@@ -52,6 +52,20 @@ class Brick(object):
     initialized : bool
         True after :meth:`initialize` has been called, False otherwise.
 
+    Notes
+    -----
+    Brick implementations can override the :meth:`_setup` method, which
+    will be called with the arguments passed to the :meth:`__init__`
+    method, in order to initialize and configure their brick.
+
+    The methods :meth:`_allocate` and :meth:`_initialize` need to be
+    overridden if the brick needs to allocate shared variables and
+    initialize their values in order to function.
+
+    A brick can have any number of methods which apply the brick on Theano
+    variables. These methods should be decorated with the
+    :meth:`apply_method` decorator.
+
     Examples
     --------
     Two usage patterns of bricks are as follows:
@@ -171,6 +185,10 @@ class Brick(object):
 
         Intialize parameters, such as weight matrices and biases.
 
+        Notes
+        -----
+        If the brick has not allocated its parameters yet, this method will
+        call the :meth:`allocate` method in order to do so.
         """
         if not self.allocated:
             self.allocate()
