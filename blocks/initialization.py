@@ -9,7 +9,7 @@ class NdarrayInitialization(object):
     __metaclass__ = ABCMeta
 
     @abstractmethod
-    def initialize(self, rng, shape):
+    def generate(self, rng, shape):
         """
         Generate an initial set of parameters from a given distribution.
 
@@ -29,6 +29,22 @@ class NdarrayInitialization(object):
         """
         pass
 
+    def initialize(self, var, rng, shape):
+        """Initialize a shared variable with generated parameters.
+
+        Parameters
+        ----------
+        var : object
+            A Theano shared variable whose value will be set with values
+            drawn from this :class:`NdarrayInitialization` instance.
+        rng : object
+            A `numpy.random.RandomState`.
+        shape : tuple
+            A shape tuple for the requested parameter array shape.
+
+        """
+        var.set_value(self.generate(rng, shape))
+
 
 class Constant(NdarrayInitialization):
     """
@@ -46,7 +62,7 @@ class Constant(NdarrayInitialization):
     def __init__(self, constant):
         self._constant = np.asarray(constant)
 
-    def initialize(self, rng, shape):
+    def generate(self, rng, shape):
         dest = np.empty(shape, dtype=theano.config.floatX)
         dest[...] = self._constant
         return dest
@@ -67,7 +83,7 @@ class IsotropicGaussian(NdarrayInitialization):
         self._mean = mean
         self._std = std
 
-    def initialize(self, rng, shape):
+    def generate(self, rng, shape):
         m = rng.normal(self._mean, self._std, size=shape)
         return m.astype(theano.config.floatX)
 
@@ -103,7 +119,7 @@ class Uniform(NdarrayInitialization):
             self._width = width
         self._mean = mean
 
-    def initialize(self, rng, shape):
+    def generate(self, rng, shape):
         w = self._width / 2
         m = rng.uniform(self._mean - w, self._mean + w, size=shape)
         return m.astype(theano.config.floatX)
