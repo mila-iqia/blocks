@@ -18,6 +18,24 @@ logging.basicConfig()
 logger = logging.getLogger(__name__)
 
 
+class Undefined(object):
+    """The class of the `UNDEF` value.
+
+    The sole purpose of this class is to create an object `UNDEF`. This
+    object has semantics of an undefined configuration setting.
+
+    `UNDEF` always evaluates to `False`, just like `None`.
+
+    """
+    def __nonzero__(self):
+        return False
+
+    def __repr__(self):
+        return 'UNDEF'
+
+UNDEF = Undefined()
+
+
 class LazyInitializationError(ValueError):
     def __init__(self, message, arg):
         super(Exception, self).__init__(message)
@@ -37,9 +55,13 @@ class Brick(object):
     before calling the methods that require them (such as :meth:`allocate`,
     :meth:`initialize`), and application methods.
 
+    To turn off lazy initialization in general set `Brick.lazy_init =
+    False`.
+
     By default, Bricks will try to initialize their parameters when being
-    applied for the first time. To turn this off for all Bricks set
-    `Bricks.initialize` to `False`.
+    applied for the first time (eager application). To turn this off and
+    enable "lazy application" for all Bricks set `Bricks.lazy_apply` to
+    `True`.
 
     Parameters
     ----------
@@ -54,11 +76,17 @@ class Brick(object):
 
     Attributes
     ----------
-    initialize : bool
-        `True` for blocks which are eager and who will try to initialize
-        their parameters before being applied. Setting this to `False`
-        means that :meth:`initialize` needs to be called manually before
-        running the compiled Theano function.
+    lazy_init : bool
+        `True` by default, allowing blocks to be configured in a lazy
+        manner. This means that not all parameters have to be passed to the
+        constructor by default. Parameters not passed will be set to
+        :class:`Uninitialized` instead. Set to `False` to disable lazy
+        initialization.
+    lazy_apply : bool
+        `False` by default, making blocks eager which means they will try
+        to initialize their parameters before being applied. Setting this
+        to `True` means that :meth:`initialize` needs to be called manually
+        before running the compiled Theano function.
     params : list of Theano shared variables
         After calling the :meth:`allocate` method this attribute will be
         populated with the shared variables storing this brick's
@@ -96,7 +124,7 @@ class Brick(object):
     initialization and only initializes the parameters of the brick after
     construction the computational graph.
 
-    >>> Brick.initialize = False
+    >>> Brick.lazy_apply = True
     >>> linear = Linear(5, weights_init=IsotropicGaussian(),
                         use_bias=False)
     >>> linear.apply(x)
@@ -106,7 +134,8 @@ class Brick(object):
 
     """
     __metaclass__ = ABCMeta
-    initialize = True
+    lazy_init = True
+    lazy_apply = False
 
     def __init__(self, name=None, rng=None):
         if name is None:
@@ -118,6 +147,14 @@ class Brick(object):
 
         self.allocated = False
         self.initialized = False
+
+    def __getattribute__(self, name):
+        value = super(Brick, self).__getattribute__(name)
+        if value is UNDEF:
+            raise LazyInitializationError(
+                "{}: {} has not been initialized".
+                format(self.__class__.__name__, name), name)
+        return value
 
     @staticmethod
     def apply_method(func):
@@ -153,15 +190,15 @@ class Brick(object):
         def wrapped_apply(self, *states_below, **kwargs):
             if not self.allocated:
                 self.allocate()
-            if not self.initialized and self.initialize:
+            if not self.initialized and not self.lazy_apply:
                 try:
                     self.initialize()
                 except LazyInitializationError as e:
                     reraise_as(LazyInitializationError(
                         "`{}`: Unable to initialize parameters because of "
                         "missing configuration (`{}`). Either set this "
-                        "configuration value, or set the `initialize` "
-                        "attribute to `False` to prevent `{}` from trying to "
+                        "configuration value, or set the `lazy_apply` "
+                        "attribute to `True` to prevent `{}` from trying to "
                         "initialize the parameters.".format(
                             self.__class__.__name__, e.arg, func.__name__),
                         e.arg))
@@ -179,10 +216,10 @@ class Brick(object):
     def lazy(func):
         """Makes the initialization lazy.
 
-        All the positional arguments and keyword arguments are set as class
-        properties. If their value is None, they are assumed to be
-        uninitialized. If an attribute is uninitialized, it will result in
-        an error when it is requested.
+        Any positional argument not given will be set to UNDEF. Keyword
+        arguments whose default value is `None` and which are not passed to
+        the function are also set to UNDEF. Lastly, positional arguments can
+        also be given as keyword arguments.
 
         Parameters
         ----------
@@ -194,49 +231,47 @@ class Brick(object):
 
         >>> class SomeBrick(Brick):
         ...     @lazy
-        ...     def __init__(self, a, b=True, c=None):
-        ...         print self.a
-        ...         pass
-        >>> brick = SomeBrick(2)
-        2
-        >>> brick.c
-        LazyInitializationError: SomeBrick: c has not been initialized
+        ...     def __init__(self, a, b, c='c', d=None):
+        ...         print a, b, c, d
+        >>> SomeBrick('a')
+        a UNDEF c UNDEF
+        >>> SomeBrick(d='d', b='b')
+        UNDEF b c d
+        >>> Brick.lazy_init = False
+        >>> SomeBrick('a')
+        TypeError: __init__() takes at least 3 arguments (2 given)
+        >>> SomeBrick('a', 'b')
+        a b c None
 
         """
-        def make_getter(arg_name):
-            def getter(self):
-                if not hasattr(self, '_' + arg_name):
-                    raise LazyInitializationError(
-                        "{}: {} has not been initialized".
-                        format(self.__class__.__name__, arg_name), arg_name)
-                else:
-                    return getattr(self, '_' + arg_name)
-            return getter
-
-        def make_setter(arg_name):
-            def setter(self, val):
-                setattr(self, '_' + arg_name, val)
-            return setter
-
         arg_spec = inspect.getargspec(func)
         arg_names = arg_spec.args[1:]
         defaults = arg_spec.defaults
-        getters, setters = [], []
-        for arg_name in arg_names:
-            getters.append(make_getter(arg_name))
-            setters.append(make_setter(arg_name))
 
         def init(self, *args, **kwargs):
-            for arg_name, getter, setter in zip(arg_names, getters, setters):
-                setattr(self.__class__, arg_name, property(getter, setter))
-            for arg_name, arg in zip(arg_names[::-1], defaults[::-1]):
-                if arg is not None:
-                    setattr(self, arg_name, arg)
-            for arg_name, arg in zip(arg_names, args):
-                setattr(self, arg_name, arg)
-            for arg_name, arg in kwargs.iteritems():
-                setattr(self, arg_name, arg)
-            func(self, *args, **kwargs)
+            if not self.lazy_init:
+                return func(self, *args, **kwargs)
+            # Fill any missing positional arguments with UNDEF
+            args = args + (UNDEF,) * (len(arg_names) - len(defaults) -
+                                      len(args))
+
+            # Check if positional arguments were passed as keyword arguments
+            args = list(args)
+            for i, arg_name in enumerate(arg_names[:-len(defaults)]):
+                if arg_name in kwargs:
+                    if args[i] is not UNDEF:
+                        raise ValueError("Positional argument `{}` at index "
+                                         "{} was also given as a keyword".
+                                         format(arg_name, i))
+                    args[i] = kwargs.pop(arg_name)
+
+            # Set keyword arguments not given, with default None, to UNDEF too
+            # TODO This could theoretically just be removed
+            for arg_name, default in zip(arg_names[-len(defaults):], defaults):
+                if arg_name not in kwargs and default is None:
+                    kwargs[arg_name] = UNDEF
+
+            return func(self, *args, **kwargs)
         return init
 
     def allocate(self):
@@ -324,8 +359,14 @@ class Linear(Brick):
 
     """
     @Brick.lazy
-    def __init__(self, input_dim=None, output_dim=None, weights_init=None,
+    def __init__(self, input_dim, output_dim, weights_init,
                  biases_init=None, use_bias=True, **kwargs):
+        if not use_bias and biases_init:
+            raise ValueError("passed biases_init, but use_bias=False")
+        if use_bias and biases_init is None:
+            raise ValueError("not passed biases_init, but use_bias=True")
+        self.__dict__.update(locals())
+        del self.self
         super(Linear, self).__init__(**kwargs)
 
     def _allocate(self):
