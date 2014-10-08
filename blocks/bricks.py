@@ -3,19 +3,25 @@
 This defines the basic interface of bricks.
 """
 from abc import ABCMeta
+import inspect
 import logging
 
 import numpy as np
 from theano import tensor
 
 from blocks.utils import pack, sharedX, unpack
+from blocks import SEPARATOR, DEFAULT_SEED
 
 BRICK_PREFIX = 'brick'
-BRICK_SEPARATOR = '_'
-DEFAULT_SEED = [2014, 10, 5]
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
+
+
+class LazyInitializationError(Exception):
+    def __init__(self, message, arg):
+        super(Exception, self).__init__(message)
+        self.arg = arg
 
 
 class Brick(object):
@@ -24,6 +30,12 @@ class Brick(object):
     A Brick is a group of parameterized Theano operations. Bricks can be
     considered connected, disjoint subsets of nodes in Theano's
     computiational graph.
+
+    Bricks support lazy initialization. This means that bricks can be
+    initialized by calling :meth:`__init__` with only a subset of the
+    required arguments. These settings must then be set by hand later
+    before calling the methods that require them (such as :meth:`allocate`,
+    :meth:`initialize`), and application methods.
 
     Parameters
     ----------
@@ -54,9 +66,9 @@ class Brick(object):
 
     Notes
     -----
-    Brick implementations can override the :meth:`_setup` method, which
-    will be called with the arguments passed to the :meth:`__init__`
-    method, in order to initialize and configure their brick.
+    Brick implementations *must* call the :meth:`__init__` constructor of
+    their parent using `super(BlockImplementation,
+    self).__init__(**kwargs)`.
 
     The methods :meth:`_allocate` and :meth:`_initialize` need to be
     overridden if the brick needs to allocate shared variables and
@@ -68,7 +80,7 @@ class Brick(object):
 
     Examples
     --------
-    Two usage patterns of bricks are as follows:
+    Two example usage patterns of bricks are as follows:
 
     >>> x = theano.tensor.vector()
     >>> linear = Linear(5, 3, weights_init=IsotropicGaussian(),
@@ -76,85 +88,152 @@ class Brick(object):
     >>> linear.apply(x)
     brick_linear_output_0
 
-    More fine-grained control is also possible:
+    More fine-grained control is also possible. This example uses lazy
+    initialization and only initializes the parameters of the brick after
+    construction the computational graph.
 
-    >>> linear = Linear(5, 3, weights_init=IsotropicGaussian(),
-                        biases_init=Constant(0), initialize=False)
-    >>> linear.allocate()
-    >>> linear.apply(x)
+    >>> linear = Linear(5, weights_init=IsotropicGaussian(),
+                        biases_init=Constant(0))
+    >>> linear.apply(x, initialize=False)
     brick_linear_output_0
+    >>> layer.output_dim = 3
     >>> linear.initialize()
 
     """
     __metaclass__ = ABCMeta
 
-    def __init__(self, *args, **kwargs):
-        name = kwargs.pop('name', None)
-        rng = kwargs.pop('rng', None)
-        initialize = kwargs.pop('initialize', True)
-
+    def __init__(self, name=None, rng=None, initialize=True):
         if name is None:
             name = self.__class__.__name__.lower()
-        self.name = '{}{}{}'.format(BRICK_PREFIX, BRICK_SEPARATOR, name)
+        self.name = '{}{}{}'.format(BRICK_PREFIX, SEPARATOR, name)
         if rng is None:
             rng = np.random.RandomState(DEFAULT_SEED)
         self.rng = rng
 
-        self._setup(*args, **kwargs)
-
         self.allocated = False
         self.initialized = False
 
-        if initialize:
-            self.initialize()
-
-    def _setup(self):
-        """Configure the brick.
-
-        This is the setup method called by the :meth:`__init__`
-        method. Derived classes should overwrite this method and perform
-        the configuration of their brick here.
-
-        .. todo ::
-           Determine the conditions for calling this method a second time.
-           It could give issues if the parameters have already been
-           initialized. But maybe that's the user's responsibility,
-           considering that this is a non-public method anyway.
-        """
-        pass
-
     @staticmethod
-    def apply_method(apply):
+    def apply_method(func):
         """Wraps methods that apply a brick to inputs in different ways.
 
         This decorator will provide some necessary pre- and post-processing
         of the Theano variables, such as tagging them with the brick that
         created them and naming them.
 
+        Wrapped application methods accept the `initialize` keyword
+        argument. By default this is set to `True`, which will attempt to
+        initialize the brick with the current configuration. If this fails
+        because some configuration is missing, a warning will be given.
+        Prevent this behaviour by setting `initialize` to `False`, in which
+        case the layer will not try to initialize itself.
+
         Parameters
         ----------
         apply : method
-            A method which takes Theano variablse as an input, and returns
+            A method which takes Theano variables as an input, and returns
             the output of the Brick
 
         Raises
         ------
         ValueError
-            If the Brick has not been initialized yet.
+            If the parameters of this brick have not been allocated yet. In
+            order to allocate them, use the :meth:`allocate` method.
+        LazyInitializationError
+            If parameters needed to perform the application of this brick
+            have not been provided yet.
 
         """
-        def wrapped_apply(self, *states_below):
+        def wrapped_apply(self, *states_below, **kwargs):
+            initialize = kwargs.pop('initialize', True)
             if not self.allocated:
-                raise ValueError("{}: parameters have not been allocated".
-                                 format(self.__class__.__name__))
+                self.allocate()
+            if not self.initialized and initialize:
+                try:
+                    self.initialize()
+                except LazyInitializationError as e:
+                    logger.warning("`{}`: Unable to initialize parameters "
+                                   "because of missing configuration (`{}`). "
+                                   "Set the required configuration values and "
+                                   "call the `initialize` method before "
+                                   "running the compiled Theano function. To "
+                                   "supress this warning, please use "
+                                   "initialize=False when calling `{}`.".
+                                   format(self.__class__.__name__, e.arg,
+                                          func.__name__))
             states_below = list(states_below)
             for i, state_below in enumerate(states_below):
                 states_below[i] = state_below.copy()
-            outputs = pack(apply(self, *states_below))
+            outputs = pack(func(self, *states_below, **kwargs))
             for output in outputs:
+                # TODO Tag with dimensions, axes, etc. for error-checking
                 output.tag.owner_brick = self
             return unpack(outputs)
         return wrapped_apply
+
+    @staticmethod
+    def lazy(func):
+        """Makes the initialization lazy.
+
+        All the positional arguments and keyword arguments are set as class
+        properties. If their value is None, they are assumed to be
+        uninitialized. If an attribute is uninitialized, it will result in
+        an error when it is requested.
+
+        Parameters
+        ----------
+        func : method
+            The __init__ method to make lazy.
+
+        Examples
+        --------
+
+        >>> class SomeBrick(Brick):
+        ...     @lazy
+        ...     def __init__(self, a, b=True, c=None):
+        ...         print self.a
+        ...         pass
+        >>> brick = SomeBrick(2)
+        2
+        >>> brick.c
+        LazyInitializationError: SomeBrick: c has not been initialized
+
+        """
+        def make_getter(arg_name):
+            def getter(self):
+                if not hasattr(self, '_' + arg_name):
+                    raise LazyInitializationError(
+                        "{}: {} has not been initialized".
+                        format(self.__class__.__name__, arg_name), arg_name)
+                else:
+                    return getattr(self, '_' + arg_name)
+            return getter
+
+        def make_setter(arg_name):
+            def setter(self, val):
+                setattr(self, '_' + arg_name, val)
+            return setter
+
+        arg_spec = inspect.getargspec(func)
+        arg_names = arg_spec.args[1:]
+        defaults = arg_spec.defaults
+        getters, setters = [], []
+        for arg_name in arg_names:
+            getters.append(make_getter(arg_name))
+            setters.append(make_setter(arg_name))
+
+        def init(self, *args, **kwargs):
+            for arg_name, getter, setter in zip(arg_names, getters, setters):
+                setattr(self.__class__, arg_name, property(getter, setter))
+            for arg_name, arg in zip(arg_names[::-1], defaults[::-1]):
+                if arg is not None:
+                    setattr(self, arg_name, arg)
+            for arg_name, arg in zip(arg_names, args):
+                setattr(self, arg_name, arg)
+            for arg_name, arg in kwargs.iteritems():
+                setattr(self, arg_name, arg)
+            func(self, *args, **kwargs)
+        return init
 
     def allocate(self):
         """Allocate shared variables for parameters.
@@ -233,15 +312,10 @@ class Linear(Brick):
     :class:`Brick`
 
     """
-    def _setup(self, input_dim, output_dim, weights_init, biases_init=None,
-               use_bias=True):
-        self.input_dim = input_dim
-        self.output_dim = output_dim
-        self.weights_init = weights_init
-        if use_bias and biases_init is None:
-            raise ValueError
-        self.biases_init = biases_init
-        self.use_bias = use_bias
+    @Brick.lazy
+    def __init__(self, input_dim=None, output_dim=None, weights_init=None,
+                 biases_init=None, use_bias=True, **kwargs):
+        super(Linear, self).__init__(**kwargs)
 
     def _allocate(self):
         self.params.append(sharedX(np.empty((0, 0))))
