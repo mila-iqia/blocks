@@ -10,6 +10,7 @@ before_install:
   - conda update --yes conda
 install:
   - conda install --yes python=$TRAVIS_PYTHON_VERSION atlas numpy nose
+  - pip install -q --no-deps git+git://github.com/Theano/Theano.git
 # command to run tests
 script:
   - nosetests
