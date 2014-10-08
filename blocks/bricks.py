@@ -37,6 +37,10 @@ class Brick(object):
     before calling the methods that require them (such as :meth:`allocate`,
     :meth:`initialize`), and application methods.
 
+    By default, Bricks will try to initialize their parameters when being
+    applied for the first time. To turn this off for all Bricks set
+    `Bricks.initialize` to `False`.
+
     Parameters
     ----------
     name : str, optional
@@ -47,14 +51,14 @@ class Brick(object):
     rng : object, optional
         A `numpy.random.RandomState` object. This can be used by the brick
         to e.g. initialize parameters.
-    initialize : bool, optional
-        If `True` then the parameters of this brick will automatically be
-        allocated and initialized by calls to the :meth:`allocate` and
-        :meth:`initialize`. If `False` these methods need to be called
-        manually after initializing. Defaults to `True`.
 
     Attributes
     ----------
+    initialize : bool
+        `True` for blocks which are eager and who will try to initialize
+        their parameters before being applied. Setting this to `False`
+        means that :meth:`initialize` needs to be called manually before
+        running the compiled Theano function.
     params : list of Theano shared variables
         After calling the :meth:`allocate` method this attribute will be
         populated with the shared variables storing this brick's
@@ -92,17 +96,19 @@ class Brick(object):
     initialization and only initializes the parameters of the brick after
     construction the computational graph.
 
+    >>> Brick.initialize = False
     >>> linear = Linear(5, weights_init=IsotropicGaussian(),
-                        biases_init=Constant(0))
-    >>> linear.apply(x, initialize=False)
+                        use_bias=False)
+    >>> linear.apply(x)
     brick_linear_output_0
     >>> layer.output_dim = 3
     >>> linear.initialize()
 
     """
     __metaclass__ = ABCMeta
+    initialize = True
 
-    def __init__(self, name=None, rng=None, initialize=True):
+    def __init__(self, name=None, rng=None):
         if name is None:
             name = self.__class__.__name__.lower()
         self.name = '{}{}{}'.format(BRICK_PREFIX, SEPARATOR, name)
@@ -145,19 +151,19 @@ class Brick(object):
 
         """
         def wrapped_apply(self, *states_below, **kwargs):
-            initialize = kwargs.pop('initialize', True)
             if not self.allocated:
                 self.allocate()
-            if not self.initialized and initialize:
+            if not self.initialized and self.initialize:
                 try:
                     self.initialize()
                 except LazyInitializationError as e:
                     reraise_as(LazyInitializationError(
                         "`{}`: Unable to initialize parameters because of "
                         "missing configuration (`{}`). Either set this "
-                        "configuration value, or call `{}` with "
-                        "`initialize=False`.".format(self.__class__.__name__,
-                                                     e.arg, func.__name__),
+                        "configuration value, or set the `initialize` "
+                        "attribute to `False` to prevent `{}` from trying to "
+                        "initialize the parameters.".format(
+                            self.__class__.__name__, e.arg, func.__name__),
                         e.arg))
             states_below = list(states_below)
             for i, state_below in enumerate(states_below):
@@ -248,6 +254,13 @@ class Brick(object):
         ValueError
             If the state of this brick is insufficient to determine the
             number of parameters or their dimensionality to be initialized.
+
+        Notes
+        -----
+        This method already sets the :attr:`params` attribute to an empty
+        list, so implementations of :meth:`_allocate` can simply append to
+        this list as needed. This is to make sure that parameters are
+        completely reset by calls to this method.
 
         """
         self.params = []
