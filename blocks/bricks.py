@@ -9,7 +9,7 @@ import logging
 import numpy as np
 from theano import tensor
 
-from blocks.utils import pack, sharedX, unpack
+from blocks.utils import pack, reraise_as, sharedX, unpack
 from blocks import SEPARATOR, DEFAULT_SEED
 
 BRICK_PREFIX = 'brick'
@@ -18,7 +18,7 @@ logging.basicConfig()
 logger = logging.getLogger(__name__)
 
 
-class LazyInitializationError(Exception):
+class LazyInitializationError(ValueError):
     def __init__(self, message, arg):
         super(Exception, self).__init__(message)
         self.arg = arg
@@ -152,15 +152,13 @@ class Brick(object):
                 try:
                     self.initialize()
                 except LazyInitializationError as e:
-                    logger.warning("`{}`: Unable to initialize parameters "
-                                   "because of missing configuration (`{}`). "
-                                   "Set the required configuration values and "
-                                   "call the `initialize` method before "
-                                   "running the compiled Theano function. To "
-                                   "supress this warning, please use "
-                                   "initialize=False when calling `{}`.".
-                                   format(self.__class__.__name__, e.arg,
-                                          func.__name__))
+                    reraise_as(LazyInitializationError(
+                        "`{}`: Unable to initialize parameters because of "
+                        "missing configuration (`{}`). Either set this "
+                        "configuration value, or call `{}` with "
+                        "`initialize=False`.".format(self.__class__.__name__,
+                                                     e.arg, func.__name__),
+                        e.arg))
             states_below = list(states_below)
             for i, state_below in enumerate(states_below):
                 states_below[i] = state_below.copy()
