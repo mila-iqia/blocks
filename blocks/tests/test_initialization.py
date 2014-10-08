@@ -8,7 +8,7 @@ from blocks.initialization import Constant, IsotropicGaussian, Uniform
 def test_constant():
     def check_constant(const, shape, ground_truth):
         # rng unused, so pass None.
-        init = Constant(const).initialize(None, ground_truth.shape)
+        init = Constant(const).generate(None, ground_truth.shape)
         assert_(ground_truth.dtype == theano.config.floatX)
         assert_(ground_truth.shape == init.shape)
         assert_equal(ground_truth, init)
@@ -27,7 +27,7 @@ def test_gaussian():
     rng = np.random.RandomState([2014, 1, 20])
 
     def check_gaussian(rng, mean, std, shape):
-        weights = IsotropicGaussian(mean, std).initialize(rng, shape)
+        weights = IsotropicGaussian(mean, std).generate(rng, shape)
         assert_(weights.shape == shape)
         assert_(weights.dtype == theano.config.floatX)
         assert_allclose(weights.mean(), mean, atol=1e-2)
@@ -41,7 +41,7 @@ def test_uniform():
 
     def check_uniform(rng, mean, width, std, shape):
         weights = Uniform(mean=mean, width=width,
-                          std=std).initialize(rng, shape)
+                          std=std).generate(rng, shape)
         assert_(weights.shape == shape)
         assert_(weights.dtype == theano.config.floatX)
         assert_allclose(weights.mean(), mean, atol=1e-2)
