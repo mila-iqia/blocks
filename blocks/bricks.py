@@ -327,7 +327,15 @@ class Brick(object):
         """
         if not self.allocated:
             self.allocate()
-        self._initialize()
+        try:
+            self._initialize()
+        except Exception as e:
+            if self.lazy_init and not isinstance(e, LazyInitializationError):
+                reraise_as("Lazy initialization is enabled, so please make "
+                           "sure you have set all the required configuration "
+                           "for this method call.")
+            else:
+                raise
         self.initialized = True
 
     def _initialize(self):
