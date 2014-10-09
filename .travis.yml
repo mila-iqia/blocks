@@ -13,4 +13,4 @@ install:
   - pip install -q --no-deps git+git://github.com/Theano/Theano.git
 # command to run tests
 script:
-  - nosetests
+  - nosetests --with-doctest --doctest-options=+IGNORE_EXCEPTION_DETAIL

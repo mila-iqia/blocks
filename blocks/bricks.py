@@ -114,23 +114,24 @@ class Brick(object):
     --------
     Two example usage patterns of bricks are as follows:
 
-    >>> x = theano.tensor.vector()
-    >>> linear = Linear(5, 3, weights_init=IsotropicGaussian(),
-                        biases_init=Constant(0))
-    >>> linear.apply(x)
-    brick_linear_output_0
+    >>> import theano
+    ... from blocks.initialization import IsotropicGaussian, Constant
+    ... x = theano.tensor.vector()
+    ... linear = Linear(5, 3, weights_init=IsotropicGaussian(),
+    ...                 biases_init=Constant(0))
+    ... linear.apply(x)
 
     More fine-grained control is also possible. This example uses lazy
     initialization and only initializes the parameters of the brick after
     construction the computational graph.
 
-    >>> Brick.lazy_apply = True
-    >>> linear = Linear(5, weights_init=IsotropicGaussian(),
-                        use_bias=False)
-    >>> linear.apply(x)
-    brick_linear_output_0
-    >>> layer.output_dim = 3
-    >>> linear.initialize()
+    >>> from blocks.initialization import IsotropicGaussian
+    ... Brick.lazy_apply = True
+    ... linear = Linear(5, weights_init=IsotropicGaussian(),
+    ...                 use_bias=False)
+    ... linear.apply(x)
+    ... layer.output_dim = 3
+    ... linear.initialize()
 
     """
     __metaclass__ = ABCMeta
@@ -230,17 +231,19 @@ class Brick(object):
         --------
 
         >>> class SomeBrick(Brick):
-        ...     @lazy
+        ...     @Brick.lazy
         ...     def __init__(self, a, b, c='c', d=None):
         ...         print a, b, c, d
-        >>> SomeBrick('a')
+        >>> brick = SomeBrick('a')
         a UNDEF c UNDEF
-        >>> SomeBrick(d='d', b='b')
+        >>> brick = SomeBrick(d='d', b='b')
         UNDEF b c d
         >>> Brick.lazy_init = False
-        >>> SomeBrick('a')
+        >>> brick = SomeBrick('a')
+        Traceback (most recent call last):
+          File "<stdin>", line 1, in <module>
         TypeError: __init__() takes at least 3 arguments (2 given)
-        >>> SomeBrick('a', 'b')
+        >>> brick = SomeBrick('a', 'b')
         a b c None
 
         """
