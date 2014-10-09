@@ -11,8 +11,9 @@ before_install:
 install:
   - conda install --yes --quiet python=$TRAVIS_PYTHON_VERSION atlas numpy nose pip coverage
   - pip install -q --no-deps git+git://github.com/Theano/Theano.git
+  - pip install -q coveralls
 # command to run tests
 script:
-  - nosetests --with-coverage --with-doctest --doctest-options=+IGNORE_EXCEPTION_DETAIL
+  - nosetests --with-coverage --cover-package=blocks --with-doctest --doctest-options=+IGNORE_EXCEPTION_DETAIL
 after_script:
   - coveralls
