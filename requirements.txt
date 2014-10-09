@@ -1,2 +1,1 @@
-numpy>=1.8.1
--e git://github.com/Theano/Theano.git#egg=Theano-master
+sphinxcontrib-napoleon
