@@ -248,7 +248,7 @@ class Brick(object):
         ...     def __init__(self, a, b, c='c', d=None):
         ...         print a, b, c, d
         >>> brick = SomeBrick('a')
-        a UNDEF c None
+        a UNDEF c UNDEF
         >>> brick = SomeBrick(d='d', b='b')
         UNDEF b c d
         >>> Brick.lazy_init = False
