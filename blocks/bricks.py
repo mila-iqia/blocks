@@ -248,7 +248,7 @@ class Brick(object):
         ...     def __init__(self, a, b, c='c', d=None):
         ...         print a, b, c, d
         >>> brick = SomeBrick('a')
-        a UNDEF c UNDEF
+        a UNDEF c None
         >>> brick = SomeBrick(d='d', b='b')
         UNDEF b c d
         >>> Brick.lazy_init = False
@@ -280,11 +280,6 @@ class Brick(object):
                                          "{} was also given as a keyword".
                                          format(arg_name, i))
                     args[i] = kwargs.pop(arg_name)
-
-            # Set keyword arguments not given, with default None, to UNDEF too
-            for arg_name, default in zip(arg_names[-len(defaults):], defaults):
-                if arg_name not in kwargs and default is None:
-                    kwargs[arg_name] = UNDEF
 
             return func(self, *args, **kwargs)
         return init
