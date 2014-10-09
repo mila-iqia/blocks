@@ -1,1 +1,3 @@
 sphinxcontrib-napoleon
+numpy
+-e http://github.com/Theano/Theano.git
