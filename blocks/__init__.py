@@ -71,11 +71,11 @@ class Block(object):
             inputs = list(inputs)
             for i, inp in enumerate(inputs):
                 inputs[i] = inp.copy()
-                inputs[i].owner = self
+                inputs[i].tag.owner = self
             outputs = pack(func(self, *inputs, **kwargs))
             for i, output in enumerate(outputs):
                 outputs[i] = output.copy()
-                outputs[i].owner = self
+                outputs[i].tag.owner = self
             return unpack(outputs)
         wrapped_apply._raw = func
         return wrapped_apply
