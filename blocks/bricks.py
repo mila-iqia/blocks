@@ -375,6 +375,19 @@ class Linear(Brick):
 
     @Brick.apply_method
     def apply(self, inp):
+        """Apply the linear transformation.
+
+        Parameters
+        ----------
+        inp : Theano variable
+            The input on which to apply the transformation
+
+        Returns
+        -------
+        output : Theano variable
+            The transformed input plus optional bias
+
+        """
         if self.use_bias:
             W, b = self.params
         else:
@@ -388,40 +401,76 @@ class Linear(Brick):
 def _linear_activation_factory(name, activation):
     """Class factory of Linear Brick folloed by a simple activation."""
     class LinearActivation(Linear):
+        """Linear transformation with element-wise {0} activation.
+
+        Performs a linear transformation (matrix multiplication) and adds
+        an optional bias term. Then apply the {0} function.
+
+        See also
+        --------
+        :class:`Linear` : For arguments and attributes.
+
+        """
         @Brick.apply_method
+        @wraps(Linear.apply)
         def apply(self, inp):
             output = activation(super(LinearActivation,
                                       self).apply._raw(self, inp))
             return output
-    LinearActivation.__name__ = name
+    LinearActivation.__name__ = 'Linear{}'.format(name)
+    LinearActivation.__doc__ = LinearActivation.__doc__.format(name.lower())
+    LinearActivation.apply.__func__.__doc__ = \
+        LinearActivation.apply.__func__.__doc__.format(name.lower())
     return LinearActivation
 
 
 def _activation_factory(name, activation):
     """Class factory for Bricks which perform simple Theano calls."""
     class Activation(Brick):
-        """Linear transform followed by {} activation.
+        """Element-wise application of {0} function.
 
         Parameters
         ----------
-        See :class:`Linear`
+        inp : Theano variable
+            The Theano variable on which to apply the {0} function..
 
-        """.format(name.lower())
+        Returns
+        -------
+        output : Theano variable
+            The Theano variable with the {0} function applied.
+
+        """
         @Brick.apply_method
         def apply(self, inp):
+            """Apply the {0} function element-wise.
+
+            Parameters
+            ----------
+            inp : Theano variable
+                Theano variable to apply {0} to, element-wise.
+
+            Returns
+            -------
+            output : Theano variable
+                The input with the activation function applied.
+
+            """
             output = activation(inp)
             return output
     Activation.__name__ = name
+    Activation.__doc__ = Activation.__doc__.format(name.lower())
+    Activation.apply.__func__.__doc__ = \
+        Activation.apply.__func__.__doc__.format(name.lower())
     return Activation
 
 Tanh = _activation_factory('Tanh', tensor.tanh)
 Sigmoid = _activation_factory('Sigmoid', tensor.nnet.sigmoid)
 Softmax = _activation_factory('Softmax', tensor.nnet.softmax)
 
-LinearTanh = _linear_activation_factory('LinearTanh', tensor.tanh)
-LinearSigmoid = _linear_activation_factory('LinearSigmoid',
+LinearTanh = _linear_activation_factory('Tanh', tensor.tanh)
+LinearSigmoid = _linear_activation_factory('Sigmoid',
                                            tensor.nnet.sigmoid)
-LinearSoftmax = _linear_activation_factory('LinearSoftmax',
+LinearSoftmax = _linear_activation_factory('Softmax',
                                            tensor.nnet.softmax)
 
 
