@@ -1,4 +1,6 @@
 """The blocks library for parameterized Theano ops"""
+from functools import wraps
+
 from blocks.bricks import SEPARATOR, UNDEF
 from blocks.initialization import NdarrayInitialization
 from blocks.utils import pack, unpack
@@ -64,6 +66,7 @@ class Block(object):
             the output of a block.
 
         """
+        @wraps(func)
         def wrapped_apply(self, *inputs, **kwargs):
             inputs = list(inputs)
             for i, inp in enumerate(inputs):

@@ -3,6 +3,7 @@
 This defines the basic interface of bricks.
 """
 from abc import ABCMeta
+from functools import wraps
 import inspect
 import logging
 
@@ -188,6 +189,7 @@ class Brick(object):
             have not been provided yet.
 
         """
+        @wraps(func)
         def wrapped_apply(self, *inputs, **kwargs):
             if not self.allocated:
                 self.allocate()
