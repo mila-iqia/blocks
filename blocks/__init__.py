@@ -88,15 +88,16 @@ class DaisyChain(Block):
     Parameters
     ----------
     layers : list of Brick instances
-        Bricks are expected to have a `input_dim` and a `output_dim`
-        argument. The `output_dim` should already be set, the `input_dim`
+        Bricks are expected to have a ``input_dim`` and a ``output_dim``
+        argument. The `output_dim` should already be set, the ``input_dim``
         will be set by this block, except for the first block.
     default_weights_init : object
-        A NdarrayInitialization object that will be used to initialize the
-        weights of layers who don't have an initialization object already.
+        A :class:`NdarrayInitialization` object that will be used to
+        initialize the weights of layers who don't have an initialization
+        object already.
     default_biases_init : object
-        A NdarrayInitialization object to initialize the biases of layers
-        which don't have biases_init set already.
+        A :class:`NdarrayInitialization` object to initialize the biases of
+        layers which don't have biases_init set already.
 
     Notes
     -----
