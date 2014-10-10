@@ -201,7 +201,7 @@ class Brick(object):
             outputs = pack(func(self, *inputs, **kwargs))
             for output in outputs:
                 # TODO Tag with dimensions, axes, etc. for error-checking
-                output.tag.owner_brick = self
+                output.tag.owner = self
             return unpack(outputs)
         # Save the unwrapped function so that derived classes can use it
         wrapped_apply._raw = func
