@@ -10,9 +10,10 @@ import numpy as np
 from theano import tensor
 
 from blocks.utils import pack, reraise_as, sharedX, unpack
-from blocks import SEPARATOR, DEFAULT_SEED
 
 BRICK_PREFIX = 'brick'
+DEFAULT_SEED = [2014, 10, 5]
+SEPARATOR = '_'
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
@@ -27,19 +28,10 @@ class Undefined(object):
     `UNDEF` always evaluates to `False`, just like `None`.
 
     """
-    def __nonzero__(self):
-        return False
-
     def __repr__(self):
         return 'UNDEF'
 
 UNDEF = Undefined()
-
-
-class LazyInitializationError(ValueError):
-    def __init__(self, message, arg):
-        super(Exception, self).__init__(message)
-        self.arg = arg
 
 
 class Brick(object):
@@ -55,13 +47,13 @@ class Brick(object):
     before calling the methods that require them (such as :meth:`allocate`,
     :meth:`initialize`), and application methods.
 
-    To turn off lazy initialization in general set `Brick.lazy_init =
-    False`.
+    To turn off lazy initialization in general set ``Brick.lazy_init =
+    False``.
 
     By default, Bricks will try to initialize their parameters when being
     applied for the first time (eager application). To turn this off and
-    enable "lazy application" for all Bricks set `Bricks.lazy_apply` to
-    `True`.
+    enable "lazy application" for all Bricks set ``Bricks.lazy_apply`` to
+    ``True``.
 
     Parameters
     ----------
@@ -100,7 +92,8 @@ class Brick(object):
     -----
     Brick implementations *must* call the :meth:`__init__` constructor of
     their parent using `super(BlockImplementation,
-    self).__init__(**kwargs)`.
+    self).__init__(**kwargs)` at the end of the derived `__init__` method
+    (else insufficient configuration could cause errors).
 
     The methods :meth:`_allocate` and :meth:`_initialize` need to be
     overridden if the brick needs to allocate shared variables and
@@ -163,14 +156,6 @@ class Brick(object):
         if not self.lazy_init:
             self.initialize()
 
-    def __getattribute__(self, name):
-        value = super(Brick, self).__getattribute__(name)
-        if value is UNDEF:
-            raise LazyInitializationError(
-                "{}: {} has not been initialized".
-                format(self.__class__.__name__, name), name)
-        return value
-
     @staticmethod
     def apply_method(func):
         """Wraps methods that apply a brick to inputs in different ways.
@@ -182,7 +167,7 @@ class Brick(object):
         By default, application methods are eager, and will try to
         initialize the parameters of the brick. If the configuration of
         this brick is insufficient to do so, an exception will be raised
-        (usually a :class:`LazyInitizializationError`). To prevent this
+        (usually a :class:`LazyInitializationError`). To prevent this
         from happening, one can set `Brick.lazy_apply = True`, in which
         case the parameters need to be initialized manually with a call to
         :meth:`initialize` before using the resulting Theano function.
@@ -207,17 +192,7 @@ class Brick(object):
             if not self.allocated:
                 self.allocate()
             if not self.initialized and not self.lazy_apply:
-                try:
-                    self.initialize()
-                except LazyInitializationError as e:
-                    reraise_as(LazyInitializationError(
-                        "`{}`: Unable to initialize parameters because of "
-                        "missing configuration (`{}`). Either set this "
-                        "configuration value, or set the `lazy_apply` "
-                        "attribute to `True` to prevent `{}` from trying to "
-                        "initialize the parameters.".format(
-                            self.__class__.__name__, e.arg, func.__name__),
-                        e.arg))
+                self.initialize()
             inputs = list(inputs)
             for i, inp in enumerate(inputs):
                 inputs[i] = inp.copy()
@@ -226,6 +201,8 @@ class Brick(object):
                 # TODO Tag with dimensions, axes, etc. for error-checking
                 output.tag.owner_brick = self
             return unpack(outputs)
+        # Save the unwrapped function so that derived classes can use it
+        wrapped_apply._raw = func
         return wrapped_apply
 
     @staticmethod
@@ -329,8 +306,8 @@ class Brick(object):
             self.allocate()
         try:
             self._initialize()
-        except Exception as e:
-            if self.lazy_init and not isinstance(e, LazyInitializationError):
+        except Exception:
+            if self.lazy_init:
                 reraise_as("Lazy initialization is enabled, so please make "
                            "sure you have set all the required configuration "
                            "for this method call.")
@@ -372,10 +349,6 @@ class Linear(Brick):
 
     .. math:: f(\mathbf{x}) = \mathbf{W}\mathbf{x} + \mathbf{b}
 
-    See also
-    --------
-    :class:`Brick`
-
     """
     @Brick.lazy
     def __init__(self, input_dim, output_dim, weights_init,
@@ -410,18 +383,44 @@ class Linear(Brick):
         return output
 
 
-class Tanh(Brick):
-    @Brick.apply_method
-    def apply(self, inp):
-        output = tensor.tanh(inp)
-        return output
+def _linear_activation_factory(name, activation):
+    """Class factory of Linear Brick folloed by a simple activation."""
+    class LinearActivation(Linear):
+        @Brick.apply_method
+        def apply(self, inp):
+            output = activation(super(LinearActivation,
+                                      self).apply._raw(self, inp))
+            return output
+    LinearActivation.__name__ = name
+    return LinearActivation
 
 
-class Softmax(Brick):
-    @Brick.apply_method
-    def apply(self, inp):
-        output = tensor.nnet.softmax(inp)
-        return output
+def _activation_factory(name, activation):
+    """Class factory for Bricks which perform simple Theano calls."""
+    class Activation(Brick):
+        """Linear transform followed by {} activation.
+
+        Parameters
+        ----------
+        See :class:`Linear`
+
+        """.format(name.lower())
+        @Brick.apply_method
+        def apply(self, inp):
+            output = activation(inp)
+            return output
+    Activation.__name__ = name
+    return Activation
+
+Tanh = _activation_factory('Tanh', tensor.tanh)
+Sigmoid = _activation_factory('Sigmoid', tensor.nnet.sigmoid)
+Softmax = _activation_factory('Softmax', tensor.nnet.softmax)
+
+LinearTanh = _linear_activation_factory('LinearTanh', tensor.tanh)
+LinearSigmoid = _linear_activation_factory('LinearSigmoid',
+                                           tensor.nnet.sigmoid)
+LinearSoftmax = _linear_activation_factory('LinearSoftmax',
+                                           tensor.nnet.softmax)
 
 
 class Cost(Brick):
