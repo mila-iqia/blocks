@@ -104,15 +104,18 @@ class DaisyChain(Block):
     Examples
     --------
 
-    To create a simple neural network
+    Consider a simple neural network with a single hidden layer and a
+    softmax output layer.
 
     .. math::
 
-       \mathbf{h} = \tanh(\mathbf{W}_0\mathbf{x} + \mathbf{b}_0)
-       \mathbf{y} = \mathrm{softmax}(mathbf{W}_1\mathbf{h} + \mathbf{b}_1)
+       \mathbf{h} &= \\tanh(\mathbf{W}_0 \mathbf{x} + \mathbf{b}_0) \\\\
+       \mathbf{y} &= \mathrm{softmax}(\mathbf{W}_1 \mathbf{h} + \mathbf{b}_1)
 
-    where :math:`\mathbf{x} \in \mathbb{R}^30`, :math:`\mathbf{h} \in
-    \mathbb{R}^20` and :math:`\mathbf{y} \in \mathbb{R}^10`, we do
+    where :math:`\mathbf{x} \in \mathbb{R}^{30}`, :math:`\mathbf{h} \in
+    \mathbb{R}^{20}` and :math:`\mathbf{y} \in \mathbb{R}^{10}`. We
+    initialize the weight matrices by drawing from a standard normal
+    distribution, and set the initial biases to zero.
 
     >>> from theano import tensor
     ... x = tensor.matrix()
@@ -155,6 +158,19 @@ class DaisyChain(Block):
 
     @Block.apply_method
     def fprop(self, inp):
+        """Forward-propogate the input through the MLP.
+
+        Parameters
+        ----------
+        inp : Theano variable
+            The input to the network.
+
+        Returns
+        -------
+        output : Theano variable
+            The output of the last layer of the MLP.
+
+        """
         for layer in self.children:
             inp = layer.apply(inp)
         output = inp
