@@ -200,7 +200,7 @@ class Brick(object):
 
     """
     __metaclass__ = ABCMeta
-    lazy = False
+    lazy = True
     allocation_config = ['name']
     initialization_config = []
 
@@ -305,7 +305,7 @@ class Brick(object):
         return wrapped_apply
 
     @staticmethod
-    def lazy(func):
+    def lazy_method(func):
         """Makes the initialization lazy.
 
         Any positional argument not given will be set to ``None``.
@@ -325,7 +325,7 @@ class Brick(object):
         --------
 
         >>> class SomeBrick(Brick):
-        ...     @Brick.lazy
+        ...     @Brick.lazy_method
         ...     def __init__(self, a, b, c='c', d=None):
         ...         print a, b, c, d
         >>> brick = SomeBrick('a')
@@ -337,6 +337,7 @@ class Brick(object):
         Traceback (most recent call last):
           File "<stdin>", line 1, in <module>
         TypeError: __init__() takes at least 3 arguments (2 given)
+        >>> Brick.lazy = True  # Reset for other doctests
 
         """
         arg_spec = inspect.getargspec(func)
@@ -566,7 +567,7 @@ class Linear(DefaultRNG):
     .. math:: f(\mathbf{x}) = \mathbf{W}\mathbf{x} + \mathbf{b}
 
     """
-    @Brick.lazy
+    @Brick.lazy_method
     def __init__(self, input_dim, output_dim, weights_init,
                  biases_init=None, use_bias=True, **kwargs):
         self.__dict__.update(locals())
@@ -705,12 +706,31 @@ class MLP(DefaultRNG):
     dims : list of ints
         A list of input dimensions, as well as the output dimension of the
         last layer. Required for :meth:`initialize`.
-    weights_init : :class:`NdarrayInitialization`
+    weights_init : :class:`utils.NdarrayInitialization`
+        The initialization scheme to initialize all the weights with.
+    biases_init : :class:`utils.NdarrayInitialization`
+        The initialization scheme to initialize all the biases with.
+    use_bias : bool
+        Whether or not to use biases.
+
+    Notes
+    -----
+    Note that the ``weights_init``, ``biases_init`` and ``use_bias``
+    configurations will overwrite those of the layers each time the
+    :class:`MLP` is re-initialized. For more fine-grained control, push the
+    configuration to the child layers manually before initialization.
+
+    >>> from blocks.initialization import IsotropicGaussian, Constant
+    >>> mlp = MLP([Tanh(), None], [30, 20, 10],
+    ...           IsotropicGaussian(), Constant(0))
+    >>> mlp.push_initialization_config()  # Configure children
+    >>> mlp.children[0].weights_init = IsotropicGaussian(0.1)
+    >>> mlp.initialize()
 
     """
     initialization_config = ['dims', 'weights_init', 'use_bias', 'biases_init']
 
-    @Brick.lazy
+    @Brick.lazy_method
     def __init__(self, activations, dims, weights_init, biases_init=None,
                  use_bias=True, **kwargs):
         super(MLP, self).__init__(**kwargs)
