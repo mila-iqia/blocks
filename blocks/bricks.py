@@ -69,44 +69,38 @@ class Parameters(list):
 class Brick(object):
     """A brick encapsulates Theano operations with parameters.
 
-    A Brick is a group of parameterized Theano operations. Bricks can be
-    considered connected, disjoint subsets of nodes in Theano's
-    computiational graph.
+    A brick goes through the following stages:
 
-    A Brick goes through the following stages:
-
-    #. Construction: The call to :meth:`__init__` constructs a
-       :class:`Brick` instance with a name and creates any child Bricks as
+    1. Construction: The call to :meth:`__init__` constructs a
+       :class:`Brick instance with a name and creates any child bricks as
        well.
-    #. Allocation: This allocates the shared Theano variables required for
+    2. Allocation: This allocates the shared Theano variables required for
        the parameters. In order to do so, some configuration might be
        required in order to determine the dimensionality of the shared
        variables.
-    #. The following can be done in either order:
+    3. The following can be done in either order:
 
-       #. Application: By applying the :class:`Brick` to a set of Theano
+       a) Application: By applying the brick to a set of Theano
           variables a part of the computational graph of the final model is
           constructed.
-       #. Initialization: This sets the initial values of the parameters,
+       b) Initialization: This sets the initial values of the parameters,
           which is needed to call the final compiled Theano function.
 
-    Each :class:`Brick` has a *configuration* e.g. a linear transformation
-    needs to know its input dimension in order to initialize its weight
-    matrix. All of these parameters can be passed to the :meth:`__init__`
-    constructor. However, by default Bricks support *lazy initialization*.
-    This means that any configuration not passed to the :meth:`__init__`
-    method needs to be set manually before making calls to any method which
-    depend on this configuration setting.
+    At each different stage, a brick might need a certain set of
+    configuration settings. All of these settings can be passed to the
+    :meth:`__init__` constructor. However, by default many bricks support
+    *lazy initialization*. This means that the configuration settings can
+    be set later.
 
     .. note::
 
-       Some arguments to :meth:`alloc` are *always* required, even when
+       Some arguments to :meth:`__init__` are *always* required, even when
        lazy initialization is enabled. Other arguments must be given before
        calling :meth:`allocate`, while others yet only need to be given in
        order to call :meth:`initialize`. Always read the documentation of
        each brick carefully.
 
-    Trying to initialize or apply a Brick will automatically result in
+    Trying to initialize or apply a brick will automatically result in
     :meth:`allocate` being called if it wasn't called before.
 
     Lazy initialization can be turned off by setting ``Brick.lazy =
@@ -124,17 +118,17 @@ class Brick(object):
     Attributes
     ----------
     lazy : bool
-        ``True`` by default. When Bricks are lazy, not all configuration
+        ``True`` by default. When bricks are lazy, not all configuration
         needs to be provided to the constructor, allowing it to be set in
         another way after construction. Many parts of the library rely on
         this behaviour. However, it does require a separate call to
-        :meth:`initialize`. If set to ``True`` on the other hand, Bricks
+        :meth:`initialize`. If set to ``True`` on the other hand, bricks
         will be ready to run after construction.
     params : list of Theano shared variables
         After calling the :meth:`allocate` method this attribute will be
         populated with the shared variables storing this brick's
         parameters. Any variable added to this list will automatically be
-        tagged with this Brick as an owner.
+        tagged with this brick as an owner.
     allocated : bool
         ``False`` if :meth:`allocate` has not been called yet, or if the
         configuration of this brick has changed since the last call to
@@ -169,7 +163,7 @@ class Brick(object):
     -----
     Brick implementations *must* call the :meth:`__init__` constructor of
     their parent using `super(BlockImplementation,
-    self).__init__(**kwargs)` at the beginning of the overriding
+    self).__init__(**kwargs)` at the *beginning* of the overriding
     `__init__`.
 
     The methods :meth:`_allocate` and :meth:`_initialize` need to be
@@ -196,7 +190,7 @@ class Brick(object):
     ... linear.output_dim = 3
     ... linear.initialize()
 
-    In simple cases, eager Bricks are easier to deal with.
+    In simple cases, eager bricks are easier to deal with.
 
     >>> from blocks.initialization import IsotropicGaussian, Constant
     ... Brick.lazy = False
@@ -237,32 +231,32 @@ class Brick(object):
 
     @property
     def params(self):
-        """Return the parameters of this brick."""
+        """The parameters of this brick.
+
+        Notes
+        -----
+        Setting the parameters will set :attr:`allocated` to ``True``,
+        which allows you to set the parameters manually as well e.g.
+
+        >>> brick = Brick()
+        >>> brick.params = Parameters(brick)
+        >>> brick.allocated
+        True
+
+        However, keep in mind that this could prevent child bricks from
+        being correctly allocated.
+
+        .. warning::
+
+           If a normal list is passed instead of a :class:`Parameters`
+           instance , the parameters won't automatically be tagged as
+           belonging to this brick.
+
+        """
         return self._params
 
     @params.setter
     def params(self, params):
-        """Set the parameters of this brick.
-
-        Parameters
-        ----------
-        params : object
-            A :class:`Parameters` instance containing this class's
-            parameters.
-
-        .. warning::
-
-           If a normal list is passed, the parameters won't
-           automatically be tagged as belonging to this Brick.
-
-        Notes
-        -----
-        Sets :attr:`allocated` to ``True``, which allows you to set the
-        parameters manually as well e.g. ``brick.params = Parameters(brick,
-        [...])``. However, keep in mind that this could prevent child
-        bricks from being correctly allocated.
-
-        """
         self._params = params
         self.allocated = True
 
@@ -700,6 +694,20 @@ class SquaredError(CostMatrix):
 
 
 class MLP(DefaultRNG):
+    """A simple multi-layer perceptron
+
+    Parameters
+    ----------
+    activations : bricks or ``None``
+        A list of activations to apply after each linear transformation.
+        Give ``None`` to not apply any activation. Required for
+        :meth:`__init__`.
+    dims : list of ints
+        A list of input dimensions, as well as the output dimension of the
+        last layer. Required for :meth:`initialize`.
+    weights_init : :class:`NdarrayInitialization`
+
+    """
     initialization_config = ['dims', 'weights_init', 'use_bias', 'biases_init']
 
     @Brick.lazy
