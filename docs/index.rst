@@ -6,10 +6,12 @@
 Welcome to Blocks's documentation!
 ==================================
 
-Contents:
-
 .. toctree::
    :maxdepth: 2
+
+   blocks
+   initialization
+   utils
 
 .. automodule:: blocks
 
