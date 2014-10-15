@@ -220,28 +220,22 @@ class Brick(object):
                 self.initialize()
             inputs = list(inputs)
             for i, inp in enumerate(inputs):
-                try:
+                if isinstance(inp, tensor.Variable):
                     inputs[i] = inp.copy()
                     inputs[i].tag.owner = self
                     inputs[i].name = self.name + INPUT_SUFFIX
-                except AttributeError:
-                    inputs[i] = inp
             for key, value in kwargs.items():
-                try:
+                if isinstance(value, tensor.Variable):
                     kwargs[key] = value.copy()
                     kwargs[key].tag.owner = self
                     kwargs[key].name = self.name + INPUT_SUFFIX
-                except AttributeError:
-                    kwargs[key] = value
             outputs = pack(func(self, *inputs, **kwargs))
             for i, output in enumerate(outputs):
-                try:
+                if isinstance(output, tensor.Variable):
                     # TODO Tag with dimensions, axes, etc. for error-checking
                     outputs[i] = output.copy()
                     outputs[i].tag.owner = self
                     outputs[i].name = self.name + OUTPUT_SUFFIX
-                except AttributeError:
-                    outputs[i] = output
             return unpack(outputs)
         return wrapped_apply
 
