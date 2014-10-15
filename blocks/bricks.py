@@ -540,11 +540,10 @@ class Linear(DefaultRNG):
     def _initialize(self):
         if self.use_bias:
             W, b = self.params
-            self.biases_init.initialize(b, self.rng, (self.output_dim,))
+            self.biases_init.initialize(b, self.rng)
         else:
             W, = self.params
-        self.weights_init.initialize(W, self.rng,
-                                     (self.input_dim, self.output_dim))
+        self.weights_init.initialize(W, self.rng)
 
     @Brick.apply_method
     def apply(self, inp):
