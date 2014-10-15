@@ -22,69 +22,45 @@ logging.basicConfig()
 logger = logging.getLogger(__name__)
 
 
-class Parameters(list):
-    """Automatically tag parameters with the bricks that they belong to.
-
-    If parameters are shared by bricks, both of them will show up in the
-    owners list.
-
-    Parameters
-    ----------
-    owner : Brick
-        The :class:`Brick` that owns this set of parameters.
-    params : list of Theano variables, optional
-        A initial set of parameters.
-
-    .. todo ::
-
-       We could consider quietly tagging the shared variables here,
-       whenever a normal variable is passed.
-    """
-    def __init__(self, owner, params=None):
-        self.owner = owner
-        if params is None:
-            params = []
-        for param in params:
-            getattr(param.tag, PARAM_OWNER_TAG, []).append(self.owner)
-        super(Parameters, self).__init__(params)
-
-    def __setitem__(self, key, param):
-        getattr(param.tag, PARAM_OWNER_TAG, []).append(self.owner)
-        super(Parameters, self).__setitem__(key, param)
-
-    def append(self, param):
-        getattr(param.tag, PARAM_OWNER_TAG, []).append(self.owner)
-        super(Parameters, self).append(param)
-
-    def extend(self, params):
-        for param in params:
-            getattr(param.tag, PARAM_OWNER_TAG, []).append(self.owner)
-        super(Parameters, self).extend(params)
-
-    def insert(self, index, param):
-        getattr(param.tag, PARAM_OWNER_TAG, []).append(self.owner)
-        super(Parameters, self).insert(index, param)
-
-
 class Brick(object):
     """A brick encapsulates Theano operations with parameters.
 
     A brick goes through the following stages:
 
     1. Construction: The call to :meth:`__init__` constructs a
-       :class:`Brick instance with a name and creates any child bricks as
+       :class:`Brick` instance with a name and creates any child bricks as
        well.
-    2. Allocation: This allocates the shared Theano variables required for
-       the parameters. In order to do so, some configuration might be
-       required in order to determine the dimensionality of the shared
-       variables.
+    2. Allocation of parameters:
+
+       a) Allocation configuration of children: The
+          :meth:`push_allocation_config` method configures any children of
+          this block.
+       b) Allocation: The :meth:`allocate` method allocates the shared
+          Theano variables required for the parameters. Also allocates
+          parameters for all children.
+
     3. The following can be done in either order:
 
        a) Application: By applying the brick to a set of Theano
           variables a part of the computational graph of the final model is
           constructed.
-       b) Initialization: This sets the initial values of the parameters,
-          which is needed to call the final compiled Theano function.
+       b) The initialization of parameters:
+
+          i.  Initialization configuration of children: The
+              :meth:`push_initialization_config` method configures any
+              children of this block.
+          ii. Initialization: This sets the initial values of the
+              parameters by a call to :meth:`initialize`, which is needed
+              to call the final compiled Theano function.  Also initializes
+              all children.
+
+    Not all stages need to be called explicitly. Step 3(a) will
+    automatically allocate the parameters if needed. Similarly, step
+    3(b.ii) and 2(b) will automatically perform steps 3(b.i) and 2(a) if
+    needed. They only need to be called separately if greater control is
+    required. The only two methods which always need to be called are an
+    application method to construct the computational graph, and the
+    :meth:`initialize` method in order to initialize the parameters.
 
     At each different stage, a brick might need a certain set of
     configuration settings. All of these settings can be passed to the
@@ -100,9 +76,6 @@ class Brick(object):
        order to call :meth:`initialize`. Always read the documentation of
        each brick carefully.
 
-    Trying to initialize or apply a brick will automatically result in
-    :meth:`allocate` being called if it wasn't called before.
-
     Lazy initialization can be turned off by setting ``Brick.lazy =
     False``. In this case, there is no need to call :meth:`initialize`
     manually anymore, but all the configuration must be passed to the
@@ -117,50 +90,40 @@ class Brick(object):
 
     Attributes
     ----------
+    name : str
+        The name of this brick.
     lazy : bool
         ``True`` by default. When bricks are lazy, not all configuration
         needs to be provided to the constructor, allowing it to be set in
         another way after construction. Many parts of the library rely on
         this behaviour. However, it does require a separate call to
-        :meth:`initialize`. If set to ``True`` on the other hand, bricks
+        :meth:`initialize`. If set to ``False`` on the other hand, bricks
         will be ready to run after construction.
     params : list of Theano shared variables
         After calling the :meth:`allocate` method this attribute will be
         populated with the shared variables storing this brick's
-        parameters. Any variable added to this list will automatically be
-        tagged with this brick as an owner.
+        parameters.
+    children : list of bricks
+        The children of this brick.
     allocated : bool
-        ``False`` if :meth:`allocate` has not been called yet, or if the
-        configuration of this brick has changed since the last call to
-        :meth:`allocate`. ``True`` otherwise.
+        ``False`` if :meth:`allocate` has not been called yet. ``True``
+        otherwise.
     initialized : bool
-        ``False`` if :meth:`allocate` has not been called yet, or if the
-        configuration of this brick has changed since the last call to
-        :meth:`allocate`. ``True`` otherwise.
+        ``False`` if :meth:`allocate` has not been called yet. ``True``
+        otherwise.
     allocation_config_pushed : bool
         ``False`` if :meth:`allocate` or :meth:`push_allocation_config`
-        haven't been called yet, or if the configuration of this brick has
-        changed since the last call. ``True`` otherwise.
+        hasn't been called yet. ``True`` otherwise.
     initialization_config_pushed : bool
-        ``False`` if :meth:`initialize` or :meth:`push_initialization_config`
-        haven't been called yet, or if the configuration of this brick has
-        changed since the last call. ``True`` otherwise.
-    allocation_config : list of strings
-        These are the attributes that define the configuration required to
-        call :meth:`allocate`. Changing them will cause :attr:`allocated`
-        to be set to ``False`` again and :meth:`allocate` to be called next
-        time :meth:`initialize` or an application method is called, causing
-        the parameters to be reset. Note that the parameters of child
-        bricks might also be re-allocated.
-    initialization_config : list of strings
-        These are the attributes that define the configuration required to
-        call :meth:`initialize`. Changing them will cause
-        :attr:`initialization` to be set to ``False`` again and will cause
-        :meth:`initialize` to be called next time this brick is applied, if
-        the brick is not lazy.
+        ``False`` if :meth:`initialize` or
+        :meth:`push_initialization_config` hasn't been called yet. ``True``
+        otherwise.
 
     Notes
     -----
+    To provide support for lazy initialization, apply the :meth:`lazy`
+    decorator to the :meth:`__init__` method.
+
     Brick implementations *must* call the :meth:`__init__` constructor of
     their parent using `super(BlockImplementation,
     self).__init__(**kwargs)` at the *beginning* of the overriding
@@ -174,8 +137,10 @@ class Brick(object):
     variables. These methods should be decorated with the
     :meth:`apply_method` decorator.
 
-    To provide support for lazy initialization, apply the :meth:`lazy`
-    decorator to the :meth:`__init__` method.
+    If a brick has children, they must be listed in the :attr:`children`
+    attribute. Moreover, if the brick wants to control the configuration of
+    its children, the :meth:`_push_allocation_config` and
+    :meth:`_push_initialization_config` methods need to be overridden.
 
     Examples
     --------
@@ -201,8 +166,6 @@ class Brick(object):
     """
     __metaclass__ = ABCMeta
     lazy = True
-    allocation_config = ['name']
-    initialization_config = []
 
     def __init__(self, name=None):
         if name is None:
@@ -215,50 +178,6 @@ class Brick(object):
         self.allocation_config_pushed = False
         self.initialized = False
         self.initialization_config_pushed = False
-
-    def __setattr__(self, name, value):
-        # If config changes, initialize/allocate must be called again
-        if hasattr(self, name) and getattr(self, name) != value:
-            if name in self.allocation_config:
-                # TODO Add warning about resetting of parameters?
-                self.allocated = False
-                self.allocation_config_pushed = False
-            if name in self.initialization_config:
-                # TODO Add warning about need for re-initialization?
-                self.initialized = False
-                self.initialization_config_pushed = False
-        super(Brick, self).__setattr__(name, value)
-
-    @property
-    def params(self):
-        """The parameters of this brick.
-
-        Notes
-        -----
-        Setting the parameters will set :attr:`allocated` to ``True``,
-        which allows you to set the parameters manually as well e.g.
-
-        >>> brick = Brick()
-        >>> brick.params = Parameters(brick)
-        >>> brick.allocated
-        True
-
-        However, keep in mind that this could prevent child bricks from
-        being correctly allocated.
-
-        .. warning::
-
-           If a normal list is passed instead of a :class:`Parameters`
-           instance , the parameters won't automatically be tagged as
-           belonging to this brick.
-
-        """
-        return self._params
-
-    @params.setter
-    def params(self, params):
-        self._params = params
-        self.allocated = True
 
     @staticmethod
     def apply_method(func):
@@ -347,7 +266,7 @@ class Brick(object):
         def init(self, *args, **kwargs):
             if not self.lazy:
                 return func(self, *args, **kwargs)
-            # Fill any missing positional arguments with UNDEF
+            # Fill any missing positional arguments with None
             args = args + (None,) * (len(arg_names) - len(defaults) -
                                      len(args))
 
@@ -382,15 +301,9 @@ class Brick(object):
 
         Notes
         -----
-        This method sets the :attr:`params` attribute to an empty
-        :class:`Parameters` instance. This is in order to ensure that calls
-        to this method completely reset the parameters.
-
-        .. warning ::
-
-           Always ``append`` to this list (or ``extend``, ``insert``,
-           ``set``), but never use ``self.params = [...]``. This will
-           disable the automatic tagging of parameters.
+        This method sets the :attr:`params` attribute to an empty list.
+        This is in order to ensure that calls to this method completely
+        reset the parameters.
 
         """
         if not self.allocation_config_pushed:
@@ -401,8 +314,17 @@ class Brick(object):
             except:
                 self.allocation_config_pushed = False
                 raise
-        self.params = Parameters(self)  # This sets self.allocated to True
-        self._allocate()
+        self.params = []
+        try:
+            self._allocate()
+        except Exception:
+            if self.lazy:
+                reraise_as("Lazy initialization is enabled, so please make "
+                           "sure you have set all the required configuration "
+                           "for this method call.")
+            else:
+                raise
+        self.allocated = True
 
     def _allocate(self):
         """Brick implementation of parameter initialization.
@@ -462,6 +384,14 @@ class Brick(object):
         pass
 
     def push_allocation_config(self):
+        """Push the configuration for allocation to child bricks.
+
+        Bricks can configure their children, based on their own current
+        configuration. This will be automatically done by a call to
+        :meth:`allocate`, but if you want to override the configuration of
+        child bricks manually, then you can call this function manually.
+
+        """
         self._push_allocation_config()
         self.allocation_config_pushed = True
 
@@ -480,6 +410,14 @@ class Brick(object):
         pass
 
     def push_initialization_config(self):
+        """Push the configuration for initialization to child bricks.
+
+        Bricks can configure their children, based on their own current
+        configuration. This will be automatically done by a call to
+        :meth:`initialize`, but if you want to override the configuration
+        of child bricks manually, then you can call this function manually.
+
+        """
         self._push_initialization_config()
         self.initialization_config_pushed = True
 
@@ -505,6 +443,8 @@ class DefaultRNG(Brick):
     ----------
     rng : object
         A ``numpy.RandomState`` instance.
+    **kwargs
+        Keyword arguments to pass on to the :meth:`Brick` base class.
 
     Attributes
     ----------
@@ -545,9 +485,9 @@ class Linear(DefaultRNG):
     Parameters
     ----------
     input_dim : int
-        The dimension of the input. Required by :meth:`initialize`.
+        The dimension of the input. Required by :meth:`allocate`.
     output_dim : int
-        The dimension of the output. Required by :meth:`initialize`.
+        The dimension of the output. Required by :meth:`allocate`.
     weights_init : object
         A `NdarrayInitialization` instance which will be used by to
         initialize the weight matrix. Required by :meth:`initialize`.
@@ -556,7 +496,8 @@ class Linear(DefaultRNG):
         the biases. Required by :meth:`initialize` when `use_bias` is
         `True`.
     use_bias : bool, optional
-        Whether to use a bias. Defaults to `True`.
+        Whether to use a bias. Defaults to `True`. Required by
+        :meth:`initialize`.
 
     Notes
     -----
@@ -575,9 +516,10 @@ class Linear(DefaultRNG):
         super(Linear, self).__init__(**kwargs)
 
     def _allocate(self):
-        self.params.append(sharedX(np.empty((0, 0))))
+        self.params.append(sharedX(np.zeros((self.input_dim,
+                                             self.output_dim))))
         if self.use_bias:
-            self.params.append(sharedX(np.empty((0,))))
+            self.params.append(sharedX(np.zeros((self.output_dim,))))
 
     def _initialize(self):
         if self.use_bias:
@@ -705,7 +647,7 @@ class MLP(DefaultRNG):
         :meth:`__init__`.
     dims : list of ints
         A list of input dimensions, as well as the output dimension of the
-        last layer. Required for :meth:`initialize`.
+        last layer. Required for :meth:`allocate`.
     weights_init : :class:`utils.NdarrayInitialization`
         The initialization scheme to initialize all the weights with.
     biases_init : :class:`utils.NdarrayInitialization`
@@ -728,7 +670,6 @@ class MLP(DefaultRNG):
     >>> mlp.initialize()
 
     """
-    initialization_config = ['dims', 'weights_init', 'use_bias', 'biases_init']
 
     @Brick.lazy_method
     def __init__(self, activations, dims, weights_init, biases_init=None,
@@ -742,12 +683,15 @@ class MLP(DefaultRNG):
         self.__dict__.update(locals())
         del self.self
 
-    def _push_initialization_config(self):
+    def _push_allocation_config(self):
         assert len(self.dims) - 1 == len(self.linear_transformations)
         for input_dim, output_dim, layer in zip(self.dims[:-1], self.dims[1:],
                                                 self.linear_transformations):
             layer.input_dim = input_dim
             layer.output_dim = output_dim
+
+    def _push_initialization_config(self):
+        for layer in self.linear_transformations:
             for attr in ['weights_init', 'use_bias', 'biases_init']:
                 setattr(layer, attr, getattr(self, attr))
 
