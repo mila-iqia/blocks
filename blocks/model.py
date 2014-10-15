@@ -4,8 +4,6 @@ import theano
 from theano import tensor
 from theano.sandbox.rng_mrg import MRG_RandomStreams
 
-import blocks
-
 
 # NOT WORKING RIGHT NOW
 

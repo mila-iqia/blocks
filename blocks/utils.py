@@ -1,5 +1,6 @@
 import sys
-import numpy as np
+
+import numpy
 import theano
 
 
@@ -54,7 +55,7 @@ def unpack(arg):
 
 
 def shared_floatx_zeros(shape, **kwargs):
-    return shared_floatx(np.zeros(shape), **kwargs)
+    return shared_floatx(numpy.zeros(shape), **kwargs)
 
 
 def shared_floatx(value, name=None, borrow=False, dtype=None):
