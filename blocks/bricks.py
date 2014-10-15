@@ -10,7 +10,7 @@ import logging
 import numpy as np
 from theano import tensor
 
-from utils import pack, reraise_as, sharedZerosX, unpack
+from utils import pack, reraise_as, shared_floatx_zeros, unpack
 
 BRICK_PREFIX = 'brick_'
 INPUT_SUFFIX = '_input'
@@ -532,9 +532,10 @@ class Linear(DefaultRNG):
         super(Linear, self).__init__(**kwargs)
 
     def _allocate(self):
-        self.params.append(sharedZerosX((self.input_dim, self.output_dim)))
+        self.params.append(shared_floatx_zeros((self.input_dim,
+                                                self.output_dim)))
         if self.use_bias:
-            self.params.append(sharedZerosX((self.output_dim,)))
+            self.params.append(shared_floatx_zeros((self.output_dim,)))
 
     def _initialize(self):
         if self.use_bias:
