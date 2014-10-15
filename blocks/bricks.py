@@ -46,10 +46,10 @@ class Brick(object):
           constructed.
        b) The initialization of parameters:
 
-          i.  Initialization configuration of children: The
+          I.  Initialization configuration of children: The
               :meth:`push_initialization_config` method configures any
               children of this block.
-          ii. Initialization: This sets the initial values of the
+          II. Initialization: This sets the initial values of the
               parameters by a call to :meth:`initialize`, which is needed
               to call the final compiled Theano function.  Also initializes
               all children.
