@@ -43,7 +43,7 @@ class NdarrayInitialization(object):
 
         """
         if not shape:
-            shape = var.get_value().shape
+            shape = var.get_value(borrow=True, return_internal_type=True).shape
         var.set_value(self.generate(rng, shape))
 
 
