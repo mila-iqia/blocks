@@ -1,13 +1,16 @@
 from blocks.bricks import Brick
+
+from numpy.testing import assert_raises
 from theano import tensor
 
-class Identity(Brick):
 
+class Identity(Brick):
     @Brick.apply_method
     def apply(self, a, b=1, **kwargs):
         if isinstance(a, list):
             a = a[0]
         return [a, b] + kwargs.values()
+
 
 def test_apply_method():
     brick = Identity()
@@ -16,8 +19,8 @@ def test_apply_method():
     z = tensor.vector('z')
 
     def check_output_variable(o):
-        assert o.tag.owner == brick
-        assert o.owner.inputs[0].tag.owner == brick
+        assert o.tag.owner is brick
+        assert o.owner.inputs[0].tag.owner is brick
 
     # Case 1: both positional arguments are provided.
     u, v = brick.apply(x, y)
@@ -40,11 +43,5 @@ def test_apply_method():
     assert v == 1
 
     # Case 5: variable was wrapped in a list. We can not handle that.
-    try:
-        u, v = brick.apply([x])
-        check_output_variable(u)
-    except AttributeError:
-        pass
-    else:
-        assert False
-
+    u, v = brick.apply([x])
+    assert_raises(AttributeError, check_output_variable, u)
