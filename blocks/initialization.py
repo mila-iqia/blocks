@@ -27,7 +27,6 @@ class NdarrayInitialization(object):
             this object, of shape `shape`, with dtype
             `theano.config.floatX`.
         """
-        pass
 
     def initialize(self, var, rng, shape):
         """Initialize a shared variable with generated parameters.

@@ -1,5 +1,5 @@
 import numpy as np
-from numpy.testing import assert_, assert_equal, assert_allclose
+from numpy.testing import assert_, assert_equal, assert_allclose, assert_raises
 import theano
 
 from blocks.initialization import Constant, IsotropicGaussian, Uniform
@@ -53,3 +53,5 @@ def test_uniform():
     yield check_uniform, rng, 0, 0.05, None, (500, 600)
     yield check_uniform, rng, 0, None, 0.001, (600, 500)
     yield check_uniform, rng, 5, None, 0.004, (700, 300)
+
+    assert_raises(ValueError, Uniform, 0, 1, 1)
