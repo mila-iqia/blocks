@@ -224,7 +224,6 @@ class Brick(object):
                     inputs[i] = inp.copy()
                     inputs[i].tag.owner = self
                     inputs[i].name = self.name + INPUT_SUFFIX
-            kwargs = dict(kwargs)
             for key, value in kwargs.items():
                 if isinstance(value, tensor.Variable):
                     kwargs[key] = value.copy()
