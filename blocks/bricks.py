@@ -165,7 +165,7 @@ class Brick(object):
 
     """
     __metaclass__ = ABCMeta
-    #: By default classes have lazy initialization enabled.
+    #: See :attr:`lazy`
     lazy = True
 
     def __init__(self, name=None):
