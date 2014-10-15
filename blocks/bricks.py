@@ -46,17 +46,17 @@ class Brick(object):
           constructed.
        b) The initialization of parameters:
 
-          I.  Initialization configuration of children: The
-              :meth:`push_initialization_config` method configures any
-              children of this block.
-          II. Initialization: This sets the initial values of the
-              parameters by a call to :meth:`initialize`, which is needed
-              to call the final compiled Theano function.  Also initializes
-              all children.
+          1. Initialization configuration of children: The
+             :meth:`push_initialization_config` method configures any
+             children of this block.
+          2. Initialization: This sets the initial values of the
+             parameters by a call to :meth:`initialize`, which is needed
+             to call the final compiled Theano function.  Also initializes
+             all children.
 
     Not all stages need to be called explicitly. Step 3(a) will
     automatically allocate the parameters if needed. Similarly, step
-    3(b.ii) and 2(b) will automatically perform steps 3(b.i) and 2(a) if
+    3(b.2) and 2(b) will automatically perform steps 3(b.1) and 2(a) if
     needed. They only need to be called separately if greater control is
     required. The only two methods which always need to be called are an
     application method to construct the computational graph, and the
@@ -165,6 +165,7 @@ class Brick(object):
 
     """
     __metaclass__ = ABCMeta
+    #: By default classes have lazy initialization enabled.
     lazy = True
 
     def __init__(self, name=None):
