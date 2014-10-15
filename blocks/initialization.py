@@ -28,7 +28,7 @@ class NdarrayInitialization(object):
             `theano.config.floatX`.
         """
 
-    def initialize(self, var, rng, shape):
+    def initialize(self, var, rng, shape=None):
         """Initialize a shared variable with generated parameters.
 
         Parameters
@@ -42,6 +42,8 @@ class NdarrayInitialization(object):
             A shape tuple for the requested parameter array shape.
 
         """
+        if not shape:
+            shape = var.get_value().shape
         var.set_value(self.generate(rng, shape))
 
 
