@@ -1,5 +1,5 @@
 import sys
-
+import numpy
 import theano
 
 
@@ -52,6 +52,8 @@ def unpack(arg):
     else:
         return arg
 
+def sharedZerosX(shape, name=None, borrow=False, dtype=None):
+    return sharedX(numpy.zeros(shape), name, borrow, dtype)
 
 def sharedX(value, name=None, borrow=False, dtype=None):
     """Transform a value into a shared variable of type floatX.
