@@ -82,6 +82,7 @@ def sharedX(value, name=None, borrow=False, dtype=None):
                          name=name,
                          borrow=borrow)
 
+
 def reraise_as(new_exc):
     """
     Parameters

@@ -9,11 +9,12 @@ before_install:
   - export PATH=/home/travis/miniconda/bin:$PATH
   - conda update --yes conda
 install:
-  - conda install --yes --quiet python=$TRAVIS_PYTHON_VERSION atlas numpy nose pip coverage
+  - conda install --yes --quiet python=$TRAVIS_PYTHON_VERSION atlas numpy nose pip coverage pep8
   - pip install -q --no-deps git+git://github.com/Theano/Theano.git
   - pip install -q coveralls
 # command to run tests
 script:
+  - pep8 blocks
   - nosetests --with-coverage --cover-package=blocks --with-doctest --doctest-options=+IGNORE_EXCEPTION_DETAIL
 after_script:
   - coveralls
