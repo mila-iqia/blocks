@@ -10,7 +10,7 @@ import logging
 import numpy as np
 from theano import tensor
 
-from blocks.utils import pack, reraise_as, sharedX, unpack
+from utils import pack, reraise_as, sharedX, unpack
 
 BRICK_PREFIX = 'brick_'
 INPUT_SUFFIX = '_input'
@@ -186,7 +186,15 @@ class Brick(object):
 
         This decorator will provide some necessary pre- and post-processing
         of the Theano variables, such as tagging them with the brick that
-        created them and naming them.
+        created them and naming them. These changes will apply to
+        Theano variables given as positional arguments and keywords arguments.
+
+        .. warning::
+
+            Properly set tags are important for correct functioning of the
+            framework. Do not provide inputs to your apply method in a way
+            different than passing them as positional or keyword arguments,
+            e.g. as list or tuple elements.
 
         Application methods will allocate the brick parameters with a call
         :meth:`allocate` if they have not been allocated already.
@@ -212,15 +220,23 @@ class Brick(object):
                 self.initialize()
             inputs = list(inputs)
             for i, inp in enumerate(inputs):
-                inputs[i] = inp.copy()
-                inputs[i].tag.owner = self
-                inputs[i].name = self.name + INPUT_SUFFIX
+                if isinstance(inp, tensor.Variable):
+                    inputs[i] = inp.copy()
+                    inputs[i].tag.owner = self
+                    inputs[i].name = self.name + INPUT_SUFFIX
+            kwargs = dict(kwargs)
+            for key, value in kwargs.items():
+                if isinstance(value, tensor.Variable):
+                    kwargs[key] = value.copy()
+                    kwargs[key].tag.owner = self
+                    kwargs[key].name = self.name + INPUT_SUFFIX
             outputs = pack(func(self, *inputs, **kwargs))
             for i, output in enumerate(outputs):
-                # TODO Tag with dimensions, axes, etc. for error-checking
-                outputs[i] = output.copy()
-                outputs[i].tag.owner = self
-                outputs[i].name = self.name + OUTPUT_SUFFIX
+                if isinstance(output, tensor.Variable):
+                    # TODO Tag with dimensions, axes, etc. for error-checking
+                    outputs[i] = output.copy()
+                    outputs[i].tag.owner = self
+                    outputs[i].name = self.name + OUTPUT_SUFFIX
             return unpack(outputs)
         return wrapped_apply
 
