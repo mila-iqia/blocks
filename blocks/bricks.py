@@ -8,9 +8,11 @@ import inspect
 import logging
 
 import numpy as np
+import theano
 from theano import tensor
 
-from utils import pack, reraise_as, shared_floatx_zeros, unpack
+from blocks.utils import pack, reraise_as, shared_floatx_zeros, unpack
+from blocks.initialization import Constant
 
 BRICK_PREFIX = 'brick_'
 INPUT_SUFFIX = '_input'
@@ -278,6 +280,8 @@ class Brick(object):
         arg_spec = inspect.getargspec(func)
         arg_names = arg_spec.args[1:]
         defaults = arg_spec.defaults
+        if defaults is None:
+            defaults = []
 
         def init(self, *args, **kwargs):
             if not self.lazy:
@@ -469,12 +473,6 @@ class DefaultRNG(Brick):
         default seed which can be set at a module level using
         ``blocks.bricks.DEFAULT_SEED = seed``.
 
-    Notes
-    -----
-    Put this class first in the list of base classes to make sure that
-    it gets called instead of the :class:`Brick` class's :meth:`__init__`
-    method.
-
     """
     def __init__(self, rng=None, **kwargs):
         self.rng = rng
@@ -614,43 +612,6 @@ Sigmoid = _activation_factory('Sigmoid', tensor.nnet.sigmoid)
 Softmax = _activation_factory('Softmax', tensor.nnet.softmax)
 
 
-class Cost(Brick):
-    pass
-
-
-class CostMatrix(Cost):
-    """Base class for costs which can be calculated element-wise.
-
-    Assumes that the data has format (batch, features).
-    """
-    __metaclass__ = ABCMeta
-
-    @Brick.apply_method
-    def apply(self, y, y_hat):
-        self.cost_matrix._raw(y, y_hat).sum(axis=1).mean()
-
-
-class BinaryCrossEntropy(CostMatrix):
-    @Brick.apply_method
-    def cost_matrix(self, y, y_hat):
-        cost = tensor.nnet.binary_crossentropy(y_hat, y)
-        return cost
-
-
-class AbsoluteError(CostMatrix):
-    @Brick.apply_method
-    def cost_matrix(self, y, y_hat):
-        cost = tensor.abs(y - y_hat)
-        return cost
-
-
-class SquaredError(CostMatrix):
-    @Brick.apply_method
-    def apply(self, y, y_hat):
-        cost = tensor.sqr(y - y_hat)
-        return cost
-
-
 class MLP(DefaultRNG):
     """A simple multi-layer perceptron
 
@@ -720,3 +681,75 @@ class MLP(DefaultRNG):
             else:
                 output = activation.apply(linear.apply(output))
         return output
+
+
+class Wrap3D(Brick):
+    """Convert 3D arrays to 2D and back in order to apply 2D bricks.
+
+    .. todo::
+
+       Check how this works with NaN
+
+    """
+    @Brick.lazy_method
+    def __init__(self, child, **kwargs):
+        super(Wrap3D, self).__init__(**kwargs)
+        self.children = [child]
+
+    @Brick.apply_method
+    def apply(self, inp):
+        child, = self.children
+        flat_shape = ([inp.shape[0] * inp.shape[1]] +
+                      [inp.shape[i] for i in range(2, inp.ndim)])
+        output = child.apply(inp.reshape(flat_shape))
+        full_shape = ([inp.shape[0], inp.shape[1]] +
+                      [output.shape[i] for i in range(1, output.ndim)])
+        return output.reshape(full_shape)
+
+
+class Recurrent(DefaultRNG):
+    """Simple recurrent layer with optional activation.
+
+    .. todo::
+
+       Implement deep transitions (by using other bricks)
+
+    """
+    @Brick.lazy_method
+    def __init__(self, dim, weights_init, activation=None, hidden_init=None,
+                 **kwargs):
+        super(Recurrent, self).__init__(**kwargs)
+        if hidden_init is None:
+            hidden_init = Constant(0)
+        self.__dict__.update(locals())
+        del self.self
+
+    def _allocate(self):
+        self.params.append(shared_floatx_zeros((self.dim, self.dim)))
+
+    def _initialize(self):
+        W, = self.params
+        self.weights_init.initialize(W, self.rng)
+
+    @Brick.apply_method
+    def apply(self, inp):
+        assert inp.ndim == 3
+        self.init_hidden = tensor.alloc(
+            self.hidden_init.generate(self.rng, (self.dim,)),
+            inp.shape[1], self.dim)
+        if self.dim == 1:
+            # Theano issue 1772
+            self.init_hidden = tensor.unbroadcast(self.init_hidden, 1)
+
+        def step(x, h, W):
+            z = x + tensor.dot(h, W)
+            if self.activation is not None:
+                z = self.activation.apply(z)
+            return z
+
+        W, = self.params
+        z, updates = theano.scan(fn=step, sequences=[inp],
+                                 outputs_info=[self.init_hidden],
+                                 non_sequences=[W])
+        assert not updates
+        return z
