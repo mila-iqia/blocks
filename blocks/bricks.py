@@ -705,6 +705,24 @@ class Wrap3D(Brick):
 class Recurrent(DefaultRNG):
     """Simple recurrent layer with optional activation.
 
+    Parameters
+    ----------
+    dim : int
+        The dimension of the hidden state
+    weights_init : object
+        The :class:`utils.NdarrayInitialization` object to initialize the
+        weight matrix with.
+    activation : Brick
+        The brick to apply as activation.
+    hidden_init : object, optional
+        The :class:`utils.NdarrayInitialization` object to initialize the
+        first hidden state with. Defaults to zeros.
+    shared_init_hidden : bool, optional
+        If ``True``, then the initial hidden state is stored in a shared
+        variable. This requires the hidden state to be set manually before
+        each call. It allows for hidden states to be carried over in
+        between calls.
+
     .. todo::
 
        Implement deep transitions (by using other bricks). Currently, this
@@ -718,7 +736,7 @@ class Recurrent(DefaultRNG):
     """
     @Brick.lazy_method
     def __init__(self, dim, weights_init, activation=None, hidden_init=None,
-                 **kwargs):
+                 shared_init_hidden=False, **kwargs):
         super(Recurrent, self).__init__(**kwargs)
         if hidden_init is None:
             hidden_init = Constant(0)
@@ -756,12 +774,16 @@ class Recurrent(DefaultRNG):
 
         """
         assert inp.ndim == 3
-        self.init_hidden = tensor.alloc(
-            self.hidden_init.generate(self.rng, (self.dim,)),
-            inp.shape[1], self.dim)
+        if self.shared_init_hidden:
+            self.init_hidden = shared_floatx_zeros((0, 0))
+            outputs_info = self.init_hidden
+        else:
+            outputs_info = tensor.alloc(
+                self.hidden_init.generate(self.rng, (self.dim,)),
+                inp.shape[1], self.dim)
         if self.dim == 1:
             # Theano issue 1772
-            self.init_hidden = tensor.unbroadcast(self.init_hidden, 1)
+            outputs_info = tensor.unbroadcast(outputs_info, 1)
 
         def step(x, mask, h, W):
             z = x + tensor.dot(h, W)
@@ -775,7 +797,7 @@ class Recurrent(DefaultRNG):
             inp = inp[::-1]
             mask = mask[::-1]
         z, updates = theano.scan(fn=step, sequences=[inp, mask],
-                                 outputs_info=[self.init_hidden],
+                                 outputs_info=[outputs_info],
                                  non_sequences=[W])
         assert not updates
         return z

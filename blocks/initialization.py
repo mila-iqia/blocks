@@ -130,12 +130,20 @@ class Identity(NdarrayInitialization):
     Only works for 2D arrays. If the number of columns is not equal to the
     number of rows, the array will be truncated or padded with zeros.
 
+    Params
+    ------
+    mult : float, optional
+        Multiply the identity matrix with a scalar. Defaults to 1.
+
     """
+    def __init__(self, mult=1):
+        self.mult = mult
+
     def generate(self, rng, shape):
         if len(shape) != 2:
             raise ValueError
         rows, cols = shape
-        return np.eye(rows, cols, dtype=theano.config.floatX)
+        return self.mult * np.eye(rows, cols, dtype=theano.config.floatX)
 
 
 class Orthogonal(NdarrayInitialization):
