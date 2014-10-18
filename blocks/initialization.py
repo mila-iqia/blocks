@@ -10,8 +10,7 @@ class NdarrayInitialization(object):
 
     @abstractmethod
     def generate(self, rng, shape):
-        """
-        Generate an initial set of parameters from a given distribution.
+        """Generate an initial set of parameters from a given distribution.
 
         Parameters
         ----------
@@ -48,8 +47,9 @@ class NdarrayInitialization(object):
 
 
 class Constant(NdarrayInitialization):
-    """
-    Initialize parameters to a constant. The constant may be a scalar or an
+    """Initialize parameters to a constant.
+
+    The constant may be a scalar or an
     array_like of any shape that is broadcastable with the requested
     parameter arrays.
 
@@ -70,8 +70,7 @@ class Constant(NdarrayInitialization):
 
 
 class IsotropicGaussian(NdarrayInitialization):
-    """
-    Initialize parameters from an isotropic Gaussian distribution.
+    """Initialize parameters from an isotropic Gaussian distribution.
 
     Parameters
     ----------
@@ -90,8 +89,7 @@ class IsotropicGaussian(NdarrayInitialization):
 
 
 class Uniform(NdarrayInitialization):
-    """
-    Initialize parameters from a uniform distribution.
+    """Initialize parameters from a uniform distribution.
 
     Parameters
     ----------
@@ -124,3 +122,32 @@ class Uniform(NdarrayInitialization):
         w = self._width / 2
         m = rng.uniform(self._mean - w, self._mean + w, size=shape)
         return m.astype(theano.config.floatX)
+
+
+class Identity(NdarrayInitialization):
+    """Initialize to the identity matrix.
+
+    Only works for 2D arrays. If the number of columns is not equal to the
+    number of rows, the array will be truncated or padded with zeros.
+
+    """
+    def generate(self, rng, shape):
+        if len(shape) != 2:
+            raise ValueError
+        rows, cols = shape
+        return np.eye(rows, cols, dtype=theano.config.floatX)
+
+
+class Orthogonal(NdarrayInitialization):
+    """Initialize a random orthogonal matrix.
+
+    Only works for 2D, square arrays.
+
+    """
+    def generate(self, rng, shape):
+        M = np.random.randn(*shape).astype(theano.config.floatX)
+        # QR decomposition of matrix with entries in N(0, 1) is random
+        Q, R = np.linalg.qr(M)
+        # Correct that NumPy doesn't force diagonal of R to be non-negative
+        Q = Q * np.sign(np.diag(R))
+        return Q

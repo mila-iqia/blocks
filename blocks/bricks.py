@@ -684,13 +684,7 @@ class MLP(DefaultRNG):
 
 
 class Wrap3D(Brick):
-    """Convert 3D arrays to 2D and back in order to apply 2D bricks.
-
-    .. todo::
-
-       Check how this works with NaN
-
-    """
+    """Convert 3D arrays to 2D and back in order to apply 2D bricks."""
     @Brick.lazy_method
     def __init__(self, child, apply_method='apply', **kwargs):
         super(Wrap3D, self).__init__(**kwargs)
@@ -713,8 +707,8 @@ class Recurrent(DefaultRNG):
 
     .. todo::
 
-       Implement deep transitions (by using other bricks). This probably
-       re-implements too much from the Linear brick.
+       Implement deep transitions (by using other bricks). Currently, this
+       probably re-implements too much from the Linear brick.
 
        Other important features:
 
@@ -758,6 +752,7 @@ class Recurrent(DefaultRNG):
            * We should stop assuming that batches are the second dimension,
              in order to support nested RNNs i.e. where the first n axes
              are time, n + 1 is the batch, and n + 2, ... are features.
+             Masks will become n + 1 dimensional as well then.
 
         """
         assert inp.ndim == 3
@@ -768,7 +763,7 @@ class Recurrent(DefaultRNG):
             # Theano issue 1772
             self.init_hidden = tensor.unbroadcast(self.init_hidden, 1)
 
-        def step(x, h, W):
+        def step(x, mask, h, W):
             z = x + tensor.dot(h, W)
             if self.activation is not None:
                 z = self.activation.apply(z)
@@ -779,8 +774,36 @@ class Recurrent(DefaultRNG):
         if reverse:
             inp = inp[::-1]
             mask = mask[::-1]
-        z, updates = theano.scan(fn=step, sequences=[inp],
+        z, updates = theano.scan(fn=step, sequences=[inp, mask],
                                  outputs_info=[self.init_hidden],
                                  non_sequences=[W])
         assert not updates
         return z
+
+
+class BidirectionalRecurrent(DefaultRNG):
+    @Brick.lazy_method
+    def __init__(self, dim, weights_init, activation=None, hidden_init=None,
+                 combine='concatenate', **kwargs):
+        super(BidirectionalRecurrent, self).__init__(**kwargs)
+        if hidden_init is None:
+            hidden_init = Constant(0)
+        self.__dict__.update(locals())
+        del self.self
+        self.children = [Recurrent(), Recurrent()]
+
+    def _push_allocation_config(self):
+        for child in self.children:
+            for attr in ['dim', 'activation', 'hidden_init']:
+                setattr(child, attr, getattr(self, attr))
+        self.children[1].reverse = True
+
+    def _push_initialization_config(self):
+        for child in self.children:
+            child.weights_init = self.weights_init
+
+    @Brick.apply_method
+    def apply(self, inp, mask):
+        forward, backward = [child.apply(inp, mask) for child in self.children]
+        output = tensor.concatenate([forward[-1], backward[-1]], axis=1)
+        return output
