@@ -712,7 +712,12 @@ class Recurrent(DefaultRNG):
 
     .. todo::
 
-       Implement deep transitions (by using other bricks)
+       Implement deep transitions (by using other bricks). This probably
+       re-implements too much from the Linear brick.
+
+       Other important features:
+
+       * Carrying over hidden state between batches
 
     """
     @Brick.lazy_method
@@ -732,7 +737,7 @@ class Recurrent(DefaultRNG):
         self.weights_init.initialize(W, self.rng)
 
     @Brick.apply_method
-    def apply(self, inp):
+    def apply(self, inp, reverse=False):
         assert inp.ndim == 3
         self.init_hidden = tensor.alloc(
             self.hidden_init.generate(self.rng, (self.dim,)),
@@ -748,8 +753,25 @@ class Recurrent(DefaultRNG):
             return z
 
         W, = self.params
+        if reverse:
+            inp = self.reverse(inp)
         z, updates = theano.scan(fn=step, sequences=[inp],
                                  outputs_info=[self.init_hidden],
                                  non_sequences=[W])
         assert not updates
         return z
+
+    @staticmethod
+    def reverse(inp):
+        """Reverses the time-dimension, leaving the NaNs."""
+        num_nan = tensor.isnan(inp).sum(ainpis=0)[:, 0]
+        seq_len = inp.shape[0]
+
+        def replace(inp, num_nan):
+            """Reverse the first n - ``num_nan`` elements in a vector"""
+            inp = tensor.set_subtensor(inp[:seq_len - num_nan],
+                                       inp[seq_len - num_nan - 1::-1])
+            return inp
+        inp, _ = theano.scan(fn=replace,
+                             sequences=[inp.dimshuffle(1, 0, 2), num_nan])
+        return inp.dimshuffle(1, 0, 2)
