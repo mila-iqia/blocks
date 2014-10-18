@@ -692,16 +692,17 @@ class Wrap3D(Brick):
 
     """
     @Brick.lazy_method
-    def __init__(self, child, **kwargs):
+    def __init__(self, child, apply_method='apply', **kwargs):
         super(Wrap3D, self).__init__(**kwargs)
         self.children = [child]
+        self.apply_method = apply_method
 
     @Brick.apply_method
     def apply(self, inp):
         child, = self.children
         flat_shape = ([inp.shape[0] * inp.shape[1]] +
                       [inp.shape[i] for i in range(2, inp.ndim)])
-        output = child.apply(inp.reshape(flat_shape))
+        output = getattr(child, self.apply_method)(inp.reshape(flat_shape))
         full_shape = ([inp.shape[0], inp.shape[1]] +
                       [output.shape[i] for i in range(1, output.ndim)])
         return output.reshape(full_shape)
@@ -718,6 +719,7 @@ class Recurrent(DefaultRNG):
        Other important features:
 
        * Carrying over hidden state between batches
+       * Return k last hidden states
 
     """
     @Brick.lazy_method
@@ -737,7 +739,27 @@ class Recurrent(DefaultRNG):
         self.weights_init.initialize(W, self.rng)
 
     @Brick.apply_method
-    def apply(self, inp, reverse=False):
+    def apply(self, inp, mask, reverse=False):
+        """Given data and mask, apply recurrent layer.
+
+        Parameters
+        ----------
+        inp : Theano variable
+            The input, assumed to be at least 3 dimensional, in the shape
+            (time, batch, features, ...)
+        mask : Theano variable
+            A 2D binary array in the shape (time, batch) which is 1 if
+            there is data available, 0 if not.
+
+        .. todo::
+
+           * Mask should become part of ``MaskedTensorVariable`` type so
+             that it can be passed around transparently.
+           * We should stop assuming that batches are the second dimension,
+             in order to support nested RNNs i.e. where the first n axes
+             are time, n + 1 is the batch, and n + 2, ... are features.
+
+        """
         assert inp.ndim == 3
         self.init_hidden = tensor.alloc(
             self.hidden_init.generate(self.rng, (self.dim,)),
@@ -750,28 +772,15 @@ class Recurrent(DefaultRNG):
             z = x + tensor.dot(h, W)
             if self.activation is not None:
                 z = self.activation.apply(z)
+            z = mask[:, None] * z + (1 - mask[:, None]) * h
             return z
 
         W, = self.params
         if reverse:
-            inp = self.reverse(inp)
+            inp = inp[::-1]
+            mask = mask[::-1]
         z, updates = theano.scan(fn=step, sequences=[inp],
                                  outputs_info=[self.init_hidden],
                                  non_sequences=[W])
         assert not updates
         return z
-
-    @staticmethod
-    def reverse(inp):
-        """Reverses the time-dimension, leaving the NaNs."""
-        num_nan = tensor.isnan(inp).sum(ainpis=0)[:, 0]
-        seq_len = inp.shape[0]
-
-        def replace(inp, num_nan):
-            """Reverse the first n - ``num_nan`` elements in a vector"""
-            inp = tensor.set_subtensor(inp[:seq_len - num_nan],
-                                       inp[seq_len - num_nan - 1::-1])
-            return inp
-        inp, _ = theano.scan(fn=replace,
-                             sequences=[inp.dimshuffle(1, 0, 2), num_nan])
-        return inp.dimshuffle(1, 0, 2)
