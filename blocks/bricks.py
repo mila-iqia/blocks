@@ -780,6 +780,11 @@ class BaseRecurrent(Brick):
                 reverse : bool
                     If True, the inputs are processed in backward direction.
                     It not given is False.
+
+                ..todo:
+
+                    Handle `updates` returned by the `theano.scan` routine.
+
                 """
 
                 # Extract arguments related to iteration.
