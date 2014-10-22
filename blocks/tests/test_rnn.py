@@ -7,6 +7,7 @@ from theano import tensor
 from blocks.bricks import Recurrent, Tanh
 from blocks.initialization import Constant
 
+
 class TestRecurrent(unittest.TestCase):
 
     def setUp(self):
