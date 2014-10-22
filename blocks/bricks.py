@@ -799,14 +799,14 @@ class BaseRecurrent(Brick):
                     kwargs[arg_name] = arg
                 # Separate kwargs that are not
                 # input, context or state variables.
-                rest_kwargs = {key : value for key, value in kwargs.items()
-                        if not key in scan_names}
+                rest_kwargs = {key: value for key, value in kwargs.items()
+                               if key not in scan_names}
 
                 # Check what is given and what is not.
                 def only_given(arg_names):
                     return OrderedDict((arg_name, kwargs[arg_name])
-                            for arg_name in arg_names
-                            if arg_name in kwargs)
+                                       for arg_name in arg_names
+                                       if arg_name in kwargs)
                 inputs_given = only_given(inputs)
                 contexts_given = only_given(contexts)
 
@@ -824,24 +824,25 @@ class BaseRecurrent(Brick):
 
                 def scan_function(*args):
                     args = list(args)
-                    arg_names = (inputs_given.keys()
-                            + states_given.keys()
-                            + contexts_given.keys())
+                    arg_names = (inputs_given.keys() +
+                                 states_given.keys() +
+                                 contexts_given.keys())
                     kwargs = dict(zip(arg_names, args))
                     kwargs.update(rest_kwargs)
                     return fun(self, **kwargs)
-                result, updates = theano.scan(scan_function,
-                        sequences=inputs_given.values(),
-                        outputs_info=states_given.values()
-                                + [None] * num_outputs,
-                        non_sequences=contexts_given.values(),
-                        go_backwards=reverse)
+                result, updates = theano.scan(
+                    scan_function,
+                    sequences=inputs_given.values(),
+                    outputs_info=states_given.values() + [None] * num_outputs,
+                    non_sequences=contexts_given.values(),
+                    go_backwards=reverse)
                 assert not updates
                 return result
 
             return Brick.apply_method(actual_apply)
 
         return decorator
+
 
 class Recurrent(BaseRecurrent, DefaultRNG):
     """Simple recurrent layer with optional activation.
@@ -892,9 +893,8 @@ class Recurrent(BaseRecurrent, DefaultRNG):
     def _initialize(self):
         self.weights_init.initialize(self.W, self.rng)
 
-    @BaseRecurrent.recurrent_apply_method(
-            inputs=['inp', 'mask'],
-            states=['state'])
+    @BaseRecurrent.recurrent_apply_method(inputs=['inp', 'mask'],
+                                          states=['state'])
     def apply(self, inp, state, mask=None):
         """Given data and mask, apply recurrent layer.
 
@@ -927,7 +927,8 @@ class Recurrent(BaseRecurrent, DefaultRNG):
         if self.activation is not None:
             next_state = self.activation.apply(next_state)
         if mask:
-            next_state = mask[:, None] * next_state + (1 - mask[:, None]) * state
+            next_state = (mask[:, None] * next_state +
+                          (1 - mask[:, None]) * state)
         return next_state
 
 
