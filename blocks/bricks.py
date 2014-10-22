@@ -856,14 +856,6 @@ class Recurrent(BaseRecurrent, DefaultRNG):
         weight matrix with.
     activation : Brick
         The brick to apply as activation.
-    hidden_init : object, optional
-        The :class:`utils.NdarrayInitialization` object to initialize the
-        first hidden state with. Defaults to zeros.
-    shared_init_hidden : bool, optional
-        If ``True``, then the initial hidden state is stored in a shared
-        variable. This requires the hidden state to be set manually before
-        each call. It allows for hidden states to be carried over in
-        between calls.
 
     .. todo::
 
@@ -877,8 +869,7 @@ class Recurrent(BaseRecurrent, DefaultRNG):
 
     """
     @Brick.lazy_method
-    def __init__(self, dim, weights_init, activation=None, hidden_init=None,
-                 shared_init_hidden=False, **kwargs):
+    def __init__(self, dim, weights_init, activation=None, **kwargs):
         super(Recurrent, self).__init__(**kwargs)
         self.__dict__.update(locals())
         del self.self
