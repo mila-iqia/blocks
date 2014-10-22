@@ -7,9 +7,6 @@ from theano import tensor
 from blocks.bricks import Recurrent, Tanh
 from blocks.initialization import Constant
 
-def sigmoid(x):
-    return 1 / (1 + numpy.exp(-x))
-
 class TestRecurrent(unittest.TestCase):
 
     def setUp(self):

@@ -759,7 +759,7 @@ class BaseRecurrent(Brick):
 
         # Take care of default initialization.
         for i in range(len(states)):
-            if isinstance(states[i], str):
+            if isinstance(states[i], basestring):
                 states[i] = (states[i], BaseRecurrent.zero_state)
 
         states, state_init_funcs = map(list, zip(*states))
