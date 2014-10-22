@@ -6,6 +6,7 @@ from abc import ABCMeta
 from functools import wraps
 import inspect
 import logging
+from collections import OrderedDict
 
 import numpy as np
 import theano
@@ -702,7 +703,142 @@ class Wrap3D(Brick):
         return output.reshape(full_shape)
 
 
-class Recurrent(DefaultRNG):
+class BaseRecurrent(Brick):
+    """Base class for recurrent bricks.
+
+    A recurrent network processes sequences by applying recursively
+    a transition operator. This class contains some useful routine
+    that fascilitate simple and boilerplate code free implementation
+    of recurrent bricks.
+    """
+
+    def zero_state(self, batch_size):
+        """Create an initial state consisting of zeros.
+
+        The default state initialization routine. The dtype of the
+        state is extracted from `self.params`. If there are parameters
+        with different dtypes, a smarter method should be used.
+        """
+        dtype = self.params[0].dtype
+        for i in self.params[1:]:
+            assert self.params[i].dtype == dtype
+        return tensor.zeros((batch_size, self.dim), dtype=dtype)
+
+    @staticmethod
+    def recurrent_apply_method(inputs, states, contexts=[], num_outputs=0):
+        """Wraps an apply method to allow its recurrent application.
+
+        This decorator allows you to use implementation
+        of an RNN transition to process sequences without writing
+        the iteration-related code again and again. In the most general
+        form information flow of a recurrent network
+        can be described as follows: depending on the context variables
+        and driven by input sequences the RNN updates its states and
+        produces output sequences. Thus the input variables of
+        your transition function play one of three roles: an input,
+        a context or a state. These roles should be specified it the
+        decorator call to make iteration possible.
+
+        Parameters
+        ----------
+        contexts : list of strs
+            Names of transition function arguments that
+            play context role.
+        inputs : list of strs
+            Names of transition function argument that
+            play input role.
+        states : list of str or (str, function) tuples.
+            Names of transition function arguments that
+            play state role. Additionaly a state initialization
+            function can be passed. The function should take
+            `self` and the batch sizes as arguments. By
+            default `BaseRecurrent.zero_state` is used.
+        num_outputs : int
+            Number of outputs of the transition function.
+        """
+
+        # Take care of default initialization.
+        for i in range(len(states)):
+            if isinstance(states[i], str):
+                states[i] = (states[i], BaseRecurrent.zero_state)
+
+        states, state_init_funcs = map(list, zip(*states))
+        scan_names = contexts + inputs + states
+
+        def decorator(fun):
+            arg_spec = inspect.getargspec(fun)
+            arg_names = arg_spec.args[1:]
+
+            def actual_apply(self, *args, **kwargs):
+                """Iterates a transition function.
+
+                Parameters
+                ----------
+                one_step : bool
+                    If True no iteration is done, transition function is simply
+                    applied to the arguments. If not given is False.
+                reverse : bool
+                    If True, the inputs are processed in backward direction.
+                    It not given is False.
+                """
+
+                # Extract arguments related to iteration.
+                one_step = kwargs.pop("one_step", False)
+                if one_step:
+                    return fun(self, *args, **kwargs)
+                reverse = kwargs.pop("reverse", False)
+                assert not reverse or not one_step
+
+                # Push everything to kwargs.
+                for arg, arg_name in zip(args, arg_names):
+                    kwargs[arg_name] = arg
+                # Separate kwargs that are not
+                # input, context or state variables.
+                rest_kwargs = {key : value for key, value in kwargs.items()
+                        if not key in scan_names}
+
+                # Check what is given and what is not.
+                def only_given(arg_names):
+                    return OrderedDict((arg_name, kwargs[arg_name])
+                            for arg_name in arg_names
+                            if arg_name in kwargs)
+                inputs_given = only_given(inputs)
+                contexts_given = only_given(contexts)
+
+                # At least one input, please.
+                assert len(inputs_given) > 0
+                some_input = inputs_given.values()[1]
+                batch_size = some_input.shape[1]
+
+                # Ensure that all initial states are available.
+                for state, init_func in zip(states, state_init_funcs):
+                    if not kwargs.get(state):
+                        kwargs[state] = init_func(self, batch_size)
+                states_given = only_given(states)
+                assert len(states_given) == len(states)
+
+                def scan_function(*args):
+                    args = list(args)
+                    arg_names = (inputs_given.keys()
+                            + states_given.keys()
+                            + contexts_given.keys())
+                    kwargs = dict(zip(arg_names, args))
+                    kwargs.update(rest_kwargs)
+                    return fun(self, **kwargs)
+                result, updates = theano.scan(scan_function,
+                        sequences=inputs_given.values(),
+                        outputs_info=states_given.values()
+                                + [None] * num_outputs,
+                        non_sequences=contexts_given.values(),
+                        go_backwards=reverse)
+                assert not updates
+                return result
+
+            return Brick.apply_method(actual_apply)
+
+        return decorator
+
+class Recurrent(BaseRecurrent, DefaultRNG):
     """Simple recurrent layer with optional activation.
 
     Parameters
@@ -738,30 +874,35 @@ class Recurrent(DefaultRNG):
     def __init__(self, dim, weights_init, activation=None, hidden_init=None,
                  shared_init_hidden=False, **kwargs):
         super(Recurrent, self).__init__(**kwargs)
-        if hidden_init is None:
-            hidden_init = Constant(0)
         self.__dict__.update(locals())
         del self.self
+
+    @property
+    def W(self):
+        return self.params[0]
 
     def _allocate(self):
         self.params.append(shared_floatx_zeros((self.dim, self.dim)))
 
     def _initialize(self):
-        W, = self.params
-        self.weights_init.initialize(W, self.rng)
+        self.weights_init.initialize(self.W, self.rng)
 
-    @Brick.apply_method
-    def apply(self, inp, mask, reverse=False):
+    @BaseRecurrent.recurrent_apply_method(
+            inputs=['inp', 'mask'],
+            states=['state'])
+    def apply(self, inp, state, mask=None):
         """Given data and mask, apply recurrent layer.
 
         Parameters
         ----------
         inp : Theano variable
-            The input, assumed to be at least 3 dimensional, in the shape
-            (time, batch, features, ...)
+            The 2 dimensional input, in the shape (batch, features).
+        state : Theano variable
+            The 2 dimensional state, in the shape (batch, features).
         mask : Theano variable
-            A 2D binary array in the shape (time, batch) which is 1 if
-            there is data available, 0 if not.
+            A 1D binary array in the shape (batch,) which is 1 if
+            there is data available, 0 if not. Assumed to be 1-s
+            only if not given.
 
         .. todo::
 
@@ -773,34 +914,16 @@ class Recurrent(DefaultRNG):
              Masks will become n + 1 dimensional as well then.
 
         """
-        assert inp.ndim == 3
-        if self.shared_init_hidden:
-            self.init_hidden = shared_floatx_zeros((0, 0))
-            outputs_info = self.init_hidden
-        else:
-            outputs_info = tensor.alloc(
-                self.hidden_init.generate(self.rng, (self.dim,)),
-                inp.shape[1], self.dim)
-        if self.dim == 1:
-            # Theano issue 1772
-            outputs_info = tensor.unbroadcast(outputs_info, 1)
+        assert inp.ndim == 2
+        assert state.ndim == 2
+        assert mask.ndim == 1
 
-        def step(x, mask, h, W):
-            z = x + tensor.dot(h, W)
-            if self.activation is not None:
-                z = self.activation.apply(z)
-            z = mask[:, None] * z + (1 - mask[:, None]) * h
-            return z
-
-        W, = self.params
-        if reverse:
-            inp = inp[::-1]
-            mask = mask[::-1]
-        z, updates = theano.scan(fn=step, sequences=[inp, mask],
-                                 outputs_info=[outputs_info],
-                                 non_sequences=[W])
-        assert not updates
-        return z
+        next_state = inp + tensor.dot(state, self.W)
+        if self.activation is not None:
+            next_state = self.activation.apply(next_state)
+        if mask:
+            next_state = mask[:, None] * next_state + (1 - mask[:, None]) * state
+        return next_state
 
 
 class BidirectionalRecurrent(DefaultRNG):
