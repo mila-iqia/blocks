@@ -249,7 +249,7 @@ class Brick(object):
         Any positional argument not given will be set to ``None``.
         Positional arguments can also be given as keyword arguments.
 
-        .. todo ::
+        .. todo::
 
            Use ``UNDEF`` or ``None`` as a default?
 
@@ -710,22 +710,20 @@ class BaseRecurrent(Brick):
     a transition operator. This class contains some useful routine
     that fascilitate simple and boilerplate code free implementation
     of recurrent bricks.
-    """
 
+    """
     def zero_state(self, batch_size):
         """Create an initial state consisting of zeros.
 
         The default state initialization routine. The dtype of the
         state is extracted from `self.params`. If there are parameters
         with different dtypes, a smarter method should be used.
+
         """
-        dtype = self.params[0].dtype
-        for i in self.params[1:]:
-            assert self.params[i].dtype == dtype
-        return tensor.zeros((batch_size, self.dim), dtype=dtype)
+        return tensor.zeros((batch_size, self.dim), dtype=theano.config.floatX)
 
     @staticmethod
-    def recurrent_apply_method(inputs, states, contexts=[], num_outputs=0):
+    def recurrent_apply_method(inputs, states, contexts=None, num_outputs=0):
         """Wraps an apply method to allow its recurrent application.
 
         This decorator allows you to use implementation
@@ -742,27 +740,25 @@ class BaseRecurrent(Brick):
         Parameters
         ----------
         contexts : list of strs
-            Names of transition function arguments that
-            play context role.
+            Names of transition function arguments that play context role.
         inputs : list of strs
-            Names of transition function argument that
-            play input role.
+            Names of transition function argument that play input role.
         states : list of str or (str, function) tuples.
-            Names of transition function arguments that
-            play state role. Additionaly a state initialization
-            function can be passed. The function should take
-            `self` and the batch sizes as arguments. By
-            default `BaseRecurrent.zero_state` is used.
+            Names of transition function arguments that play state role.
+            Additionaly a state initialization function can be passed. The
+            function should take ``self`` and the batch sizes as arguments.
+            By default :meth:`zero_state` is used.
         num_outputs : int
             Number of outputs of the transition function.
+
         """
-
         # Take care of default initialization.
-        for i in range(len(states)):
-            if isinstance(states[i], basestring):
-                states[i] = (states[i], BaseRecurrent.zero_state)
-
-        states, state_init_funcs = map(list, zip(*states))
+        for i, state in enumerate(states):
+            if isinstance(state, basestring):
+                states[i] = (state, BaseRecurrent.zero_state)
+        states, state_init_funcs = [list(_) for _ in zip(*states)]
+        if contexts is None:
+            contexts = []
         scan_names = contexts + inputs + states
 
         def decorator(fun):
@@ -775,18 +771,21 @@ class BaseRecurrent(Brick):
                 Parameters
                 ----------
                 one_step : bool
-                    If True no iteration is done, transition function is simply
-                    applied to the arguments. If not given is False.
+                    If ``True``, no iteration is made and transition
+                    function is simply applied to the arguments. ``False``
+                    by default.
                 reverse : bool
-                    If True, the inputs are processed in backward direction.
-                    It not given is False.
+                    If ``True``, the inputs are processed in backward
+                    direction. ``False`` by default.
 
-                ..todo:
+                .. todo::
 
-                    Handle `updates` returned by the `theano.scan` routine.
+                   * Handle `updates` returned by the `theano.scan`
+                     routine.
+                   * ``kwargs`` has a random order; check if this is a
+                     problem.
 
                 """
-
                 # Extract arguments related to iteration.
                 one_step = kwargs.pop("one_step", False)
                 if one_step:
@@ -794,26 +793,25 @@ class BaseRecurrent(Brick):
                 reverse = kwargs.pop("reverse", False)
                 assert not reverse or not one_step
 
-                # Push everything to kwargs.
+                # Push everything to kwargs
                 for arg, arg_name in zip(args, arg_names):
                     kwargs[arg_name] = arg
-                # Separate kwargs that are not
-                # input, context or state variables.
+                # Separate kwargs that aren't input, context or state variables
                 rest_kwargs = {key: value for key, value in kwargs.items()
                                if key not in scan_names}
 
-                # Check what is given and what is not.
+                # Check what is given and what is not
                 def only_given(arg_names):
                     return OrderedDict((arg_name, kwargs[arg_name])
                                        for arg_name in arg_names
-                                       if arg_name in kwargs)
+                                       if arg_name in kwargs)  # TODO remove?
                 inputs_given = only_given(inputs)
                 contexts_given = only_given(contexts)
 
-                # At least one input, please.
+                # At least one input, please
                 assert len(inputs_given) > 0
-                some_input = inputs_given.values()[1]
-                batch_size = some_input.shape[1]
+                # TODO Assumes 1 time dim!
+                batch_size = inputs_given.values()[0].shape[1]
 
                 # Ensure that all initial states are available.
                 for state, init_func in zip(states, state_init_funcs):
@@ -824,19 +822,17 @@ class BaseRecurrent(Brick):
 
                 def scan_function(*args):
                     args = list(args)
-                    arg_names = (inputs_given.keys() +
-                                 states_given.keys() +
+                    arg_names = (inputs_given.keys() + states_given.keys() +
                                  contexts_given.keys())
                     kwargs = dict(zip(arg_names, args))
                     kwargs.update(rest_kwargs)
                     return fun(self, **kwargs)
                 result, updates = theano.scan(
-                    scan_function,
-                    sequences=inputs_given.values(),
+                    scan_function, sequences=inputs_given.values(),
                     outputs_info=states_given.values() + [None] * num_outputs,
                     non_sequences=contexts_given.values(),
                     go_backwards=reverse)
-                assert not updates
+                assert not updates  # TODO Handle updates
                 return result
 
             return Brick.apply_method(actual_apply)
@@ -938,7 +934,6 @@ class BidirectionalRecurrent(DefaultRNG):
         for child in self.children:
             for attr in ['dim', 'activation', 'hidden_init']:
                 setattr(child, attr, getattr(self, attr))
-        self.children[1].reverse = True
 
     def _push_initialization_config(self):
         for child in self.children:
@@ -946,6 +941,7 @@ class BidirectionalRecurrent(DefaultRNG):
 
     @Brick.apply_method
     def apply(self, inp, mask):
-        forward, backward = [child.apply(inp, mask) for child in self.children]
+        forward = self.children[0].apply(inp, mask)
+        backward = self.children[1].apply(inp, mask, reverse=True)
         output = tensor.concatenate([forward[-1], backward[-1]], axis=1)
         return output
