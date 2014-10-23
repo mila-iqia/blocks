@@ -1,7 +1,7 @@
 import unittest
 import itertools
 import numpy
-from numpy.testing import assert_almost_equal
+from numpy.testing import assert_allclose
 import theano
 from theano import tensor
 from blocks.bricks import Recurrent, Tanh
@@ -28,7 +28,7 @@ class TestRecurrent(unittest.TestCase):
         mask_val = numpy.array([1, 0]).astype(theano.config.floatX)
         h1_val = numpy.tanh(h0_val.dot(2 * numpy.ones((3, 3))) + x_val)
         h1_val = mask_val[:, None] * h1_val + (1 - mask_val[:, None]) * h0_val
-        assert_almost_equal(h1_val, next_h(h0_val, x_val, mask_val)[0])
+        assert_allclose(h1_val, next_h(h0_val, x_val, mask_val)[0])
 
     def test_many_steps(self):
         x = tensor.tensor3('x')
@@ -49,4 +49,4 @@ class TestRecurrent(unittest.TestCase):
             h_val[i] = (mask_val[i - 1, :, None] * h_val[i] +
                         (1 - mask_val[i - 1, :, None]) * h_val[i - 1])
         h_val = h_val[1:]
-        assert_almost_equal(h_val, calc_h(x_val, mask_val)[0])
+        assert_allclose(h_val, calc_h(x_val, mask_val)[0])
