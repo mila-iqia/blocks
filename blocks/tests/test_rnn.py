@@ -15,9 +15,9 @@ class TestRecurrent(unittest.TestCase):
         self.simple.initialize()
 
     def test_one_step(self):
-        h0 = tensor.fmatrix('h0')
-        x = tensor.fmatrix('x')
-        mask = tensor.fvector('mask')
+        h0 = tensor.matrix('h0')
+        x = tensor.matrix('x')
+        mask = tensor.vector('mask')
         h1 = self.simple.apply(x, h0, mask=mask, one_step=True)
         next_h = theano.function(inputs=[h0, x, mask], outputs=[h1])
 
@@ -31,8 +31,8 @@ class TestRecurrent(unittest.TestCase):
         assert_almost_equal(h1_val, next_h(h0_val, x_val, mask_val)[0])
 
     def test_many_steps(self):
-        x = tensor.ftensor3('x')
-        mask = tensor.fmatrix('mask')
+        x = tensor.tensor3('x')
+        mask = tensor.matrix('mask')
         h = self.simple.apply(x, mask=mask)
         calc_h = theano.function(inputs=[x, mask], outputs=[h])
 
