@@ -9,7 +9,6 @@ from blocks.initialization import Constant
 
 
 class TestRecurrent(unittest.TestCase):
-
     def setUp(self):
         self.simple = Recurrent(dim=3, weights_init=Constant(2),
                                 activation=Tanh())
@@ -22,9 +21,11 @@ class TestRecurrent(unittest.TestCase):
         h1 = self.simple.apply(x, h0, mask=mask, one_step=True)
         next_h = theano.function(inputs=[h0, x, mask], outputs=[h1])
 
-        h0_val = 0.1 * numpy.array([[1, 1, 0], [0, 1, 1]], dtype="float32")
-        x_val = 0.1 * numpy.array([[1, 2, 3], [4, 5, 6]], dtype="float32")
-        mask_val = numpy.array([1, 0]).astype("float32")
+        h0_val = 0.1 * numpy.array([[1, 1, 0], [0, 1, 1]],
+                                   dtype=theano.config.floatX)
+        x_val = 0.1 * numpy.array([[1, 2, 3], [4, 5, 6]],
+                                  dtype=theano.config.floatX)
+        mask_val = numpy.array([1, 0]).astype(theano.config.floatX)
         h1_val = numpy.tanh(h0_val.dot(2 * numpy.ones((3, 3))) + x_val)
         h1_val = mask_val[:, None] * h1_val + (1 - mask_val[:, None]) * h0_val
         assert_almost_equal(h1_val, next_h(h0_val, x_val, mask_val)[0])
@@ -36,11 +37,12 @@ class TestRecurrent(unittest.TestCase):
         calc_h = theano.function(inputs=[x, mask], outputs=[h])
 
         x_val = 0.1 * numpy.asarray(list(itertools.permutations(range(4))),
-                                    dtype="float32")
-        x_val = numpy.ones((24, 4, 3), dtype="float32") * x_val[..., None]
-        mask_val = numpy.ones((24, 4), dtype="float32")
+                                    dtype=theano.config.floatX)
+        x_val = numpy.ones((24, 4, 3),
+                           dtype=theano.config.floatX) * x_val[..., None]
+        mask_val = numpy.ones((24, 4), dtype=theano.config.floatX)
         mask_val[12:24, 3] = 0
-        h_val = numpy.zeros((25, 4, 3), dtype="float32")
+        h_val = numpy.zeros((25, 4, 3), dtype=theano.config.floatX)
         for i in range(1, 25):
             h_val[i] = numpy.tanh(h_val[i - 1].dot(
                 2 * numpy.ones((3, 3))) + x_val[i - 1])
