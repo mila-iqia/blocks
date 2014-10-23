@@ -804,7 +804,7 @@ class BaseRecurrent(Brick):
                 def only_given(arg_names):
                     return OrderedDict((arg_name, kwargs[arg_name])
                                        for arg_name in arg_names
-                                       if arg_name in kwargs)  # TODO remove?
+                                       if arg_name in kwargs)
                 inputs_given = only_given(inputs)
                 contexts_given = only_given(contexts)
 
