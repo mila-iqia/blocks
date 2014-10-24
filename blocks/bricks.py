@@ -924,6 +924,35 @@ class Recurrent(BaseRecurrent, DefaultRNG):
 
 
 class GatedRecurrent(BaseRecurrent, DefaultRNG):
+    """Gated recurrent neural network.
+
+    Gated recurrent neural network (GRNN) as introduced in [1]. Every unit
+    of a GRNN is equiped with update and reset gates that fascilitate better
+    gradient propagation.
+
+    Parameters
+    ----------
+    activation : Brick or None
+        The brick to apply as activation. If `None` an `Identity` brick is used.
+    gated_activation : Brick or None
+        The brick to apply as activation for gates. If `None` a `Sigmoid`
+        brick is used.
+    dim : int
+        The dimension of the hidden state.
+    weights_init : object
+        The :class:`utils.NdarrayInitialization` object to initialize the
+        weight matrix with.
+    use_upgate_gate : bool
+        If True the update gates are used.
+    use_reset_gate : bool
+        If True the reset gates are used.
+
+
+    .. [1] Kyunghyun Cho, Bart van Merrienboer, Caglar Gulcehre,
+         Dzmitry Bahdanau, Fethi Bougares, Holger Schwenk and Yoshua Bengio.
+         Learning Phrase Representations using RNN Encoder-Decoder
+         for Statistical Machine Translation. EMNLP 2014.
+    """
 
     @Brick.lazy_method
     def __init__(self, activation, gate_activation, dim, weights_init,
