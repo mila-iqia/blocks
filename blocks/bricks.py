@@ -483,6 +483,7 @@ class Brick(object):
         """
         pass
 
+
 class DefaultRNG(Brick):
     """A mixin class for Bricks which need a RNG to initialize.
 
