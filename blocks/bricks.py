@@ -870,7 +870,7 @@ class Recurrent(BaseRecurrent, DefaultRNG):
     def __init__(self, dim, weights_init, activation=None, **kwargs):
         super(Recurrent, self).__init__(**kwargs)
         if not activation:
-            activation=Identity()
+            activation = Identity()
         self.__dict__.update(locals())
         del self.self
 
@@ -933,7 +933,8 @@ class GatedRecurrent(BaseRecurrent, DefaultRNG):
     Parameters
     ----------
     activation : Brick or None
-        The brick to apply as activation. If `None` an `Identity` brick is used.
+        The brick to apply as activation. If `None` an `Identity` brick is
+        used.
     gated_activation : Brick or None
         The brick to apply as activation for gates. If `None` a `Sigmoid`
         brick is used.
