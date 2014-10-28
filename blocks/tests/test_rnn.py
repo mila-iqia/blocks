@@ -26,7 +26,7 @@ class TestRecurrent(unittest.TestCase):
         h0 = tensor.matrix('h0')
         x = tensor.matrix('x')
         mask = tensor.vector('mask')
-        h1 = self.simple.apply(x, h0, mask=mask, one_step=True)
+        h1 = self.simple.apply(x, h0, mask=mask)
         next_h = theano.function(inputs=[h0, x, mask], outputs=[h1])
 
         h0_val = 0.1 * numpy.array([[1, 1, 0], [0, 1, 1]],
@@ -41,7 +41,7 @@ class TestRecurrent(unittest.TestCase):
     def test_many_steps(self):
         x = tensor.tensor3('x')
         mask = tensor.matrix('mask')
-        h = self.simple.apply(x, mask=mask)
+        h = self.simple.apply(x, mask=mask, iterate=True)
         calc_h = theano.function(inputs=[x, mask], outputs=[h])
 
         x_val = 0.1 * numpy.asarray(list(itertools.permutations(range(4))),
@@ -76,7 +76,7 @@ class TestGatedRecurrent(unittest.TestCase):
         x = tensor.matrix('x')
         z = tensor.matrix('z')
         r = tensor.matrix('r')
-        h1 = self.gated.apply(x, z, r, h0, one_step=True)
+        h1 = self.gated.apply(x, z, r, h0)
         next_h = theano.function(inputs=[h0, x, z, r], outputs=[h1])
 
         h0_val = 0.1 * numpy.array([[1, 1, 0], [0, 1, 1]],
@@ -98,7 +98,7 @@ class TestGatedRecurrent(unittest.TestCase):
         x = tensor.tensor3('x')
         ri = tensor.tensor3('ri')
         mask = tensor.matrix('mask')
-        h = self.reset_only.apply(x, reset_inps=ri, mask=mask)
+        h = self.reset_only.apply(x, reset_inps=ri, mask=mask, iterate=True)
         calc_h = theano.function(inputs=[x, ri, mask], outputs=[h])
 
         x_val = 0.1 * numpy.asarray(list(itertools.permutations(range(4))),

@@ -879,10 +879,9 @@ class BaseRecurrent(Brick):
 
             Parameters
             ----------
-            one_step : bool
-                If ``True``, no iteration is made and transition
-                function is simply applied to the arguments. ``False``
-                by default.
+            iterate : bool
+                If ``True`` iteration is made. By default ``False``
+                which means that transition function is applied as is.
             reverse : bool
                 If ``True``, the inputs are processed in backward
                 direction. ``False`` by default.
@@ -896,11 +895,10 @@ class BaseRecurrent(Brick):
 
             """
             # Extract arguments related to iteration.
-            one_step = kwargs.pop("one_step", False)
-            if one_step:
+            iterate = kwargs.pop("iterate", False)
+            if not iterate:
                 return func(brick, *args, **kwargs)
             reverse = kwargs.pop("reverse", False)
-            assert not reverse or not one_step
 
             signature = wrapper.signature(brick, *args, **kwargs)
             assert isinstance(signature, RecurrentApplySignature)
