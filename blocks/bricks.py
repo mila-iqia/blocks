@@ -1022,6 +1022,17 @@ class ForkInputs(Brick):
             kwargs[name] = fork.apply(common_input)
         return self.wrapped_apply(**kwargs)
 
+    @apply.signature_method
+    def apply_signature(self):
+        signature = copy.deepcopy(self.wrapped_signature_func())
+        if isinstance(signature, RecurrentApplySignature):
+            signature.input_names = (
+                [name for name in signature.input_names
+                 if name not in signature.forkable_input_names]
+                + ["common_input"])
+            return signature
+        return ApplySignature()
+
 
 class Recurrent(BaseRecurrent, DefaultRNG):
     """Simple recurrent layer with optional activation.

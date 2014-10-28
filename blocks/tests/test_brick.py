@@ -1,6 +1,7 @@
 import copy
 
-from blocks.bricks import Brick, Linear, MultiInputApplySignature, ForkInputs
+from blocks.bricks import (
+    Brick, Linear, ForkInputs, RecurrentApplySignature)
 from blocks.initialization import Constant
 
 from numpy.testing import assert_raises
@@ -70,25 +71,31 @@ def test_multiinput():
     class TestBrick(Brick):
 
         @Brick.apply_method
-        def apply(self, inp1, inp2, **kwargs):
-            return inp1, inp2
+        def apply(self, inp1, inp2, inp3, **kwargs):
+            return inp1, inp2, inp3
 
         @apply.signature_method
         def apply_signature(self, *args, **kwargs):
-            return MultiInputApplySignature(
-                ['inp1', 'inp2'], dict(inp1=10, inp2=10))
+            return RecurrentApplySignature(
+                input_names=["inp1", "inp2", "inp3"],
+                forkable_input_names=['inp1', 'inp2'],
+                dims=dict(inp1=10, inp2=10))
 
     tb = TestBrick(name="tb")
-    fi = ForkInputs(tb, input_dim=11)
+    fi = ForkInputs(tb, input_dim=11, name="fi")
+
+    def undo_copy(variable, times):
+        for i in range(times):
+            variable = variable.owner.inputs[0]
+        return variable
 
     x = tensor.matrix('x')
-    ys = fi.apply(x)
-    for y, fork in zip(ys, fi.forks):
+    ys = fi.apply(x, inp3=x)
+    for y, fork in zip(ys[:2], fi.forks):
         assert fork.dims[0] == 11
         assert fork.dims[1] == 10
-
-        def undo_copy(variable, times):
-            for i in range(times):
-                variable = variable.owner.inputs[0]
-            return variable
         assert undo_copy(y, 3).tag.owner == fork
+    assert undo_copy(ys[2], 4) == x
+
+    input_names = ForkInputs.apply.signature(fi).input_names
+    assert tuple(input_names) == ("inp3", "common_input")
