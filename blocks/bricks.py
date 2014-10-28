@@ -973,7 +973,7 @@ class ForkInputs(Brick):
     @Brick.lazy_method
     def __init__(self, child, input_dim, apply_method='apply',
                  fork=None, weights_init=None, biases_init=None, **kwargs):
-        super(ForkInputs, self).__init__(kwargs)
+        super(ForkInputs, self).__init__(**kwargs)
         self.__dict__.update(**locals())
         del self.self
         del self.kwargs
