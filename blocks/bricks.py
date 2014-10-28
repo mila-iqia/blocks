@@ -2,9 +2,10 @@
 
 This defines the basic interface of bricks.
 """
+import copy
 import types
 from abc import ABCMeta
-from functools import wraps
+from functools import wraps, partial
 import inspect
 import logging
 from collections import OrderedDict
@@ -27,11 +28,11 @@ logging.basicConfig()
 logger = logging.getLogger(__name__)
 
 
-class ApplyMethodSignature(object):
+class ApplySignature(object):
     """Base class for signatures of apply methods.
 
     """
-    pass
+    __metaclass__ = ABCMeta
 
 
 class Brick(object):
@@ -201,7 +202,8 @@ class Brick(object):
         """
         state = self.__dict__
         for attr in ['allocated', 'initialized', 'params']:
-            state.pop(attr)
+            if attr in state:
+                state.pop(attr)
         return state
 
     def __setstate__(self, state):
@@ -237,7 +239,7 @@ class Brick(object):
                 __metaclass__ = ABCMeta
 
                 def __init__(self):
-                    self.signature = lambda brick: ApplyMethodSignature()
+                    self.signature = lambda brick: ApplySignature()
 
                 def __get__(self, brick, owner):
                     if brick:
@@ -279,7 +281,7 @@ class Brick(object):
 
                 def signature_method(self, signature_func):
                     self.signature = signature_func
-                    return self
+                    return signature_func
 
             return ApplyWrapper()
         return decorator
@@ -734,6 +736,8 @@ class MLP(DefaultRNG):
         self.children = (self.linear_transformations +
                          [activation for activation in activations
                           if activation is not None])
+        if not dims:
+            dims = [None] * (len(activations) + 1)
         self.__dict__.update(locals())
         del self.self
 
@@ -780,8 +784,30 @@ class Wrap3D(Brick):
         return output.reshape(full_shape)
 
 
-class RecurrentApplyMethodSignature(ApplyMethodSignature):
-    """Base class for signatures of recurrent apply methods.
+class MultiInputApplySignature(ApplySignature):
+    """Signature of an apply method with multiple inputs.
+
+    Attributes:
+    ----------
+    forkable_input_names : list of strs
+        Names of the inputs that can be forked from a common one.
+    dims : dict
+        A dictionary of available dimensionalities. Keys are names,
+        value are ints.
+
+    """
+
+    def __init__(self, forkable_input_names=None, dims=None):
+        if not forkable_input_names:
+            forkable_input_names = list()
+        if not dims:
+            dims = dict()
+        self.__dict__.update(**locals())
+        del self.self
+
+
+class RecurrentApplySignature(MultiInputApplySignature):
+    """Signature of a recurrent apply method.
 
     Attributes
     ----------
@@ -796,19 +822,15 @@ class RecurrentApplyMethodSignature(ApplyMethodSignature):
     state_init_funcs : dict
         A dictionary for hidden states initialization functions. Keys are
         state names, values are functions.
-    dims : dict
-        A dictionary of available dimensionalities. Keys are state names,
-        value are ints.
 
     """
 
     def __init__(self, input_names=[], state_names=[], context_names=[],
-                 num_outputs=0):
-        super(RecurrentApplyMethodSignature, self).__init__()
+                 num_outputs=0, **kwargs):
+        super(RecurrentApplySignature, self).__init__(**kwargs)
         self.__dict__.update(**locals())
         del self.self
         self.state_init_funcs = dict()
-        self.dims = dict()
 
     def scan_arguments(self):
         return self.input_names + self.state_names + self.context_names
@@ -881,7 +903,7 @@ class BaseRecurrent(Brick):
             assert not reverse or not one_step
 
             signature = wrapper.signature(brick, *args, **kwargs)
-            assert isinstance(signature, RecurrentApplyMethodSignature)
+            assert isinstance(signature, RecurrentApplySignature)
 
             # Push everything to kwargs
             for arg, arg_name in zip(args, arg_names):
@@ -929,6 +951,78 @@ class BaseRecurrent(Brick):
             return result
 
         return Brick._apply_method(True)(recurrent_apply)
+
+
+class ForkInputs(Brick):
+    """Wraps a block with multiple inputs to use one common input.
+
+    Parameters
+    ----------
+    child : Brick
+        The brick with multiple inputs to wrap.
+    input_dim : int
+        The common input dimensionality.
+    apply_method : str
+        The name of the wrapped brick apply method to use.
+    fork : Brick
+        A prototype for fork bricks.
+    weights_init : `utils.NdarrayInitialization`
+        Weight initilization method to propagate to fork bricks.
+    biases_init : `utils.NdarrayInitialization`
+        Biases initialization method to propagate to fork bricks.
+
+    """
+    @Brick.lazy_method
+    def __init__(self, child, input_dim, apply_method='apply',
+                 fork=None, weights_init=None, biases_init=None, **kwargs):
+        super(ForkInputs, self).__init__(kwargs)
+        self.__dict__.update(**locals())
+        del self.self
+        del self.kwargs
+
+        self.wrapped_apply = getattr(child, self.apply_method)
+        self.wrapped_signature_func = partial(
+            getattr(child.__class__, apply_method).signature, self.child)
+
+        signature = self.wrapped_signature_func()
+        assert isinstance(signature, MultiInputApplySignature)
+        if not fork:
+            fork = MLP([Identity()])
+        self.forks = []
+        for input_name in signature.forkable_input_names:
+            fork_copy = copy.deepcopy(fork)
+            fork_copy.name = "{}_{}".format("fork", input_name)
+            self.forks.append(fork_copy)
+        self.children = [child] + self.forks
+
+    def _push_allocation_config(self):
+        signature = self.wrapped_signature_func()
+        for name, fork in zip(signature.forkable_input_names, self.forks):
+            fork.dims[0] = self.input_dim
+            fork.dims[-1] = signature.dims[name]
+
+    def _push_initialization_config(self):
+        for fork in self.forks:
+            if self.weights_init:
+                fork.weights_init = self.weights_init
+            if self.biases_init:
+                fork.biases_init = self.biases_init
+
+    @BaseRecurrent.apply_method
+    def apply(self, common_input, **kwargs):
+        """Apply the child brick with forked inputs.
+
+        Parameters
+        ----------
+        common_input : Theano variable
+            The input to fork.
+
+        """
+        signature = self.wrapped_signature_func()
+        for name, fork in zip(signature.forkable_input_names, self.forks):
+            assert name not in kwargs
+            kwargs[name] = fork.apply(common_input)
+        return self.wrapped_apply(**kwargs)
 
 
 class Recurrent(BaseRecurrent, DefaultRNG):
@@ -1011,9 +1105,10 @@ class Recurrent(BaseRecurrent, DefaultRNG):
         return next_state
 
     @apply.signature_method
-    def apply(self, *args, **kwargs):
-        return RecurrentApplyMethodSignature(
-            input_names=['inp', 'mask'], state_names=['state'])
+    def apply_signature(self, *args, **kwargs):
+        return RecurrentApplySignature(
+            input_names=['inp', 'mask'], forkable_input_names=['inp'],
+            state_names=['state'])
 
 
 class GatedRecurrent(BaseRecurrent, DefaultRNG):
@@ -1153,12 +1248,13 @@ class GatedRecurrent(BaseRecurrent, DefaultRNG):
 
     @apply.signature_method
     def apply_signature(self, *args, **kwargs):
-        s = RecurrentApplyMethodSignature(
-            input_names=['inps', 'mask'], state_names=['states'])
+        s = RecurrentApplySignature(
+            input_names=['mask', 'inps'], state_names=['states'])
         if self.use_update_gate:
             s.input_names.append('update_inps')
         if self.use_reset_gate:
             s.input_names.append('reset_inps')
+        s.forkable_input_names = s.input_names[1:]
         return s
 
 

@@ -1,22 +1,21 @@
 import copy
 
-from blocks.bricks import Brick, Linear
+from blocks.bricks import Brick, Linear, MultiInputApplySignature, ForkInputs
 from blocks.initialization import Constant
 
 from numpy.testing import assert_raises
 from theano import tensor
 
 
-class Identity(Brick):
-    @Brick.apply_method
-    def apply(self, a, b=1, **kwargs):
-        if isinstance(a, list):
-            a = a[0]
-        return [a, b] + kwargs.values()
-
-
 def test_apply_method():
-    brick = Identity()
+    class TestBrick(Brick):
+        @Brick.apply_method
+        def apply(self, a, b=1, **kwargs):
+            if isinstance(a, list):
+                a = a[0]
+            return [a, b] + kwargs.values()
+
+    brick = TestBrick()
     x = tensor.vector('x')
     y = tensor.vector('y')
     z = tensor.vector('z')
@@ -65,3 +64,31 @@ def test_deepcopy():
     assert brick_copy.allocation_config_pushed
     assert brick_copy.initialization_config_pushed
     assert not hasattr(brick_copy, 'params')
+
+
+def test_multiinput():
+    class TestBrick(Brick):
+
+        @Brick.apply_method
+        def apply(self, inp1, inp2, **kwargs):
+            return inp1, inp2
+
+        @apply.signature_method
+        def apply_signature(self, *args, **kwargs):
+            return MultiInputApplySignature(
+                ['inp1', 'inp2'], dict(inp1=10, inp2=10))
+
+    tb = TestBrick(name="tb")
+    fi = ForkInputs(tb, input_dim=11)
+
+    x = tensor.matrix('x')
+    ys = fi.apply(x)
+    for y, fork in zip(ys, fi.forks):
+        assert fork.dims[0] == 11
+        assert fork.dims[1] == 10
+
+        def undo_copy(variable, times):
+            for i in range(times):
+                variable = variable.owner.inputs[0]
+            return variable
+        assert undo_copy(y, 3).tag.owner == fork
