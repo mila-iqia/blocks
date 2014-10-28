@@ -845,15 +845,13 @@ class BaseRecurrent(Brick):
     of recurrent bricks.
 
     """
-    def zero_state(self, batch_size):
+    def zero_state(self, dim, batch_size, *args, **kwargs):
         """Create an initial state consisting of zeros.
 
-        The default state initialization routine. The dtype of the
-        state is extracted from `self.params`. If there are parameters
-        with different dtypes, a smarter method should be used.
+        The default state initialization routine.
 
         """
-        return tensor.zeros((batch_size, self.dim), dtype=theano.config.floatX)
+        return tensor.zeros((batch_size, dim), dtype=theano.config.floatX)
 
     @staticmethod
     def recurrent_apply_method(func):
@@ -925,10 +923,12 @@ class BaseRecurrent(Brick):
 
             # Ensure that all initial states are available.
             for state_name in signature.state_names:
+                dim = signature.dims[state_name]
                 if not kwargs.get(state_name):
                     init_func = signature.state_init_funcs.get(
                         state_name, BaseRecurrent.zero_state)
-                    kwargs[state_name] = init_func(brick, batch_size)
+                    kwargs[state_name] = init_func(brick, dim, batch_size,
+                                                   *args, **kwargs)
             states_given = only_given(signature.state_names)
             assert len(states_given) == len(signature.state_names)
 
@@ -1117,7 +1117,7 @@ class Recurrent(BaseRecurrent, DefaultRNG):
     def apply_signature(self, *args, **kwargs):
         return RecurrentApplySignature(
             input_names=['inp', 'mask'], forkable_input_names=['inp'],
-            state_names=['state'])
+            state_names=['state'], dims=dict(state=self.dim))
 
 
 class GatedRecurrent(BaseRecurrent, DefaultRNG):
@@ -1258,7 +1258,8 @@ class GatedRecurrent(BaseRecurrent, DefaultRNG):
     @apply.signature_method
     def apply_signature(self, *args, **kwargs):
         s = RecurrentApplySignature(
-            input_names=['mask', 'inps'], state_names=['states'])
+            input_names=['mask', 'inps'], state_names=['states'],
+            dims=dict(states=self.dim))
         if self.use_update_gate:
             s.input_names.append('update_inps')
         if self.use_reset_gate:
