@@ -5,105 +5,7 @@ from abc import abstractmethod
 from blocks.bricks import (
     Brick, MLP, BaseRecurrent, Identity, ForkInputs, ApplySignature,
     zero_state)
-
-
-class TrivialEmitter(Brick):
-
-    def __init__(self, output_dim, **kwargs):
-        super(TrivialEmitter, self).__init__(**kwargs)
-        self.output_dim = output_dim
-
-    @Brick.apply_method
-    def emit(self, summaries):
-        return summaries
-
-    @emit.signature_method
-    def emit_signature(self, *args, **kwargs):
-        return ApplySignature(output_dims=[self.output_dim])
-
-    @abstractmethod
-    def cost(self, summaries, outputs):
-        pass
-
-
-class TrivialFeedback(Brick):
-
-    @Brick.lazy_method
-    def __init__(self, output_dim, **kwargs):
-        super(TrivialFeedback, self).__init__(**kwargs)
-        self.output_dim = output_dim
-
-    @Brick.apply_method
-    def apply(self, outputs):
-        return outputs
-
-    @apply.signature_method
-    def apply_signature(self):
-        return ApplySignature(output_dims=[self.output_dim])
-
-
-class NullStateInitializer(Brick):
-
-    def __init__(self, state_names, context_names, null_output, **kwargs):
-        super(NullStateInitializer, self).__init__(**kwargs)
-        self.__dict__.update(**locals())
-
-        assert len(self.context_names) == 0
-
-    @Brick.apply_method
-    def initialize_state(self, state_name, batch_size, **kwargs):
-        if state_name == 'outputs':
-            shape = [batch_size] + [self.null_output.shape[i]
-                                    for i in range(self.null_output.ndim)]
-            return tensor.alloc(self.null_output, *shape)
-        else:
-            state_index = self.state_names.index(state_name)
-            return zero_state(
-                None, self.state_dims[state_index], batch_size)
-
-
-class DefaultSummarizer(Brick):
-
-    @Brick.lazy_method
-    def __init__(self, state_names, context_names,
-                 weights_init, biases_init, **kwargs):
-        super(DefaultSummarizer, self).__init__(**kwargs)
-        self.__dict__.update(**locals())
-
-        self.input_names = ['feedback'] + state_names + context_names
-        self.projectors = [MLP(name="project_{}".format(name),
-                               activations=[Identity()])
-                           for name in self.input_names]
-        self.children = self.projectors
-
-    def _push_allocation_config(self):
-        self.dims = [self.feedback_dim] + self.state_dims + self.context_dims
-        for projector, dim in zip(self.projectors, self.dims):
-            projector.dims[0] = dim
-            projector.dims[-1] = self.summary_dim
-
-    def _push_initialization_config(self):
-        for child in self.children:
-            if self.weights_init:
-                child.weights_init = self.weights_init
-            if self.biases_init:
-                child.biases_init = self.biases_init
-
-    @Brick.apply_method
-    def summarize(self, **kwargs):
-        projections = [projector.apply(kwargs[name]) for name, projector in
-                       zip(self.input_names, self.projectors)]
-        if len(projections) == 1:
-            return projections[0]
-        return sum(projections[1:], projections[0])
-
-
-def dict_union(*dicts, **kwargs):
-    result = dict()
-    for d in list(dicts) + [kwargs]:
-        assert len(set(result.keys()).intersection(set(d.keys()))) == 0
-        result.update(d)
-    return result
+from blocks.utils import dict_union
 
 
 class BaseSequenceGenerator(BaseRecurrent):
@@ -263,3 +165,94 @@ class SequenceGenerator(BaseSequenceGenerator):
         if self.biases_init:
             self.fork_inputs_wrapper.biases_init = self.biases_init
         super(SequenceGenerator, self)._push_initialization_config()
+
+
+class NullStateInitializer(Brick):
+
+    def __init__(self, state_names, context_names, null_output, **kwargs):
+        super(NullStateInitializer, self).__init__(**kwargs)
+        self.__dict__.update(**locals())
+
+        assert len(self.context_names) == 0
+
+    @Brick.apply_method
+    def initialize_state(self, state_name, batch_size, **kwargs):
+        if state_name == 'outputs':
+            shape = [batch_size] + [self.null_output.shape[i]
+                                    for i in range(self.null_output.ndim)]
+            return tensor.alloc(self.null_output, *shape)
+        else:
+            state_index = self.state_names.index(state_name)
+            return zero_state(
+                None, self.state_dims[state_index], batch_size)
+
+
+class DefaultSummarizer(Brick):
+
+    @Brick.lazy_method
+    def __init__(self, state_names, context_names,
+                 weights_init, biases_init, **kwargs):
+        super(DefaultSummarizer, self).__init__(**kwargs)
+        self.__dict__.update(**locals())
+
+        self.input_names = ['feedback'] + state_names + context_names
+        self.projectors = [MLP(name="project_{}".format(name),
+                               activations=[Identity()])
+                           for name in self.input_names]
+        self.children = self.projectors
+
+    def _push_allocation_config(self):
+        self.dims = [self.feedback_dim] + self.state_dims + self.context_dims
+        for projector, dim in zip(self.projectors, self.dims):
+            projector.dims[0] = dim
+            projector.dims[-1] = self.summary_dim
+
+    def _push_initialization_config(self):
+        for child in self.children:
+            if self.weights_init:
+                child.weights_init = self.weights_init
+            if self.biases_init:
+                child.biases_init = self.biases_init
+
+    @Brick.apply_method
+    def summarize(self, **kwargs):
+        projections = [projector.apply(kwargs[name]) for name, projector in
+                       zip(self.input_names, self.projectors)]
+        if len(projections) == 1:
+            return projections[0]
+        return sum(projections[1:], projections[0])
+
+
+class TrivialEmitter(Brick):
+
+    def __init__(self, output_dim, **kwargs):
+        super(TrivialEmitter, self).__init__(**kwargs)
+        self.output_dim = output_dim
+
+    @Brick.apply_method
+    def emit(self, summaries):
+        return summaries
+
+    @emit.signature_method
+    def emit_signature(self, *args, **kwargs):
+        return ApplySignature(output_dims=[self.output_dim])
+
+    @abstractmethod
+    def cost(self, summaries, outputs):
+        pass
+
+
+class TrivialFeedback(Brick):
+
+    @Brick.lazy_method
+    def __init__(self, output_dim, **kwargs):
+        super(TrivialFeedback, self).__init__(**kwargs)
+        self.output_dim = output_dim
+
+    @Brick.apply_method
+    def apply(self, outputs):
+        return outputs
+
+    @apply.signature_method
+    def apply_signature(self):
+        return ApplySignature(output_dims=[self.output_dim])

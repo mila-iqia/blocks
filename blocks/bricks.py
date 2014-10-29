@@ -1231,9 +1231,9 @@ class GatedRecurrent(BaseRecurrent, DefaultRNG):
             return shared
         self.params.append(new_param('state2state'))
         self.params.append(new_param('state2update')
-            if self.use_update_gate else None)
+                           if self.use_update_gate else None)
         self.params.append(new_param('state2reset')
-            if self.use_reset_gate else None)
+                           if self.use_reset_gate else None)
 
     def _initialize(self):
         self.weights_init.initialize(self.state2state, self.rng)

@@ -183,3 +183,11 @@ def check_theano_variable(variable, n_dim, dtype):
         raise ValueError("Wrong dtype:"
                          "\n\texpected {}, got {}".format(
                              dtype, variable.dtype))
+
+
+def dict_union(*dicts, **kwargs):
+    result = dict()
+    for d in list(dicts) + [kwargs]:
+        assert len(set(result.keys()).intersection(set(d.keys()))) == 0
+        result.update(d)
+    return result
