@@ -286,6 +286,17 @@ class Brick(object):
             return ApplyWrapper()
         return decorator
 
+    def get_signature_func(self, apply_method):
+        """Creates a function that returns the signature of `apply_method`.
+
+        Parameters
+        ----------
+        apply_method : str
+            Name of the apply method.
+
+        """
+        return partial(getattr(self.__class__, apply_method).signature, self)
+
     @staticmethod
     def apply_method(func):
         """Wraps methods that apply a brick to inputs in different ways.
@@ -979,8 +990,8 @@ class ForkInputs(Brick):
         del self.kwargs
 
         self.wrapped_apply = getattr(child, self.apply_method)
-        self.wrapped_signature_func = partial(
-            getattr(child.__class__, apply_method).signature, self.child)
+        self.wrapped_signature_func = self.child.get_signature_func(
+            self.apply_method)
 
         signature = self.wrapped_signature_func()
         assert isinstance(signature, MultiInputApplySignature)
