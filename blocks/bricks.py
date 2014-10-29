@@ -929,6 +929,7 @@ class BaseRecurrent(Brick):
             if not iterate:
                 return func(brick, *args, **kwargs)
             reverse = kwargs.pop("reverse", False)
+            return_initial_states = kwargs.pop("return_initial_states", False)
 
             signature = wrapper.signature(brick, *args, **kwargs)
             assert isinstance(signature, RecurrentApplySignature)
@@ -948,17 +949,21 @@ class BaseRecurrent(Brick):
             inputs_given = only_given(signature.input_names)
             contexts_given = only_given(signature.context_names)
 
-            # At least one input, please
-            assert len(inputs_given) > 0
             # TODO Assumes 1 time dim!
-            batch_size = inputs_given.values()[0].shape[1]
+            if len(inputs_given):
+                shape = inputs_given.values()[0].shape
+                n_steps = shape[0]
+                batch_size = shape[1]
+            else:
+                n_steps = kwargs.pop('n_steps')
+                batch_size = kwargs.pop('batch_size')
 
             # Ensure that all initial states are available.
             for state_name in signature.state_names:
-                dim = signature.dims[state_name]
                 if not kwargs.get(state_name):
+                    dim = signature.dims[state_name]
                     init_func = signature.state_init_funcs.get(
-                        state_name, BaseRecurrent.zero_state)
+                        state_name, zero_state)
                     kwargs[state_name] = init_func(brick, dim, batch_size,
                                                    *args, **kwargs)
             states_given = only_given(signature.state_names)
@@ -976,7 +981,14 @@ class BaseRecurrent(Brick):
                 outputs_info=(states_given.values()
                               + [None] * signature.num_outputs),
                 non_sequences=contexts_given.values(),
+                n_steps=n_steps,
                 go_backwards=reverse)
+            if not isinstance(result, list):
+                result = [result]
+            if return_initial_states:
+                # Undo the subtensor
+                for i in range(len(states_given)):
+                    result[i] = result[i].owner.inputs[0]
             assert not updates  # TODO Handle updates
             return result
 
