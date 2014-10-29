@@ -31,8 +31,16 @@ logger = logging.getLogger(__name__)
 class ApplySignature(object):
     """Base class for signatures of apply methods.
 
+    Attributes
+    ----------
+    output_dims : list
+        The list of output dimensionalities if available, None otherwise.
+
     """
     __metaclass__ = ABCMeta
+
+    def __init__(self, output_dims=None):
+        self.output_dims = output_dims
 
 
 class Brick(object):
