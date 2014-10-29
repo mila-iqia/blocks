@@ -201,6 +201,9 @@ class Brick(object):
         self.initialized = False
         self.initialization_config_pushed = False
 
+    def __str__(self):
+        return self.name
+
     def __getstate__(self):
         """Override the default __getstate__ method.
 
