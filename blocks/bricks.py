@@ -866,6 +866,14 @@ class RecurrentApplySignature(MultiInputApplySignature):
     def scan_arguments(self):
         return self.input_names + self.state_names + self.context_names
 
+def zero_state(brick, dim, batch_size, *args, **kwargs):
+    """Create an initial state consisting of zeros.
+
+    The default state initialization routine. It is not made a method
+    to ensure that the brick argument can be omitted.
+
+    """
+    return tensor.zeros((batch_size, dim), dtype=theano.config.floatX)
 
 class BaseRecurrent(Brick):
     """Base class for recurrent bricks.
@@ -876,13 +884,6 @@ class BaseRecurrent(Brick):
     of recurrent bricks.
 
     """
-    def zero_state(self, dim, batch_size, *args, **kwargs):
-        """Create an initial state consisting of zeros.
-
-        The default state initialization routine.
-
-        """
-        return tensor.zeros((batch_size, dim), dtype=theano.config.floatX)
 
     @staticmethod
     def recurrent_apply_method(func):
