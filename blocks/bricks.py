@@ -849,11 +849,18 @@ class RecurrentApplySignature(MultiInputApplySignature):
 
     """
 
-    def __init__(self, input_names=[], state_names=[], context_names=[],
+    def __init__(self, input_names=None, state_names=None, context_names=None,
                  num_outputs=0, **kwargs):
         super(RecurrentApplySignature, self).__init__(**kwargs)
+        if not input_names:
+            input_names = []
+        if not state_names:
+            state_names = []
+        if not context_names:
+            context_names = []
         self.__dict__.update(**locals())
         del self.self
+        del self.kwargs
         self.state_init_funcs = dict()
 
     def scan_arguments(self):
