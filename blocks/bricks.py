@@ -1223,11 +1223,13 @@ class GatedRecurrent(BaseRecurrent, DefaultRNG):
         return self.params[2]
 
     def _allocate(self):
-        def new_param():
-            return shared_floatx_zeros((self.dim, self.dim))
-        self.params.append(new_param())
-        self.params.append(new_param() if self.use_update_gate else None)
-        self.params.append(new_param() if self.use_reset_gate else None)
+        def new_param(name):
+            shared = shared_floatx_zeros((self.dim, self.dim))
+            shared.name = name
+            return shared
+        self.params.append(new_param('state2state'))
+        self.params.append(new_param('state2update') if self.use_update_gate else None)
+        self.params.append(new_param('state2reset') if self.use_reset_gate else None)
 
     def _initialize(self):
         self.weights_init.initialize(self.state2state, self.rng)
@@ -1303,11 +1305,13 @@ class GatedRecurrent(BaseRecurrent, DefaultRNG):
     def apply_signature(self, *args, **kwargs):
         s = RecurrentApplySignature(
             input_names=['mask', 'inps'], state_names=['states'],
-            dims=dict(states=self.dim))
+            dims=dict(inps=self.dim, states=self.dim))
         if self.use_update_gate:
             s.input_names.append('update_inps')
+            s.dims['update_inps'] = self.dim
         if self.use_reset_gate:
             s.input_names.append('reset_inps')
+            s.dims['reset_inps'] = self.dim
         s.forkable_input_names = s.input_names[1:]
         return s
 
