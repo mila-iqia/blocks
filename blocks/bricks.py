@@ -261,6 +261,8 @@ class Brick(object):
                         return self
 
                 def __call__(self, brick, *inputs, **kwargs):
+                    return_list = kwargs.pop('return_list', False)
+
                     if not brick.allocated:
                         brick.allocate()
                     if not brick.initialized and not brick.lazy:
@@ -288,7 +290,7 @@ class Brick(object):
                             outputs[i] = output.copy()
                             outputs[i].tag.owner = brick
                             outputs[i].name = brick.name + OUTPUT_SUFFIX
-                    return unpack(outputs)
+                    return outputs if return_list else unpack(outputs)
 
                 def signature_method(self, signature_func):
                     self.signature = signature_func
