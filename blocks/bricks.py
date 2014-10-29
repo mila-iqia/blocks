@@ -1074,8 +1074,8 @@ class ForkInputs(Brick):
                 [name for name in signature.input_names
                  if name not in signature.forkable_input_names]
                 + ["common_input"])
-            return signature
-        return ApplySignature()
+        signature.forkable_input_names = "common_input"
+        return signature
 
 
 class Recurrent(BaseRecurrent, DefaultRNG):
