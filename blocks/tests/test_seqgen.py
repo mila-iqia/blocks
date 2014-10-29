@@ -10,6 +10,7 @@ from blocks.initialization import Orthogonal, IsotropicGaussian, Constant
 
 floatX = theano.config.floatX
 
+
 class MSEEmitter(TrivialEmitter):
 
     @Brick.apply_method
@@ -50,4 +51,3 @@ def test_sequence_generator():
     assert states.shape == (n_steps, batch_size, dim)
     assert outputs.shape == (n_steps, batch_size, output_dim)
     assert costs.shape == (n_steps, batch_size)
-

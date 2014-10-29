@@ -866,6 +866,7 @@ class RecurrentApplySignature(MultiInputApplySignature):
     def scan_arguments(self):
         return self.input_names + self.state_names + self.context_names
 
+
 def zero_state(brick, dim, batch_size, *args, **kwargs):
     """Create an initial state consisting of zeros.
 
@@ -874,6 +875,7 @@ def zero_state(brick, dim, batch_size, *args, **kwargs):
 
     """
     return tensor.zeros((batch_size, dim), dtype=theano.config.floatX)
+
 
 class BaseRecurrent(Brick):
     """Base class for recurrent bricks.
@@ -1228,8 +1230,10 @@ class GatedRecurrent(BaseRecurrent, DefaultRNG):
             shared.name = name
             return shared
         self.params.append(new_param('state2state'))
-        self.params.append(new_param('state2update') if self.use_update_gate else None)
-        self.params.append(new_param('state2reset') if self.use_reset_gate else None)
+        self.params.append(new_param('state2update')
+            if self.use_update_gate else None)
+        self.params.append(new_param('state2reset')
+            if self.use_reset_gate else None)
 
     def _initialize(self):
         self.weights_init.initialize(self.state2state, self.rng)

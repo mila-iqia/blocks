@@ -183,9 +183,9 @@ class BaseSequenceGenerator(BaseRecurrent):
     def cost(self, outputs, mask=None, **kwargs):
         batch_size = outputs.shape[-2]
 
-        contexts = {name : kwargs[name] for name in self.context_names}
+        contexts = {name: kwargs[name] for name in self.context_names}
         initial_states = {name: self.initializer.initialize_state(
-                            name, batch_size=batch_size, **contexts)
+                          name, batch_size=batch_size, **contexts)
                           for name in self.state_names}
 
         feedback = self.feedback.apply(outputs)
@@ -196,7 +196,8 @@ class BaseSequenceGenerator(BaseRecurrent):
         states = dict(zip(self.state_names, states))
 
         feedback = tensor.roll(feedback, 1, 0)
-        feedback = tensor.set_subtensor(feedback[0],
+        feedback = tensor.set_subtensor(
+            feedback[0],
             self.feedback.apply(self.initializer.initialize_state(
                 'outputs', batch_size=batch_size, **contexts)))
         summaries = self.summarizer.summarize(
