@@ -14,8 +14,8 @@ floatX = theano.config.floatX
 class MSEEmitter(TrivialEmitter):
 
     @Brick.apply_method
-    def cost(self, summaries, outputs):
-        return ((summaries - outputs) ** 2).sum(axis=summaries.ndim - 1)
+    def cost(self, readouts, outputs):
+        return ((readouts - outputs) ** 2).sum(axis=readouts.ndim - 1)
 
 
 def test_sequence_generator():
@@ -33,7 +33,7 @@ def test_sequence_generator():
         TrivialFeedback(output_dim, name="feedback"),
         null_output=tensor.zeros((output_dim,)),
         weights_init=IsotropicGaussian(0.01), biases_init=Constant(0))
-    generator.summarizer.summary_dim = output_dim
+    generator.readout.readout_dim = output_dim
 
     y = tensor.tensor3('y')
     mask = tensor.matrix('mask')

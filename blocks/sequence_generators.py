@@ -17,7 +17,7 @@ class BaseSequenceGenerator(BaseRecurrent):
     the `initializer` brick.
 
     2. The current state, the previous output and the contexts are
-    summarized in a single varible using the `summarizer` brick.
+    summarized in a single varible using the `readout` brick.
 
     3. An output is generated from the summary by the `emitter` brick.
 
@@ -35,7 +35,7 @@ class BaseSequenceGenerator(BaseRecurrent):
     """
     @Brick.lazy_method
     def __init__(self, transition, emitter, feedback, null_output,
-                 initializer=None, summarizer=None,
+                 initializer=None, readout=None,
                  weights_init=None, biases_init=None, **kwargs):
         super(BaseSequenceGenerator, self).__init__(**kwargs)
         self.__dict__.update(**locals())
@@ -52,12 +52,12 @@ class BaseSequenceGenerator(BaseRecurrent):
         if not self.initializer:
             self.initializer = NullStateInitializer(
                 self.state_names, self.context_names, null_output)
-        if not self.summarizer:
-            self.summarizer = DefaultSummarizer(
+        if not self.readout:
+            self.readout = DefaultReadout(
                 self.state_names, self.context_names)
 
         self.children = [self.transition, self.initializer,
-                         self.summarizer, self.emitter, self.feedback]
+                         self.readout, self.emitter, self.feedback]
 
     def _push_allocation_config(self):
         transition_signature = self.transition_signature_func()
@@ -67,15 +67,15 @@ class BaseSequenceGenerator(BaseRecurrent):
                         for name in transition_signature.context_names]
 
         feedback_signature = self.feedback.get_signature_func('apply')()
-        self.summarizer.feedback_dim = feedback_signature.output_dims[0]
+        self.readout.feedback_dim = feedback_signature.output_dims[0]
 
-        for brick in self.summarizer, self.initializer:
+        for brick in self.readout, self.initializer:
             brick.state_dims = state_dims
             brick.context_dims = context_dims
 
     def _push_initialization_config(self):
         # Does not touch `transition` initilization
-        for brick in [self.initializer, self.summarizer, self.feedback]:
+        for brick in [self.initializer, self.readout, self.feedback]:
             if self.weights_init:
                 brick.weights_init = self.weights_init
             if self.biases_init:
@@ -102,19 +102,19 @@ class BaseSequenceGenerator(BaseRecurrent):
             feedback[0],
             self.feedback.apply(self.initializer.initialize_state(
                 'outputs', batch_size=batch_size, **contexts)))
-        summaries = self.summarizer.summarize(
+        readouts = self.readout.readout(
             feedback=feedback, **dict_union(states, contexts))
-        return self.emitter.cost(summaries, outputs)
+        return self.emitter.cost(readouts, outputs)
 
     @BaseRecurrent.recurrent_apply_method
     def generate(self, outputs, **kwargs):
         states = {name: kwargs[name] for name in self.state_names}
         contexts = {name: kwargs[name] for name in self.context_names}
-        summaries = self.summarizer.summarize(
+        readouts = self.readout.readout(
             feedback=self.feedback.apply(outputs),
             **dict_union(states, contexts))
-        next_outputs = self.emitter.emit(summaries)
-        next_costs = self.emitter.cost(summaries, next_outputs)
+        next_outputs = self.emitter.emit(readouts)
+        next_costs = self.emitter.cost(readouts, next_outputs)
         next_states = self.transition.apply(
             self.feedback.apply(next_outputs), **dict_union(states, contexts))
         return next_states, next_outputs, next_costs
@@ -187,12 +187,12 @@ class NullStateInitializer(Brick):
                 None, self.state_dims[state_index], batch_size)
 
 
-class DefaultSummarizer(Brick):
+class DefaultReadout(Brick):
 
     @Brick.lazy_method
     def __init__(self, state_names, context_names,
                  weights_init, biases_init, **kwargs):
-        super(DefaultSummarizer, self).__init__(**kwargs)
+        super(DefaultReadout, self).__init__(**kwargs)
         self.__dict__.update(**locals())
 
         self.input_names = ['feedback'] + state_names + context_names
@@ -205,7 +205,7 @@ class DefaultSummarizer(Brick):
         self.dims = [self.feedback_dim] + self.state_dims + self.context_dims
         for projector, dim in zip(self.projectors, self.dims):
             projector.dims[0] = dim
-            projector.dims[-1] = self.summary_dim
+            projector.dims[-1] = self.readout_dim
 
     def _push_initialization_config(self):
         for child in self.children:
@@ -215,7 +215,7 @@ class DefaultSummarizer(Brick):
                 child.biases_init = self.biases_init
 
     @Brick.apply_method
-    def summarize(self, **kwargs):
+    def readout(self, **kwargs):
         projections = [projector.apply(kwargs[name]) for name, projector in
                        zip(self.input_names, self.projectors)]
         if len(projections) == 1:
@@ -230,15 +230,15 @@ class TrivialEmitter(Brick):
         self.output_dim = output_dim
 
     @Brick.apply_method
-    def emit(self, summaries):
-        return summaries
+    def emit(self, readouts):
+        return readouts
 
     @emit.signature_method
     def emit_signature(self, *args, **kwargs):
         return ApplySignature(output_dims=[self.output_dim])
 
     @abstractmethod
-    def cost(self, summaries, outputs):
+    def cost(self, readouts, outputs):
         pass
 
 
