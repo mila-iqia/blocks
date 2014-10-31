@@ -998,6 +998,10 @@ class BaseRecurrent(Brick):
                     kwargs[state_name] = init_func(dim, batch_size, brick,
                                                    *args, **kwargs)
             states_given = only_given(signature.state_names)
+            # Theano issue 1772
+            for name, state in states_given.items():
+                if state.ndim == 2:
+                    states_given[name] = tensor.unbroadcast(state, 1)
             assert len(states_given) == len(signature.state_names)
 
             def scan_function(*args):
