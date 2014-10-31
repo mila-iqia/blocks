@@ -1,4 +1,5 @@
 import copy
+from collections import OrderedDict
 from functools import partial
 from theano import tensor
 from abc import abstractmethod
@@ -34,9 +35,11 @@ class BaseSequenceGenerator(BaseRecurrent):
 
     """
     @Brick.lazy_method
-    def __init__(self, transition, emitter, feedback, null_output,
-                 initializer=None, readout=None,
-                 weights_init=None, biases_init=None, **kwargs):
+    def __init__(self,
+        # bricks
+        transition, attention, readout, emitter, feedback, initializer,
+        # initialization info
+        weights_init=None, biases_init=None, **kwargs):
         super(BaseSequenceGenerator, self).__init__(**kwargs)
         self.__dict__.update(**locals())
         del self.self
@@ -44,19 +47,13 @@ class BaseSequenceGenerator(BaseRecurrent):
         self.transition_signature_func = (
             self.transition.get_signature_func('apply'))
         signature = self.transition_signature_func()
-        assert len(signature.input_names) == 2
-        assert signature.num_outputs == 0
         self.state_names = signature.state_names
         self.context_names = signature.context_names
 
-        if not self.initializer:
-            self.initializer = NullStateInitializer(
-                self.state_names, self.context_names, null_output)
-        if not self.readout:
-            self.readout = DefaultReadout(
-                self.state_names, self.context_names)
+        signature = self.attention.get_signature_func('take_look')()
+        self.glimpse_names = signature.output_names
 
-        self.children = [self.transition, self.initializer,
+        self.children = [self.transition, self.attention, self.initializer,
                          self.readout, self.emitter, self.feedback]
 
     def _push_allocation_config(self):
@@ -85,39 +82,60 @@ class BaseSequenceGenerator(BaseRecurrent):
     def cost(self, outputs, mask=None, **kwargs):
         batch_size = outputs.shape[-2]
 
+        # Prepare input for the iterative part
         contexts = {name: kwargs[name] for name in self.context_names}
         initial_states = {name: self.initializer.initialize_state(
                           name, batch_size=batch_size, **contexts)
                           for name in self.state_names}
-
         feedback = self.feedback.apply(outputs)
-        states = [state[:-1] for state in self.transition.apply(
-            feedback, mask=mask, iterate=True,
-            return_initial_states=True, return_list=True,
-            **dict_union(initial_states, contexts))]
-        states = dict(zip(self.state_names, states))
 
+        # Run the recurrent network
+        results = self.transition.apply(
+            feedback, mask=mask, iterate=True,
+            return_initial_states=True, return_dict=True,
+            **dict_union(initial_states, contexts))
+
+        # Separate the deliverables
+        states = {name: results[name][:-1] for name in set(self.state_names)}
+        returned_names = set(results.keys())
+        glimpse_names = returned_names.intersection(set(self.glimpse_names))
+        glimpses = {name: results[name] for name in glimpse_names}
+
+        # Compute the cost
         feedback = tensor.roll(feedback, 1, 0)
         feedback = tensor.set_subtensor(
             feedback[0],
             self.feedback.apply(self.initializer.initialize_state(
                 'outputs', batch_size=batch_size, **contexts)))
         readouts = self.readout.readout(
-            feedback=feedback, **dict_union(states, contexts))
-        return self.emitter.cost(readouts, outputs)
+            feedback=feedback, **dict_union(states, glimpses, contexts))
+        costs = self.emitter.cost(readouts, outputs)
+
+        # In case the user needs some glimpses or states or smth else
+        also_return =  kwargs.get("also_return")
+        if also_return:
+            others = {name: results[name] for name in also_return}
+            return (costs, others)
+        return costs
 
     @BaseRecurrent.recurrent_apply_method
     def generate(self, outputs, **kwargs):
         states = {name: kwargs[name] for name in self.state_names}
         contexts = {name: kwargs[name] for name in self.context_names}
-        readouts = self.readout.readout(
+        glimpses = {name: kwargs[name] for name in self.glimpse_names}
+
+        next_glimpses = self.attention.take_look(
+            return_dict=True,
+            **dict_union(states, glimpses, contexts))
+        next_readouts = self.readout.readout(
             feedback=self.feedback.apply(outputs),
-            **dict_union(states, contexts))
-        next_outputs = self.emitter.emit(readouts)
-        next_costs = self.emitter.cost(readouts, next_outputs)
+            **dict_union(states, next_glimpses, contexts))
+        next_outputs = self.emitter.emit(next_readouts)
+        next_costs = self.emitter.cost(next_readouts, next_outputs)
         next_states = self.transition.apply(
-            self.feedback.apply(next_outputs), **dict_union(states, contexts))
-        return next_states, next_outputs, next_costs
+            self.feedback.apply(next_outputs),
+            **dict_union(states, glimpses, contexts))
+        return next_states, next_outputs, next_glimpses.values(), next_costs
 
     @generate.signature_method
     def generate_signature(self, *args, **kwargs):
