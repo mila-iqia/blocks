@@ -247,6 +247,8 @@ class Brick(object):
 
                 def __call__(self, brick, *inputs, **kwargs):
                     return_list = kwargs.pop('return_list', False)
+                    return_dict = kwargs.pop('return_dict', False)
+                    assert not return_list or not return_dict
 
                     if not brick.allocated:
                         brick.allocate()
@@ -267,6 +269,7 @@ class Brick(object):
                         outputs = func(self, brick, *inputs, **kwargs)
                     else:
                         outputs = func(brick, *inputs, **kwargs)
+                    # TODO: allow user to return an OrderedDict
                     outputs = pack(outputs)
                     for i, output in enumerate(outputs):
                         if isinstance(output, tensor.Variable):
@@ -275,7 +278,12 @@ class Brick(object):
                             outputs[i] = output.copy()
                             outputs[i].tag.owner = brick
                             outputs[i].name = brick.name + OUTPUT_SUFFIX
-                    return outputs if return_list else unpack(outputs)
+                    if return_list:
+                        return outputs
+                    if return_dict:
+                        return OrderedDict(
+                            zip(self.signature(brick).output_names, outputs))
+                    return unpack(outputs)
 
                 def signature_method(self, signature_func):
                     self.signature = signature_func
