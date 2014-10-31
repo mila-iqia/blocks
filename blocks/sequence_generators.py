@@ -10,69 +10,51 @@ from blocks.utils import dict_union
 
 
 class BaseSequenceGenerator(BaseRecurrent):
-    """A context-dependent sequence generator.
-
-    This brick can generate a sequence by the following algorithm:
-
-    1. Hidden state is initialized from the contexts using
-    the `initializer` brick.
-
-    2. The current state, the previous output and the contexts are
-    summarized in a single varible using the `readout` brick.
-
-    3. An output is generated from the summary by the `emitter` brick.
-
-    4. The next state is obtained as follows. The feedback produced from the
-    output by the `feedback` brick is fed into the `transition`. It is assumed
-    that `transition` has only one input.
-
-    5. Continue from step 2 while the number of steps done is less then
-    required.
-
-    Some of the aforementioned blocks can be set in the __init__ method.
-    The rest can be replaced if necessary by a usual child replacement
-    procedure.
+    """An attention-based sequence generator.
 
     """
     @Brick.lazy_method
-    def __init__(self,
-        # bricks
-        transition, attention, readout, emitter, feedback, initializer,
-        # initialization info
-        weights_init=None, biases_init=None, **kwargs):
+    def __init__(self, readout, transition,
+                 weights_init=None, biases_init=None, **kwargs):
         super(BaseSequenceGenerator, self).__init__(**kwargs)
         self.__dict__.update(**locals())
         del self.self
 
-        self.transition_signature_func = (
+        self._apply_signature_func = (
             self.transition.get_signature_func('apply'))
-        signature = self.transition_signature_func()
+        signature = self._apply_signature_func()
+        assert len(signature.input_names) == 2
+        assert 'mask' in signature.input_names
         self.state_names = signature.state_names
         self.context_names = signature.context_names
 
-        signature = self.attention.get_signature_func('take_look')()
+        self._take_look_signature_func = (
+            self.transition.get_signature_func('take_look'))
+        signature = self._take_look_signature_func()
         self.glimpse_names = signature.output_names
 
-        self.children = [self.transition, self.attention, self.initializer,
-                         self.readout, self.emitter, self.feedback]
+        self.children = [self.readout, self.transition]
 
     def _push_allocation_config(self):
-        transition_signature = self.transition_signature_func()
-        state_dims = [transition_signature.dims[name]
-                      for name in transition_signature.state_names]
-        context_dims = [transition_signature.dims[name]
-                        for name in transition_signature.context_names]
+        # Configure readout
+        apply_signature = self._apply_signature_func()
+        take_look_signature = self._take_look_signature_func()
+        state_dims = {name: apply_signature.dims[name]
+                      for name in apply_signature.state_names}
+        context_dims = {name: apply_signature.dims[name]
+                        for name in apply_signature.context_names}
+        self.glimpse_dims = {name: take_look_signature.output_dims[i]
+            for i, name in enumerate(take_look_signature.output_names)}
+        self.readout.source_dims = dict_union(
+            state_dims, context_dims, self.glimpse_dims)
 
-        feedback_signature = self.feedback.get_signature_func('apply')()
-        self.readout.feedback_dim = feedback_signature.output_dims[0]
-
-        for brick in self.readout, self.initializer:
-            brick.state_dims = state_dims
-            brick.context_dims = context_dims
+        # Configure transition
+        feedback_signature = self.readout.get_signature_func('feedback')()
+        assert len(feedback_signature.output_dims) == 1
+        self.transition.input_dim = feedback_signature.output_dims[0]
 
     def _push_initialization_config(self):
-        # Does not touch `transition` initilization
-        for brick in [self.initializer, self.readout, self.feedback]:
+        for brick in [self.readout, self.transition]:
             if self.weights_init:
                 brick.weights_init = self.weights_init
             if self.biases_init:
@@ -84,32 +66,26 @@ class BaseSequenceGenerator(BaseRecurrent):
 
         # Prepare input for the iterative part
         contexts = {name: kwargs[name] for name in self.context_names}
-        initial_states = {name: self.initializer.initialize_state(
-                          name, batch_size=batch_size, **contexts)
-                          for name in self.state_names}
-        feedback = self.feedback.apply(outputs)
+        feedback = self.readout.feedback(outputs)
 
         # Run the recurrent network
         results = self.transition.apply(
             feedback, mask=mask, iterate=True,
-            return_initial_states=True, return_dict=True,
-            **dict_union(initial_states, contexts))
+            return_initial_states=True, return_dict=True, **contexts)
 
         # Separate the deliverables
-        states = {name: results[name][:-1] for name in set(self.state_names)}
-        returned_names = set(results.keys())
-        glimpse_names = returned_names.intersection(set(self.glimpse_names))
-        glimpses = {name: results[name] for name in glimpse_names}
+        states = {name: results[name][:-1] for name in self.state_names}
+        glimpses = {name: results[name] for name in self.glimpse_names}
 
         # Compute the cost
         feedback = tensor.roll(feedback, 1, 0)
         feedback = tensor.set_subtensor(
             feedback[0],
-            self.feedback.apply(self.initializer.initialize_state(
-                'outputs', batch_size=batch_size, **contexts)))
+            self.readout.feedback(self.readout.initial_outputs(
+                None, batch_size, **contexts)))
         readouts = self.readout.readout(
             feedback=feedback, **dict_union(states, glimpses, contexts))
-        costs = self.emitter.cost(readouts, outputs)
+        costs = self.readout.cost(readouts, outputs)
 
         # In case the user needs some glimpses or states or smth else
         also_return =  kwargs.get("also_return")
@@ -124,105 +100,91 @@ class BaseSequenceGenerator(BaseRecurrent):
         contexts = {name: kwargs[name] for name in self.context_names}
         glimpses = {name: kwargs[name] for name in self.glimpse_names}
 
-        next_glimpses = self.attention.take_look(
+        next_glimpses = self.transition.take_look(
             return_dict=True,
             **dict_union(states, glimpses, contexts))
         next_readouts = self.readout.readout(
-            feedback=self.feedback.apply(outputs),
+            feedback=self.readout.feedback(outputs),
             **dict_union(states, next_glimpses, contexts))
-        next_outputs = self.emitter.emit(next_readouts)
-        next_costs = self.emitter.cost(next_readouts, next_outputs)
+        next_outputs = self.readout.emit(next_readouts)
+        next_costs = self.readout.cost(next_readouts, next_outputs)
         next_states = self.transition.apply(
-            self.feedback.apply(next_outputs),
+            self.readout.feedback(next_outputs), return_list=True,
             **dict_union(states, glimpses, contexts))
-        return next_states, next_outputs, next_glimpses.values(), next_costs
+        return next_states + [next_outputs] + next_glimpses.values() + [next_costs]
 
     @generate.signature_method
     def generate_signature(self, *args, **kwargs):
-        signature = copy.deepcopy(self.transition_signature_func())
+        signature = copy.deepcopy(self._apply_signature_func())
+
         signature.state_names.append('outputs')
         signature.dims['outputs'] = (
-            self.emitter.get_signature_func('emit')().output_dims[0])
+            self.readout.get_signature_func('emit')().output_dims[0])
+        signature.state_init_funcs['outputs'] = self.readout.initial_outputs
+
+        for name in self.glimpse_names:
+            signature.glimpse_names.append(name)
+            signature.glimpse_dims[name] = self.glimpse_dims[name]
+            signature.state_init_funcs[name] = partial(
+                self.initial_glimpses, name)
+
         signature.num_outputs = 1
-        for state_name in signature.state_names:
-            # Adapt `self.initializer` to the standard
-            # state initialization function interface
-            def call_initializer(state_name, self, dim, batch_size,
-                                 *args, **kwargs):
-                contexts = {name: kwargs[name] for name in self.context_names}
-                return self.initializer.initialize_state(
-                    state_name, batch_size=batch_size, **contexts)
-            signature.state_init_funcs[state_name] = (
-                partial(call_initializer, state_name))
+
         return signature
 
 
-class SequenceGenerator(BaseSequenceGenerator):
-    """A more user-friendly subclass of the BaseSequenceGenerator.
+class AbstractReadout(Brick):
+    """Yields outputs combining information from multiple sources."""
 
-    This class is responsible for wrapping the transition and adding the
-    necessary contexts.
+    @abstractmethod
+    def emit(self, **kwargs):
+        pass
 
-    .. todo:: context addition
+    @abstractmethod
+    def feedback(self, **kwargs):
+        pass
 
-    """
+    @abstractmethod
+    def cost(self, **kwargs):
+        pass
 
-    def __init__(self, transition, *args, **kwargs):
-        self.fork_inputs_wrapper = ForkInputs(transition)
-        super(SequenceGenerator, self).__init__(self.fork_inputs_wrapper,
-                                                *args, **kwargs)
-
-    def _push_allocation_config(self):
-        feedback_signature = self.feedback.get_signature_func('apply')()
-        self.fork_inputs_wrapper.input_dim = feedback_signature.output_dims[0]
-        super(SequenceGenerator, self)._push_allocation_config()
-
-    def _push_initialization_config(self):
-        if self.weights_init:
-            self.fork_inputs_wrapper.weights_init = self.weights_init
-        if self.biases_init:
-            self.fork_inputs_wrapper.biases_init = self.biases_init
-        super(SequenceGenerator, self)._push_initialization_config()
+    @abstractmethod
+    def initial_outputs(self, dim, batch_size, **kwargs):
+        pass
 
 
-class NullStateInitializer(Brick):
+class AbstractAttentionTransition(BaseRecurrent):
+    """A recurrent transition with an attention mechanism."""
 
-    def __init__(self, state_names, context_names, null_output, **kwargs):
-        super(NullStateInitializer, self).__init__(**kwargs)
-        self.__dict__.update(**locals())
+    @abstractmethod
+    def apply(self, **kwargs):
+        pass
 
-        assert len(self.context_names) == 0
+    @abstractmethod
+    def take_look(self, **kwargs):
+        pass
 
-    @Brick.apply_method
-    def initialize_state(self, state_name, batch_size, **kwargs):
-        if state_name == 'outputs':
-            shape = [batch_size] + [self.null_output.shape[i]
-                                    for i in range(self.null_output.ndim)]
-            return tensor.alloc(self.null_output, *shape)
-        else:
-            state_index = self.state_names.index(state_name)
-            return zero_state(
-                None, self.state_dims[state_index], batch_size)
+    @abstractmethod
+    def initial_glimpses(self, glimpse_name, dim, batch_size, **kwargs):
+        pass
 
 
-class DefaultReadout(Brick):
+class SimpleReadout(AbstractReadout):
 
     @Brick.lazy_method
-    def __init__(self, state_names, context_names,
+    def __init__(self, readout_dim, source_names,
                  weights_init, biases_init, **kwargs):
-        super(DefaultReadout, self).__init__(**kwargs)
+        super(SimpleReadout, self).__init__(**kwargs)
         self.__dict__.update(**locals())
 
-        self.input_names = ['feedback'] + state_names + context_names
         self.projectors = [MLP(name="project_{}".format(name),
                                activations=[Identity()])
-                           for name in self.input_names]
+                           for name in self.source_names]
         self.children = self.projectors
 
     def _push_allocation_config(self):
-        self.dims = [self.feedback_dim] + self.state_dims + self.context_dims
-        for projector, dim in zip(self.projectors, self.dims):
-            projector.dims[0] = dim
+        for name, projector in zip(self.source_names, self.projectors):
+            projector.dims[0] = self.source_dims[name]
             projector.dims[-1] = self.readout_dim
 
     def _push_initialization_config(self):
@@ -235,42 +197,78 @@ class DefaultReadout(Brick):
     @Brick.apply_method
     def readout(self, **kwargs):
         projections = [projector.apply(kwargs[name]) for name, projector in
-                       zip(self.input_names, self.projectors)]
+                       zip(self.source_names, self.projectors)]
         if len(projections) == 1:
             return projections[0]
         return sum(projections[1:], projections[0])
 
-
-class TrivialEmitter(Brick):
-
-    def __init__(self, output_dim, **kwargs):
-        super(TrivialEmitter, self).__init__(**kwargs)
-        self.output_dim = output_dim
-
     @Brick.apply_method
-    def emit(self, readouts):
+    def emit(self, readouts, **kwargs):
         return readouts
 
     @emit.signature_method
     def emit_signature(self, *args, **kwargs):
-        return ApplySignature(output_dims=[self.output_dim])
-
-    @abstractmethod
-    def cost(self, readouts, outputs):
-        pass
-
-
-class TrivialFeedback(Brick):
-
-    @Brick.lazy_method
-    def __init__(self, output_dim, **kwargs):
-        super(TrivialFeedback, self).__init__(**kwargs)
-        self.output_dim = output_dim
+        return ApplySignature(output_dims=[self.readout_dim])
 
     @Brick.apply_method
-    def apply(self, outputs):
+    def feedback(self, outputs, **kwargs):
         return outputs
 
+    @feedback.signature_method
+    def feedback_signature(self, *args, **kwargs):
+        return ApplySignature(output_dims=[self.readout_dim])
+
+    @Brick.apply_method
+    def initial_outputs(self, dim, *args, **kwargs):
+        if not dim:
+            dim = self.readout_dim
+        return zero_state(dim, *args, **kwargs)
+
+
+class AttentionTransition(AbstractAttentionTransition):
+
+    @Brick.lazy_method
+    def __init__(self, transition, input_dim, attention=None, **kwargs):
+        super(AttentionTransition, self).__init__(**kwargs)
+        self.__dict__.update(**locals())
+        del self.self
+        del self.kwargs
+
+        if self.attention:
+            raise NotImplementedError()
+
+        self.fork_inputs = ForkInputs(self.transition)
+        self.children = [self.transition, self.fork_inputs]
+
+    def _push_allocation_config(self):
+        self.fork_inputs.input_dim = self.input_dim
+
+    def _push_initialization_config(self):
+        for child in self.children:
+            if self.weights_init:
+                child.weights_init = self.weights_init
+            if self.biases_init:
+                child.biases_init = self.biases_init
+
+    @BaseRecurrent.recurrent_apply_method
+    def apply(self, feedback, *args, **kwargs):
+        return self.fork_inputs.apply(feedback, *args, **kwargs)
+
     @apply.signature_method
-    def apply_signature(self):
-        return ApplySignature(output_dims=[self.output_dim])
+    def apply_signature(self, *args, **kwargs):
+        signature = self.fork_inputs.get_signature_func('apply')()
+        common_input_index = signature.input_names.index(ForkInputs.common_input)
+        signature.input_names[common_input_index] = 'feedback'
+        return signature
+
+    @Brick.apply_method
+    def take_look(self, *args, **kwargs):
+        return None
+
+    @take_look.signature_method
+    def take_look_signature(self, *args, **kwargs):
+        return ApplySignature([], [])
+
+    @Brick.apply_method
+    def initial_glimpses(self, *args, **kwargs):
+        raise NotImplementedError()

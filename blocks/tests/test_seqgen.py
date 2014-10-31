@@ -5,18 +5,10 @@ from theano import tensor
 
 from blocks.bricks import Brick, GatedRecurrent, Tanh
 from blocks.sequence_generators import (
-    SequenceGenerator, TrivialEmitter, TrivialFeedback)
+    BaseSequenceGenerator, SimpleReadout, AttentionTransition)
 from blocks.initialization import Orthogonal, IsotropicGaussian, Constant
 
 floatX = theano.config.floatX
-
-
-class MSEEmitter(TrivialEmitter):
-
-    @Brick.apply_method
-    def cost(self, readouts, outputs):
-        return ((readouts - outputs) ** 2).sum(axis=readouts.ndim - 1)
-
 
 def test_sequence_generator():
     output_dim = 1
@@ -24,16 +16,21 @@ def test_sequence_generator():
     batch_size = 30
     n_steps = 10
 
+    class Readout(SimpleReadout):
+
+        def __init__(self):
+            super(Readout, self).__init__(readout_dim=output_dim,
+                                          source_names=['states'])
+
+        @Brick.apply_method
+        def cost(self, readouts, outputs):
+            return ((readouts - outputs) ** 2).sum(axis=readouts.ndim - 1)
+
     transition = GatedRecurrent(
         name="transition", activation=Tanh(), dim=dim,
         weights_init=Orthogonal())
-
-    generator = SequenceGenerator(
-        transition, MSEEmitter(output_dim, name="emitter"),
-        TrivialFeedback(output_dim, name="feedback"),
-        null_output=tensor.zeros((output_dim,)),
-        weights_init=IsotropicGaussian(0.01), biases_init=Constant(0))
-    generator.readout.readout_dim = output_dim
+    transition = AttentionTransition(name="wrapper", transition=transition)
+    generator = BaseSequenceGenerator(Readout(), transition)
 
     y = tensor.tensor3('y')
     mask = tensor.matrix('mask')
