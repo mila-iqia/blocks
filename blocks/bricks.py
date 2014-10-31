@@ -1198,7 +1198,8 @@ class Recurrent(BaseRecurrent, DefaultRNG):
     def apply_signature(self, *args, **kwargs):
         return RecurrentApplySignature(
             input_names=['inp', 'mask'], forkable_input_names=['inp'],
-            state_names=['state'], dims=dict(state=self.dim))
+            state_names=['state'], output_names=['state'],
+            dims=dict(state=self.dim))
 
 
 class GatedRecurrent(BaseRecurrent, DefaultRNG):
@@ -1306,7 +1307,6 @@ class GatedRecurrent(BaseRecurrent, DefaultRNG):
         output : Theano variable
             Next states of the network.
         """
-
         if (self.use_update_gate != bool(update_inps) or
                 self.use_reset_gate != bool(reset_inps)):
             raise ValueError("Configuration and input mismatch:"
@@ -1344,6 +1344,7 @@ class GatedRecurrent(BaseRecurrent, DefaultRNG):
     def apply_signature(self, *args, **kwargs):
         s = RecurrentApplySignature(
             input_names=['mask', 'inps'], state_names=['states'],
+            output_names=['states'],
             dims=dict(inps=self.dim, states=self.dim))
         if self.use_update_gate:
             s.input_names.append('update_inps')
