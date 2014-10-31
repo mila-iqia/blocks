@@ -1049,6 +1049,8 @@ class ForkInputs(Brick):
         Biases initialization method to propagate to fork bricks.
 
     """
+    common_input = 'common_input'
+
     @Brick.lazy_method
     def __init__(self, child, input_dim, apply_method='apply',
                  fork=None, weights_init=None, biases_init=None, **kwargs):
