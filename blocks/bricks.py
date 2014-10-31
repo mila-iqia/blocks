@@ -848,13 +848,15 @@ class MultiInputApplySignature(ApplySignature):
 
     """
 
-    def __init__(self, forkable_input_names=None, dims=None):
+    def __init__(self, forkable_input_names=None, dims=None, **kwargs):
+        super(MultiInputApplySignature, self).__init__(**kwargs)
         if not forkable_input_names:
             forkable_input_names = list()
         if not dims:
             dims = dict()
         self.__dict__.update(**locals())
         del self.self
+        del self.kwargs
 
 
 class RecurrentApplySignature(MultiInputApplySignature):
