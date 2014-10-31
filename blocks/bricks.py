@@ -241,7 +241,7 @@ class Brick(object):
                     if brick:
                         def call_wrapper(brick, *args, **kwargs):
                             return self(brick, *args, **kwargs)
-                        return types.MethodType(call_wrapper, brick)
+                        return types.MethodType(call_wrapper, brick, brick.__class__)
                     else:
                         return self
 
