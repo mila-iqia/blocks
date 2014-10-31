@@ -896,7 +896,7 @@ class RecurrentApplySignature(MultiInputApplySignature):
         return self.input_names + self.state_names + self.context_names
 
 
-def zero_state(brick, dim, batch_size, *args, **kwargs):
+def zero_state(dim, batch_size, *args, **kwargs):
     """Create an initial state consisting of zeros.
 
     The default state initialization routine. It is not made a method
@@ -995,7 +995,7 @@ class BaseRecurrent(Brick):
                     dim = signature.dims[state_name]
                     init_func = signature.state_init_funcs.get(
                         state_name, zero_state)
-                    kwargs[state_name] = init_func(brick, dim, batch_size,
+                    kwargs[state_name] = init_func(dim, batch_size, brick,
                                                    *args, **kwargs)
             states_given = only_given(signature.state_names)
             assert len(states_given) == len(signature.state_names)
