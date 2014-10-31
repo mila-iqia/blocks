@@ -28,21 +28,6 @@ logging.basicConfig()
 logger = logging.getLogger(__name__)
 
 
-class ApplySignature(object):
-    """Base class for signatures of apply methods.
-
-    Attributes
-    ----------
-    output_dims : list
-        The list of output dimensionalities if available, None otherwise.
-
-    """
-    __metaclass__ = ABCMeta
-
-    def __init__(self, output_dims=None):
-        self.output_dims = output_dims
-
-
 class Brick(object):
     """A brick encapsulates Theano operations with parameters.
 
@@ -557,6 +542,39 @@ class Brick(object):
 
         """
         pass
+
+
+class ApplySignature(object):
+    """Base class for signatures of apply methods.
+
+    A signature is a piece of information provided by an apply method about
+    its inputs and outputs. Signatures are necessary for combining bricks
+    into complex structures automatically. Inputs and outputs of an
+    apply method can depend on the state of the brick, that's why the signature
+    is returned by a special signature function, which is attached to
+    an apply method by means of decorator at the class definition stage. In
+    addition the returned value of the signature function can change during
+    the brick's lifetime, e.g. after allocation of the brick the signature
+    can contain dimensionalities.
+
+    Attributes
+    ----------
+    output_names : list of strs
+        The names for the output variables of the apply method
+        given in the same order as they are returned. None if not available.
+    output_dims : list of ints
+        The expected dimensionalities of the output variables of the apply
+        method given in the same order as they are returned.
+        None if not available.
+
+    .. todo:: support `OrderedDict` for the `output_dims` attribute
+
+    """
+    __metaclass__ = ABCMeta
+
+    def __init__(self, output_names=None, output_dims=None):
+        self.__dict__.update(**locals())
+        del self.self
 
 
 class DefaultRNG(Brick):
