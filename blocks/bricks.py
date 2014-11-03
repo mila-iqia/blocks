@@ -292,8 +292,8 @@ class Brick(object):
             return ApplyWrapper()
         return decorator
 
-    def get_signature_func(self, apply_method):
-        """Creates a function that returns the signature of `apply_method`.
+    def signature(self, apply_method):
+        """Returns the current signature of `apply_method`
 
         Parameters
         ----------
@@ -301,7 +301,7 @@ class Brick(object):
             Name of the apply method.
 
         """
-        return partial(getattr(self.__class__, apply_method).signature, self)
+        return getattr(self.__class__, apply_method).signature(self)
 
     @staticmethod
     def apply_method(func):
@@ -1060,10 +1060,8 @@ class ForkInputs(Brick):
         del self.kwargs
 
         self.wrapped_apply = getattr(child, self.apply_method)
-        self.wrapped_signature_func = self.child.get_signature_func(
-            self.apply_method)
 
-        signature = self.wrapped_signature_func()
+        signature = self.child.signature('apply')
         assert isinstance(signature, MultiInputApplySignature)
         if not fork:
             fork = MLP([Identity()])
@@ -1075,7 +1073,7 @@ class ForkInputs(Brick):
         self.children = [child] + self.forks
 
     def _push_allocation_config(self):
-        signature = self.wrapped_signature_func()
+        signature = self.child.signature('apply')
         for name, fork in zip(signature.forkable_input_names, self.forks):
             fork.dims[0] = self.input_dim
             fork.dims[-1] = signature.dims[name]
@@ -1097,7 +1095,7 @@ class ForkInputs(Brick):
             The input to fork.
 
         """
-        signature = self.wrapped_signature_func()
+        signature = self.child.signature('apply')
         for name, fork in zip(signature.forkable_input_names, self.forks):
             assert name not in kwargs
             kwargs[name] = fork.apply(common_input)
@@ -1105,7 +1103,7 @@ class ForkInputs(Brick):
 
     @apply.signature_method
     def apply_signature(self):
-        signature = copy.deepcopy(self.wrapped_signature_func())
+        signature = copy.deepcopy(self.child.signature('apply'))
         if isinstance(signature, RecurrentApplySignature):
             signature.input_names = (
                 [name for name in signature.input_names

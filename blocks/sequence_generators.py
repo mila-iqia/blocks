@@ -20,25 +20,21 @@ class BaseSequenceGenerator(BaseRecurrent):
         self.__dict__.update(**locals())
         del self.self
 
-        self._apply_signature_func = (
-            self.transition.get_signature_func('apply'))
-        signature = self._apply_signature_func()
+        signature = self.transition.signature('apply')
         assert len(signature.input_names) == 2
         assert 'mask' in signature.input_names
         self.state_names = signature.state_names
         self.context_names = signature.context_names
 
-        self._take_look_signature_func = (
-            self.transition.get_signature_func('take_look'))
-        signature = self._take_look_signature_func()
-        self.glimpse_names = signature.output_names
+        self.glimpse_names = (
+            self.transition.signature('take_look').output_names)
 
         self.children = [self.readout, self.transition]
 
     def _push_allocation_config(self):
         # Configure readout
-        apply_signature = self._apply_signature_func()
-        take_look_signature = self._take_look_signature_func()
+        apply_signature = self.transition.signature('apply')
+        take_look_signature = self.transition.signature('take_look')
         state_dims = {name: apply_signature.dims[name]
                       for name in apply_signature.state_names}
         context_dims = {name: apply_signature.dims[name]
@@ -49,7 +45,7 @@ class BaseSequenceGenerator(BaseRecurrent):
             state_dims, context_dims, self.glimpse_dims)
 
         # Configure transition
-        feedback_signature = self.readout.get_signature_func('feedback')()
+        feedback_signature = self.readout.signature('feedback')
         assert len(feedback_signature.output_dims) == 1
         self.transition.input_dim = feedback_signature.output_dims[0]
 
@@ -115,11 +111,11 @@ class BaseSequenceGenerator(BaseRecurrent):
 
     @generate.signature_method
     def generate_signature(self, *args, **kwargs):
-        signature = copy.deepcopy(self._apply_signature_func())
+        signature = copy.deepcopy(self.transition.signature('apply'))
 
         signature.state_names.append('outputs')
         signature.dims['outputs'] = (
-            self.readout.get_signature_func('emit')().output_dims[0])
+            self.readout.signature('emit').output_dims[0])
         signature.state_init_funcs['outputs'] = self.readout.initial_outputs
 
         for name in self.glimpse_names:
@@ -256,7 +252,7 @@ class AttentionTransition(AbstractAttentionTransition):
 
     @apply.signature_method
     def apply_signature(self, *args, **kwargs):
-        signature = self.fork_inputs.get_signature_func('apply')()
+        signature = self.fork_inputs.signature('apply')
         common_input_index = signature.input_names.index(ForkInputs.common_input)
         signature.input_names[common_input_index] = 'feedback'
         return signature
