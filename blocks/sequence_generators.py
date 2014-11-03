@@ -335,30 +335,36 @@ class SimpleReadout(AbstractReadout):
         return zero_state(dim, *args, **kwargs)
 
 
-class AttentionTransition(AbstractAttentionTransition):
-    """Combines a recurrent transition and an attention mechanism.
+class ForkAttentionTransitionInputs(ForkInputs, AbstractAttentionTransition):
+    """A ForkInputs extension that keeps attention interface accesible."""
 
-    This brick is very much under development and currently
-    can only wrap a transition when no attention mechanism is provided.
-    """
+    @Brick.apply_method
+    def take_look(self, *args, **kwargs):
+        return self.child.take_look(*args, **kwargs)
+
+    @take_look.signature_method
+    def take_look_signature(self, *args, **kwargs):
+        return self.child.signature('take_look')
+
+    @Brick.apply_method
+    def initial_glimpses(self, *args, **kwargs):
+        return self.child.initial_glimpses(*args, **kwargs)
+
+
+class FakeAttentionTransition(AbstractAttentionTransition):
+    """Adds fake attention interface to a transition."""
 
     @Brick.lazy_method
-    def __init__(self, transition, input_dim, attention=None, **kwargs):
-        super(AttentionTransition, self).__init__(**kwargs)
+    def __init__(self, transition, weights_init, biases_init, **kwargs):
+        super(FakeAttentionTransition, self).__init__(**kwargs)
         self.__dict__.update(**locals())
         del self.self
         del self.kwargs
 
-        if self.attention:
-            raise NotImplementedError()
-
-        self.fork_inputs = ForkInputs(self.transition)
-        self.children = [self.transition, self.fork_inputs]
-
-    def _push_allocation_config(self):
-        self.fork_inputs.input_dim = self.input_dim
+        self.children = [self.transition]
 
     def _push_initialization_config(self):
+        # TODO: stop copy-pasting this code
         for child in self.children:
             if self.weights_init:
                 child.weights_init = self.weights_init
@@ -366,16 +372,12 @@ class AttentionTransition(AbstractAttentionTransition):
                 child.biases_init = self.biases_init
 
     @Brick.recurrent_apply_method
-    def apply(self, feedback, *args, **kwargs):
-        return self.fork_inputs.apply(feedback, *args, **kwargs)
+    def apply(self, *args, **kwargs):
+        return self.transition.apply(*args, **kwargs)
 
     @apply.signature_method
     def apply_signature(self, *args, **kwargs):
-        signature = self.fork_inputs.signature('apply')
-        common_input_index = signature.input_names.index(
-            ForkInputs.common_input)
-        signature.input_names[common_input_index] = 'feedback'
-        return signature
+        return self.transition.signature('apply')
 
     @Brick.apply_method
     def take_look(self, *args, **kwargs):
@@ -388,3 +390,16 @@ class AttentionTransition(AbstractAttentionTransition):
     @Brick.apply_method
     def initial_glimpses(self, *args, **kwargs):
         raise NotImplementedError()
+
+
+class SequenceGenerator(BaseSequenceGenerator):
+    """A more user-friendly interface for BaseSequenceGenerator."""
+
+    def __init__(self, readout, transition, attention=None,
+                 weights_init=None, biases_init=None, **kwargs):
+        if attention:
+            raise NotImplementedError()
+        transition = FakeAttentionTransition(transition)
+        transition = ForkAttentionTransitionInputs(transition)
+        super(SequenceGenerator, self).__init__(
+            readout, transition, weights_init, biases_init, **kwargs)

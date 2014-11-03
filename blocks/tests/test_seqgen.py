@@ -5,8 +5,8 @@ from theano import tensor
 
 from blocks.bricks import Brick, GatedRecurrent, Tanh
 from blocks.sequence_generators import (
-    BaseSequenceGenerator, SimpleReadout, AttentionTransition)
-from blocks.initialization import Orthogonal
+    SequenceGenerator, SimpleReadout)
+from blocks.initialization import Orthogonal, IsotropicGaussian, Constant
 
 floatX = theano.config.floatX
 
@@ -32,8 +32,11 @@ def test_sequence_generator():
     transition = GatedRecurrent(
         name="transition", activation=Tanh(), dim=dim,
         weights_init=Orthogonal())
-    transition = AttentionTransition(name="wrapper", transition=transition)
-    generator = BaseSequenceGenerator(Readout(), transition)
+    generator = SequenceGenerator(
+        Readout(), transition,
+        weights_init=IsotropicGaussian(0.01), biases_init=Constant(0),
+        name="generator")
+    generator.initialize()
 
     y = tensor.tensor3('y')
     mask = tensor.matrix('mask')
