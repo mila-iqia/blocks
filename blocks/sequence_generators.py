@@ -260,6 +260,24 @@ class AbstractAttentionTransition(BaseRecurrent):
 
 
 class SimpleReadout(AbstractReadout):
+    """A simple readout block.
+
+    This is an example readout block that can be used in simple cases
+    when the outputs are computed deterministically from contexts,
+    states and glimpses. No distinction is made between `readouts` and
+    `outputs` in this case, which is results into trivial `emit`
+    and `feedback` methods.
+
+    The readout is made producing by summing linear projections of all sources.
+
+    Parameters
+    ----------
+    readout_dim : int
+        The dimensionality of the readout.
+    source_names : list of strs
+        The names of information sources.
+
+    """
 
     @Brick.lazy_method
     def __init__(self, readout_dim, source_names,
@@ -316,6 +334,11 @@ class SimpleReadout(AbstractReadout):
 
 
 class AttentionTransition(AbstractAttentionTransition):
+    """Combines a recurrent transition and an attention mechanism.
+
+    This brick is very much under development and currently
+    can only wrap a transition when no attention mechanism is provided.
+    """
 
     @Brick.lazy_method
     def __init__(self, transition, input_dim, attention=None, **kwargs):
