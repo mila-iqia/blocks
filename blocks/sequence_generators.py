@@ -1,5 +1,6 @@
+"""Sequence generation framework"""
+
 import copy
-from collections import OrderedDict
 from functools import partial
 from theano import tensor
 from abc import abstractmethod
@@ -10,7 +11,63 @@ from blocks.utils import dict_union
 
 
 class BaseSequenceGenerator(BaseRecurrent):
-    """An attention-based sequence generator.
+    """A generic sequence generator.
+
+    This class combines two components, a readout network and an
+    attention-equipped recurrent transition, into a context-dependent
+    sequence generator. The generation algorithm description follows.
+
+    *Definitions:*
+
+    * states of the generator are the states of the transition as specified
+      by its `apply` method signature
+
+    * contexts of the generator are the contexts of the transition as specified
+      in its `apply` method signature
+
+    * glimpses are intermediate entities computed from the states, the contexts
+      and the previous step glimpses. They are computed by in the transition's
+      `apply` method when not given or by explicitly calling the transition's
+      `take_look` method. The output names of `take_look` specify the set of
+      glimpses taken by the generator.
+
+    *Algorithm:*
+
+    0. The initial states are computed from the contexts. The transition
+       signature is assumed to contain the initialization logic. Fake previous
+       outputs and fake previous glimpses are created using `initial_outputs`
+       and `initial_glimpses` methods of the readout and the transition
+       respectively.
+
+    1. Given the contexts, the current state and glimpses from the previous
+       step the attention mechanism hidden in the transition produces current
+       step glimpses. This happens in the `take_look` method of the transition.
+
+    2. Using the contexts, the fed back output from the previous step,
+       the current states and glimpses, the readout brick is used to generate
+       the new output by calling its `readout` and `emit` methods.
+
+    3. The new output is fed back in the `feedback` method of the readout
+       brick. This feedback, together with the contexts, the glimpses and
+       the previous states is used to get the new states in the transition's
+       `apply` method.
+
+    4. Back to step 1, if desired sequence length is not yet reached.
+
+    *Notes:*
+
+    * For machine translation we would have only one glimpse: the weighted
+      average of the annotations.
+
+    * For speech recognition we would have three: the weighted average,
+      the alignment and the monotonicity penalty.
+
+    Parameters
+    ----------
+        readout : a subclass of AbstractReadout
+            The readout component of the sequence generator.
+        transition : a subclass of AbstractAttentionTransition
+            The transition component of the sequence generator.
 
     """
     @Brick.lazy_method
