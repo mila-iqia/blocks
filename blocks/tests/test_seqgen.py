@@ -6,9 +6,10 @@ from theano import tensor
 from blocks.bricks import Brick, GatedRecurrent, Tanh
 from blocks.sequence_generators import (
     BaseSequenceGenerator, SimpleReadout, AttentionTransition)
-from blocks.initialization import Orthogonal, IsotropicGaussian, Constant
+from blocks.initialization import Orthogonal
 
 floatX = theano.config.floatX
+
 
 def test_sequence_generator():
     # Disclaimer: here we only check shapes, not values.

@@ -5,7 +5,7 @@ This defines the basic interface of bricks.
 import copy
 import types
 from abc import ABCMeta
-from functools import wraps, partial
+from functools import wraps
 import inspect
 import logging
 from collections import OrderedDict
@@ -241,7 +241,8 @@ class Brick(object):
                     if brick:
                         def call_wrapper(brick, *args, **kwargs):
                             return self(brick, *args, **kwargs)
-                        return types.MethodType(call_wrapper, brick, brick.__class__)
+                        return types.MethodType(call_wrapper,
+                                                brick, brick.__class__)
                     else:
                         return self
 
@@ -502,7 +503,7 @@ class Brick(object):
             # Check if positional arguments were passed as keyword arguments
             args = list(args)
             for i, arg_name in enumerate(arg_names[:len(arg_names)
-                                                    - len(defaults)]):
+                                                   - len(defaults)]):
                 if arg_name in kwargs:
                     if args[i] is not None:
                         raise ValueError
@@ -1017,8 +1018,6 @@ def zero_state(dim, batch_size, *args, **kwargs):
 
     """
     return tensor.zeros((batch_size, dim), dtype=theano.config.floatX)
-
-
 
 
 class ForkInputs(Brick):

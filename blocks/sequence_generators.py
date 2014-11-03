@@ -97,7 +97,8 @@ class BaseSequenceGenerator(Brick):
         context_dims = {name: apply_signature.dims[name]
                         for name in apply_signature.context_names}
         self.glimpse_dims = {name: take_look_signature.output_dims[i]
-            for i, name in enumerate(take_look_signature.output_names)}
+                             for i, name in
+                             enumerate(take_look_signature.output_names)}
         self.readout.source_dims = dict_union(
             state_dims, context_dims, self.glimpse_dims)
 
@@ -156,7 +157,7 @@ class BaseSequenceGenerator(Brick):
         costs = self.readout.cost(readouts, outputs)
 
         # In case the user needs some glimpses or states or smth else
-        also_return =  kwargs.get("also_return")
+        also_return = kwargs.get("also_return")
         if also_return:
             others = {name: results[name] for name in also_return}
             return (costs, others)
@@ -193,7 +194,8 @@ class BaseSequenceGenerator(Brick):
         next_states = self.transition.apply(
             self.readout.feedback(next_outputs), return_list=True,
             **dict_union(states, glimpses, contexts))
-        return next_states + [next_outputs] + next_glimpses.values() + [next_costs]
+        return (next_states + [next_outputs]
+                + next_glimpses.values() + [next_costs])
 
     @generate.signature_method
     def generate_signature(self, *args, **kwargs):
@@ -370,7 +372,8 @@ class AttentionTransition(AbstractAttentionTransition):
     @apply.signature_method
     def apply_signature(self, *args, **kwargs):
         signature = self.fork_inputs.signature('apply')
-        common_input_index = signature.input_names.index(ForkInputs.common_input)
+        common_input_index = signature.input_names.index(
+            ForkInputs.common_input)
         signature.input_names[common_input_index] = 'feedback'
         return signature
 
