@@ -115,6 +115,21 @@ class BaseSequenceGenerator(BaseRecurrent):
 
     @Brick.apply_method
     def cost(self, outputs, mask=None, **kwargs):
+        """Returns generation costs for output sequences.
+
+        Parameters
+        ----------
+        outputs : Theano variable
+            The 3(2) dimensional tensor containing output sequences.
+            The dimension 0 must stand for time, the dimension 1 for the
+            position on the batch.
+        mask : The 0/1 matrix identifying fake outputs.
+
+        Notes
+        -----
+        The contexts are expected as keyword arguments.
+
+        """
         batch_size = outputs.shape[-2]
 
         # Prepare input for the iterative part
@@ -149,6 +164,20 @@ class BaseSequenceGenerator(BaseRecurrent):
 
     @BaseRecurrent.recurrent_apply_method
     def generate(self, outputs, **kwargs):
+        """A sequence generation step.
+
+        Parameters
+        ----------
+        outputs : Theano variable
+            The outputs from the previous step.
+
+        Notes
+        -----
+            The contexts, previous states and glimpses are expected
+            as keyword arguments.
+
+        """
+
         states = {name: kwargs[name] for name in self.state_names}
         contexts = {name: kwargs[name] for name in self.context_names}
         glimpses = {name: kwargs[name] for name in self.glimpse_names}
