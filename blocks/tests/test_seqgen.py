@@ -11,6 +11,8 @@ from blocks.initialization import Orthogonal, IsotropicGaussian, Constant
 floatX = theano.config.floatX
 
 def test_sequence_generator():
+    # Disclaimer: here we only check shapes, not values.
+
     output_dim = 1
     dim = 20
     batch_size = 30
