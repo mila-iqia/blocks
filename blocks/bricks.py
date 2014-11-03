@@ -440,7 +440,7 @@ class Brick(object):
 
         return Brick._apply_method(True)(recurrent_apply)
 
-    def signature(self, apply_method):
+    def signature(self, apply_method, *args, **kwargs):
         """Returns the current signature of `apply_method`
 
         Parameters
@@ -449,7 +449,8 @@ class Brick(object):
             Name of the apply method.
 
         """
-        return getattr(self.__class__, apply_method).signature(self)
+        return getattr(self.__class__, apply_method).signature(
+            self, *args, **kwargs)
 
     @staticmethod
     def lazy_method(func):
