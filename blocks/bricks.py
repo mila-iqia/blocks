@@ -292,17 +292,6 @@ class Brick(object):
             return ApplyWrapper()
         return decorator
 
-    def signature(self, apply_method):
-        """Returns the current signature of `apply_method`
-
-        Parameters
-        ----------
-        apply_method : str
-            Name of the apply method.
-
-        """
-        return getattr(self.__class__, apply_method).signature(self)
-
     @staticmethod
     def apply_method(func):
         """Wraps methods that apply a brick to inputs in different ways.
@@ -336,6 +325,130 @@ class Brick(object):
 
         """
         return Brick._apply_method(False)(func)
+
+    @staticmethod
+    def recurrent_apply_method(func):
+        """Wraps an apply method to allow its iterative application.
+
+        This decorator allows you to use implementation
+        of an RNN transition to process sequences without writing
+        the iteration-related code again and again. In the most general
+        form information flow of a recurrent network
+        can be described as follows: depending on the context variables
+        and driven by input sequences the RNN updates its states and
+        produces output sequences. Thus the input variables of
+        your transition function play one of three roles: an input,
+        a context or a state. These roles should be specified in the
+        method's signature to make iteration possible.
+
+        """
+        arg_spec = inspect.getargspec(func)
+        arg_names = arg_spec.args[1:]
+
+        def recurrent_apply(wrapper, brick, *args, **kwargs):
+            """Iterates a transition function.
+
+            Parameters
+            ----------
+            iterate : bool
+                If ``True`` iteration is made. By default ``False``
+                which means that transition function is applied as is.
+            reverse : bool
+                If ``True``, the inputs are processed in backward
+                direction. ``False`` by default.
+
+            .. todo::
+
+                * Handle `updates` returned by the `theano.scan`
+                    routine.
+                * ``kwargs`` has a random order; check if this is a
+                    problem.
+
+            """
+            # Extract arguments related to iteration.
+            iterate = kwargs.pop("iterate", False)
+            if not iterate:
+                return func(brick, *args, **kwargs)
+            reverse = kwargs.pop("reverse", False)
+            return_initial_states = kwargs.pop("return_initial_states", False)
+
+            signature = wrapper.signature(brick, *args, **kwargs)
+            assert isinstance(signature, RecurrentApplySignature)
+
+            # Push everything to kwargs
+            for arg, arg_name in zip(args, arg_names):
+                kwargs[arg_name] = arg
+            # Separate kwargs that aren't input, context or state variables
+            rest_kwargs = {key: value for key, value in kwargs.items()
+                           if key not in signature.scan_arguments()}
+
+            # Check what is given and what is not
+            def only_given(arg_names):
+                return OrderedDict((arg_name, kwargs[arg_name])
+                                   for arg_name in arg_names
+                                   if arg_name in kwargs)
+            inputs_given = only_given(signature.input_names)
+            contexts_given = only_given(signature.context_names)
+
+            # TODO Assumes 1 time dim!
+            if len(inputs_given):
+                shape = inputs_given.values()[0].shape
+                n_steps = shape[0]
+                batch_size = shape[1]
+            else:
+                n_steps = kwargs.pop('n_steps')
+                batch_size = kwargs.pop('batch_size')
+
+            # Ensure that all initial states are available.
+            for state_name in signature.state_names:
+                if not kwargs.get(state_name):
+                    dim = signature.dims[state_name]
+                    init_func = signature.state_init_funcs.get(
+                        state_name, zero_state)
+                    kwargs[state_name] = init_func(dim, batch_size, brick,
+                                                   *args, **kwargs)
+            states_given = only_given(signature.state_names)
+            # Theano issue 1772
+            for name, state in states_given.items():
+                if state.ndim == 2:
+                    states_given[name] = tensor.unbroadcast(state, 1)
+            assert len(states_given) == len(signature.state_names)
+
+            def scan_function(*args):
+                args = list(args)
+                arg_names = (inputs_given.keys() + states_given.keys() +
+                             contexts_given.keys())
+                kwargs = dict(zip(arg_names, args))
+                kwargs.update(rest_kwargs)
+                return func(brick, **kwargs)
+            result, updates = theano.scan(
+                scan_function, sequences=inputs_given.values(),
+                outputs_info=(states_given.values()
+                              + [None] * signature.num_outputs),
+                non_sequences=contexts_given.values(),
+                n_steps=n_steps,
+                go_backwards=reverse)
+            if not isinstance(result, list):
+                result = [result]
+            if return_initial_states:
+                # Undo the subtensor
+                for i in range(len(states_given)):
+                    result[i] = result[i].owner.inputs[0]
+            assert not updates  # TODO Handle updates
+            return result
+
+        return Brick._apply_method(True)(recurrent_apply)
+
+    def signature(self, apply_method):
+        """Returns the current signature of `apply_method`
+
+        Parameters
+        ----------
+        apply_method : str
+            Name of the apply method.
+
+        """
+        return getattr(self.__class__, apply_method).signature(self)
 
     @staticmethod
     def lazy_method(func):
@@ -906,128 +1019,6 @@ def zero_state(dim, batch_size, *args, **kwargs):
     return tensor.zeros((batch_size, dim), dtype=theano.config.floatX)
 
 
-class BaseRecurrent(Brick):
-    """Base class for recurrent bricks.
-
-    A recurrent network processes sequences by applying recursively
-    a transition operator. This class contains some useful routine
-    that fascilitate simple and boilerplate code free implementation
-    of recurrent bricks.
-
-    """
-
-    @staticmethod
-    def recurrent_apply_method(func):
-        """Wraps an apply method to allow its recurrent application.
-
-        This decorator allows you to use implementation
-        of an RNN transition to process sequences without writing
-        the iteration-related code again and again. In the most general
-        form information flow of a recurrent network
-        can be described as follows: depending on the context variables
-        and driven by input sequences the RNN updates its states and
-        produces output sequences. Thus the input variables of
-        your transition function play one of three roles: an input,
-        a context or a state. These roles should be specified in the
-        method's signature to make iteration possible.
-
-        """
-        arg_spec = inspect.getargspec(func)
-        arg_names = arg_spec.args[1:]
-
-        def recurrent_apply(wrapper, brick, *args, **kwargs):
-            """Iterates a transition function.
-
-            Parameters
-            ----------
-            iterate : bool
-                If ``True`` iteration is made. By default ``False``
-                which means that transition function is applied as is.
-            reverse : bool
-                If ``True``, the inputs are processed in backward
-                direction. ``False`` by default.
-
-            .. todo::
-
-                * Handle `updates` returned by the `theano.scan`
-                    routine.
-                * ``kwargs`` has a random order; check if this is a
-                    problem.
-
-            """
-            # Extract arguments related to iteration.
-            iterate = kwargs.pop("iterate", False)
-            if not iterate:
-                return func(brick, *args, **kwargs)
-            reverse = kwargs.pop("reverse", False)
-            return_initial_states = kwargs.pop("return_initial_states", False)
-
-            signature = wrapper.signature(brick, *args, **kwargs)
-            assert isinstance(signature, RecurrentApplySignature)
-
-            # Push everything to kwargs
-            for arg, arg_name in zip(args, arg_names):
-                kwargs[arg_name] = arg
-            # Separate kwargs that aren't input, context or state variables
-            rest_kwargs = {key: value for key, value in kwargs.items()
-                           if key not in signature.scan_arguments()}
-
-            # Check what is given and what is not
-            def only_given(arg_names):
-                return OrderedDict((arg_name, kwargs[arg_name])
-                                   for arg_name in arg_names
-                                   if arg_name in kwargs)
-            inputs_given = only_given(signature.input_names)
-            contexts_given = only_given(signature.context_names)
-
-            # TODO Assumes 1 time dim!
-            if len(inputs_given):
-                shape = inputs_given.values()[0].shape
-                n_steps = shape[0]
-                batch_size = shape[1]
-            else:
-                n_steps = kwargs.pop('n_steps')
-                batch_size = kwargs.pop('batch_size')
-
-            # Ensure that all initial states are available.
-            for state_name in signature.state_names:
-                if not kwargs.get(state_name):
-                    dim = signature.dims[state_name]
-                    init_func = signature.state_init_funcs.get(
-                        state_name, zero_state)
-                    kwargs[state_name] = init_func(dim, batch_size, brick,
-                                                   *args, **kwargs)
-            states_given = only_given(signature.state_names)
-            # Theano issue 1772
-            for name, state in states_given.items():
-                if state.ndim == 2:
-                    states_given[name] = tensor.unbroadcast(state, 1)
-            assert len(states_given) == len(signature.state_names)
-
-            def scan_function(*args):
-                args = list(args)
-                arg_names = (inputs_given.keys() + states_given.keys() +
-                             contexts_given.keys())
-                kwargs = dict(zip(arg_names, args))
-                kwargs.update(rest_kwargs)
-                return func(brick, **kwargs)
-            result, updates = theano.scan(
-                scan_function, sequences=inputs_given.values(),
-                outputs_info=(states_given.values()
-                              + [None] * signature.num_outputs),
-                non_sequences=contexts_given.values(),
-                n_steps=n_steps,
-                go_backwards=reverse)
-            if not isinstance(result, list):
-                result = [result]
-            if return_initial_states:
-                # Undo the subtensor
-                for i in range(len(states_given)):
-                    result[i] = result[i].owner.inputs[0]
-            assert not updates  # TODO Handle updates
-            return result
-
-        return Brick._apply_method(True)(recurrent_apply)
 
 
 class ForkInputs(Brick):
@@ -1085,7 +1076,7 @@ class ForkInputs(Brick):
             if self.biases_init:
                 fork.biases_init = self.biases_init
 
-    @BaseRecurrent.apply_method
+    @Brick.apply_method
     def apply(self, common_input, **kwargs):
         """Apply the child brick with forked inputs.
 
@@ -1113,7 +1104,7 @@ class ForkInputs(Brick):
         return signature
 
 
-class Recurrent(BaseRecurrent, DefaultRNG):
+class Recurrent(DefaultRNG):
     """Simple recurrent layer with optional activation.
 
     Parameters
@@ -1155,7 +1146,7 @@ class Recurrent(BaseRecurrent, DefaultRNG):
     def _initialize(self):
         self.weights_init.initialize(self.W, self.rng)
 
-    @BaseRecurrent.recurrent_apply_method
+    @Brick.recurrent_apply_method
     def apply(self, inp, state, mask=None):
         """Given data and mask, apply recurrent layer.
 
@@ -1200,7 +1191,7 @@ class Recurrent(BaseRecurrent, DefaultRNG):
             dims=dict(state=self.dim))
 
 
-class GatedRecurrent(BaseRecurrent, DefaultRNG):
+class GatedRecurrent(DefaultRNG):
     """Gated recurrent neural network.
 
     Gated recurrent neural network (GRNN) as introduced in [1]. Every unit
@@ -1235,7 +1226,7 @@ class GatedRecurrent(BaseRecurrent, DefaultRNG):
     @Brick.lazy_method
     def __init__(self, activation, gate_activation, dim, weights_init,
                  use_update_gate=True, use_reset_gate=True, **kwargs):
-        super(BaseRecurrent, self).__init__(**kwargs)
+        super(GatedRecurrent, self).__init__(**kwargs)
 
         if not activation:
             activation = Identity()
@@ -1276,7 +1267,7 @@ class GatedRecurrent(BaseRecurrent, DefaultRNG):
         if self.use_reset_gate:
             self.weights_init.initialize(self.state2reset, self.rng)
 
-    @BaseRecurrent.recurrent_apply_method
+    @Brick.recurrent_apply_method
     def apply(self, inps, update_inps=None, reset_inps=None,
               states=None, mask=None):
         """Apply the gated recurrent transition.

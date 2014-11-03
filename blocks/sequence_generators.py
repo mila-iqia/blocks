@@ -5,12 +5,12 @@ from functools import partial
 from theano import tensor
 from abc import abstractmethod
 from blocks.bricks import (
-    Brick, MLP, BaseRecurrent, Identity, ForkInputs, ApplySignature,
+    Brick, MLP, Identity, ForkInputs, ApplySignature,
     zero_state)
 from blocks.utils import dict_union
 
 
-class BaseSequenceGenerator(BaseRecurrent):
+class BaseSequenceGenerator(Brick):
     """A generic sequence generator.
 
     This class combines two components, a readout network and an
@@ -162,7 +162,7 @@ class BaseSequenceGenerator(BaseRecurrent):
             return (costs, others)
         return costs
 
-    @BaseRecurrent.recurrent_apply_method
+    @Brick.recurrent_apply_method
     def generate(self, outputs, **kwargs):
         """A sequence generation step.
 
@@ -239,7 +239,7 @@ class AbstractReadout(Brick):
         pass
 
 
-class AbstractAttentionTransition(BaseRecurrent):
+class AbstractAttentionTransition(Brick):
     """A base class for a transition component of a sequence generator.
 
     A recurrent transition combined with an attention mechanism.
@@ -363,7 +363,7 @@ class AttentionTransition(AbstractAttentionTransition):
             if self.biases_init:
                 child.biases_init = self.biases_init
 
-    @BaseRecurrent.recurrent_apply_method
+    @Brick.recurrent_apply_method
     def apply(self, feedback, *args, **kwargs):
         return self.fork_inputs.apply(feedback, *args, **kwargs)
 
