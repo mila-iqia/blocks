@@ -187,7 +187,11 @@ class BaseSequenceGenerator(BaseRecurrent):
 
 
 class AbstractReadout(Brick):
-    """Yields outputs combining information from multiple sources."""
+    """A base class for a readout component of a sequence generator.
+
+    Yields outputs combining information from multiple sources.
+
+    """
 
     @abstractmethod
     def emit(self, **kwargs):
@@ -207,7 +211,11 @@ class AbstractReadout(Brick):
 
 
 class AbstractAttentionTransition(BaseRecurrent):
-    """A recurrent transition with an attention mechanism."""
+    """A base class for a transition component of a sequence generator.
+
+    A recurrent transition combined with an attention mechanism.
+
+    """
 
     @abstractmethod
     def apply(self, **kwargs):
