@@ -399,7 +399,7 @@ class SequenceGenerator(BaseSequenceGenerator):
                  weights_init=None, biases_init=None, **kwargs):
         if attention:
             raise NotImplementedError()
-        transition = FakeAttentionTransition(transition)
-        transition = ForkAttentionTransitionInputs(transition)
+        transition = FakeAttentionTransition(transition, name="fake")
+        transition = ForkAttentionTransitionInputs(transition, name="fork")
         super(SequenceGenerator, self).__init__(
             readout, transition, weights_init, biases_init, **kwargs)
