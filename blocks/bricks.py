@@ -18,7 +18,6 @@ from blocks.utils import (pack, reraise_as, shared_floatx_zeros, unpack,
                           check_theano_variable)
 from blocks.initialization import Constant
 
-BRICK_PREFIX = 'brick_'
 INPUT_SUFFIX = '_input'
 OUTPUT_SUFFIX = '_output'
 DEFAULT_SEED = [2014, 10, 5]
@@ -177,7 +176,7 @@ class Brick(object):
     def __init__(self, name=None):
         if name is None:
             name = self.__class__.__name__.lower()
-        self.name = '{}{}'.format(BRICK_PREFIX, name)
+        self.name = name
 
         self.children = []
 
