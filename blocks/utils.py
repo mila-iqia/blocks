@@ -1,4 +1,6 @@
 import sys
+from collections import OrderedDict
+
 
 import numpy
 import theano
@@ -184,9 +186,21 @@ def check_theano_variable(variable, n_dim, dtype):
                          "\n\texpected {}, got {}".format(
                              dtype, variable.dtype))
 
-
 def dict_union(*dicts, **kwargs):
-    result = dict()
+    """Return union of a sequence of dictionaries.
+
+    If keyword arguments are given they are added to the resulting dict.
+    If the first dictionary in the sequence is an instance of `OrderedDict`,
+    the result will be OrderedDict.
+
+    """
+
+
+    dicts = list(dicts)
+    if len(dicts) and isinstance(dicts[0], OrderedDict):
+        result = OrderedDict()
+    else:
+        result = dict()
     for d in list(dicts) + [kwargs]:
         assert len(set(result.keys()).intersection(set(d.keys()))) == 0
         result.update(d)
