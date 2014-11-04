@@ -386,7 +386,7 @@ class Brick(object):
             def only_given(arg_names):
                 return OrderedDict((arg_name, kwargs[arg_name])
                                    for arg_name in arg_names
-                                   if arg_name in kwargs)
+                                   if kwargs.get(arg_name))
             inputs_given = only_given(signature.input_names)
             contexts_given = only_given(signature.context_names)
 
