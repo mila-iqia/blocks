@@ -775,9 +775,11 @@ class Linear(DefaultRNG):
 
     def _allocate(self):
         self.params.append(shared_floatx_zeros((self.input_dim,
-                                                self.output_dim)))
+                                                self.output_dim),
+                           name="W"))
         if self.use_bias:
-            self.params.append(shared_floatx_zeros((self.output_dim,)))
+            self.params.append(shared_floatx_zeros((self.output_dim,),
+                               name="b"))
 
     def _initialize(self):
         if self.use_bias:
