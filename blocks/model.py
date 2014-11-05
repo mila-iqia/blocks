@@ -11,6 +11,15 @@ from blocks.utils import dict_union
 class Model(object):
     """Model is a container for bricks that form a single trainable entity.
 
+    In this context \"trainable\" means that there exists a differentiable cost
+    function involving model parameters and auxiliary inputs, represented as a
+    Theano computation graph. This function is typically build by calling apply
+    methods of the model bricks. The output varible of this graph should be
+    given to the Model at the construction stage. The cost computation graph
+    might be annotated with instructions to add some regularization terms to
+    the model cost.  The model is responsible to interpret these instructions
+    and return regularized cost in its `cost` method.
+
     Parameters
     ----------
     top_bricks : list of Bricks
@@ -28,15 +37,45 @@ class Model(object):
         self._get_variables()
 
     def cost(self):
+        """Return cost with regularization.
+
+        Returns
+        -------
+        cost_var : Theano variable
+            Cost with regularization.
+
+        """
         return self.basic_cost
 
     def select(self, path=None):
+        """Select bricks according to path.
+
+        Parameters
+        ----------
+        path : str or :class:`Path` or None
+            The selection path. If None, a selector with top bricks is
+            returned.
+
+        Returns
+        -------
+        selection : :class:`Selector`
+            A selector for the selected bricks.
+
+        """
         selection = Selector(self.top_bricks)
         if path:
             selection = selection.select(path)
         return selection
 
     def get_params(self):
+        """Get dictionary of model parameters.
+
+        Returns
+        -------
+        params : OrderedDict
+            A dictionary of parameters as returned by :meth:`Selector.select`.
+
+        """
         return self.select().get_params()
 
     def _get_variables(self):
@@ -60,14 +99,19 @@ class Model(object):
 class Path(object):
     """Encapsulates a path in a hierarchy of bricks.
 
-    Current the only allowed elements of pathes are names of the bricks
+    Currently the only allowed elements of pathes are names of the bricks
     and names of parameters. The latter can only be put in the end of the
     path. It is planned to support regular expressions in some way later.
+
+    Attributes
+    ----------
+    nodes : tuple
+        The tuple containing path nodes.
 
     Parameters
     ----------
     nodes : list or tuple of path nodes
-        The nodes of the part.
+        The nodes of the path.
 
     """
 
@@ -108,7 +152,7 @@ class Path(object):
         Parameters
         ----------
         string : str
-            String representation of the part.
+            String representation of the path.
 
         .. todo::
 
@@ -199,8 +243,10 @@ class Selector(object):
 
         Returns
         -------
-        A dictionary of (`path`, `param`) pairs, where `path` the string
-        representation of the part to the parameter, `param` is the parameter.
+        params : OrderedDict
+            A dictionary of (`path`, `param`) pairs, where `path` is the string
+            representation of the part to the parameter, `param` is the
+            parameter.
 
         """
         def recursion(brick):
