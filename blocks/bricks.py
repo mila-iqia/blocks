@@ -23,7 +23,6 @@ OUTPUT_SUFFIX = '_output'
 DEFAULT_SEED = [2014, 10, 5]
 PARAM_OWNER_TAG = 'param_owner'
 
-logging.basicConfig()
 logger = logging.getLogger(__name__)
 
 
