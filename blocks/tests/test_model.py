@@ -5,6 +5,7 @@ import theano
 from blocks.bricks import Brick
 from blocks.model import Path, Selector
 
+
 def test_path():
     path1 = Path.parse("/brick")
     assert path1.nodes == (Path.BrickName("brick"),)
@@ -20,6 +21,7 @@ def test_path():
     assert path4 != path2
     assert hash(path4) == hash(path3)
     assert hash(path4) != hash(path2)
+
 
 def test_selector():
     class MockBrickTop(Brick):
@@ -65,4 +67,3 @@ def test_selector():
     assert params[2][1] == b2.params[0]
     assert params[3][0] == "/t1/b2.W"
     assert params[3][1] == b2.params[1]
-

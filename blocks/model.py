@@ -8,6 +8,7 @@ from theano.tensor.sharedvar import SharedVariable
 
 from blocks.utils import dict_union
 
+
 class Model(object):
     """Model is a container for bricks that form a single trainable entity.
 
@@ -82,7 +83,7 @@ class Model(object):
         def recursion(current):
             if current.owner:
                 for inp in current.owner.inputs:
-                    if not inp in self.variables:
+                    if inp not in self.variables:
                         recursion(inp)
                 self.variables.add(inp)
 
@@ -95,6 +96,7 @@ class Model(object):
         self.variables = set()
         recursion(self.cost())
         self.input_variables = [v for v in self.variables if is_input(v)]
+
 
 class Path(object):
     """Encapsulates a path in a hierarchy of bricks.
@@ -228,7 +230,7 @@ class Selector(object):
                     matching_bricks = [child for child in children
                                        if child.name == node]
                     for match in matching_bricks:
-                        if not match in next_bricks:
+                        if match not in next_bricks:
                             next_bricks.append(match)
             current_bricks = next_bricks
         return Selector(current_bricks)
@@ -253,7 +255,7 @@ class Selector(object):
             # TODO path logic should be separate
             result = [(Path([Path.BrickName(brick.name),
                              Path.ParamName(param.name)]),
-                             param)
+                       param)
                       for param in brick.params
                       if not param_name or param.name == param_name]
             result = OrderedDict(result)
@@ -263,6 +265,5 @@ class Selector(object):
                     result[new_path] = param
             return result
         result = dict_union(*[recursion(brick)
-                             for brick in self.bricks])
+                            for brick in self.bricks])
         return OrderedDict((str(key), value) for key, value in result.items())
-

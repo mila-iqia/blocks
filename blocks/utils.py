@@ -186,6 +186,7 @@ def check_theano_variable(variable, n_dim, dtype):
                          "\n\texpected {}, got {}".format(
                              dtype, variable.dtype))
 
+
 def dict_union(*dicts, **kwargs):
     """Return union of a sequence of dictionaries.
 
@@ -194,8 +195,6 @@ def dict_union(*dicts, **kwargs):
     the result will be OrderedDict.
 
     """
-
-
     dicts = list(dicts)
     if len(dicts) and isinstance(dicts[0], OrderedDict):
         result = OrderedDict()

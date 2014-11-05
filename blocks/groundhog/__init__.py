@@ -6,6 +6,7 @@ from theano import tensor
 
 logger = logging.getLogger(__name__)
 
+
 class GroundhogIterator(object):
     """A base class for Groundhog compatible iterator.
 
@@ -25,6 +26,7 @@ class GroundhogIterator(object):
     @property
     def next_offset(self):
         return 0
+
 
 class GroundhogModel(object):
     """Wraps a model into a Groundhog compatible interface."""
@@ -55,7 +57,8 @@ class GroundhogModel(object):
     def param_grads(self):
         # Caching to simplify the computation graph
         if not hasattr(self, "_grads"):
-            self._grads = [tensor.grad(self.model.cost(), p) for p in self.params]
+            self._grads = [tensor.grad(self.model.cost(), p)
+                           for p in self.params]
         return self._grads
 
     @property
@@ -105,7 +108,7 @@ class GroundhogModel(object):
 
         params = self.model.get_params()
         for name in params.keys():
-            if not name in param_values:
+            if name not in param_values:
                 logger.error("No value is provided for the parameter {}"
                              .format(name))
 

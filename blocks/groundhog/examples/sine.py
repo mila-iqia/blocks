@@ -19,7 +19,7 @@ class Readout(SimpleReadout):
 
     def __init__(self):
         super(Readout, self).__init__(readout_dim=1,
-                                        source_names=['states'])
+                                      source_names=['states'])
 
     @Brick.apply_method
     def cost(self, readouts, outputs):
@@ -64,7 +64,7 @@ def main():
     rng = numpy.random.RandomState(seed)
     batch_size = 10
 
-    data = SeriesIterator(rng, lambda x : numpy.sin(x), 100, batch_size)
+    data = SeriesIterator(rng, lambda x: numpy.sin(x), 100, batch_size)
     model = SeriesModel()
     gh_model = GroundhogModel(model)
     state = GroundhogState("sine", batch_size, 0.0001).as_dict()
