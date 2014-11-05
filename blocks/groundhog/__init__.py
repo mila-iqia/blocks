@@ -133,6 +133,8 @@ class GroundhogState(object):
         self.trainFreq = 1
         self.loopIters = 10 ** 6
 
+        self.cutoff_rescale_length = 0.0
+
     def as_dict(self):
         return {key: value for key, value in self.__dict__.items()
                 if not key.startswith('_')}
