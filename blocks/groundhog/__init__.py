@@ -97,7 +97,7 @@ class GroundhogModel(object):
         param_values = {name.replace("-", "/"): value
                         for name, value in numpy.load(path).items()}
         for name, value in param_values.items():
-            selected = self.select(name)
+            selected = self.model.select(name)
             if len(selected) == 0:
                 logger.error("Unknown parameter {}".format(name))
             assert len(selected) == 1
