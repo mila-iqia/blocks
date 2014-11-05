@@ -1,6 +1,9 @@
 import numpy
 import argparse
+import logging
+import inspect
 from matplotlib import pyplot
+from pprint import pprint
 
 import theano
 from theano import tensor
@@ -8,7 +11,7 @@ from theano import tensor
 from groundhog.mainLoop import MainLoop
 from groundhog.trainer.SGD import SGD
 
-from blocks.bricks import Brick, GatedRecurrent, Tanh
+from blocks.bricks import Brick, GatedRecurrent, Identity, Tanh, MLP
 from blocks.model import Model
 from blocks.sequence_generators import SequenceGenerator, SimpleReadout
 from blocks.initialization import Orthogonal, IsotropicGaussian, Constant
@@ -28,21 +31,86 @@ class Readout(SimpleReadout):
         return ((readouts - outputs) ** 2).sum(axis=readouts.ndim - 1)
 
 
+class AddParameters(Brick):
+
+    @Brick.lazy_method
+    def __init__(self, transition, num_params, params_name,
+                 weights_init, biases_init, **kwargs):
+        super(AddParameters, self).__init__(**kwargs)
+        self.__dict__.update(**locals())
+        del self.self
+        del self.kwargs
+
+        signature = self.transition.signature("apply")
+        self.input_names = signature.forkable_input_names
+        self.state_name = signature.state_names[0]
+        assert len(signature.state_names) == 1
+
+        self.adders = [MLP([Identity()], name="add_{}".format(input_name))
+                       for input_name in self.input_names]
+        # Could be also several init bricks, one for each of the states
+        self.init = MLP([Identity()], name="init")
+        self.children = [self.transition] + self.adders + [self.init]
+
+    def _push_allocation_config(self):
+        signature = self.transition.signature("apply")
+        for adder, input_name in zip(self.adders, self.input_names):
+            adder.dims[0] = self.num_params
+            adder.dims[-1] = signature.dims[input_name]
+        self.init.dims[0] = self.num_params
+        self.init.dims[-1] = signature.dims[signature.state_names[0]]
+        assert len(signature.state_names) == 1
+
+    def _push_initialization_config(self):
+        for child in self.children:
+            if self.weights_init:
+                child.weights_init = self.weights_init
+            if self.biases_init:
+                child.biases_init = self.biases_init
+
+    @Brick.apply_method
+    def apply(self, **kwargs):
+        inputs = {name: kwargs.pop(name) for name in self.input_names}
+        params = kwargs.pop("params")
+        for name, adder in zip(self.input_names, self.adders):
+            inputs[name] = inputs[name] + adder.apply(params)
+        kwargs.update(inputs)
+        return self.transition.apply(**kwargs)
+
+    @apply.signature_method
+    def apply_signature(self, **kwargs):
+        signature = self.transition.signature("apply")
+        signature.context_names.append(self.params_name)
+        signature.state_init_funcs[self.state_name] = self.initialize_state
+        signature.dims[self.params_name] = self.num_params
+        return signature
+
+    @Brick.apply_method
+    def initialize_state(self, *args, **kwargs):
+        return self.init.apply(kwargs[self.params_name])
+
+
 class SeriesModel(Model):
 
-    def __init__(self):
+    def __init__(self, num_params, input_noise=0.0):
         self.transition = GatedRecurrent(
             name="transition", activation=Tanh(), dim=10,
             weights_init=Orthogonal())
+        with_params = AddParameters(self.transition, num_params, "params",
+                                    name="add")
         self.generator = SequenceGenerator(
-            Readout(), self.transition,
+            Readout(), with_params,
             weights_init=IsotropicGaussian(0.01), biases_init=Constant(0),
             name="generator")
         self.generator.initialize()
 
         self.x = tensor.tensor3('x')
+        self.params = tensor.matrix("params")
+        if input_noise:
+            self.x.tag.add_noise = input_noise
         super(SeriesModel, self).__init__(
-            [self.generator], self.generator.cost(self.x).sum())
+            [self.generator],
+            self.generator.cost(self.x, params=self.params).sum())
 
 
 class SeriesIterator(GroundhogIterator):
@@ -50,43 +118,71 @@ class SeriesIterator(GroundhogIterator):
     def __init__(self, rng, func, seq_len, batch_size):
         self.__dict__.update(**locals())
         del self.self
+        self.num_params = len(inspect.getargspec(self.func).args) - 1
 
     def next(self):
-        T = self.rng.uniform(0, self.seq_len, (self.batch_size,))
-
+        params = self.rng.uniform(size=(self.batch_size, self.num_params))
+        params = params.astype(floatX)
         x = numpy.zeros((self.seq_len, self.batch_size, 1), dtype=floatX)
         for i in range(self.seq_len):
-            x[i, :, 0] = self.func(T + i)
+            x[i, :, 0] = self.func(*([list(params.T)] +
+                                     [i * numpy.ones(self.batch_size)]))
 
-        return dict(x=x)
+        return dict(x=x, params=params)
 
 
 def main():
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format="%(asctime)s: %(name)s: %(levelname)s: %(message)s")
+
     parser = argparse.ArgumentParser(
         "Case study of generating simple sequences with RNN")
     parser.add_argument("mode", choices=["train", "plot"])
     parser.add_argument("prefix", default="sine")
+    parser.add_argument("--input-noise", type=float, default=0.0)
+    parser.add_argument("--function", default="lambda a, x: numpy.sin(a * x)")
+    parser.add_argument("--steps", type=int, default=100)
+    parser.add_argument("--params")
     args = parser.parse_args()
 
-    model = SeriesModel()
-    gh_model = GroundhogModel(model)
+    function = eval(args.function)
 
     if args.mode == "train":
         seed = 1
         rng = numpy.random.RandomState(seed)
         batch_size = 10
 
-        data = SeriesIterator(rng, lambda x: numpy.sin(x), 100, batch_size)
-        state = GroundhogState(args.prefix, batch_size, learning_rate=0.0001).as_dict()
+        data = SeriesIterator(rng, function, 100, batch_size)
+        model = SeriesModel(
+            len(inspect.getargspec(function).args) - 1,
+            input_noise=args.input_noise)
+        pprint(model.get_params().keys())
+        gh_model = GroundhogModel(model)
+        state = GroundhogState(args.prefix, batch_size, learning_rate=0.0001)
+        state = state.as_dict()
         trainer = SGD(gh_model, state, data)
         main_loop = MainLoop(data, None, None, gh_model, trainer, state, None)
         main_loop.main()
     else:
+        param_values = numpy.array(map(float, args.params.split()),
+                                   dtype=floatX)
+
+        model = SeriesModel(len(param_values))
+        gh_model = GroundhogModel(model)
         gh_model.load(args.prefix + "model.npz")
-        sample = theano.function([], model.generator.generate(
-            n_steps=100, batch_size=10, iterate=True))
-        x = sample()[0]
-        pyplot.plot(x[..., 0])
+
+        params = tensor.matrix("params")
+        sample = theano.function([params], model.generator.generate(
+            params=params, n_steps=args.steps, batch_size=1, iterate=True))
+        states, outputs, costs  = sample(param_values[None, :])
+        actual = outputs[:, 0, 0]
+
+        desired = numpy.array([function(*(list(param_values) + [T]))
+                               for T in range(args.steps)])
+        print "MSE: {}".format(((actual - desired) ** 2).sum())
+
+        pyplot.plot(numpy.hstack([actual[:, None], desired[:, None]]))
         pyplot.show()
 
 
