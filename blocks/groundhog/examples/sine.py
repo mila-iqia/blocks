@@ -1,4 +1,6 @@
 import numpy
+import argparse
+from matplotlib import pyplot
 
 import theano
 from theano import tensor
@@ -60,18 +62,33 @@ class SeriesIterator(GroundhogIterator):
 
 
 def main():
-    seed = 1
-    rng = numpy.random.RandomState(seed)
-    batch_size = 10
+    parser = argparse.ArgumentParser(
+        "Case study of generating simple sequences with RNN")
+    parser.add_argument("mode", choices=["train", "plot"])
+    parser.add_argument("prefix", default="sine")
+    args = parser.parse_args()
 
-    data = SeriesIterator(rng, lambda x: numpy.sin(x), 100, batch_size)
     model = SeriesModel()
     gh_model = GroundhogModel(model)
-    state = GroundhogState("sine", batch_size, 0.0001).as_dict()
-    trainer = SGD(gh_model, state, data)
-    main_loop = MainLoop(data, None, None, gh_model, trainer, state, None)
 
-    main_loop.main()
+    if args.mode == "train":
+        seed = 1
+        rng = numpy.random.RandomState(seed)
+        batch_size = 10
+
+        data = SeriesIterator(rng, lambda x: numpy.sin(x), 100, batch_size)
+        state = GroundhogState(args.prefix, batch_size, learning_rate=0.0001).as_dict()
+        trainer = SGD(gh_model, state, data)
+        main_loop = MainLoop(data, None, None, gh_model, trainer, state, None)
+        main_loop.main()
+    else:
+        gh_model.load(args.prefix + "model.npz")
+        sample = theano.function([], model.generator.generate(
+            n_steps=100, batch_size=10, iterate=True))
+        x = sample()[0]
+        pyplot.plot(x[..., 0])
+        pyplot.show()
+
 
 if __name__ == "__main__":
     main()
