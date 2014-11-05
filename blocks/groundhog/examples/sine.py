@@ -175,7 +175,7 @@ def main():
         params = tensor.matrix("params")
         sample = theano.function([params], model.generator.generate(
             params=params, n_steps=args.steps, batch_size=1, iterate=True))
-        states, outputs, costs  = sample(param_values[None, :])
+        states, outputs, costs = sample(param_values[None, :])
         actual = outputs[:, 0, 0]
 
         desired = numpy.array([function(*(list(param_values) + [T]))

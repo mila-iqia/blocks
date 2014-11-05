@@ -1,6 +1,5 @@
 """Sequence generation framework"""
 
-import copy
 from functools import partial
 from theano import tensor
 from abc import abstractmethod

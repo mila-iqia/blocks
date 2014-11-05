@@ -62,8 +62,9 @@ class Model(object):
             if hasattr(tag, "add_noise"):
                 logger.debug("Add {} noise to {}".format(
                     tag.add_noise, variable))
-                replace[variable] = (variable +
-                    self.random.normal(variable.shape, std=tag.add_noise))
+                replace[variable] = (
+                    variable + self.random.normal(variable.shape,
+                                                  std=tag.add_noise))
         self._cost = theano.clone(self.basic_cost, replace=replace)
         return self._cost
 
