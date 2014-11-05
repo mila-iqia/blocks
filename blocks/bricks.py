@@ -934,17 +934,17 @@ class MLP(DefaultRNG):
 class Wrap3D(Brick):
     """Convert 3D arrays to 2D and back in order to apply 2D bricks."""
     @Brick.lazy_method
-    def __init__(self, child, apply_method='apply', **kwargs):
+    def __init__(self, wrapped, apply_method='apply', **kwargs):
         super(Wrap3D, self).__init__(**kwargs)
-        self.children = [child]
+        self.children = [wrapped]
         self.apply_method = apply_method
 
     @Brick.apply_method
     def apply(self, inp):
-        child, = self.children
+        wrapped, = self.children
         flat_shape = ([inp.shape[0] * inp.shape[1]] +
                       [inp.shape[i] for i in range(2, inp.ndim)])
-        output = getattr(child, self.apply_method)(inp.reshape(flat_shape))
+        output = getattr(wrapped, self.apply_method)(inp.reshape(flat_shape))
         full_shape = ([inp.shape[0], inp.shape[1]] +
                       [output.shape[i] for i in range(1, output.ndim)])
         return output.reshape(full_shape)
@@ -1026,7 +1026,7 @@ class ForkInputs(Brick):
 
     Parameters
     ----------
-    child : Brick
+    wrapped : Brick
         The brick with multiple inputs to wrap.
     input_dim : int
         The common input dimensionality.
@@ -1043,16 +1043,16 @@ class ForkInputs(Brick):
     common_input = 'common_input'
 
     @Brick.lazy_method
-    def __init__(self, child, input_dim, apply_method='apply',
+    def __init__(self, wrapped, input_dim, apply_method='apply',
                  fork=None, weights_init=None, biases_init=None, **kwargs):
         super(ForkInputs, self).__init__(**kwargs)
         self.__dict__.update(**locals())
         del self.self
         del self.kwargs
 
-        self.wrapped_apply = getattr(child, self.apply_method)
+        self.wrapped_apply = getattr(wrapped, self.apply_method)
 
-        signature = self.child.signature('apply')
+        signature = self.wrapped.signature('apply')
         assert isinstance(signature, MultiInputApplySignature)
         if not fork:
             fork = MLP([Identity()])
@@ -1061,10 +1061,10 @@ class ForkInputs(Brick):
             fork_copy = copy.deepcopy(fork)
             fork_copy.name = "{}_{}".format("fork", input_name)
             self.forks.append(fork_copy)
-        self.children = [child] + self.forks
+        self.children = [wrapped] + self.forks
 
     def _push_allocation_config(self):
-        signature = self.child.signature('apply')
+        signature = self.wrapped.signature('apply')
         for name, fork in zip(signature.forkable_input_names, self.forks):
             fork.dims[0] = self.input_dim
             fork.dims[-1] = signature.dims[name]
@@ -1086,7 +1086,7 @@ class ForkInputs(Brick):
             The input to fork.
 
         """
-        signature = self.child.signature('apply')
+        signature = self.wrapped.signature('apply')
         for name, fork in zip(signature.forkable_input_names, self.forks):
             assert name not in kwargs
             kwargs[name] = fork.apply(common_input)
@@ -1094,7 +1094,7 @@ class ForkInputs(Brick):
 
     @apply.signature_method
     def apply_signature(self):
-        signature = self.child.signature('apply')
+        signature = self.wrapped.signature('apply')
         if isinstance(signature, RecurrentApplySignature):
             signature.input_names = (
                 [name for name in signature.input_names

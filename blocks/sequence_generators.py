@@ -340,15 +340,15 @@ class ForkAttentionTransitionInputs(ForkInputs, AbstractAttentionTransition):
 
     @Brick.apply_method
     def take_look(self, *args, **kwargs):
-        return self.child.take_look(*args, **kwargs)
+        return self.wrapped.take_look(*args, **kwargs)
 
     @take_look.signature_method
     def take_look_signature(self, *args, **kwargs):
-        return self.child.signature('take_look')
+        return self.wrapped.signature('take_look')
 
     @Brick.apply_method
     def initial_glimpses(self, *args, **kwargs):
-        return self.child.initial_glimpses(*args, **kwargs)
+        return self.wrapped.initial_glimpses(*args, **kwargs)
 
 
 class FakeAttentionTransition(AbstractAttentionTransition):
