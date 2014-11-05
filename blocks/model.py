@@ -1,12 +1,16 @@
 import re
-
+import logging
 from collections import OrderedDict
 
+import theano
+from theano.tensor.shared_randomstreams import RandomStreams
 from theano.scalar import ScalarConstant
 from theano.tensor import TensorConstant
 from theano.tensor.sharedvar import SharedVariable
 
 from blocks.utils import dict_union
+
+logger = logging.getLogger(__name__)
 
 
 class Model(object):
@@ -30,15 +34,19 @@ class Model(object):
         The model cost before regularization.
     """
 
-    def __init__(self, top_bricks, basic_cost):
+    def __init__(self, top_bricks, basic_cost, seed=1):
         self.top_bricks = tuple(top_bricks)
         for brick in self.top_bricks:
             assert brick.allocated
         self.basic_cost = basic_cost
         self._get_variables()
 
+        self.random = RandomStreams(1)
+
     def cost(self):
         """Return cost with regularization.
+
+        Currently the only regularization supported is noise addition.
 
         Returns
         -------
@@ -46,7 +54,18 @@ class Model(object):
             Cost with regularization.
 
         """
-        return self.basic_cost
+        if hasattr(self, "_cost"):
+            return self._cost
+        replace = {}
+        for variable in self.variables:
+            tag = variable.tag
+            if hasattr(tag, "add_noise"):
+                logger.debug("Add {} noise to {}".format(
+                    tag.add_noise, variable))
+                replace[variable] = (variable +
+                    self.random.normal(variable.shape, std=tag.add_noise))
+        self._cost = theano.clone(self.basic_cost, replace=replace)
+        return self._cost
 
     def select(self, path=None):
         """Select bricks according to path.
@@ -94,7 +113,7 @@ class Model(object):
                     and not isinstance(variable, ScalarConstant))
 
         self.variables = set()
-        recursion(self.cost())
+        recursion(self.basic_cost)
         self.input_variables = [v for v in self.variables if is_input(v)]
 
 
