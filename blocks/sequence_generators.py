@@ -199,7 +199,7 @@ class BaseSequenceGenerator(Brick):
 
     @generate.signature_method
     def generate_signature(self, *args, **kwargs):
-        signature = copy.deepcopy(self.transition.signature('apply'))
+        signature = self.transition.signature('apply')
 
         signature.state_names.append('outputs')
         signature.dims['outputs'] = (
