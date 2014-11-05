@@ -409,8 +409,8 @@ class Brick(object):
             states_given = only_given(signature.state_names)
             # Theano issue 1772
             for name, state in states_given.items():
-                if state.ndim == 2:
-                    states_given[name] = tensor.unbroadcast(state, 1)
+                states_given[name] = tensor.unbroadcast(state,
+                                                        *range(state.ndim))
             assert len(states_given) == len(signature.state_names)
 
             def scan_function(*args):
