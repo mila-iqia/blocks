@@ -7,10 +7,10 @@ from groundhog.mainLoop import MainLoop
 from groundhog.trainer.SGD import SGD
 
 from blocks.bricks import Brick, GatedRecurrent, Tanh
+from blocks.model import Model
 from blocks.sequence_generators import SequenceGenerator, SimpleReadout
 from blocks.initialization import Orthogonal, IsotropicGaussian, Constant
-from blocks.groundhog.state import GroundhogState
-from blocks.groundhog.model import GroundhogModel
+from blocks.groundhog import GroundhogIterator, GroundhogState, GroundhogModel
 
 floatX = theano.config.floatX
 
@@ -26,7 +26,7 @@ class Readout(SimpleReadout):
         return ((readouts - outputs) ** 2).sum(axis=readouts.ndim - 1)
 
 
-class SeriesModel(GroundhogModel):
+class SeriesModel(Model):
 
     def __init__(self):
         self.transition = GatedRecurrent(
@@ -43,14 +43,11 @@ class SeriesModel(GroundhogModel):
             [self.generator], self.generator.cost(self.x).sum())
 
 
-class SeriesIterator(object):
+class SeriesIterator(GroundhogIterator):
 
     def __init__(self, rng, func, seq_len, batch_size):
         self.__dict__.update(**locals())
         del self.self
-
-    def start(self, offset):
-        pass
 
     def next(self):
         T = self.rng.uniform(0, self.seq_len, (self.batch_size,))
@@ -61,10 +58,6 @@ class SeriesIterator(object):
 
         return dict(x=x)
 
-    @property
-    def next_offset(self):
-        return 0
-
 
 def main():
     seed = 1
@@ -73,9 +66,10 @@ def main():
 
     data = SeriesIterator(rng, lambda x : numpy.sin(x), 100, batch_size)
     model = SeriesModel()
+    gh_model = GroundhogModel(model)
     state = GroundhogState("sine", batch_size, 0.0001).as_dict()
-    trainer = SGD(model, state, data)
-    main_loop = MainLoop(data, None, None, model, trainer, state, None)
+    trainer = SGD(gh_model, state, data)
+    main_loop = MainLoop(data, None, None, gh_model, trainer, state, None)
 
     main_loop.main()
 
