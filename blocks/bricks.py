@@ -1070,7 +1070,7 @@ class ForkInputs(Brick):
             fork.dims[-1] = signature.dims[name]
 
     def _push_initialization_config(self):
-        for fork in self.forks:
+        for fork in self.children:
             if self.weights_init:
                 fork.weights_init = self.weights_init
             if self.biases_init:
