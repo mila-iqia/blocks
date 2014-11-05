@@ -1094,7 +1094,7 @@ class ForkInputs(Brick):
 
     @apply.signature_method
     def apply_signature(self):
-        signature = copy.deepcopy(self.child.signature('apply'))
+        signature = self.child.signature('apply')
         if isinstance(signature, RecurrentApplySignature):
             signature.input_names = (
                 [name for name in signature.input_names
