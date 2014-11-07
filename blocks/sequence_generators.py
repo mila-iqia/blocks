@@ -76,21 +76,21 @@ class BaseSequenceGenerator(Brick):
         self.__dict__.update(**locals())
         del self.self
 
-        signature = self.transition.signature('apply')
+        signature = self.transition.apply.signature()
         assert len(signature.input_names) == 2
         assert 'mask' in signature.input_names
         self.state_names = signature.state_names
         self.context_names = signature.context_names
 
         self.glimpse_names = (
-            self.transition.signature('take_look').output_names)
+            self.transition.take_look.signature().output_names)
 
         self.children = [self.readout, self.transition]
 
     def _push_allocation_config(self):
         # Configure readout
-        apply_signature = self.transition.signature('apply')
-        take_look_signature = self.transition.signature('take_look')
+        apply_signature = self.transition.apply.signature()
+        take_look_signature = self.transition.take_look.signature()
         state_dims = {name: apply_signature.dims[name]
                       for name in apply_signature.state_names}
         context_dims = {name: apply_signature.dims[name]
@@ -102,7 +102,7 @@ class BaseSequenceGenerator(Brick):
             state_dims, context_dims, self.glimpse_dims)
 
         # Configure transition
-        feedback_signature = self.readout.signature('feedback')
+        feedback_signature = self.readout.feedback.signature()
         assert len(feedback_signature.output_dims) == 1
         self.transition.input_dim = feedback_signature.output_dims[0]
 
@@ -198,11 +198,11 @@ class BaseSequenceGenerator(Brick):
 
     @generate.signature_method
     def generate_signature(self, *args, **kwargs):
-        signature = self.transition.signature('apply')
+        signature = self.transition.apply.signature()
 
         signature.state_names.append('outputs')
         signature.dims['outputs'] = (
-            self.readout.signature('emit').output_dims[0])
+            self.readout.emit.signature().output_dims[0])
         signature.state_init_funcs['outputs'] = self.readout.initial_outputs
 
         for name in self.glimpse_names:
@@ -343,7 +343,7 @@ class ForkAttentionTransitionInputs(ForkInputs, AbstractAttentionTransition):
 
     @take_look.signature_method
     def take_look_signature(self, *args, **kwargs):
-        return self.wrapped.signature('take_look')
+        return self.wrapped.take_look.signature()
 
     @Brick.apply_method
     def initial_glimpses(self, *args, **kwargs):
@@ -376,7 +376,7 @@ class FakeAttentionTransition(AbstractAttentionTransition):
 
     @apply.signature_method
     def apply_signature(self, *args, **kwargs):
-        return self.transition.signature('apply')
+        return self.transition.apply.signature()
 
     @Brick.apply_method
     def take_look(self, *args, **kwargs):

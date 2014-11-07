@@ -54,7 +54,7 @@ class AddParameters(Brick):
         del self.self
         del self.kwargs
 
-        signature = self.transition.signature("apply")
+        signature = self.transition.apply.signature()
         self.input_names = signature.forkable_input_names
         self.state_name = signature.state_names[0]
         assert len(signature.state_names) == 1
@@ -66,7 +66,7 @@ class AddParameters(Brick):
         self.children = [self.transition] + self.adders + [self.init]
 
     def _push_allocation_config(self):
-        signature = self.transition.signature("apply")
+        signature = self.transition.apply.signature()
         for adder, input_name in zip(self.adders, self.input_names):
             adder.dims[0] = self.num_params
             adder.dims[-1] = signature.dims[input_name]
@@ -92,7 +92,7 @@ class AddParameters(Brick):
 
     @apply.signature_method
     def apply_signature(self, **kwargs):
-        signature = self.transition.signature("apply")
+        signature = self.transition.apply.signature()
         signature.context_names.append(self.params_name)
         signature.state_init_funcs[self.state_name] = self.initialize_state
         signature.dims[self.params_name] = self.num_params

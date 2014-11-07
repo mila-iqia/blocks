@@ -453,18 +453,6 @@ class Brick(object):
 
         return Brick._apply_method(True)(recurrent_apply)
 
-    def signature(self, apply_method, *args, **kwargs):
-        """Returns the current signature of `apply_method`
-
-        Parameters
-        ----------
-        apply_method : str
-            Name of the apply method.
-
-        """
-        return getattr(self.__class__, apply_method).signature_func(
-            self, *args, **kwargs)
-
     @staticmethod
     def lazy_method(func):
         """Makes the initialization lazy.
@@ -1065,7 +1053,7 @@ class ForkInputs(Brick):
 
         self.wrapped_apply = getattr(wrapped, self.apply_method)
 
-        signature = self.wrapped.signature('apply')
+        signature = self.wrapped.apply.signature()
         assert isinstance(signature, MultiInputApplySignature)
         if not fork:
             fork = MLP([Identity()])
@@ -1077,7 +1065,7 @@ class ForkInputs(Brick):
         self.children = [wrapped] + self.forks
 
     def _push_allocation_config(self):
-        signature = self.wrapped.signature('apply')
+        signature = self.wrapped.apply.signature()
         for name, fork in zip(signature.forkable_input_names, self.forks):
             fork.dims[0] = self.input_dim
             fork.dims[-1] = signature.dims[name]
@@ -1099,7 +1087,7 @@ class ForkInputs(Brick):
             The input to fork.
 
         """
-        signature = self.wrapped.signature('apply')
+        signature = self.wrapped.apply.signature()
         for name, fork in zip(signature.forkable_input_names, self.forks):
             assert name not in kwargs
             kwargs[name] = fork.apply(common_input)
@@ -1107,7 +1095,7 @@ class ForkInputs(Brick):
 
     @apply.signature_method
     def apply_signature(self):
-        signature = self.wrapped.signature('apply')
+        signature = self.wrapped.apply.signature()
         if isinstance(signature, RecurrentApplySignature):
             signature.input_names = (
                 [name for name in signature.input_names
