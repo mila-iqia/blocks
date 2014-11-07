@@ -160,7 +160,7 @@ def main():
         name="transition", activation=Tanh(), dim=10,
         weights_init=Orthogonal())
     with_params = AddParameters(transition, num_params, "params",
-                                name="add")
+                                name="with_params")
     generator = SequenceGenerator(
         Readout(), with_params,
         weights_init=IsotropicGaussian(0.01), biases_init=Constant(0),
