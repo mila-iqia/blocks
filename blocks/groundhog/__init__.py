@@ -1,8 +1,10 @@
-import numpy
 import logging
 from abc import ABCMeta, abstractmethod
 
 from theano import tensor
+
+from blocks.model import Selector
+from blocks.serialization import save_params, load_params
 
 logger = logging.getLogger(__name__)
 
@@ -87,31 +89,10 @@ class GroundhogModel(object):
         return []
 
     def save(self, path):
-        params = self.model.get_params()
-        # numpy.savez is vulnerable to slashes in names
-        param_values = {name.replace("/", "-"): param.get_value()
-                        for name, param in params.items()}
-        numpy.savez(path, **param_values)
+        save_params(Selector(self.model.top_bricks), path)
 
     def load(self, path):
-        param_values = {name.replace("-", "/"): value
-                        for name, value in numpy.load(path).items()}
-        for name, value in param_values.items():
-            selected = self.model.select(name)
-            if len(selected) == 0:
-                logger.error("Unknown parameter {}".format(name))
-            assert len(selected) == 1
-            selected = selected[0]
-
-            assert selected.get_value().shape == value.shape
-            selected.set_value(value)
-
-        params = self.model.get_params()
-        for name in params.keys():
-            if name not in param_values:
-                logger.error("No value is provided for the parameter {}"
-                             .format(name))
-
+        load_params(Selector(self.model.top_bricks), path)
 
 class GroundhogState(object):
     """Good default values for groundhog state."""
