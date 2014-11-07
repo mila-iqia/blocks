@@ -101,21 +101,6 @@ class AddParameters(Brick):
         return self.init.apply(kwargs[self.params_name])
 
 
-class SeriesGenerator(SequenceGenerator):
-    """ The top brick. """
-
-    def __init__(self, num_params):
-        transition = GatedRecurrent(
-            name="transition", activation=Tanh(), dim=10,
-            weights_init=Orthogonal())
-        with_params = AddParameters(transition, num_params, "params",
-                                    name="add")
-        super(SeriesGenerator, self).__init__(
-            Readout(), with_params,
-            weights_init=IsotropicGaussian(0.01), biases_init=Constant(0),
-            name="generator")
-
-
 class SeriesIterator(GroundhogIterator):
     """Training data generator."""
 
@@ -169,7 +154,17 @@ def main():
     args = parser.parse_args()
 
     function = eval(args.function)
-    generator = SeriesGenerator(len(inspect.getargspec(function).args) - 1)
+    num_params = len(inspect.getargspec(function).args) - 1
+
+    transition = GatedRecurrent(
+        name="transition", activation=Tanh(), dim=10,
+        weights_init=Orthogonal())
+    with_params = AddParameters(transition, num_params, "params",
+                                name="add")
+    generator = SequenceGenerator(
+        Readout(), with_params,
+        weights_init=IsotropicGaussian(0.01), biases_init=Constant(0),
+        name="generator")
     generator.allocate()
     pprint(Selector(generator).get_params().keys())
 
