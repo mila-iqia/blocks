@@ -706,8 +706,6 @@ class DefaultRNG(Brick):
     ----------
     rng : object
         A ``numpy.RandomState`` instance.
-    **kwargs
-        Keyword arguments to pass on to the :meth:`Brick` base class.
 
     Attributes
     ----------
@@ -953,7 +951,7 @@ class Wrap3D(Brick):
 class MultiInputApplySignature(ApplySignature):
     """Signature of an apply method with multiple inputs.
 
-    Attributes:
+    Attributes
     ----------
     forkable_input_names : list of strs
         Names of the inputs that can be forked from a common one.

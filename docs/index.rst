@@ -17,3 +17,5 @@ Indices and tables
    utils
    sequence_generators
    model
+   serialization
+   graph
