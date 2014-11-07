@@ -3,7 +3,7 @@ import argparse
 import logging
 import inspect
 from matplotlib import pyplot
-from pprint import pprint
+import pprint
 
 import theano
 from theano import tensor
@@ -20,6 +20,8 @@ from blocks.groundhog import GroundhogIterator, GroundhogState, GroundhogModel
 from blocks.serialization import load_params
 
 floatX = theano.config.floatX
+
+logger = logging.getLogger()
 
 
 class Readout(SimpleReadout):
@@ -166,7 +168,8 @@ def main():
         weights_init=IsotropicGaussian(0.01), biases_init=Constant(0),
         name="generator")
     generator.allocate()
-    pprint(Selector(generator).get_params().keys())
+    logger.debug("Parameters:\n" +
+                 pprint.pformat(Selector(generator).get_params().keys()))
 
     if args.mode == "train":
         seed = 1
