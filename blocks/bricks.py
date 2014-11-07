@@ -3,9 +3,7 @@
 This defines the basic interface of bricks.
 """
 import copy
-import types
 from abc import ABCMeta
-from functools import wraps
 import inspect
 import logging
 from collections import OrderedDict
