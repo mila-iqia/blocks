@@ -42,7 +42,7 @@ class AddParameters(Brick):
 
     In fact an improved version of this brick should be moved
     to the main body of the library, because it is clearly reusable
-    (e.g. it is can be a part of Encoder-Decoder translation model.
+    (e.g. it can be a part of Encoder-Decoder translation model.
 
     """
 
