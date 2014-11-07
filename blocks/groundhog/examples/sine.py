@@ -12,7 +12,7 @@ from groundhog.mainLoop import MainLoop
 from groundhog.trainer.SGD import SGD
 
 from blocks.bricks import Brick, GatedRecurrent, Identity, Tanh, MLP
-from blocks.sine import Selector
+from blocks.select import Selector
 from blocks.graph import Cost
 from blocks.sequence_generators import SequenceGenerator, SimpleReadout
 from blocks.initialization import Orthogonal, IsotropicGaussian, Constant
