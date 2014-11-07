@@ -6,6 +6,7 @@ from blocks.select import Selector
 
 logger = logging.getLogger(__name__)
 
+
 def save_params(bricks, path):
     """Save bricks parameters.
 
@@ -28,6 +29,7 @@ def save_params(bricks, path):
     param_values = {name.replace("/", "-"): param.get_value()
                     for name, param in params.items()}
     numpy.savez(path, **param_values)
+
 
 def load_params(bricks, path):
     """Load brick parameters.
@@ -62,4 +64,4 @@ def load_params(bricks, path):
     for name in params.keys():
         if name not in param_values:
             logger.error("No value is provided for the parameter {}"
-                            .format(name))
+                         .format(name))

@@ -6,6 +6,7 @@ from theano.tensor import TensorConstant
 from theano.tensor.sharedvar import SharedVariable
 from theano.tensor.shared_randomstreams import RandomStreams
 
+
 class ComputationGraph(object):
     """Encapsulates a managed Theano computation graph.
 
@@ -94,4 +95,3 @@ class Cost(ComputationGraph):
                                  self.random.normal(variable.shape,
                                                     std=level))
         self.replace(replace)
-

@@ -143,7 +143,7 @@ def main():
 
     parser = argparse.ArgumentParser(
         "Case study of generating simple 1d sequences with RNN.",
-         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
         "mode", choices=["train", "plot"],
         help="The mode to run. Use `train` to train a new model"
