@@ -12,10 +12,12 @@ from groundhog.mainLoop import MainLoop
 from groundhog.trainer.SGD import SGD
 
 from blocks.bricks import Brick, GatedRecurrent, Identity, Tanh, MLP
-from blocks.model import Model
+from blocks.sine import Selector
+from blocks.graph import Cost
 from blocks.sequence_generators import SequenceGenerator, SimpleReadout
 from blocks.initialization import Orthogonal, IsotropicGaussian, Constant
 from blocks.groundhog import GroundhogIterator, GroundhogState, GroundhogModel
+from blocks.serialization import load_params
 
 floatX = theano.config.floatX
 
@@ -99,28 +101,19 @@ class AddParameters(Brick):
         return self.init.apply(kwargs[self.params_name])
 
 
-class SeriesModel(Model):
-    """ I do not like the current model. It makes no sense. """
+class SeriesGenerator(SequenceGenerator):
+    """ The top brick. """
 
-    def __init__(self, num_params, input_noise=0.0):
-        self.transition = GatedRecurrent(
+    def __init__(self, num_params):
+        transition = GatedRecurrent(
             name="transition", activation=Tanh(), dim=10,
             weights_init=Orthogonal())
-        with_params = AddParameters(self.transition, num_params, "params",
+        with_params = AddParameters(transition, num_params, "params",
                                     name="add")
-        self.generator = SequenceGenerator(
+        super(SeriesGenerator, self).__init__(
             Readout(), with_params,
             weights_init=IsotropicGaussian(0.01), biases_init=Constant(0),
             name="generator")
-        self.generator.initialize()
-
-        self.x = tensor.tensor3('x')
-        self.params = tensor.matrix("params")
-        if input_noise:
-            self.x.tag.add_noise = input_noise
-        super(SeriesModel, self).__init__(
-            [self.generator],
-            self.generator.cost(self.x, params=self.params).sum())
 
 
 class SeriesIterator(GroundhogIterator):
@@ -176,34 +169,37 @@ def main():
     args = parser.parse_args()
 
     function = eval(args.function)
+    generator = SeriesGenerator(len(inspect.getargspec(function).args) - 1)
+    generator.allocate()
+    pprint(Selector(generator).get_params().keys())
 
     if args.mode == "train":
         seed = 1
         rng = numpy.random.RandomState(seed)
         batch_size = 10
 
+        generator.initialize()
+
+        cost = Cost(generator.cost(tensor.tensor3('x'),
+                                   params=tensor.matrix("params")).sum())
+        cost.apply_noise(cost.inputs, args.input_noise)
+
+        gh_model = GroundhogModel(generator, cost)
+        state = GroundhogState(args.prefix, batch_size,
+                               learning_rate=0.0001).as_dict()
         data = SeriesIterator(rng, function, 100, batch_size)
-        model = SeriesModel(
-            len(inspect.getargspec(function).args) - 1,
-            input_noise=args.input_noise)
-        pprint(model.get_params().keys())
-        gh_model = GroundhogModel(model)
-        state = GroundhogState(args.prefix, batch_size, learning_rate=0.0001)
-        state = state.as_dict()
         trainer = SGD(gh_model, state, data)
         main_loop = MainLoop(data, None, None, gh_model, trainer, state, None)
         main_loop.main()
     elif args.mode == "plot":
-        param_values = numpy.array(map(float, args.params.split()),
-                                   dtype=floatX)
-
-        model = SeriesModel(len(param_values))
-        gh_model = GroundhogModel(model)
-        gh_model.load(args.prefix + "model.npz")
+        load_params(generator,  args.prefix + "model.npz")
 
         params = tensor.matrix("params")
-        sample = theano.function([params], model.generator.generate(
+        sample = theano.function([params], generator.generate(
             params=params, n_steps=args.steps, batch_size=1, iterate=True))
+
+        param_values = numpy.array(map(float, args.params.split()),
+                                   dtype=floatX)
         states, outputs, costs = sample(param_values[None, :])
         actual = outputs[:, 0, 0]
 

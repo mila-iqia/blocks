@@ -2,8 +2,10 @@ import logging
 from abc import ABCMeta, abstractmethod
 
 from theano import tensor
+from theano import Variable
 
-from blocks.model import Selector
+from blocks.graph import Cost
+from blocks.select import Selector
 from blocks.serialization import save_params, load_params
 
 logger = logging.getLogger(__name__)
@@ -33,19 +35,38 @@ class GroundhogIterator(object):
 class GroundhogModel(object):
     """Wraps a model into a Groundhog compatible interface."""
 
-    def __init__(self, model):
-        self.model = model
+    def __init__(self, bricks, cost):
+        if not isinstance(bricks, Selector):
+            bricks = Selector(bricks)
+        if isinstance(cost, Variable):
+            cost = Cost(cost)
+        assert isinstance(cost, Cost)
+        self.bricks = bricks
+        self.cost = cost
 
     @property
     def params(self):
         # Caching for speed
         if not hasattr(self, "_params"):
-            self._params = self.model.get_params().values()
+            self._params = self.bricks.get_params().values()
         return self._params
 
     @property
+    def train_cost(self):
+        # Caching to simplify the computation graph
+        return self.cost.actual_cost()
+
+    @property
+    def param_grads(self):
+        # Caching to simplify the computation graph
+        if not hasattr(self, "_grads"):
+            self._grads = [tensor.grad(self.train_cost, p)
+                           for p in self.params]
+        return self._grads
+
+    @property
     def inputs(self):
-        return self.model.input_variables
+        return self.cost.inputs
 
     @property
     def properties(self):
@@ -56,23 +77,8 @@ class GroundhogModel(object):
         return []
 
     @property
-    def param_grads(self):
-        # Caching to simplify the computation graph
-        if not hasattr(self, "_grads"):
-            self._grads = [tensor.grad(self.model.cost(), p)
-                           for p in self.params]
-        return self._grads
-
-    @property
     def params_grad_scale(self):
         return [1.0] * len(self.params)
-
-    @property
-    def train_cost(self):
-        # Caching to simplify the computation graph
-        if not hasattr(self, "_train_cost"):
-            self._train_cost = self.model.cost()
-        return self._train_cost
 
     @property
     def valid_costs(self):
@@ -89,10 +95,11 @@ class GroundhogModel(object):
         return []
 
     def save(self, path):
-        save_params(Selector(self.model.top_bricks), path)
+        save_params(self.bricks, path)
 
     def load(self, path):
-        load_params(Selector(self.model.top_bricks), path)
+        load_params(self.bricks, path)
+
 
 class GroundhogState(object):
     """Good default values for groundhog state."""

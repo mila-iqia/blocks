@@ -3,7 +3,7 @@ from copy import deepcopy
 import theano
 
 from blocks.bricks import Brick
-from blocks.model import Path, Selector
+from blocks.select import Path, Selector
 
 
 def test_path():
