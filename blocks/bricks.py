@@ -215,6 +215,82 @@ class Brick(object):
         Brick.__init__(self)
         self.__dict__.update(state)
 
+    class BoundApplyWrapper(object):
+        """Binds an ApplyWrapper with a Brick for a proper apply call."""
+
+        def __init__(self, wrapper, brick):
+            self.wrapper = wrapper
+            self.brick = brick
+            self.__doc__ = wrapper.__doc__
+
+        def __call__(self, *args, **kwargs):
+            return self.wrapper(self.brick, *args, **kwargs)
+
+        def signature(self, *args, **kwargs):
+            return self.wrapper.signature_func(
+                self.brick, *args, **kwargs)
+
+    class ApplyWrapper(object):
+        """Wraps an apply method."""
+
+        __metaclass__ = ABCMeta
+
+        def __init__(self, func, pass_wrapper_reference):
+            self.func = func
+            self.pass_wrapper_reference = pass_wrapper_reference
+            self.__doc__ = func.__doc__
+            self.signature_func = lambda brick: ApplySignature()
+
+        def __get__(self, brick, owner):
+            if brick:
+                return Brick.BoundApplyWrapper(self, brick)
+            else:
+                return self
+
+        def __call__(self, brick, *inputs, **kwargs):
+            return_list = kwargs.pop('return_list', False)
+            return_dict = kwargs.pop('return_dict', False)
+            assert not return_list or not return_dict
+
+            if not brick.allocated:
+                brick.allocate()
+            if not brick.initialized and not brick.lazy:
+                brick.initialize()
+            inputs = list(inputs)
+            for i, inp in enumerate(inputs):
+                if isinstance(inp, tensor.Variable):
+                    inputs[i] = inp.copy()
+                    inputs[i].tag.owner = brick
+                    inputs[i].name = brick.name + INPUT_SUFFIX
+            for key, value in kwargs.items():
+                if isinstance(value, tensor.Variable):
+                    kwargs[key] = value.copy()
+                    kwargs[key].tag.owner = brick
+                    kwargs[key].name = brick.name + INPUT_SUFFIX
+            if self.pass_wrapper_reference:
+                outputs = self.func(self, brick, *inputs, **kwargs)
+            else:
+                outputs = self.func(brick, *inputs, **kwargs)
+            # TODO: allow user to return an OrderedDict
+            outputs = pack(outputs)
+            for i, output in enumerate(outputs):
+                if isinstance(output, tensor.Variable):
+                    # TODO Tag with dimensions, axes, etc. for
+                    # error-checking
+                    outputs[i] = output.copy()
+                    outputs[i].tag.owner = brick
+                    outputs[i].name = brick.name + OUTPUT_SUFFIX
+            if return_list:
+                return outputs
+            if return_dict:
+                return OrderedDict(
+                    zip(self.signature_func(brick).output_names, outputs))
+            return unpack(outputs)
+
+        def signature_method(self, signature_func):
+            self.signature_func = signature_func
+            return signature_func
+
     @staticmethod
     def _apply_method(pass_wrapper_reference):
         """Wraps an apply method.
@@ -227,68 +303,7 @@ class Brick(object):
 
         """
         def decorator(func):
-            @wraps(func, updated=())
-            class ApplyWrapper(object):
-
-                __metaclass__ = ABCMeta
-
-                def __init__(self):
-                    self.signature = lambda brick: ApplySignature()
-
-                def __get__(self, brick, owner):
-                    if brick:
-                        def call_wrapper(brick, *args, **kwargs):
-                            return self(brick, *args, **kwargs)
-                        return types.MethodType(call_wrapper,
-                                                brick, brick.__class__)
-                    else:
-                        return self
-
-                def __call__(self, brick, *inputs, **kwargs):
-                    return_list = kwargs.pop('return_list', False)
-                    return_dict = kwargs.pop('return_dict', False)
-                    assert not return_list or not return_dict
-
-                    if not brick.allocated:
-                        brick.allocate()
-                    if not brick.initialized and not brick.lazy:
-                        brick.initialize()
-                    inputs = list(inputs)
-                    for i, inp in enumerate(inputs):
-                        if isinstance(inp, tensor.Variable):
-                            inputs[i] = inp.copy()
-                            inputs[i].tag.owner = brick
-                            inputs[i].name = brick.name + INPUT_SUFFIX
-                    for key, value in kwargs.items():
-                        if isinstance(value, tensor.Variable):
-                            kwargs[key] = value.copy()
-                            kwargs[key].tag.owner = brick
-                            kwargs[key].name = brick.name + INPUT_SUFFIX
-                    if pass_wrapper_reference:
-                        outputs = func(self, brick, *inputs, **kwargs)
-                    else:
-                        outputs = func(brick, *inputs, **kwargs)
-                    # TODO: allow user to return an OrderedDict
-                    outputs = pack(outputs)
-                    for i, output in enumerate(outputs):
-                        if isinstance(output, tensor.Variable):
-                            # TODO Tag with dimensions, axes, etc. for
-                            # error-checking
-                            outputs[i] = output.copy()
-                            outputs[i].tag.owner = brick
-                            outputs[i].name = brick.name + OUTPUT_SUFFIX
-                    if return_list:
-                        return outputs
-                    if return_dict:
-                        return OrderedDict(
-                            zip(self.signature(brick).output_names, outputs))
-                    return unpack(outputs)
-
-                def signature_method(self, signature_func):
-                    self.signature = signature_func
-                    return signature_func
-
-            return ApplyWrapper()
+            return Brick.ApplyWrapper(func, pass_wrapper_reference)
         return decorator
 
     @staticmethod
@@ -371,7 +386,7 @@ class Brick(object):
             reverse = kwargs.pop("reverse", False)
             return_initial_states = kwargs.pop("return_initial_states", False)
 
-            signature = wrapper.signature(brick, *args, **kwargs)
+            signature = wrapper.signature_func(brick, *args, **kwargs)
             assert isinstance(signature, RecurrentApplySignature)
 
             # Push everything to kwargs
@@ -447,7 +462,7 @@ class Brick(object):
             Name of the apply method.
 
         """
-        return getattr(self.__class__, apply_method).signature(
+        return getattr(self.__class__, apply_method).signature_func(
             self, *args, **kwargs)
 
     @staticmethod

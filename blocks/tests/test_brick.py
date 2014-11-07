@@ -97,5 +97,5 @@ def test_multiinput():
         assert undo_copy(y, 3).tag.owner == fork
     assert undo_copy(ys[2], 4) == x
 
-    input_names = ForkInputs.apply.signature(fi).input_names
+    input_names = fi.apply.signature().input_names
     assert tuple(input_names) == ("inp3", "common_input")
