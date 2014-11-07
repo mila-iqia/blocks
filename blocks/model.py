@@ -8,6 +8,7 @@ from theano.scalar import ScalarConstant
 from theano.tensor import TensorConstant
 from theano.tensor.sharedvar import SharedVariable
 
+from blocks.bricks import Brick
 from blocks.utils import dict_union
 
 logger = logging.getLogger(__name__)
@@ -210,6 +211,8 @@ class Selector(object):
     """
 
     def __init__(self, bricks):
+        if isinstance(bricks, Brick):
+            bricks = [bricks]
         self.bricks = bricks
 
     def select(self, path):
