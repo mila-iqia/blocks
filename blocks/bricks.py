@@ -170,6 +170,9 @@ class Brick(object):
     #: See :attr:`lazy`
     lazy = True
 
+    # The reference to the brick, whose apply method was called last.
+    _last_brick_called = None
+
     def __init__(self, name=None):
         if name is None:
             name = self.__class__.__name__.lower()
@@ -246,6 +249,13 @@ class Brick(object):
                 return self
 
         def __call__(self, brick, *inputs, **kwargs):
+            last = Brick._last_brick_called
+            if last and brick not in last.children:
+                raise Exception("The brick {} called an apply method of the"
+                                " brick {} without having it in the children"
+                                " list."
+                                .format(last, brick))
+
             return_list = kwargs.pop('return_list', False)
             return_dict = kwargs.pop('return_dict', False)
             assert not return_list or not return_dict
@@ -265,10 +275,14 @@ class Brick(object):
                     kwargs[key] = value.copy()
                     kwargs[key].tag.owner = brick
                     kwargs[key].name = brick.name + INPUT_SUFFIX
+
+            Brick._last_brick_called = brick
             if self.pass_wrapper_reference:
                 outputs = self.func(self, brick, *inputs, **kwargs)
             else:
                 outputs = self.func(brick, *inputs, **kwargs)
+            Brick._last_brick_called = last
+
             # TODO: allow user to return an OrderedDict
             outputs = pack(outputs)
             for i, output in enumerate(outputs):
@@ -1134,6 +1148,7 @@ class Recurrent(DefaultRNG):
             activation = Identity()
         self.__dict__.update(locals())
         del self.self
+        self.children = [activation]
 
     @property
     def W(self):
@@ -1235,6 +1250,8 @@ class GatedRecurrent(DefaultRNG):
         self.__dict__.update(locals())
         del self.self
         del self.kwargs
+
+        self.children = [activation, gate_activation]
 
     @property
     def state2state(self):
