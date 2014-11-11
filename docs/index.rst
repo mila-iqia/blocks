@@ -19,3 +19,4 @@ Indices and tables
    model
    serialization
    graph
+   lookup
