@@ -6,6 +6,7 @@ from abc import abstractmethod
 from blocks.bricks import (
     Brick, MLP, Identity, ForkInputs, ApplySignature,
     zero_state)
+from blocks.lookup import LookupTable
 from blocks.utils import dict_union
 
 
@@ -216,27 +217,36 @@ class BaseSequenceGenerator(Brick):
         return signature
 
 
-class AbstractReadout(Brick):
+class AbstractEmitter(Brick):
+
+    @abstractmethod
+    def emit(self, readouts):
+        pass
+
+    @abstractmethod
+    def cost(self, readouts, outputs):
+        pass
+
+    @abstractmethod
+    def initial_outputs(self, dim, batch_size, *args, **kwargs):
+        pass
+
+
+class AbstractFeedback(Brick):
+
+    @abstractmethod
+    def feedback(self, outputs):
+        pass
+
+
+class AbstractReadout(AbstractEmitter, AbstractFeedback):
     """A base class for a readout component of a sequence generator.
 
     Yields outputs combining information from multiple sources.
 
     """
-
     @abstractmethod
-    def emit(self, **kwargs):
-        pass
-
-    @abstractmethod
-    def feedback(self, **kwargs):
-        pass
-
-    @abstractmethod
-    def cost(self, **kwargs):
-        pass
-
-    @abstractmethod
-    def initial_outputs(self, dim, batch_size, **kwargs):
+    def readout(self, **kwargs):
         pass
 
 
@@ -246,7 +256,6 @@ class AbstractAttentionTransition(Brick):
     A recurrent transition combined with an attention mechanism.
 
     """
-
     @abstractmethod
     def apply(self, **kwargs):
         pass
@@ -260,16 +269,91 @@ class AbstractAttentionTransition(Brick):
         pass
 
 
-class SimpleReadout(AbstractReadout):
-    """A simple readout block.
+class TrivialEmitter(AbstractEmitter):
 
-    This is an example readout block that can be used in simple cases
-    when the outputs are computed deterministically from contexts,
-    states and glimpses. No distinction is made between `readouts` and
-    `outputs` in this case, which is results into trivial `emit`
-    and `feedback` methods.
+    @Brick.lazy_method
+    def __init__(self, readout_dim, **kwargs):
+        super(TrivialEmitter, self).__init__(**kwargs)
+        self.readout_dim = readout_dim
 
-    The readout is made producing by summing linear projections of all sources.
+    @Brick.apply_method
+    def emit(self, outputs):
+        return outputs
+
+    @emit.signature_method
+    def emit_signature(self):
+        return ApplySignature(output_dims=[self.readout_dim])
+
+    @Brick.apply_method
+    def initial_outputs(self, dim, batch_size, *args, **kwargs):
+        return zero_state(self.readout_dim, batch_size, **kwargs)
+
+
+class TrivialFeedback(AbstractFeedback):
+
+    @Brick.lazy_method
+    def __init__(self, output_dim, **kwargs):
+        super(TrivialFeedback, self).__init__(**kwargs)
+        self.output_dim = output_dim
+
+    @Brick.apply_method
+    def feedback(self, outputs):
+        return outputs
+
+    @feedback.signature_method
+    def feedback_signature(self):
+        return ApplySignature(output_dims=[self.output_dim])
+
+
+class Readout(AbstractReadout):
+    """Readout brick with separated emitting and feedback parts."""
+
+    @Brick.lazy_method
+    def __init__(self, readout_dim, emitter=None, feedbacker=None, **kwargs):
+        super(Readout, self).__init__(**kwargs)
+
+        if not emitter:
+            emitter = TrivialEmitter(readout_dim)
+        if not feedbacker:
+            feedbacker = TrivialFeedback(readout_dim)
+        self.__dict__.update(**locals())
+        del self.self
+        del self.kwargs
+
+        self.children = [self.emitter, self.feedbacker]
+
+    def _push_allocation_config(self):
+        self.emitter.readout_dim = self.readout_dim
+        self.feedbacker.output_dim = (
+            self.emitter.emit.signature().output_dims[0])
+
+    @Brick.apply_method
+    def emit(self, readouts):
+        return self.emitter.emit(readouts)
+
+    @emit.signature_method
+    def emit_signature(self, *args, **kwargs):
+        return self.emitter.emit.signature(*args, **kwargs)
+
+    @Brick.apply_method
+    def cost(self, readouts, outputs):
+        return self.emitter.cost(readouts, outputs)
+
+    @Brick.apply_method
+    def initial_outputs(self, dim, batch_size, *args, **kwargs):
+        return self.emitter.initial_outputs(dim, batch_size, **kwargs)
+
+    @Brick.apply_method
+    def feedback(self, outputs):
+        return self.feedbacker.feedback(outputs)
+
+    @feedback.signature_method
+    def feedback_signature(self, *args, **kwargs):
+        return self.feedbacker.feedback.signature(*args, **kwargs)
+
+
+class LinearReadout(Readout):
+    """Readout computed as sum of linear projections.
 
     Parameters
     ----------
@@ -279,19 +363,19 @@ class SimpleReadout(AbstractReadout):
         The names of information sources.
 
     """
-
     @Brick.lazy_method
     def __init__(self, readout_dim, source_names,
                  weights_init, biases_init, **kwargs):
-        super(SimpleReadout, self).__init__(**kwargs)
+        super(LinearReadout, self).__init__(readout_dim, **kwargs)
         self.__dict__.update(**locals())
 
         self.projectors = [MLP(name="project_{}".format(name),
                                activations=[Identity()])
                            for name in self.source_names]
-        self.children = self.projectors
+        self.children.extend(self.projectors)
 
     def _push_allocation_config(self):
+        super(LinearReadout, self)._push_allocation_config()
         for name, projector in zip(self.source_names, self.projectors):
             projector.dims[0] = self.source_dims[name]
             projector.dims[-1] = self.readout_dim
@@ -311,21 +395,31 @@ class SimpleReadout(AbstractReadout):
             return projections[0]
         return sum(projections[1:], projections[0])
 
-    @Brick.apply_method
-    def emit(self, readouts, **kwargs):
-        return readouts
 
-    @emit.signature_method
-    def emit_signature(self, *args, **kwargs):
-        return ApplySignature(output_dims=[self.readout_dim])
+class LookupFeedback(AbstractEmitter):
+
+    @Brick.lazy_method
+    def __init__(self, num_outputs, feedback_dim, **kwargs):
+        super(LookupFeedback, self).__init__(**kwargs)
+        self.num_outputs = num_outputs
+        self.feedback_dim = feedback_dim
+
+        self.lookup = LookupTable(num_outputs, feedback_dim,
+                                  kwargs.get("weights_init"))
+        self.children.append(self.lookup)
+
+    def _push_allocation_config(self):
+        self.lookup.length = self.num_outputs
+        self.lookup.dim = self.feedback_dim
 
     @Brick.apply_method
     def feedback(self, outputs, **kwargs):
-        return outputs
+        return self.lookup(outputs)
 
     @feedback.signature_method
     def feedback_signature(self, *args, **kwargs):
-        return ApplySignature(output_dims=[self.readout_dim])
+        return ApplySignature(output_dims=[self.feedback_dim])
+
 
 class ForkAttentionTransitionInputs(ForkInputs, AbstractAttentionTransition):
     """A ForkInputs extension that keeps attention interface accesible.

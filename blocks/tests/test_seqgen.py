@@ -5,7 +5,7 @@ from theano import tensor
 
 from blocks.bricks import Brick, GatedRecurrent, Tanh
 from blocks.sequence_generators import (
-    SequenceGenerator, SimpleReadout)
+    SequenceGenerator, LinearReadout, TrivialEmitter)
 from blocks.initialization import Orthogonal, IsotropicGaussian, Constant
 
 floatX = theano.config.floatX
@@ -19,21 +19,19 @@ def test_sequence_generator():
     batch_size = 30
     n_steps = 10
 
-    class Readout(SimpleReadout):
-
-        def __init__(self):
-            super(Readout, self).__init__(readout_dim=output_dim,
-                                          source_names=['states'])
-
+    class Emitter(TrivialEmitter):
         @Brick.apply_method
         def cost(self, readouts, outputs):
+            """Compute MSE."""
             return ((readouts - outputs) ** 2).sum(axis=readouts.ndim - 1)
 
     transition = GatedRecurrent(
         name="transition", activation=Tanh(), dim=dim,
         weights_init=Orthogonal())
     generator = SequenceGenerator(
-        Readout(), transition,
+        LinearReadout(readout_dim=output_dim, source_names=["states"],
+                      emitter=Emitter(name="emitter"), name="readout"),
+        transition,
         weights_init=IsotropicGaussian(0.01), biases_init=Constant(0),
         name="generator")
     generator.initialize()
