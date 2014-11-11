@@ -327,15 +327,29 @@ class SimpleReadout(AbstractReadout):
     def feedback_signature(self, *args, **kwargs):
         return ApplySignature(output_dims=[self.readout_dim])
 
-    @Brick.apply_method
-    def initial_outputs(self, dim, *args, **kwargs):
-        if not dim:
-            dim = self.readout_dim
-        return zero_state(dim, *args, **kwargs)
-
-
 class ForkAttentionTransitionInputs(ForkInputs, AbstractAttentionTransition):
-    """A ForkInputs extension that keeps attention interface accesible."""
+    """A ForkInputs extension that keeps attention interface accesible.
+
+    This brick will burn in hell quite soon.
+    """
+    @Brick.apply_method
+    def apply(self, *args, **kwargs):
+        return super(ForkAttentionTransitionInputs, self).apply(
+            *args, **kwargs)
+
+    @Brick.apply_method
+    def init_state(self, state_name, *args, **kwargs):
+        return self.wrapped.apply.signature().state_init_funcs[state_name](
+            *args, **kwargs)
+
+    @apply.signature_method
+    def apply_signature(self, *args, **kwargs):
+        signature = super(
+            ForkAttentionTransitionInputs, self).apply.signature()
+        for state_name in signature.state_init_funcs:
+            signature.state_init_funcs[state_name] = partial(self.init_state,
+                                                             state_name)
+        return signature
 
     @Brick.apply_method
     def take_look(self, *args, **kwargs):
@@ -374,9 +388,18 @@ class FakeAttentionTransition(AbstractAttentionTransition):
     def apply(self, *args, **kwargs):
         return self.transition.apply(*args, **kwargs)
 
+    @Brick.apply_method
+    def init_state(self, state_name, *args, **kwargs):
+        return self.transition.apply.signature().state_init_funcs[state_name](
+            *args, **kwargs)
+
     @apply.signature_method
     def apply_signature(self, *args, **kwargs):
-        return self.transition.apply.signature()
+        signature = self.transition.apply.signature()
+        for state_name in signature.state_init_funcs:
+            signature.state_init_funcs[state_name] = partial(self.init_state,
+                                                             state_name)
+        return signature
 
     @Brick.apply_method
     def take_look(self, *args, **kwargs):
