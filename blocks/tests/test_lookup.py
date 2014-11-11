@@ -8,6 +8,7 @@ from blocks.lookup import LookupTable
 
 floatX = theano.config.floatX
 
+
 def test_lookup_table():
     lt = LookupTable(5, 3)
     lt.allocate()

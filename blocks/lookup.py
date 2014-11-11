@@ -5,6 +5,7 @@ from theano import tensor
 from blocks.bricks import Brick
 from blocks.utils import shared_floatx_zeros, check_theano_variable
 
+
 class LookupTable(Brick):
     """Incapsulates representations of a range of integers.
 

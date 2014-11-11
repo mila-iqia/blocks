@@ -184,7 +184,7 @@ def check_theano_variable(variable, n_dim, dtype_prefix):
     if dtype_prefix and not variable.dtype.startswith(dtype_prefix):
         raise ValueError("Wrong dtype prefix:"
                          "\n\texpected starting with {}, got {}".format(
-                            dtype_prefix, variable.dtype))
+                             dtype_prefix, variable.dtype))
 
 
 def dict_union(*dicts, **kwargs):
