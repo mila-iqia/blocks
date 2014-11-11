@@ -250,7 +250,7 @@ class Brick(object):
 
         def __call__(self, brick, *inputs, **kwargs):
             last = Brick._last_brick_called
-            if last and brick not in last.children:
+            if last and last != brick and brick not in last.children:
                 raise Exception("The brick {} called an apply method of the"
                                 " brick {} without having it in the children"
                                 " list."
