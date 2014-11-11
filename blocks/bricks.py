@@ -277,11 +277,13 @@ class Brick(object):
                     kwargs[key].name = brick.name + INPUT_SUFFIX
 
             Brick._last_brick_called = brick
-            if self.pass_wrapper_reference:
-                outputs = self.func(self, brick, *inputs, **kwargs)
-            else:
-                outputs = self.func(brick, *inputs, **kwargs)
-            Brick._last_brick_called = last
+            try:
+                if self.pass_wrapper_reference:
+                    outputs = self.func(self, brick, *inputs, **kwargs)
+                else:
+                    outputs = self.func(brick, *inputs, **kwargs)
+            finally:
+                Brick._last_brick_called = last
 
             # TODO: allow user to return an OrderedDict
             outputs = pack(outputs)
