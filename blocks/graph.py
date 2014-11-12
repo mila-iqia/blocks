@@ -3,6 +3,7 @@
 import logging
 
 import theano
+from theano import Variable
 from theano.scalar import ScalarConstant
 from theano.tensor import TensorConstant
 from theano.tensor.sharedvar import SharedVariable
@@ -28,6 +29,8 @@ class ComputationGraph(object):
 
     """
     def __init__(self, outputs):
+        if isinstance(outputs, Variable):
+            outputs = [outputs]
         self.outputs = outputs
         self._get_variables()
 
@@ -38,7 +41,7 @@ class ComputationGraph(object):
                 if not owner in self.applies:
                     if hasattr(owner.tag, 'updates'):
                         logger.debug("updates of {}".format(owner))
-                        self.updates.append(owner.tag.updates)
+                        self.updates.extend(owner.tag.updates.items())
                     self.applies.add(owner)
 
                 for inp in owner.inputs:
@@ -71,6 +74,11 @@ class ComputationGraph(object):
         """
         self.outputs = theano.clone(self.outputs, replace=replacements)
         self._get_variables()
+
+    def function(self):
+        """Create Theano function from the graph contained."""
+        return theano.function(self.inputs, self.outputs,
+                               updates=self.updates)
 
 
 class Cost(ComputationGraph):
