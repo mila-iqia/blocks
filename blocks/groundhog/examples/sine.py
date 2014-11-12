@@ -5,9 +5,9 @@ import pprint
 
 import numpy
 import theano
-from groundhog.mainLoop import MainLoop
-from groundhog.trainer.SGD import SGD
 try:
+    from groundhog.mainLoop import MainLoop
+    from groundhog.trainer.SGD import SGD
     from matplotlib import pyplot
 except:
     pass  # TODO matplotlib as dependency?

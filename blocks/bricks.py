@@ -1292,8 +1292,8 @@ class GatedRecurrent(DefaultRNG):
         output : Theano variable
             Next states of the network.
         """
-        if (self.use_update_gate == (update_inps is not None)) or \
-                (self.use_reset_gate == (reset_inps is not None)):
+        if (self.use_update_gate != (update_inps is not None)) or \
+                (self.use_reset_gate != (reset_inps is not None)):
             raise ValueError("Configuration and input mismatch: You should "
                              "provide inputs for gates if and only if the "
                              "gates are on.")

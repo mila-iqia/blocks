@@ -220,6 +220,7 @@ def dict_union(*dicts, **kwargs):
         result.update(d)
     return result
 
+
 def repr_attrs(instance, *attrs):
     """Prints a representation of an object with certain attributes.
 
@@ -237,9 +238,9 @@ def repr_attrs(instance, *attrs):
     ...         self.value = value
     >>> a = A('a_value')
     >>> repr(a)
-    <__main__.A object at 0x7fb2b4741a10>
+    <blocks.utils.A object at 0x7fb2b4741a10>  #doctest: +SKIP
     >>> repr_attrs(a, 'value')
-    <__main__.A object at 0x7fb2b4741a10: value=a_value>
+    <blocks.utils.A object at 0x7fb2b4741a10: value=a_value>  #doctest: +SKIP
 
     """
     repr_template = ("<{0.__class__.__module__}.{0.__class__.__name__} "
