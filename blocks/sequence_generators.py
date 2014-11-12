@@ -403,8 +403,9 @@ class SoftmaxEmitter(AbstractEmitter, DefaultRNG):
         max_output = probs.shape[-1]
         flat_outputs = outputs.flatten()
         num_outputs = flat_outputs.shape[0]
-        return probs.flatten()[max_output * tensor.arange(num_outputs)
-                               + flat_outputs].reshape(outputs.shape)
+        return -tensor.log(
+            probs.flatten()[max_output * tensor.arange(num_outputs)
+                            + flat_outputs].reshape(outputs.shape))
 
     @emit.signature_method
     def emit_signature(self):
