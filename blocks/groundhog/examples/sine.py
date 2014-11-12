@@ -1,15 +1,17 @@
-import numpy
 import argparse
 import logging
 import inspect
-from matplotlib import pyplot
 import pprint
 
+import numpy
 import theano
-from theano import tensor
-
 from groundhog.mainLoop import MainLoop
 from groundhog.trainer.SGD import SGD
+try:
+    from matplotlib import pyplot
+except:
+    pass  # TODO matplotlib as dependency?
+from theano import tensor
 
 from blocks.bricks import Brick, GatedRecurrent, Identity, Tanh, MLP
 from blocks.select import Selector
@@ -20,7 +22,6 @@ from blocks.groundhog import GroundhogIterator, GroundhogState, GroundhogModel
 from blocks.serialization import load_params
 
 floatX = theano.config.floatX
-
 logger = logging.getLogger()
 
 

@@ -3,17 +3,17 @@
 This defines the basic interface of bricks.
 """
 import copy
-from abc import ABCMeta
 import inspect
 import logging
+from abc import ABCMeta
 from collections import OrderedDict
 
 import numpy as np
 import theano
 from theano import tensor
 
-from blocks.utils import (pack, reraise_as, shared_floatx_zeros, unpack,
-                          check_theano_variable)
+from blocks.utils import (pack, repr_attrs, reraise_as, shared_floatx_zeros,
+                          unpack)
 from blocks.initialization import Constant
 
 INPUT_SUFFIX = '_input'
@@ -155,7 +155,7 @@ class Brick(object):
     ... x = theano.tensor.vector()
     ... linear.apply(x)  # Calls linear.allocate() automatically
     ... linear.output_dim = 3
-    ... linear.initialize()
+    ... linear.initialize()  # Initializes the weight matrix
 
     In simple cases, eager bricks are easier to deal with.
 
@@ -183,7 +183,7 @@ class Brick(object):
         self.initialization_config_pushed = False
 
     def __str__(self):
-        return self.name
+        return repr_attrs(self, 'name')
 
     def __getstate__(self):
         """Override the default __getstate__ method.
@@ -191,6 +191,7 @@ class Brick(object):
         Ensures that `params` are not copied even when `copy.deepcopy`
         is called by excluding them from the brick's state together
         with the attributes `allocated` and `initialized`.
+
         """
         state = self.__dict__
         for attr in ['allocated', 'initialized', 'params']:
@@ -203,12 +204,13 @@ class Brick(object):
 
         Calls the __init__ method before setting the state to ensure
         default initialization of the attributes excluded from the state
-        in __getstate__.
+        in :meth:`__getstate__`.
 
         Parameters
         ----------
         state : dict
             Dictionary of the attributes to set.
+
         """
         Brick.__init__(self)
         self.__dict__.update(state)
@@ -1170,11 +1172,6 @@ class Recurrent(DefaultRNG):
              Masks will become n + 1 dimensional as well then.
 
         """
-        dtype = self.W.dtype
-        check_theano_variable(inp, 2, dtype)
-        check_theano_variable(state, 2, dtype)
-        check_theano_variable(mask, 1, dtype)
-
         next_state = inp + tensor.dot(state, self.W)
         next_state = self.activation.apply(next_state)
         if mask:
@@ -1295,26 +1292,21 @@ class GatedRecurrent(DefaultRNG):
         output : Theano variable
             Next states of the network.
         """
-        if (self.use_update_gate != bool(update_inps) or
-                self.use_reset_gate != bool(reset_inps)):
-            raise ValueError("Configuration and input mismatch:"
-                             "\n\tyou should provide inputs for gates if"
-                             " and only if the gates are on.")
+        if (self.use_update_gate == (update_inps is not None)) or \
+                (self.use_reset_gate == (reset_inps is not None)):
+            raise ValueError("Configuration and input mismatch: You should "
+                             "provide inputs for gates if and only if the "
+                             "gates are on.")
 
-        dtype = self.state2state.dtype
-        for inp in [states, inps, update_inps, reset_inps]:
-            check_theano_variable(inp, 2, dtype)
-        check_theano_variable(mask, 1, dtype)
-
-        states_reseted = states
+        states_reset = states
 
         if self.use_reset_gate:
             reset_values = self.gate_activation.apply(
                 states.dot(self.state2reset) + reset_inps)
-            states_reseted = states * reset_values
+            states_reset = states * reset_values
 
         next_states = self.activation.apply(
-            states_reseted.dot(self.state2state) + inps)
+            states_reset.dot(self.state2state) + inps)
 
         if self.use_update_gate:
             update_values = self.gate_activation.apply(

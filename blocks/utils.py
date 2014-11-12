@@ -157,8 +157,8 @@ def reraise_as(new_exc):
 def check_theano_variable(variable, n_dim, dtype):
     """Check number of dimensions and dtype of a Theano variable.
 
-    If the input is not a Theano variable, it is converted to one. `None` input
-    is handled as a special case: no checks are done.
+    If the input is not a Theano variable, it is converted to one. `None`
+    input is handled as a special case: no checks are done.
 
     Parameters
     ----------
@@ -168,6 +168,7 @@ def check_theano_variable(variable, n_dim, dtype):
         Expected number of dimensions.
     dtype : str
         Expected dtype.
+
     """
 
     if variable is None:
@@ -188,19 +189,63 @@ def check_theano_variable(variable, n_dim, dtype):
 
 
 def dict_union(*dicts, **kwargs):
-    """Return union of a sequence of dictionaries.
+    """Return union of a sequence of disjoint dictionaries.
 
-    If keyword arguments are given they are added to the resulting dict.
-    If the first dictionary in the sequence is an instance of `OrderedDict`,
-    the result will be OrderedDict.
+    Parameters
+    ----------
+    dicts : dicts
+        A set of dictionaries with no keys in common. If the first
+        dictionary in the sequence is an instance of `OrderedDict`, the
+        result will be OrderedDict.
+    **kwargs
+        Keywords and values to add to the resulting dictionary.
+
+    Raises
+    ------
+    ValueError
+        If a key appears twice in the dictionaries or keyword arguments.
 
     """
     dicts = list(dicts)
-    if len(dicts) and isinstance(dicts[0], OrderedDict):
+    if dicts and isinstance(dicts[0], OrderedDict):
         result = OrderedDict()
     else:
-        result = dict()
+        result = {}
     for d in list(dicts) + [kwargs]:
-        assert len(set(result.keys()).intersection(set(d.keys()))) == 0
+        duplicate_keys = set(result.keys()) & set(d.keys())
+        if duplicate_keys:
+            raise ValueError("The following keys have duplicate entries: {}"
+                             .format(", ".join(str(key) for key in
+                                               duplicate_keys)))
         result.update(d)
     return result
+
+def repr_attrs(instance, *attrs):
+    """Prints a representation of an object with certain attributes.
+
+    Parameters
+    ----------
+    instance : object
+        The object of which to print the string representation
+    *attrs
+        Names of attributes that should be printed.
+
+    Examples
+    --------
+    >>> class A(object):
+    ...     def __init__(self, value):
+    ...         self.value = value
+    >>> a = A('a_value')
+    >>> repr(a)
+    <__main__.A object at 0x7fb2b4741a10>
+    >>> repr_attrs(a, 'value')
+    <__main__.A object at 0x7fb2b4741a10: value=a_value>
+
+    """
+    repr_template = ("<{0.__class__.__module__}.{0.__class__.__name__} "
+                     "object at {1:#x}")
+    if attrs:
+        repr_template += ": " + ", ".join(["{0}={{0.{0}}}".format(attr)
+                                           for attr in attrs])
+    repr_template += '>'
+    return repr_template.format(instance, id(instance))
