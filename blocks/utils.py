@@ -237,10 +237,10 @@ def repr_attrs(instance, *attrs):
     ...     def __init__(self, value):
     ...         self.value = value
     >>> a = A('a_value')
-    >>> repr(a)
-    <blocks.utils.A object at 0x7fb2b4741a10>  #doctest: +SKIP
-    >>> repr_attrs(a, 'value')
-    <blocks.utils.A object at 0x7fb2b4741a10: value=a_value>  #doctest: +SKIP
+    >>> repr(a)  # doctest: +SKIP
+    <blocks.utils.A object at 0x7fb2b4741a10>
+    >>> repr_attrs(a, 'value')  # doctest: +SKIP
+    <blocks.utils.A object at 0x7fb2b4741a10: value=a_value>
 
     """
     repr_template = ("<{0.__class__.__module__}.{0.__class__.__name__} "
