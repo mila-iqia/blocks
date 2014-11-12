@@ -5,7 +5,7 @@ from theano import tensor
 from abc import abstractmethod
 from blocks.bricks import (
     Brick, MLP, Identity, ForkInputs, ApplySignature,
-    zero_state)
+    DefaultRNG, zero_state)
 from blocks.lookup import LookupTable
 from blocks.utils import dict_union
 
@@ -269,42 +269,6 @@ class AbstractAttentionTransition(Brick):
         pass
 
 
-class TrivialEmitter(AbstractEmitter):
-
-    @Brick.lazy_method
-    def __init__(self, readout_dim, **kwargs):
-        super(TrivialEmitter, self).__init__(**kwargs)
-        self.readout_dim = readout_dim
-
-    @Brick.apply_method
-    def emit(self, outputs):
-        return outputs
-
-    @emit.signature_method
-    def emit_signature(self):
-        return ApplySignature(output_dims=[self.readout_dim])
-
-    @Brick.apply_method
-    def initial_outputs(self, dim, batch_size, *args, **kwargs):
-        return zero_state(self.readout_dim, batch_size, **kwargs)
-
-
-class TrivialFeedback(AbstractFeedback):
-
-    @Brick.lazy_method
-    def __init__(self, output_dim, **kwargs):
-        super(TrivialFeedback, self).__init__(**kwargs)
-        self.output_dim = output_dim
-
-    @Brick.apply_method
-    def feedback(self, outputs):
-        return outputs
-
-    @feedback.signature_method
-    def feedback_signature(self):
-        return ApplySignature(output_dims=[self.output_dim])
-
-
 class Readout(AbstractReadout):
     """Readout brick with separated emitting and feedback parts."""
 
@@ -368,6 +332,8 @@ class LinearReadout(Readout):
                  weights_init, biases_init, **kwargs):
         super(LinearReadout, self).__init__(readout_dim, **kwargs)
         self.__dict__.update(**locals())
+        del self.self
+        del self.kwargs
 
         self.projectors = [MLP(name="project_{}".format(name),
                                activations=[Identity()])
@@ -396,7 +362,76 @@ class LinearReadout(Readout):
         return sum(projections[1:], projections[0])
 
 
-class LookupFeedback(AbstractEmitter):
+class TrivialEmitter(AbstractEmitter):
+
+    @Brick.lazy_method
+    def __init__(self, readout_dim, **kwargs):
+        super(TrivialEmitter, self).__init__(**kwargs)
+        self.readout_dim = readout_dim
+
+    @Brick.apply_method
+    def emit(self, readouts):
+        return readouts
+
+    @emit.signature_method
+    def emit_signature(self):
+        return ApplySignature(output_dims=[self.readout_dim])
+
+    @Brick.apply_method
+    def initial_outputs(self, dim, batch_size, *args, **kwargs):
+        return zero_state(self.readout_dim, batch_size, **kwargs)
+
+
+class SoftmaxEmitter(AbstractEmitter, DefaultRNG):
+
+    def __init__(self,  **kwargs):
+        super(SoftmaxEmitter, self).__init__(**kwargs)
+
+    def _probs(self, readouts):
+        shape = readouts.shape
+        return tensor.nnet.softmax(readouts.reshape(
+            (tensor.prod(shape[:-1]), shape[-1]))).reshape(shape)
+
+    @Brick.apply_method
+    def emit(self, readouts):
+        probs = self._probs(readouts)
+        return self.theano_rng.multinomial(pvals=probs).argmax(axis=-1)
+
+    @Brick.apply_method
+    def cost(self, readouts, outputs):
+        probs = self._probs(readouts)
+        max_output = probs.shape[-1]
+        flat_outputs = outputs.flatten()
+        num_outputs = flat_outputs.shape[0]
+        return probs.flatten()[max_output * tensor.arange(num_outputs)
+                               + flat_outputs].reshape(outputs.shape)
+
+    @emit.signature_method
+    def emit_signature(self):
+        return ApplySignature(output_dims=[0])
+
+    @Brick.apply_method
+    def initial_outputs(self, dim, batch_size, *args, **kwargs):
+        return tensor.zeros((batch_size,), dtype='int64')
+
+
+class TrivialFeedback(AbstractFeedback):
+
+    @Brick.lazy_method
+    def __init__(self, output_dim, **kwargs):
+        super(TrivialFeedback, self).__init__(**kwargs)
+        self.output_dim = output_dim
+
+    @Brick.apply_method
+    def feedback(self, outputs):
+        return outputs
+
+    @feedback.signature_method
+    def feedback_signature(self):
+        return ApplySignature(output_dims=[self.output_dim])
+
+
+class LookupFeedback(AbstractFeedback):
 
     @Brick.lazy_method
     def __init__(self, num_outputs, feedback_dim, **kwargs):
@@ -406,15 +441,23 @@ class LookupFeedback(AbstractEmitter):
 
         self.lookup = LookupTable(num_outputs, feedback_dim,
                                   kwargs.get("weights_init"))
-        self.children.append(self.lookup)
+        self.children = [self.lookup]
 
     def _push_allocation_config(self):
         self.lookup.length = self.num_outputs
         self.lookup.dim = self.feedback_dim
 
+    def _push_initialization_config(self):
+        for child in self.children:
+            if self.weights_init:
+                child.weights_init = self.weights_init
+            if self.biases_init:
+                child.biases_init = self.biases_init
+
     @Brick.apply_method
     def feedback(self, outputs, **kwargs):
-        return self.lookup(outputs)
+        assert self.output_dim == 0
+        return self.lookup.lookup(outputs)
 
     @feedback.signature_method
     def feedback_signature(self, *args, **kwargs):

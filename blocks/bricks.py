@@ -462,7 +462,8 @@ class Brick(object):
                 # Undo the subtensor
                 for i in range(len(states_given)):
                     result[i] = result[i].owner.inputs[0]
-            assert not updates  # TODO Handle updates
+            if updates:
+                updates.values()[0].owner.tag.updates = updates
             return result
 
         return Brick._apply_method(True)(recurrent_apply)
@@ -742,6 +743,10 @@ class DefaultRNG(Brick):
             return self._rng
         else:
             return np.random.RandomState(DEFAULT_SEED)
+
+    @property
+    def theano_rng(self):
+        return tensor.shared_randomstreams.RandomStreams(DEFAULT_SEED)
 
     @rng.setter
     def rng(self, rng):

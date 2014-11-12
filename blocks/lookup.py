@@ -2,11 +2,11 @@
 
 from theano import tensor
 
-from blocks.bricks import Brick
+from blocks.bricks import Brick, DefaultRNG
 from blocks.utils import shared_floatx_zeros, check_theano_variable
 
 
-class LookupTable(Brick):
+class LookupTable(DefaultRNG):
     """Incapsulates representations of a range of integers.
 
     Parameters
