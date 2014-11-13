@@ -264,17 +264,29 @@ class Brick(object):
                 brick.allocate()
             if not brick.initialized and not brick.lazy:
                 brick.initialize()
+
+            args, varargs, _1, _2 = inspect.getargspec(self.func)
+            # take `self` into account
+            args = args[1:]
+            apply_name = self.func.__name__
+            def variable_name(name):
+                return "{}_{}_{}".format(brick.name, apply_name, name)
+
             inputs = list(inputs)
             for i, inp in enumerate(inputs):
+                if i < len(args):
+                    arg_name = args[i]
+                else:
+                    arg_name = "{}_{}".format(varargs, len(args) - i)
                 if isinstance(inp, tensor.Variable):
                     inputs[i] = inp.copy()
                     inputs[i].tag.owner = brick
-                    inputs[i].name = brick.name + INPUT_SUFFIX
+                    inputs[i].name = variable_name(arg_name)
             for key, value in kwargs.items():
                 if isinstance(value, tensor.Variable):
                     kwargs[key] = value.copy()
                     kwargs[key].tag.owner = brick
-                    kwargs[key].name = brick.name + INPUT_SUFFIX
+                    kwargs[key].name = variable_name(key)
 
             Brick._last_brick_called = brick
             try:
@@ -285,15 +297,19 @@ class Brick(object):
             finally:
                 Brick._last_brick_called = last
 
+            output_names = self.signature_func(brick).output_names
+
             # TODO: allow user to return an OrderedDict
             outputs = pack(outputs)
             for i, output in enumerate(outputs):
+                output_name = (output_names[i] if output_names
+                               else "out" + str(i))
                 if isinstance(output, tensor.Variable):
                     # TODO Tag with dimensions, axes, etc. for
                     # error-checking
                     outputs[i] = output.copy()
                     outputs[i].tag.owner = brick
-                    outputs[i].name = brick.name + OUTPUT_SUFFIX
+                    outputs[i].name = variable_name(output_name)
             if return_list:
                 return outputs
             if return_dict:
