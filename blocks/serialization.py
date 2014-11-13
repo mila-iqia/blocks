@@ -57,7 +57,8 @@ def load_params(bricks, path):
         assert len(selected) == 1
         selected = selected[0]
 
-        assert selected.get_value().shape == value.shape
+        assert selected.get_value(
+            borrow=True, return_internal_type=True).shape == value.shape
         selected.set_value(value)
 
     params = bricks.get_params()
