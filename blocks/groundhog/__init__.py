@@ -44,6 +44,8 @@ class GroundhogModel(object):
         self.bricks = bricks
         self.cost = cost
 
+        self.properties = []
+
     @property
     def params(self):
         # Caching for speed
@@ -67,10 +69,6 @@ class GroundhogModel(object):
     @property
     def inputs(self):
         return self.cost.inputs
-
-    @property
-    def properties(self):
-        return []
 
     @property
     def updates(self):
