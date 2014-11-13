@@ -412,6 +412,7 @@ class Application(object):
     def __init__(self, application):
         self.application = application
         self.f = {}
+        self.delegated = None
 
     def __call__(self, *args, **kwargs):
         return self.application(self.brick, *args, **kwargs)
@@ -432,6 +433,10 @@ class Application(object):
     @brick.setter
     def brick(self, value):
         self._brick = value
+
+    def delegate(self, f):
+        self.delegated = f
+        return f
 
     def wrap(self, wrapper):
         """Wraps this application method.
@@ -472,6 +477,8 @@ class Application(object):
     def __getattr__(self, attr):
         if attr in self.f:
             return self.f[attr](self.brick)
+        elif hasattr(self, '_brick') and self.delegated is not None:
+            return getattr(self.delegated(self.brick), attr)
         else:
             super(Application, self).__getattribute__(attr)
 
