@@ -392,23 +392,6 @@ def lazy(func):
     return init
 
 
-class Signature(object):
-    """Signature of an application method.
-
-    Notes
-    -----
-    A single signature is shared by all class instances for a particular
-    label, so that a descriptor can be used. Hence, we store the actual
-    function to call in a dictionary, with the instance as the key.
-
-    """
-    def __init__(self):
-        self.f = {}
-
-    def __get__(self, instance, owner):
-        return self.f[instance](instance.brick)
-
-
 class Application(object):
     """A particular application of a brick.
 
@@ -428,6 +411,7 @@ class Application(object):
     """
     def __init__(self, application):
         self.application = application
+        self.f = {}
 
     def __call__(self, *args, **kwargs):
         return self.application(self.brick, *args, **kwargs)
@@ -480,18 +464,16 @@ class Application(object):
         See :meth:`signature` for examples.
 
         """
-        # Be sure not to overwrite the class descriptor if it already
-        # exists for this label
-        if not hasattr(self.__class__, label):
-            signature = Signature()
-            setattr(self.__class__, label, signature)
-        else:
-            signature = getattr(self.__class__, label)
-
         def apply_signature(f):
-            signature.f[self] = f
+            self.f[label] = f
             return f
         return apply_signature
+
+    def __getattr__(self, attr):
+        if attr in self.f:
+            return self.f[attr](self.brick)
+        else:
+            super(Application, self).__getattribute__(attr)
 
 
 def signature(**kwargs):
