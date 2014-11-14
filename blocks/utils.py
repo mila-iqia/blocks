@@ -5,6 +5,7 @@ from collections import OrderedDict
 import numpy
 import theano
 from theano import tensor
+from theano import printing
 
 
 def pack(arg):
@@ -204,3 +205,14 @@ def dict_union(*dicts, **kwargs):
         assert len(set(result.keys()).intersection(set(d.keys()))) == 0
         result.update(d)
     return result
+
+
+def put_hook(variable, hook_fn):
+    return printing.Print(global_fn=lambda _, x: hook_fn(x))(variable)
+
+
+def ipdb_breakpoint(variable):
+    def watch(x):
+        import ipdb
+        ipdb.set_trace()
+    return put_hook(variable, watch)
