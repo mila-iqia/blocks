@@ -67,7 +67,7 @@ def recurrent(*args, **kwargs):
             # Push everything to kwargs
             for arg, arg_name in zip(args, arg_names):
                 kwargs[arg_name] = arg
-            # Separate kwargs that aren't input, context or state variables
+            # Separate kwargs that aren't sequence, context or state variables
             scan_arguments = (application.sequences + application.states +
                               application.contexts)
             rest_kwargs = {key: value for key, value in kwargs.items()
@@ -96,9 +96,10 @@ def recurrent(*args, **kwargs):
             # Ensure that all initial states are available.
             for state_name in application.states:
                 if state_name in kwargs and callable(kwargs[state_name]):
-                    # TODO Allow initialization apply method to be passed
+                    # TODO Allow initialization function to be passed
                     pass
                 elif state_name not in kwargs:
+                    # TODO init_func returns 2D-tensor, fails for iterate=False
                     if hasattr(brick, 'initial_state'):
                         init_func = brick.initial_state
                     else:
@@ -106,11 +107,14 @@ def recurrent(*args, **kwargs):
                     dim = brick.dims[state_name]
                     kwargs[state_name] = init_func(dim, batch_size)
             states_given = only_given(application.states)
+            assert len(states_given) == len(application.states)
+
             # Theano issue 1772
             for name, state in states_given.items():
                 states_given[name] = tensor.unbroadcast(state,
                                                         *range(state.ndim))
-            assert len(states_given) == len(application.states)
+
+            # Apply methods
             if not iterate:
                 return application_method(brick, **kwargs)
 
@@ -131,6 +135,8 @@ def recurrent(*args, **kwargs):
             return result
 
         return recurrent_apply
+
+    # Decorator can be used with or without arguments
     assert (args and not kwargs) or (not args and kwargs)
     if args:
         application_method, = args
