@@ -26,14 +26,13 @@ class TestRecurrent(unittest.TestCase):
         self.simple.initialize()
 
     def test_one_step(self):
+        h0 = tensor.matrix('h0')
         x = tensor.matrix('x')
         mask = tensor.vector('mask')
-        import ipdb
-        ipdb.set_trace()
-        h1 = self.simple.apply(x, mask=mask, iterate=False)
-        next_h = theano.function(inputs=[x, mask], outputs=[h1])
+        h1 = self.simple.apply(x, h0, mask=mask, iterate=False)
+        next_h = theano.function(inputs=[h0, x, mask], outputs=[h1])
 
-        h0_val = 0.1 * numpy.array([[0, 0, 0], [0, 0, 0]],
+        h0_val = 0.1 * numpy.array([[1, 1, 0], [0, 1, 1]],
                                    dtype=floatX)
         x_val = 0.1 * numpy.array([[1, 2, 3], [4, 5, 6]],
                                   dtype=floatX)

@@ -49,7 +49,7 @@ def recurrent(*args, **kwargs):
                 If ``True`` iteration is made. By default ``True``
                 which means that transition function is applied as is.
             reverse : bool
-                If ``True``, the inputs are processed in backward
+                If ``True``, the sequences are processed in backward
                 direction. ``False`` by default.
 
             .. todo::
@@ -63,14 +63,12 @@ def recurrent(*args, **kwargs):
             # Extract arguments related to iteration.
             iterate = kwargs.pop('iterate', True)
             reverse = kwargs.pop('reverse', False)
-            if not iterate:
-                return application_method(brick, *args, **kwargs)
 
             # Push everything to kwargs
             for arg, arg_name in zip(args, arg_names):
                 kwargs[arg_name] = arg
             # Separate kwargs that aren't input, context or state variables
-            scan_arguments = (application.inputs + application.states +
+            scan_arguments = (application.sequences + application.states +
                               application.contexts)
             rest_kwargs = {key: value for key, value in kwargs.items()
                            if key not in scan_arguments}
@@ -79,50 +77,56 @@ def recurrent(*args, **kwargs):
             def only_given(arg_names):
                 return {arg_name: kwargs[arg_name] for arg_name in arg_names
                         if arg_name in kwargs}
-            inputs_given = only_given(application.inputs)
+            sequences_given = only_given(application.sequences)
             contexts_given = only_given(application.contexts)
 
             # TODO Assumes 1 time dim!
-            if len(inputs_given):
-                shape = inputs_given.values()[0].shape
-                n_steps = shape[0]
-                batch_size = shape[1]
+            if len(sequences_given):
+                shape = sequences_given.values()[0].shape
+                if not iterate:
+                    batch_size = shape[0]
+                else:
+                    n_steps = shape[0]
+                    batch_size = shape[1]
             else:
+                # TODO Raise error if n_steps and batch_size not found?
                 n_steps = kwargs.pop('n_steps')
                 batch_size = kwargs.pop('batch_size')
 
             # Ensure that all initial states are available.
             for state_name in application.states:
-                if state_name not in kwargs:
-                    dim = brick.dims[state_name]
+                if state_name in kwargs and callable(kwargs[state_name]):
+                    # TODO Allow initialization apply method to be passed
+                    pass
+                elif state_name not in kwargs:
                     if hasattr(brick, 'initial_state'):
                         init_func = brick.initial_state
                     else:
                         init_func = zero_state
+                    dim = brick.dims[state_name]
                     kwargs[state_name] = init_func(dim, batch_size)
             states_given = only_given(application.states)
             # Theano issue 1772
             for name, state in states_given.items():
                 states_given[name] = tensor.unbroadcast(state,
-                                                        * range(state.ndim))
+                                                        *range(state.ndim))
             assert len(states_given) == len(application.states)
+            if not iterate:
+                return application_method(brick, **kwargs)
 
             def scan_function(*args):
                 args = list(args)
-                arg_names = (inputs_given.keys() + states_given.keys() +
+                arg_names = (sequences_given.keys() + states_given.keys() +
                              contexts_given.keys())
                 kwargs = dict(zip(arg_names, args))
                 kwargs.update(rest_kwargs)
                 return application_method(brick, **kwargs)
             result, updates = theano.scan(
-                scan_function, sequences=inputs_given.values(),
-                outputs_info=(states_given.values()
-                              + [None] * len([_ for _ in application.outputs if _ not in states_given])),
+                scan_function, sequences=sequences_given.values(),
+                outputs_info=states_given.values(),
                 non_sequences=contexts_given.values(),
                 n_steps=n_steps,
                 go_backwards=reverse)
-            if not isinstance(result, list):
-                result = [result]
             assert not updates  # TODO Handle updates
             return result
 
@@ -212,7 +216,7 @@ class Recurrent(DefaultRNG):
     def _initialize(self):
         self.weights_init.initialize(self.W, self.rng)
 
-    @recurrent(inputs=['inp', 'mask'], states=['state'], outputs=['state'],
+    @recurrent(sequences=['inp', 'mask'], states=['state'], outputs=['state'],
                contexts=[])
     def apply(self, inp=None, state=None, mask=None):
         """Given data and mask, apply recurrent layer.
