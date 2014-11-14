@@ -1,11 +1,10 @@
 import inspect
-from collections import OrderedDict
 
 import theano
 from theano import tensor
 
-from blocks.bricks import (DefaultRNG, Identity, lazy, signature, tag,
-                           wrap_application)
+from blocks.bricks import (application_wrapper, DefaultRNG, Identity, lazy,
+                           tag)
 from blocks.utils import shared_floatx_zeros
 
 
@@ -37,8 +36,8 @@ def recurrent(*args, **kwargs):
         Names of the outputs.
 
     """
-    def recurrent_wrapper(application):
-        arg_spec = inspect.getargspec(application)
+    def recurrent_wrapper(application, application_method):
+        arg_spec = inspect.getargspec(application_method)
         arg_names = arg_spec.args[1:]
 
         def recurrent_apply(brick, *args, **kwargs):
@@ -65,7 +64,7 @@ def recurrent(*args, **kwargs):
             iterate = kwargs.pop('iterate', True)
             reverse = kwargs.pop('reverse', False)
             if not iterate:
-                return application(brick, *args, **kwargs)
+                return application_method(brick, *args, **kwargs)
 
             # Push everything to kwargs
             for arg, arg_name in zip(args, arg_names):
@@ -78,9 +77,8 @@ def recurrent(*args, **kwargs):
 
             # Check what is given and what is not
             def only_given(arg_names):
-                return OrderedDict((arg_name, kwargs[arg_name])
-                                   for arg_name in arg_names
-                                   if kwargs.get(arg_name))
+                return {arg_name: kwargs[arg_name] for arg_name in arg_names
+                        if arg_name in kwargs}
             inputs_given = only_given(application.inputs)
             contexts_given = only_given(application.contexts)
 
@@ -95,17 +93,18 @@ def recurrent(*args, **kwargs):
 
             # Ensure that all initial states are available.
             for state_name in application.states:
-                if not kwargs.get(state_name):
+                if state_name not in kwargs:
                     dim = brick.dims[state_name]
-                    init_func = brick.state_init_funcs.get(
-                        state_name, zero_state)
-                    kwargs[state_name] = init_func(dim, batch_size, brick,
-                                                   *args, **kwargs)
+                    if hasattr(brick, 'initial_state'):
+                        init_func = brick.initial_state
+                    else:
+                        init_func = zero_state
+                    kwargs[state_name] = init_func(dim, batch_size)
             states_given = only_given(application.states)
             # Theano issue 1772
             for name, state in states_given.items():
                 states_given[name] = tensor.unbroadcast(state,
-                                                        *range(state.ndim))
+                                                        * range(state.ndim))
             assert len(states_given) == len(application.states)
 
             def scan_function(*args):
@@ -114,11 +113,11 @@ def recurrent(*args, **kwargs):
                              contexts_given.keys())
                 kwargs = dict(zip(arg_names, args))
                 kwargs.update(rest_kwargs)
-                return application(brick, **kwargs)
+                return application_method(brick, **kwargs)
             result, updates = theano.scan(
                 scan_function, sequences=inputs_given.values(),
                 outputs_info=(states_given.values()
-                              + [None] * len(application.outputs)),
+                              + [None] * len([_ for _ in application.outputs if _ not in states_given])),
                 non_sequences=contexts_given.values(),
                 n_steps=n_steps,
                 go_backwards=reverse)
@@ -130,13 +129,14 @@ def recurrent(*args, **kwargs):
         return recurrent_apply
     assert (args and not kwargs) or (not args and kwargs)
     if args:
-        application, = args
-        return tag(wrap_application(signature()(application),
-                                    recurrent_wrapper))
+        application_method, = args
+        application = application_wrapper()(application_method)
+        return application.wrap(recurrent_wrapper).wrap(tag)
     else:
-        return lambda application: \
-            tag(wrap_application(signature(**kwargs)(application),
-                                 recurrent_wrapper))
+        def wrapper(application_method):
+            application = application_wrapper(**kwargs)(application_method)
+            return application.wrap(recurrent_wrapper).wrap(tag)
+        return wrapper
 
 
 # class Wrap3D(Brick):
@@ -200,6 +200,7 @@ class Recurrent(DefaultRNG):
         self.__dict__.update(locals())
         del self.self
         del self.kwargs
+        self.dims = {state: dim for state in self.apply.states}
 
     @property
     def W(self):
@@ -211,8 +212,9 @@ class Recurrent(DefaultRNG):
     def _initialize(self):
         self.weights_init.initialize(self.W, self.rng)
 
-    @recurrent(inputs=['inp', 'mask'], states=['state'], outputs=['state'])
-    def apply(self, inp, state, mask=None):
+    @recurrent(inputs=['inp', 'mask'], states=['state'], outputs=['state'],
+               contexts=[])
+    def apply(self, inp=None, state=None, mask=None):
         """Given data and mask, apply recurrent layer.
 
         Parameters

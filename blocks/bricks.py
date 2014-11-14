@@ -409,13 +409,13 @@ class Application(object):
         If this class is used without being a member of a brick.
 
     """
-    def __init__(self, application):
-        self.application = application
+    def __init__(self, application_method):
+        self.application_method = application_method
         self.f = {}
-        self.delegated = None
+        self.delegate_method = None
 
     def __call__(self, *args, **kwargs):
-        return self.application(self.brick, *args, **kwargs)
+        return self.application_method(self.brick, *args, **kwargs)
 
     def __get__(self, instance, owner):
         # Making this class a descriptor gives us access to the owning brick
@@ -435,7 +435,7 @@ class Application(object):
         self._brick = value
 
     def delegate(self, f):
-        self.delegated = f
+        self.delegate_method = f
         return f
 
     def wrap(self, wrapper):
@@ -444,8 +444,13 @@ class Application(object):
         Parameters
         ----------
         wrapper : method
-            A method which takes an application method as an input, and
-            returns a wrapped method (e.g. a decorator).
+            A method which takes two arguments: An :class:`Application`
+            instance and an application method, and returns a new
+            application method.
+
+        Returns
+        -------
+        The current instance with the wrapped application.
 
         Notes
         -----
@@ -453,10 +458,10 @@ class Application(object):
         will lose the signature of the application method.
 
         """
-        self.application = wrapper(self.application)
+        self.application_method = wrapper(self, self.application_method)
         return self
 
-    def signature(self, label):
+    def property(self, label):
         """Decorator to add properties to applications.
 
         Parameters
@@ -466,43 +471,48 @@ class Application(object):
 
         Examples
         --------
-        See :meth:`signature` for examples.
+        See :meth:`_application` for examples.
 
         """
-        def apply_signature(f):
+        def add_property(f):
             self.f[label] = f
             return f
-        return apply_signature
+        return add_property
 
     def __getattr__(self, attr):
         if attr in self.f:
             return self.f[attr](self.brick)
-        elif hasattr(self, '_brick') and self.delegated is not None:
-            return getattr(self.delegated(self.brick), attr)
+        elif hasattr(self, '_brick') and self.delegate_method is not None:
+            return getattr(self.delegate_method(self.brick), attr)
         else:
             super(Application, self).__getattribute__(attr)
 
 
-def signature(**kwargs):
-    """Allows application methods to have signatures.
+def application_wrapper(**kwargs):
+    """Replaces application methods with :class:`Application` instances.
 
     This method transparently replaces a brick's application method by a
     class. This allows attributes and properties to be used, giving other
     bricks access to important information about this application.
 
+    This method can also be used as a decorator, but in practice it should
+    probably only be called by decorators such as :meth:`application` and
+    :meth:`recurrent.recurrent`.
+
     Parameters
     ----------
     kwargs
-        The attributes to add to this application method
+        The attributes to add to the returned :class:`Application`
+        instance.
 
     Examples
     --------
     >>> SomeBrick(Brick):
-    ...     @signature(inputs=['x'])
+    ...     @_application(inputs=['x'])
     ...     def apply(self, x):
     ...         return x + 1
     ...
-    ...     @apply.signature('outputs')
+    ...     @apply.property('outputs')
     ...     def apply_outputs(self):
     ...         return ['y']
     >>> some_brick = SomeBrick()
@@ -512,19 +522,19 @@ def signature(**kwargs):
     ['y']
 
     """
-    def wrap_application(application):
-        assert not isinstance(application, Application)
-        application = Application(application)
+    def wrap_application(application_method):
+        assert not isinstance(application_method, Application)
+        application = Application(application_method)
         for key, value in kwargs.items():
             setattr(application, key, value)
         return application
     return wrap_application
 
 
-def tag(application):
+def tag(application, application_method):
     """Wraps an application method in order to tag iputs and outputs.
 
-    This decorator will provide some necessary pre- and post-processing
+    This wrapper will provide some necessary pre- and post-processing
     of the Theano variables, such as tagging them with the brick that
     created them and naming them. These changes will apply to
     Theano variables given as positional arguments and keywords arguments.
@@ -538,41 +548,37 @@ def tag(application):
 
     Notes
     -----
-    This method works both with raw application methods as well as methods
-    with signatures (i.e. :class:`Application` instances).
-
     Application methods will allocate the brick parameters with a call
     :meth:`allocate` if they have not been allocated already.
 
     """
-    def application_tagger(application):
-        def tagged_application(brick, *inputs, **kwargs):
-            if not brick.allocated:
-                brick.allocate()
-            if not brick.initialized and not brick.lazy:
-                brick.initialize()
-            for i, inp in enumerate(inputs):
-                if isinstance(inp, tensor.Variable):
-                    inputs[i] = inp.copy()
-                    inputs[i].tag.owner = brick
-                    inputs[i].name = brick.name + INPUT_SUFFIX
-            for key, value in kwargs.items():
-                if isinstance(value, tensor.Variable):
-                    kwargs[key] = value.copy()
-                    kwargs[key].tag.owner = brick
-                    kwargs[key].name = brick.name + INPUT_SUFFIX
-            outputs = application(brick, *inputs, **kwargs)
-            # TODO allow user to return an OrderedDict
-            outputs = pack(outputs)
-            for i, output in enumerate(outputs):
-                if isinstance(output, tensor.Variable):
-                    # TODO Tag with dimensions, axes, etc. for error-checking
-                    outputs[i] = output.copy()
-                    outputs[i].tag.owner = brick
-                    outputs[i].name = brick.name + OUTPUT_SUFFIX
-            return unpack(outputs)
-        return tagged_application
-    return wrap_application(application, application_tagger)
+    def tagged_application(brick, *inputs, **kwargs):
+        if not brick.allocated:
+            brick.allocate()
+        if not brick.initialized and not brick.lazy:
+            brick.initialize()
+        inputs = list(inputs)
+        for i, inp in enumerate(inputs):
+            if isinstance(inp, tensor.Variable):
+                inputs[i] = inp.copy()
+                inputs[i].tag.owner = brick
+                inputs[i].name = brick.name + INPUT_SUFFIX
+        for key, value in kwargs.items():
+            if isinstance(value, tensor.Variable):
+                kwargs[key] = value.copy()
+                kwargs[key].tag.owner = brick
+                kwargs[key].name = brick.name + INPUT_SUFFIX
+        outputs = application_method(brick, *inputs, **kwargs)
+        # TODO allow user to return an OrderedDict
+        outputs = pack(outputs)
+        for i, output in enumerate(outputs):
+            if isinstance(output, tensor.Variable):
+                # TODO Tag with dimensions, axes, etc. for error-checking
+                outputs[i] = output.copy()
+                outputs[i].tag.owner = brick
+                outputs[i].name = brick.name + OUTPUT_SUFFIX
+        return unpack(outputs)
+    return tagged_application
 
 
 def application(*args, **kwargs):
@@ -598,27 +604,14 @@ def application(*args, **kwargs):
     """
     assert (args and not kwargs) or (not args and kwargs)
     if args:
-        application, = args
-        return tag(signature()(application))
+        application_method, = args
+        application = application_wrapper()(application_method)
+        return application.wrap(tag)
     else:
-        return lambda application: tag(signature(**kwargs)(application))
-
-
-def wrap_application(application, wrapper):
-    """Small helper method that wraps application methods.
-
-    Works both for raw application methods, and :class:`Application`
-    instances.
-
-    Parameters
-    ---------
-    application : method or object
-
-    """
-    if isinstance(application, Application):
-        return application.wrap(wrapper)
-    else:
-        return wrapper(application)
+        def application(application_method):
+            application = application_wrapper(**kwargs)(application_method)
+            return application.wrap(tag)
+        return application
 
 
 class DefaultRNG(Brick):
