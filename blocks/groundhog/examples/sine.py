@@ -16,26 +16,14 @@ from theano import tensor
 from blocks.bricks import Brick, GatedRecurrent, Identity, Tanh, MLP
 from blocks.select import Selector
 from blocks.graph import Cost
-from blocks.sequence_generators import SequenceGenerator, SimpleReadout
+from blocks.sequence_generators import (
+    SequenceGenerator, LinearReadout, TrivialEmitter)
 from blocks.initialization import Orthogonal, IsotropicGaussian, Constant
 from blocks.groundhog import GroundhogIterator, GroundhogState, GroundhogModel
 from blocks.serialization import load_params
 
 floatX = theano.config.floatX
 logger = logging.getLogger()
-
-
-class Readout(SimpleReadout):
-    """Specifies input names, dimensionality and cost for SimpleReadout."""
-
-    def __init__(self):
-        super(Readout, self).__init__(readout_dim=1,
-                                      source_names=['states'])
-
-    @Brick.apply_method
-    def cost(self, readouts, outputs):
-        """Compute MSE."""
-        return ((readouts - outputs) ** 2).sum(axis=readouts.ndim - 1)
 
 
 class AddParameters(Brick):
@@ -46,7 +34,6 @@ class AddParameters(Brick):
     (e.g. it can be a part of Encoder-Decoder translation model.
 
     """
-
     @Brick.lazy_method
     def __init__(self, transition, num_params, params_name,
                  weights_init, biases_init, **kwargs):
@@ -159,13 +146,21 @@ def main():
     function = eval(args.function)
     num_params = len(inspect.getargspec(function).args) - 1
 
+    class Emitter(TrivialEmitter):
+        @Brick.apply_method
+        def cost(self, readouts, outputs):
+            """Compute MSE."""
+            return ((readouts - outputs) ** 2).sum(axis=readouts.ndim - 1)
+
     transition = GatedRecurrent(
         name="transition", activation=Tanh(), dim=10,
         weights_init=Orthogonal())
     with_params = AddParameters(transition, num_params, "params",
                                 name="with_params")
     generator = SequenceGenerator(
-        Readout(), with_params,
+        LinearReadout(readout_dim=1, source_names=["states"],
+                      emitter=Emitter(name="emitter"), name="readout"),
+        with_params,
         weights_init=IsotropicGaussian(0.01), biases_init=Constant(0),
         name="generator")
     generator.allocate()
