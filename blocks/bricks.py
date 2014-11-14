@@ -16,8 +16,8 @@ from blocks.utils import (pack, reraise_as, shared_floatx_zeros, unpack,
                           check_theano_variable)
 from blocks.initialization import Constant
 
-INPUT_SUFFIX = '_input'
-OUTPUT_SUFFIX = '_output'
+INPUT = 'input'
+OUTPUT = 'output'
 DEFAULT_SEED = [2014, 10, 5]
 PARAM_OWNER_TAG = 'param_owner'
 
@@ -281,11 +281,13 @@ class Brick(object):
                 if isinstance(inp, tensor.Variable):
                     inputs[i] = inp.copy()
                     inputs[i].tag.owner = brick
+                    inputs[i].tag.typ = INPUT
                     inputs[i].name = variable_name(arg_name)
             for key, value in kwargs.items():
                 if isinstance(value, tensor.Variable):
                     kwargs[key] = value.copy()
                     kwargs[key].tag.owner = brick
+                    kwargs[key].tag.typ = INPUT
                     kwargs[key].name = variable_name(key)
 
             Brick._last_brick_called = brick
@@ -302,13 +304,15 @@ class Brick(object):
             # TODO: allow user to return an OrderedDict
             outputs = pack(outputs)
             for i, output in enumerate(outputs):
-                output_name = (output_names[i] if output_names
+                output_name = (output_names[i]
+                               if output_names and i < len(output_names)
                                else "out" + str(i))
                 if isinstance(output, tensor.Variable):
                     # TODO Tag with dimensions, axes, etc. for
                     # error-checking
                     outputs[i] = output.copy()
                     outputs[i].tag.owner = brick
+                    outputs[i].tag.typ = OUTPUT
                     outputs[i].name = variable_name(output_name)
             if return_list:
                 return outputs
