@@ -1,13 +1,18 @@
 """Sequence generation framework"""
 
 from functools import partial
-from theano import tensor
 from abc import abstractmethod
+import logging
+
+from theano import tensor
+
 from blocks.bricks import (
     Brick, MLP, Identity, ForkInputs, ApplySignature,
     DefaultRNG, zero_state)
 from blocks.lookup import LookupTable
 from blocks.utils import dict_union
+
+logger = logging.getLogger(__name__)
 
 
 class BaseSequenceGenerator(Brick):
@@ -134,13 +139,16 @@ class BaseSequenceGenerator(Brick):
         batch_size = outputs.shape[-2]
 
         # Prepare input for the iterative part
+        states = {name: kwargs[name] for name in self.state_names
+                  if name in kwargs}
         contexts = {name: kwargs[name] for name in self.context_names}
         feedback = self.readout.feedback(outputs)
 
         # Run the recurrent network
         results = self.transition.apply(
             feedback, mask=mask, iterate=True,
-            return_initial_states=True, return_dict=True, **contexts)
+            return_initial_states=True, return_dict=True,
+            **dict_union(states, contexts))
 
         # Separate the deliverables
         states = {name: results[name][:-1] for name in self.state_names}
