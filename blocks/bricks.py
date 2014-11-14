@@ -414,8 +414,52 @@ class Application(object):
         self.f = {}
         self.delegate_method = None
 
-    def __call__(self, *args, **kwargs):
-        return self.application_method(self.brick, *args, **kwargs)
+    def __call__(self, *inputs, **kwargs):
+        """Wraps an application method.
+
+        This wrapper will provide some necessary pre- and post-processing
+        of the Theano variables, such as tagging them with the brick that
+        created them and naming them. These changes will apply to
+        Theano variables given as positional arguments and keywords arguments.
+
+        .. warning::
+
+            Properly set tags are important for correct functioning of the
+            framework. Do not provide inputs to your apply method in a way
+            different than passing them as positional or keyword arguments,
+            e.g. as list or tuple elements.
+
+        Notes
+        -----
+        Application methods will allocate the brick parameters with a call
+        :meth:`allocate` if they have not been allocated already.
+
+        """
+        if not self.brick.allocated:
+            self.brick.allocate()
+        if not self.brick.initialized and not self.brick.lazy:
+            self.brick.initialize()
+        inputs = list(inputs)
+        for i, inp in enumerate(inputs):
+            if isinstance(inp, tensor.Variable):
+                inputs[i] = inp.copy()
+                inputs[i].tag.owner = self.brick
+                inputs[i].name = self.brick.name + INPUT_SUFFIX
+        for key, value in kwargs.items():
+            if isinstance(value, tensor.Variable):
+                kwargs[key] = value.copy()
+                kwargs[key].tag.owner = self.brick
+                kwargs[key].name = self.brick.name + INPUT_SUFFIX
+        outputs = self.application_method(self.brick, *inputs, **kwargs)
+        # TODO allow user to return an OrderedDict
+        outputs = pack(outputs)
+        for i, output in enumerate(outputs):
+            if isinstance(output, tensor.Variable):
+                # TODO Tag with dimensions, axes, etc. for error-checking
+                outputs[i] = output.copy()
+                outputs[i].tag.owner = self.brick
+                outputs[i].name = self.brick.name + OUTPUT_SUFFIX
+        return unpack(outputs)
 
     def __get__(self, instance, owner):
         # Making this class a descriptor gives us access to the owning brick
@@ -531,56 +575,6 @@ def application_wrapper(**kwargs):
     return wrap_application
 
 
-def tag(application, application_method):
-    """Wraps an application method in order to tag iputs and outputs.
-
-    This wrapper will provide some necessary pre- and post-processing
-    of the Theano variables, such as tagging them with the brick that
-    created them and naming them. These changes will apply to
-    Theano variables given as positional arguments and keywords arguments.
-
-    .. warning::
-
-        Properly set tags are important for correct functioning of the
-        framework. Do not provide inputs to your apply method in a way
-        different than passing them as positional or keyword arguments,
-        e.g. as list or tuple elements.
-
-    Notes
-    -----
-    Application methods will allocate the brick parameters with a call
-    :meth:`allocate` if they have not been allocated already.
-
-    """
-    def tagged_application(brick, *inputs, **kwargs):
-        if not brick.allocated:
-            brick.allocate()
-        if not brick.initialized and not brick.lazy:
-            brick.initialize()
-        inputs = list(inputs)
-        for i, inp in enumerate(inputs):
-            if isinstance(inp, tensor.Variable):
-                inputs[i] = inp.copy()
-                inputs[i].tag.owner = brick
-                inputs[i].name = brick.name + INPUT_SUFFIX
-        for key, value in kwargs.items():
-            if isinstance(value, tensor.Variable):
-                kwargs[key] = value.copy()
-                kwargs[key].tag.owner = brick
-                kwargs[key].name = brick.name + INPUT_SUFFIX
-        outputs = application_method(brick, *inputs, **kwargs)
-        # TODO allow user to return an OrderedDict
-        outputs = pack(outputs)
-        for i, output in enumerate(outputs):
-            if isinstance(output, tensor.Variable):
-                # TODO Tag with dimensions, axes, etc. for error-checking
-                outputs[i] = output.copy()
-                outputs[i].tag.owner = brick
-                outputs[i].name = brick.name + OUTPUT_SUFFIX
-        return unpack(outputs)
-    return tagged_application
-
-
 def application(*args, **kwargs):
     """Decorator for methods that apply a brick to inputs.
 
@@ -606,11 +600,11 @@ def application(*args, **kwargs):
     if args:
         application_method, = args
         application = application_wrapper()(application_method)
-        return application.wrap(tag)
+        return application
     else:
         def application(application_method):
             application = application_wrapper(**kwargs)(application_method)
-            return application.wrap(tag)
+            return application
         return application
 
 
