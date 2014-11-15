@@ -1,8 +1,8 @@
 import sys
 from collections import OrderedDict
 
-
 import numpy
+import six
 import theano
 from theano import tensor
 
@@ -130,7 +130,7 @@ def reraise_as(new_exc):
     """
     orig_exc_type, orig_exc_value, orig_exc_traceback = sys.exc_info()
 
-    if isinstance(new_exc, basestring):
+    if isinstance(new_exc, six.string_types):
         new_exc = orig_exc_type(new_exc)
 
     if hasattr(new_exc, 'args'):
@@ -151,7 +151,7 @@ def reraise_as(new_exc):
 
     new_exc.__cause__ = orig_exc_value
     new_exc.reraised = True
-    raise type(new_exc), new_exc, orig_exc_traceback
+    six.reraise(type(new_exc), new_exc, orig_exc_traceback)
 
 
 def check_theano_variable(variable, n_dim, dtype):
