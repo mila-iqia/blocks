@@ -1,6 +1,8 @@
 import logging
+import numpy
 from abc import ABCMeta, abstractmethod
 
+import theano
 from theano import tensor
 from theano import Variable
 
@@ -44,6 +46,9 @@ class GroundhogModel(object):
         self.bricks = bricks
         self.cost = cost
 
+        self.properties = []
+        self.updates = []
+
     @property
     def params(self):
         # Caching for speed
@@ -54,7 +59,9 @@ class GroundhogModel(object):
     @property
     def train_cost(self):
         # Caching to simplify the computation graph
-        return self.cost.actual_cost()
+        if not hasattr(self, "_train_cost"):
+            self._train_cost = self.cost.actual_cost()
+        return self._train_cost
 
     @property
     def param_grads(self):
@@ -69,20 +76,28 @@ class GroundhogModel(object):
         return self.cost.inputs
 
     @property
-    def properties(self):
-        return []
+    def valid_costs(self):
+        return ['cost'] + [name for name, var in self.properties]
 
-    @property
-    def updates(self):
-        return []
+    def validate(self, data):
+        valid_names = self.valid_costs
+        valid_vars = [self.train_cost] + [var for name, var in self.properties]
+
+        sums = numpy.zeros((len(valid_vars),))
+        num_batches = 0
+
+        if not hasattr(self, "_valid_func"):
+            self._valid_func = theano.function(self.inputs, valid_vars,
+                                               updates=self.updates)
+        for batch in data:
+            sums += numpy.hstack(self._valid_func(
+                *[batch[inp.name] for inp in self.inputs]))
+            num_batches += 1
+        return zip(valid_names, sums / num_batches)
 
     @property
     def params_grad_scale(self):
         return [1.0] * len(self.params)
-
-    @property
-    def valid_costs(self):
-        return []
 
     @property
     def exclude_params_for_norm(self):
@@ -109,11 +124,15 @@ class GroundhogState(object):
         self.bs = batch_size
         self.lr = learning_rate
         self.seed = 1
-        # TODO: what does it mean?
+
+        # Early stopping
+        self.cost_threshold = 10 ** 3 # effectively disables early stopping
         self.patience = 1
+        self.divide_lr = False
         self.minerr = -1
         self.timeStop = 10 ** 9
         self.minlr = 0
+
         self.overwrite = True
         self.hookFreq = -1
         self.saveFreq = 30
