@@ -524,7 +524,9 @@ class Application(object):
         return add_property
 
     def __getattr__(self, attr):
-        if attr in self.f:
+        if attr == '_brick':
+            raise AttributeError
+        elif attr in self.f:
             return self.f[attr](self.brick)
         elif hasattr(self, '_brick') and self.delegate_method is not None:
             return getattr(self.delegate_method(self.brick), attr)
@@ -551,7 +553,7 @@ def application_wrapper(**kwargs):
 
     Examples
     --------
-    >>> SomeBrick(Brick):
+    >>> class SomeBrick(Brick):
     ...     @_application(inputs=['x'])
     ...     def apply(self, x):
     ...         return x + 1
