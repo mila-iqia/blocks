@@ -19,7 +19,7 @@ class TestBrick(Brick):
     def apply(self, x, y=1, **kwargs):
         if isinstance(x, list):
             x = x[0]
-        return [x, y] + kwargs.values()
+        return [x, y] + list(kwargs.values())
 
     @application(inputs=['x'], outputs=['y'])
     def second_apply(self, x):
