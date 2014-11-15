@@ -4,8 +4,8 @@ import theano
 from numpy.testing import assert_allclose, assert_raises
 from theano import tensor
 
-from blocks.bricks import (application, Brick, DEFAULT_SEED, Identity, lazy,
-                           Linear, MLP, Tanh)
+from blocks.bricks import (Application, application, Brick, DEFAULT_SEED,
+                           Identity, lazy, Linear, MLP, Tanh)
 from blocks.initialization import Constant
 
 
@@ -94,6 +94,7 @@ def test_lazy():
     assert brick.config is None
     brick = TestBrick(config='config')
     assert brick.config == 'config'
+    assert_raises(ValueError, TestBrick, 'config', config='config')
 
 
 def test_allocate():
@@ -191,6 +192,14 @@ def test_application():
     assert brick.delegated_apply.outputs == ['y']
 
     assert brick.second_apply.all == ['x', 'y']
+
+    Brick.lazy = False
+    brick = TestBrick('config')
+    x = tensor.vector()
+    brick.apply(x)
+    assert brick.initialized
+
+    assert_raises(ValueError, getattr, Application(lambda x: x), 'brick')
 
 
 def test_rng():
