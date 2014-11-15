@@ -554,7 +554,7 @@ def application_wrapper(**kwargs):
     Examples
     --------
     >>> class SomeBrick(Brick):
-    ...     @_application(inputs=['x'])
+    ...     @application_wrapper(inputs=['x'])
     ...     def apply(self, x):
     ...         return x + 1
     ...
@@ -562,9 +562,9 @@ def application_wrapper(**kwargs):
     ...     def apply_outputs(self):
     ...         return ['y']
     >>> some_brick = SomeBrick()
-    >>> some_brick.inputs
+    >>> some_brick.apply.inputs
     ['x']
-    >>> some_brick.outputs
+    >>> some_brick.apply.outputs
     ['y']
 
     """
