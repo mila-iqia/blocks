@@ -19,7 +19,6 @@ def sigmoid(x):
 
 
 class TestRecurrent(unittest.TestCase):
-
     def setUp(self):
         self.simple = Recurrent(dim=3, weights_init=Constant(2),
                                 activation=Tanh())

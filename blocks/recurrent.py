@@ -83,7 +83,7 @@ def recurrent(*args, **kwargs):
 
             # TODO Assumes 1 time dim!
             if len(sequences_given):
-                shape = sequences_given.values()[0].shape
+                shape = list(sequences_given.values())[0].shape
                 if not iterate:
                     batch_size = shape[0]
                 else:
@@ -130,15 +130,15 @@ def recurrent(*args, **kwargs):
 
             def scan_function(*args):
                 args = list(args)
-                arg_names = (sequences_given.keys() + states_given.keys() +
-                             contexts_given.keys())
+                arg_names = (list(sequences_given) + list(states_given) +
+                             list(contexts_given))
                 kwargs = dict(zip(arg_names, args))
                 kwargs.update(rest_kwargs)
                 return application_method(brick, **kwargs)
             result, updates = theano.scan(
-                scan_function, sequences=sequences_given.values(),
-                outputs_info=states_given.values(),
-                non_sequences=contexts_given.values(),
+                scan_function, sequences=list(sequences_given.values()),
+                outputs_info=list(states_given.values()),
+                non_sequences=list(contexts_given.values()),
                 n_steps=n_steps,
                 go_backwards=reverse)
             assert not updates  # TODO Handle updates
