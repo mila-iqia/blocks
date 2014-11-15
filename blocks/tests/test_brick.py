@@ -1,21 +1,152 @@
-import copy
-
-from blocks.bricks import (
-    Brick, Linear, ForkInputs, RecurrentApplySignature)
-from blocks.initialization import Constant
-
-from numpy.testing import assert_raises
+import numpy
+import six
+import theano
+from numpy.testing import assert_allclose, assert_raises
 from theano import tensor
 
+from blocks.bricks import (application, Brick, DEFAULT_SEED, Identity, lazy,
+                           Linear, MLP, Tanh)
+from blocks.initialization import Constant
 
-def test_apply_method():
-    class TestBrick(Brick):
-        @Brick.apply_method
-        def apply(self, a, b=1, **kwargs):
-            if isinstance(a, list):
-                a = a[0]
-            return [a, b] + kwargs.values()
 
+class TestBrick(Brick):
+    @lazy
+    def __init__(self, config, **kwargs):
+        super(TestBrick, self).__init__(**kwargs)
+        self.config = config
+
+    @application
+    def apply(self, x, y=1, **kwargs):
+        if isinstance(x, list):
+            x = x[0]
+        return [x, y] + kwargs.values()
+
+    @application(inputs=['x'], outputs=['y'])
+    def second_apply(self, x):
+        return x + 1
+
+    @second_apply.property('all')
+    def second_apply_all(self):
+        return self.second_apply.inputs + self.second_apply.outputs
+
+    @application
+    def delegated_apply(self):
+        pass
+
+    @delegated_apply.delegate
+    def delegate(self):
+        return self.second_apply
+
+
+class ParentBrick(Brick):
+    def __init__(self, child=None, **kwargs):
+        super(ParentBrick, self).__init__(**kwargs)
+        if child is None:
+            child = TestBrick()
+        self.children = [child]
+
+
+class BrokenAllocateBrick(Brick):
+    def _allocate(self):
+        raise AttributeError
+
+
+class BrokenInitializeBrick(Brick):
+    def _initialize(self):
+        raise AttributeError
+
+
+class ParameterBrick(Brick):
+    def _allocate(self):
+        self.params.append(
+            theano.shared(numpy.zeros((10, 10), dtype=theano.config.floatX)))
+
+
+def test_super():
+    Brick.lazy = True
+    brick = TestBrick()
+    assert isinstance(brick.name, six.string_types)
+    assert brick.children == []
+    assert not any([brick.allocated, brick.allocation_config_pushed,
+                    brick.initialized, brick.initialization_config_pushed])
+
+    parent_brick = ParentBrick()
+    assert len(parent_brick.children) == 1
+
+    brick = TestBrick(name='test_name')
+    assert brick.name == 'test_name'
+
+
+def test_repr():
+    Brick.lazy = True
+    brick = TestBrick()
+    assert 'name=testbrick' in repr(brick)
+    assert hex(id(brick)) in repr(brick)
+    assert str(brick) == repr(brick)
+
+
+def test_lazy():
+    Brick.lazy = False
+    assert_raises(TypeError, TestBrick)
+
+    Brick.lazy = True
+    brick = TestBrick()
+    assert brick.config is None
+    brick = TestBrick(config='config')
+    assert brick.config == 'config'
+
+
+def test_allocate():
+    Brick.lazy = True
+    brick = TestBrick()
+    brick.allocate()
+    assert brick.allocated
+    assert brick.allocation_config_pushed
+
+    parent_brick = ParentBrick()
+    parent_brick.allocate()
+    assert parent_brick.children[0].allocated
+    assert parent_brick.children[0].allocation_config_pushed
+
+    parameter_brick = ParameterBrick()
+    assert not hasattr(parameter_brick, 'params')
+    parameter_brick.allocate()
+    assert len(parameter_brick.params) == 1
+    parameter_brick.params[0].set_value(
+        numpy.ones((10, 10), dtype=theano.config.floatX))
+    parameter_brick.allocate()
+    assert numpy.all(parameter_brick.params[0].get_value() == 0)
+
+    broken_parent_brick = ParentBrick(BrokenAllocateBrick())
+    assert_raises(AttributeError, broken_parent_brick.allocate)
+    assert not broken_parent_brick.allocation_config_pushed
+    assert not broken_parent_brick.allocated
+
+    Brick.lazy = False
+    broken_parent_brick = ParentBrick(BrokenAllocateBrick())
+    assert_raises(AttributeError, broken_parent_brick.allocate)
+    assert not broken_parent_brick.allocation_config_pushed
+    assert not broken_parent_brick.allocated
+
+
+def test_initialize():
+    Brick.lazy = True
+    brick = TestBrick()
+    brick.initialize()
+
+    parent_brick = ParentBrick()
+    parent_brick.initialize()
+
+    broken_parent_brick = ParentBrick(BrokenInitializeBrick())
+    assert_raises(AttributeError, broken_parent_brick.initialize)
+
+    Brick.lazy = False
+    broken_parent_brick = ParentBrick(BrokenInitializeBrick())
+    assert_raises(AttributeError, broken_parent_brick.initialize)
+
+
+def test_tagging():
+    Brick.lazy = True
     brick = TestBrick()
     x = tensor.vector('x')
     y = tensor.vector('y')
@@ -31,12 +162,12 @@ def test_apply_method():
         check_output_variable(o)
 
     # Case 2: `b` is given as a keyword argument.
-    u, v = brick.apply(x, b=y)
+    u, v = brick.apply(x, y=y)
     for o in [u, v]:
         check_output_variable(o)
 
     # Case 3: two positional and one keyword argument.
-    u, v, w = brick.apply(x, y, c=z)
+    u, v, w = brick.apply(x, y, z=z)
     for o in [u, v, w]:
         check_output_variable(o)
 
@@ -50,52 +181,71 @@ def test_apply_method():
     assert_raises(AttributeError, check_output_variable, u)
 
 
-def test_deepcopy():
-    brick = Linear(input_dim=2, output_dim=3,
-                   weights_init=Constant(1),
-                   biases_init=Constant(1))
-    brick.initialize()
-    assert brick.allocated
-    assert brick.initialized
-    assert len(brick.params) == 2
+def test_application():
+    Brick.lazy = True
+    brick = TestBrick()
+    assert brick.second_apply.inputs == ['x']
+    assert brick.second_apply.outputs == ['y']
 
-    brick_copy = copy.deepcopy(brick)
-    assert not brick_copy.allocated
-    assert not brick_copy.initialized
-    assert brick_copy.allocation_config_pushed
-    assert brick_copy.initialization_config_pushed
-    assert not hasattr(brick_copy, 'params')
+    assert brick.delegated_apply.inputs == ['x']
+    assert brick.delegated_apply.outputs == ['y']
+
+    assert brick.second_apply.all == ['x', 'y']
 
 
-def test_multiinput():
-    class TestBrick(Brick):
+def test_rng():
+    Brick.lazy = True
+    linear = Linear()
+    assert isinstance(linear.rng, numpy.random.RandomState)
+    assert linear.rng.rand() == numpy.random.RandomState(DEFAULT_SEED).rand()
+    linear = Linear(rng=numpy.random.RandomState(1))
+    assert linear.rng.rand() == numpy.random.RandomState(1).rand()
 
-        @Brick.apply_method
-        def apply(self, inp1, inp2, inp3, **kwargs):
-            return inp1, inp2, inp3
 
-        @apply.signature_method
-        def apply_signature(self, *args, **kwargs):
-            return RecurrentApplySignature(
-                input_names=["inp1", "inp2", "inp3"],
-                forkable_input_names=['inp1', 'inp2'],
-                dims=dict(inp1=10, inp2=10))
+def test_linear():
+    x = tensor.matrix()
 
-    tb = TestBrick(name="tb")
-    fi = ForkInputs(tb, input_dim=11, name="fi")
+    linear = Linear(input_dim=16, output_dim=8, weights_init=Constant(2),
+                    biases_init=Constant(1))
+    y = linear.apply(x)
+    linear.initialize()
+    x_val = numpy.ones((4, 16), dtype=theano.config.floatX)
+    assert_allclose(
+        y.eval({x: x_val}),
+        x_val.dot(2 * numpy.ones((16, 8))) + numpy.ones((4, 8)))
 
-    def undo_copy(variable, times):
-        for i in range(times):
-            variable = variable.owner.inputs[0]
-        return variable
+    linear = Linear(input_dim=16, output_dim=8, weights_init=Constant(2),
+                    use_bias=False)
+    y = linear.apply(x)
+    linear.initialize()
+    x_val = numpy.ones((4, 16), dtype=theano.config.floatX)
+    assert_allclose(y.eval({x: x_val}), x_val.dot(2 * numpy.ones((16, 8))))
 
-    x = tensor.matrix('x')
-    ys = fi.apply(x, inp3=x)
-    for y, fork in zip(ys[:2], fi.forks):
-        assert fork.dims[0] == 11
-        assert fork.dims[1] == 10
-        assert undo_copy(y, 3).tag.owner == fork
-    assert undo_copy(ys[2], 4) == x
 
-    input_names = fi.apply.signature().input_names
-    assert tuple(input_names) == ("inp3", "common_input")
+def test_activations():
+    x = tensor.vector()
+    x_val = numpy.random.rand(8).astype(theano.config.floatX)
+    assert_allclose(x_val, Identity().apply(x).eval({x: x_val}))
+    assert_allclose(numpy.tanh(x_val), Tanh().apply(x).eval({x: x_val}),
+                    rtol=1e-06)
+
+
+def test_mlp():
+    x = tensor.matrix()
+    x_val = numpy.random.rand(2, 16).astype(theano.config.floatX)
+    Brick.lazy = True
+    mlp = MLP(activations=[Tanh(), None], dims=[16, 8, 4],
+              weights_init=Constant(1), biases_init=Constant(1))
+    y = mlp.apply(x)
+    mlp.initialize()
+    assert_allclose(
+        numpy.tanh(x_val.dot(numpy.ones((16, 8))) + numpy.ones((2, 8))).dot(
+            numpy.ones((8, 4))) + numpy.ones((2, 4)),
+        y.eval({x: x_val}), rtol=1e-06)
+
+    mlp = MLP(activations=[None], weights_init=Constant(1), use_bias=False)
+    mlp.dims = [16, 8]
+    y = mlp.apply(x)
+    mlp.initialize()
+    assert_allclose(x_val.dot(numpy.ones((16, 8))),
+                    y.eval({x: x_val}), rtol=1e-06)
