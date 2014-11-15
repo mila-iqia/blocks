@@ -3,7 +3,9 @@ import inspect
 import theano
 from theano import tensor
 
-from blocks.bricks import application_wrapper, DefaultRNG, Identity, lazy
+from blocks.bricks import (Application, application_wrapper, DefaultRNG,
+                           Identity, lazy)
+from blocks.initialization import Constant, NdarrayInitialization
 from blocks.utils import shared_floatx_zeros
 
 
@@ -94,17 +96,26 @@ def recurrent(*args, **kwargs):
 
             # Ensure that all initial states are available.
             for state_name in application.states:
-                if state_name in kwargs and callable(kwargs[state_name]):
-                    # TODO Allow initialization function to be passed
-                    pass
-                elif state_name not in kwargs:
+                dim = brick.dims[state_name]
+                if state_name in kwargs:
+                    if isinstance(kwargs[state_name], NdarrayInitialization):
+                        kwargs[state_name] = tensor.alloc(
+                            kwargs[state_name].generate(brick.rng, (1, dim)),
+                            batch_size, dim)
+                    elif isinstance(kwargs[state_name], Application):
+                        kwargs[state_name] = \
+                            kwargs[state_name].application_method(state_name,
+                                                                  batch_size)
+                else:
                     # TODO init_func returns 2D-tensor, fails for iterate=False
                     if hasattr(brick, 'initial_state'):
-                        init_func = brick.initial_state
+                        kwargs[state_name] = \
+                            brick.initial_state.application_method(state_name,
+                                                                   batch_size)
                     else:
-                        init_func = zero_state
-                    dim = brick.dims[state_name]
-                    kwargs[state_name] = init_func(dim, batch_size)
+                        kwargs[state_name] = tensor.alloc(
+                            Constant(0).generate(brick.rng, (1, dim)),
+                            batch_size, dim)
             states_given = only_given(application.states)
             assert len(states_given) == len(application.states)
 
