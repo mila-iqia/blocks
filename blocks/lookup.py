@@ -2,7 +2,7 @@
 
 from theano import tensor
 
-from blocks.bricks import Brick, DefaultRNG, lazy, application
+from blocks.bricks import DefaultRNG, lazy, application
 from blocks.utils import shared_floatx_zeros, check_theano_variable
 
 
