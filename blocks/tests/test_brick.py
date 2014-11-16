@@ -41,9 +41,14 @@ class TestBrick(Brick):
 class ParentBrick(Brick):
     def __init__(self, child=None, **kwargs):
         super(ParentBrick, self).__init__(**kwargs)
+        self.child = child
         if child is None:
             child = TestBrick()
         self.children = [child]
+
+    @application
+    def apply(self, *args, **kwargs):
+        return self.child.apply(*args, **kwargs)
 
 
 class BrokenAllocateBrick(Brick):
@@ -181,6 +186,11 @@ def test_tagging():
     u, v = brick.apply([x])
     assert_raises(AttributeError, check_output_variable, u)
 
+def test_apply_not_child():
+    child = TestBrick()
+    parent = ParentBrick(child)
+    parent.children = []
+    assert_raises(ValueError, parent.apply, tensor.matrix())
 
 def test_application():
     Brick.lazy = True
