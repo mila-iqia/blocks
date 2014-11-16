@@ -186,11 +186,13 @@ def test_tagging():
     u, v = brick.apply([x])
     assert_raises(AttributeError, check_output_variable, u)
 
+
 def test_apply_not_child():
     child = TestBrick()
     parent = ParentBrick(child)
     parent.children = []
     assert_raises(ValueError, parent.apply, tensor.matrix())
+
 
 def test_application():
     Brick.lazy = True
