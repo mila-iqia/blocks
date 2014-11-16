@@ -154,21 +154,20 @@ def reraise_as(new_exc):
     six.reraise(type(new_exc), new_exc, orig_exc_traceback)
 
 
-def check_theano_variable(variable, n_dim, dtype):
+def check_theano_variable(variable, n_dim, dtype_prefix):
     """Check number of dimensions and dtype of a Theano variable.
 
-    If the input is not a Theano variable, it is converted to one. `None`
-    input is handled as a special case: no checks are done.
+    If the input is not a Theano variable, it is converted to one. `None` input
+    is handled as a special case: no checks are done.
 
     Parameters
     ----------
     variable : Theano variable or convertable to one
         A variable to check.
     n_dim : int
-        Expected number of dimensions.
+        Expected number of dimensions or None. If None, no check is performed.
     dtype : str
-        Expected dtype.
-
+        Expected dtype prefix or None. If None, no check is performed.
     """
 
     if variable is None:
@@ -177,15 +176,15 @@ def check_theano_variable(variable, n_dim, dtype):
     if not isinstance(variable, tensor.Variable):
         variable = tensor.as_tensor_variable(variable)
 
-    if variable.ndim != n_dim:
+    if n_dim and variable.ndim != n_dim:
         raise ValueError("Wrong number of dimensions:"
                          "\n\texpected {}, got {}".format(
                              n_dim, variable.ndim))
 
-    if not dtype == variable.dtype:
-        raise ValueError("Wrong dtype:"
-                         "\n\texpected {}, got {}".format(
-                             dtype, variable.dtype))
+    if dtype_prefix and not variable.dtype.startswith(dtype_prefix):
+        raise ValueError("Wrong dtype prefix:"
+                         "\n\texpected starting with {}, got {}".format(
+                             dtype_prefix, variable.dtype))
 
 
 def dict_union(*dicts, **kwargs):

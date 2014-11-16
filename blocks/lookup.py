@@ -2,7 +2,7 @@
 
 from theano import tensor
 
-from blocks.bricks import Brick, DefaultRNG
+from blocks.bricks import Brick, DefaultRNG, lazy, application
 from blocks.utils import shared_floatx_zeros, check_theano_variable
 
 
@@ -18,7 +18,7 @@ class LookupTable(DefaultRNG):
         The dimensionality of representations.
 
     """
-    @Brick.lazy_method
+    @lazy
     def __init__(self, length, dim, weights_init, **kwargs):
         super(LookupTable, self).__init__(**kwargs)
         self.__dict__.update(**locals())
@@ -36,7 +36,7 @@ class LookupTable(DefaultRNG):
     def _initialize(self):
         self.weights_init.initialize(self.W, self.rng)
 
-    @Brick.apply_method
+    @application
     def lookup(self, indices):
         """Perform lookup.
 
