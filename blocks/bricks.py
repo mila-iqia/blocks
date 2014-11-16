@@ -416,6 +416,8 @@ class Application(object):
         self.f = {}
         self.delegate_method = None
 
+    _last_brick_applied = None
+
     def __call__(self, *inputs, **kwargs):
         """Wraps an application method.
 
@@ -437,6 +439,13 @@ class Application(object):
         :meth:`allocate` if they have not been allocated already.
 
         """
+        last = Application._last_brick_applied
+        if last and last != self.brick and self.brick not in last.children:
+            raise ValueError("The brick {} called an apply method of the"
+                             " brick {} without having it in the children"
+                             " list."
+                             .format(last, self.brick))
+
         if not self.brick.allocated:
             self.brick.allocate()
         if not self.brick.initialized and not self.brick.lazy:
@@ -452,7 +461,11 @@ class Application(object):
                 kwargs[key] = value.copy()
                 kwargs[key].tag.owner = self.brick
                 kwargs[key].name = self.brick.name + INPUT_SUFFIX
-        outputs = self.application_method(self.brick, *inputs, **kwargs)
+        Application._last_brick_applied = self.brick
+        try:
+            outputs = self.application_method(self.brick, *inputs, **kwargs)
+        finally:
+            Application._last_brick_applied = last
         # TODO allow user to return an OrderedDict
         outputs = pack(outputs)
         for i, output in enumerate(outputs):

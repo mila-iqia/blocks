@@ -221,6 +221,7 @@ class Recurrent(DefaultRNG):
         del self.self
         del self.kwargs
         self.dims = {state: dim for state in self.apply.states}
+        self.children = [activation]
 
     @property
     def W(self):
@@ -312,6 +313,7 @@ class GatedRecurrent(DefaultRNG):
         del self.self
         del self.kwargs
         self.dims = {'inps': dim, 'states': dim}
+        self.children = [activation, gate_activation]
 
     @property
     def state_to_state(self):
