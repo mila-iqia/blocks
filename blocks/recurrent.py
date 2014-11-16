@@ -4,7 +4,7 @@ import theano
 from theano import tensor
 
 from blocks.bricks import (Application, application_wrapper, DefaultRNG,
-                           Identity, lazy)
+                           Identity, lazy, Tanh)
 from blocks.initialization import Constant, NdarrayInitialization
 from blocks.utils import shared_floatx_zeros
 
@@ -161,7 +161,7 @@ def recurrent(*args, **kwargs):
 
 # class Wrap3D(Brick):
 #     """Convert 3D arrays to 2D and back in order to apply 2D bricks."""
-#     @Brick.lazy_method
+#     @lazy
 #     def __init__(self, wrapped, apply_method='apply', **kwargs):
 #         super(Wrap3D, self).__init__(**kwargs)
 #         self.children = [wrapped]
@@ -266,178 +266,173 @@ class Recurrent(DefaultRNG):
         return next_state
 
 
-# class GatedRecurrent(DefaultRNG):
-#     """Gated recurrent neural network.
-#
-#     Gated recurrent neural network (GRNN) as introduced in [1]. Every unit
-#     of a GRNN is equiped with update and reset gates that fascilitate better
-#     gradient propagation.
-#
-#     Parameters
-#     ----------
-#     activation : Brick or None
-#         The brick to apply as activation. If `None` an `Identity` brick is
-#         used.
-#     gated_activation : Brick or None
-#         The brick to apply as activation for gates. If `None` a `Sigmoid`
-#         brick is used.
-#     dim : int
-#         The dimension of the hidden state.
-#     weights_init : object
-#         The :class:`utils.NdarrayInitialization` object to initialize the
-#         weight matrix with.
-#     use_upgate_gate : bool
-#         If True the update gates are used.
-#     use_reset_gate : bool
-#         If True the reset gates are used.
-#
-#
-#     .. [1] Kyunghyun Cho, Bart van Merrienboer, Caglar Gulcehre,
-#          Dzmitry Bahdanau, Fethi Bougares, Holger Schwenk and Yoshua Bengio.
-#          Learning Phrase Representations using RNN Encoder-Decoder
-#          for Statistical Machine Translation. EMNLP 2014.
-#     """
-#
-#     @Brick.lazy_method
-#     def __init__(self, activation, gate_activation, dim, weights_init,
-#                  use_update_gate=True, use_reset_gate=True, **kwargs):
-#         super(GatedRecurrent, self).__init__(**kwargs)
-#
-#         if not activation:
-#             activation = Identity()
-#         if not gate_activation:
-#             gate_activation = Sigmoid()
-#
-#         self.__dict__.update(locals())
-#         del self.self
-#         del self.kwargs
-#
-#     @property
-#     def state2state(self):
-#         return self.params[0]
-#
-#     @property
-#     def state2update(self):
-#         return self.params[1]
-#
-#     @property
-#     def state2reset(self):
-#         return self.params[2]
-#
-#     def _allocate(self):
-#         def new_param(name):
-#             shared = shared_floatx_zeros((self.dim, self.dim))
-#             shared.name = name
-#             return shared
-#         self.params.append(new_param('state2state'))
-#         self.params.append(new_param('state2update')
-#                            if self.use_update_gate else None)
-#         self.params.append(new_param('state2reset')
-#                            if self.use_reset_gate else None)
-#
-#     def _initialize(self):
-#         self.weights_init.initialize(self.state2state, self.rng)
-#         if self.use_update_gate:
-#             self.weights_init.initialize(self.state2update, self.rng)
-#         if self.use_reset_gate:
-#             self.weights_init.initialize(self.state2reset, self.rng)
-#
-#     @Brick.recurrent_apply_method
-#     def apply(self, inps, update_inps=None, reset_inps=None,
-#               states=None, mask=None):
-#         """Apply the gated recurrent transition.
-#
-#         Parameters
-#         ----------
-#         states : Theano variable
-#             The 2 dimensional matrix of current states in the shape
-#             (batch_size, features). Required for `one_step` usage.
-#         inps : Theano matrix of floats
-#             The 2 dimensional matrix of inputs in the shape
-#             (batch_size, features)
-#         update_inps : Theano variable
-#             The 2 dimensional matrix of inputs to the update gates in the shape
-#             (batch_size, features). None when the update gates are not used.
-#         reset_inps : Theano variable
-#             The 2 dimensional matrix of inputs to the reset gates in the shape
-#             (batch_size, features). None when the reset gates are not used.
-#         mask : Theano variable
-#             A 1D binary array in the shape (batch,) which is 1 if
-#             there is data available, 0 if not. Assumed to be 1-s
-#             only if not given.
-#
-#         Returns
-#         -------
-#         output : Theano variable
-#             Next states of the network.
-#         """
-#         if (self.use_update_gate != (update_inps is not None)) or \
-#                 (self.use_reset_gate != (reset_inps is not None)):
-#             raise ValueError("Configuration and input mismatch: You should "
-#                              "provide inputs for gates if and only if the "
-#                              "gates are on.")
-#
-#         states_reset = states
-#
-#         if self.use_reset_gate:
-#             reset_values = self.gate_activation.apply(
-#                 states.dot(self.state2reset) + reset_inps)
-#             states_reset = states * reset_values
-#
-#         next_states = self.activation.apply(
-#             states_reset.dot(self.state2state) + inps)
-#
-#         if self.use_update_gate:
-#             update_values = self.gate_activation.apply(
-#                 states.dot(self.state2update) + update_inps)
-#             next_states = (next_states * update_values
-#                            + states * (1 - update_values))
-#
-#         if mask:
-#             next_states = (mask[:, None] * next_states
-#                            + (1 - mask[:, None]) * states)
-#
-#         return next_states
-#
-#     @apply.signature_method
-#     def apply_signature(self, *args, **kwargs):
-#         s = RecurrentApplySignature(
-#             input_names=['mask', 'inps'], state_names=['states'],
-#             output_names=['states'],
-#             dims=dict(inps=self.dim, states=self.dim))
-#         if self.use_update_gate:
-#             s.input_names.append('update_inps')
-#             s.dims['update_inps'] = self.dim
-#         if self.use_reset_gate:
-#             s.input_names.append('reset_inps')
-#             s.dims['reset_inps'] = self.dim
-#         s.forkable_input_names = s.input_names[1:]
-#         return s
-#
-#
-# class BidirectionalRecurrent(DefaultRNG):
-#     @Brick.lazy_method
-#     def __init__(self, dim, weights_init, activation=None, hidden_init=None,
-#                  combine='concatenate', **kwargs):
-#         super(BidirectionalRecurrent, self).__init__(**kwargs)
-#         if hidden_init is None:
-#             hidden_init = Constant(0)
-#         self.__dict__.update(locals())
-#         del self.self
-#         self.children = [Recurrent(), Recurrent()]
-#
-#     def _push_allocation_config(self):
-#         for child in self.children:
-#             for attr in ['dim', 'activation', 'hidden_init']:
-#                 setattr(child, attr, getattr(self, attr))
-#
-#     def _push_initialization_config(self):
-#         for child in self.children:
-#             child.weights_init = self.weights_init
-#
-#     @Brick.apply_method
-#     def apply(self, inp, mask):
-#         forward = self.children[0].apply(inp, mask)
-#         backward = self.children[1].apply(inp, mask, reverse=True)
-#         output = tensor.concatenate([forward[-1], backward[-1]], axis=1)
-#         return output
+class GatedRecurrent(DefaultRNG):
+    """Gated recurrent neural network.
+
+    Gated recurrent neural network (GRNN) as introduced in [1]. Every unit
+    of a GRNN is equiped with update and reset gates that facilitate better
+    gradient propagation.
+
+    Parameters
+    ----------
+    activation : Brick or None
+        The brick to apply as activation. If `None` an `Identity` brick is
+        used.
+    gated_activation : Brick or None
+        The brick to apply as activation for gates. If `None` a `Sigmoid`
+        brick is used.
+    dim : int
+        The dimension of the hidden state.
+    weights_init : object
+        The :class:`utils.NdarrayInitialization` object to initialize the
+        weight matrix with.
+    use_upgate_gate : bool
+        If True the update gates are used.
+    use_reset_gate : bool
+        If True the reset gates are used.
+
+
+    .. [1] Kyunghyun Cho, Bart van Merrienboer, Caglar Gulcehre,
+        Dzmitry Bahdanau, Fethi Bougares, Holger Schwenk and Yoshua Bengio.
+        Learning Phrase Representations using RNN Encoder-Decoder
+        for Statistical Machine Translation. EMNLP 2014.
+    """
+
+    @lazy
+    def __init__(self, activation, gate_activation, dim, weights_init,
+                 use_update_gate=True, use_reset_gate=True, **kwargs):
+        super(GatedRecurrent, self).__init__(**kwargs)
+
+        if not activation:
+            activation = Identity()
+        if not gate_activation:
+            gate_activation = Tanh()
+
+        self.__dict__.update(locals())
+        del self.self
+        del self.kwargs
+        self.dims = {'inps': dim, 'states': dim}
+
+    @property
+    def state_to_state(self):
+        return self.params[0]
+
+    @property
+    def state_to_update(self):
+        return self.params[1]
+
+    @property
+    def state_to_reset(self):
+        return self.params[2]
+
+    def _allocate(self):
+        new_param = lambda: shared_floatx_zeros((self.dim, self.dim))
+        self.params.append(new_param())
+        self.params.append(new_param() if self.use_update_gate else None)
+        self.params.append(new_param() if self.use_reset_gate else None)
+
+    def _initialize(self):
+        self.weights_init.initialize(self.state_to_state, self.rng)
+        if self.use_update_gate:
+            self.weights_init.initialize(self.state_to_update, self.rng)
+        if self.use_reset_gate:
+            self.weights_init.initialize(self.state_to_reset, self.rng)
+
+    @recurrent(states=['states'], outputs=['states'], contexts=[])
+    def apply(self, inps, update_inps=None, reset_inps=None,
+              states=None, mask=None):
+        """Apply the gated recurrent transition.
+
+        Parameters
+        ----------
+        states : Theano variable
+            The 2 dimensional matrix of current states in the shape
+            (batch_size, features). Required for `one_step` usage.
+        inps : Theano matrix of floats
+            The 2 dimensional matrix of inputs in the shape (batch_size,
+            features)
+        update_inps : Theano variable
+            The 2 dimensional matrix of inputs to the update gates in the
+            shape (batch_size, features). None when the update gates are
+            not used.
+        reset_inps : Theano variable
+            The 2 dimensional matrix of inputs to the reset gates in the
+            shape (batch_size, features). None when the reset gates are not
+            used.
+        mask : Theano variable
+            A 1D binary array in the shape (batch,) which is 1 if there is
+            data available, 0 if not. Assumed to be 1-s only if not given.
+
+        Returns
+        -------
+        output : Theano variable
+            Next states of the network.
+        """
+        if (self.use_update_gate != (update_inps is not None)) or \
+                (self.use_reset_gate != (reset_inps is not None)):
+            raise ValueError("Configuration and input mismatch: You should "
+                             "provide inputs for gates if and only if the "
+                             "gates are on.")
+
+        states_reset = states
+
+        if self.use_reset_gate:
+            reset_values = self.gate_activation.apply(
+                states.dot(self.state_to_reset) + reset_inps)
+            states_reset = states * reset_values
+
+        next_states = self.activation.apply(
+            states_reset.dot(self.state_to_state) + inps)
+
+        if self.use_update_gate:
+            update_values = self.gate_activation.apply(
+                states.dot(self.state_to_update) + update_inps)
+            next_states = (next_states * update_values
+                           + states * (1 - update_values))
+
+        if mask:
+            next_states = (mask[:, None] * next_states
+                           + (1 - mask[:, None]) * states)
+
+        return next_states
+
+    @apply.property('sequences')
+    def apply_inputs(self):
+        sequences = ['mask', 'inps']
+        if self.use_update_gate:
+            sequences.append('update_inps')
+        if self.use_reset_gate:
+            sequences.append('reset_inps')
+        return sequences
+
+
+class BidirectionalRecurrent(DefaultRNG):
+    @lazy
+    def __init__(self, dim, weights_init, activation=None, hidden_init=None,
+                 combine='concatenate', **kwargs):
+        super(BidirectionalRecurrent, self).__init__(**kwargs)
+        if hidden_init is None:
+            hidden_init = Constant(0)
+        self.__dict__.update(locals())
+        del self.self
+        self.children = [Recurrent(), Recurrent()]
+
+    def _push_allocation_config(self):
+        for child in self.children:
+            for attr in ['dim', 'activation', 'hidden_init']:
+                setattr(child, attr, getattr(self, attr))
+
+    def _push_initialization_config(self):
+        for child in self.children:
+            child.weights_init = self.weights_init
+
+    @recurrent
+    def apply(self, *args, **kwargs):
+        forward = self.children[0].apply(*args, **kwargs)
+        backward = self.children[1].apply(reverse=True, *args, **kwargs)
+        output = tensor.concatenate([forward, backward], axis=2)
+        return output
+
+    @apply.delegate
+    def apply_delegate(self):
+        return self.children[0]
