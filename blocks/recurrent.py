@@ -96,7 +96,7 @@ def recurrent(*args, **kwargs):
 
             # Ensure that all initial states are available.
             for state_name in application.states:
-                dim = brick.dims[state_name]
+                dim = brick.dimension(state_name)
                 if state_name in kwargs:
                     if isinstance(kwargs[state_name], NdarrayInitialization):
                         kwargs[state_name] = tensor.alloc(
@@ -220,7 +220,7 @@ class Recurrent(DefaultRNG):
         self.__dict__.update(locals())
         del self.self
         del self.kwargs
-        self.dims = {state: dim for state in self.apply.states}
+        self._dims = {state: dim for state in self.apply.states}
         self.children = [activation]
 
     @property
@@ -312,7 +312,7 @@ class GatedRecurrent(DefaultRNG):
         self.__dict__.update(locals())
         del self.self
         del self.kwargs
-        self.dims = {'inps': dim, 'states': dim}
+        self._dims = {'inps': dim, 'states': dim}
         self.children = [activation, gate_activation]
 
     @property
