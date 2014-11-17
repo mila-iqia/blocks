@@ -10,7 +10,7 @@ before_install:
   - export PATH=/home/travis/miniconda/bin:$PATH
   - conda update -q --yes conda
 install:
-  - conda install -q --yes python=$TRAVIS_PYTHON_VERSION numpy pip coverage six flake8
+  - conda install -q --yes python=$TRAVIS_PYTHON_VERSION nose numpy pip coverage six flake8
   - pip install -q --no-deps git+git://github.com/Theano/Theano.git
   - pip install -q nose2
   - pip install -q nose2[coverage-plugin]
