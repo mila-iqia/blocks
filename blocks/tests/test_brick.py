@@ -196,7 +196,7 @@ def test_apply_not_child():
 
 def test_request_unknown_dimension():
     brick = TestBrick()
-    assert_raises(ValueError, brick.dimension, 'unknown')
+    assert_raises(ValueError, brick.get_dim, 'unknown')
 
 
 def test_application():

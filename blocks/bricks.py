@@ -337,7 +337,7 @@ class Brick(object):
         """
         pass
 
-    def dimension(self, name):
+    def get_dim(self, name):
         """Get dimension of an input/output variable of a brick.
 
         Parameters

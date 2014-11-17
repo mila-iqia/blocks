@@ -96,7 +96,7 @@ def recurrent(*args, **kwargs):
 
             # Ensure that all initial states are available.
             for state_name in application.states:
-                dim = brick.dimension(state_name)
+                dim = brick.get_dim(state_name)
                 if state_name in kwargs:
                     if isinstance(kwargs[state_name], NdarrayInitialization):
                         kwargs[state_name] = tensor.alloc(
@@ -226,10 +226,10 @@ class Recurrent(DefaultRNG):
     def W(self):
         return self.params[0]
 
-    def dimension(self, name):
+    def get_dim(self, name):
         if name in ['state']:
             return self.dim
-        return super(Recurrent, self).dimension()
+        return super(Recurrent, self).get_dim()
 
     def _allocate(self):
         self.params.append(shared_floatx_zeros((self.dim, self.dim)))
@@ -330,10 +330,10 @@ class GatedRecurrent(DefaultRNG):
     def state_to_reset(self):
         return self.params[2]
 
-    def dimension(self, name):
+    def get_dim(self, name):
         if name in ['states']:
             return self.dim
-        return super(GatedRecurrent, self).dimension(name)
+        return super(GatedRecurrent, self).get_dim(name)
 
     def _allocate(self):
         new_param = lambda: shared_floatx_zeros((self.dim, self.dim))
