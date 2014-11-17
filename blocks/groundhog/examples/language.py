@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import numpy
 import argparse
 import logging
@@ -25,6 +27,7 @@ floatX = theano.config.floatX
 
 logger = logging.getLogger()
 
+
 def main():
     logging.basicConfig(
         level=logging.DEBUG,
@@ -42,7 +45,7 @@ def main():
         "prefix", default="sine",
         help="The prefix for model, timing and state files")
     parser.add_argument(
-            "state", nargs="?", default="",
+        "state", nargs="?", default="",
         help="Changes to Groundhog state")
     parser.add_argument("--path", help="Path to a language dataset")
     parser.add_argument("--dict", help="Path to the dataset dictionary")
@@ -67,7 +70,7 @@ def main():
         LinearReadout(readout_dim=num_chars, source_names=["states"],
                       emitter=SoftmaxEmitter(name="emitter"),
                       feedbacker=LookupFeedback(
-                        num_chars, dim, name='feedback'),
+                          num_chars, dim, name='feedback'),
                       name="readout"),
         transition,
         weights_init=IsotropicGaussian(0.01), biases_init=Constant(0),
@@ -75,9 +78,9 @@ def main():
     generator.allocate()
     logger.debug("Parameters:\n" +
                  pprint.pformat(
-                    [(key, value.get_value().shape) for key, value
-                     in Selector(generator).get_params().items()],
-                    width=120))
+                     [(key, value.get_value().shape) for key, value
+                      in Selector(generator).get_params().items()],
+                     width=120))
 
     if args.mode == "train":
         batch_size = 1
@@ -90,7 +93,8 @@ def main():
         # why it does not carry the hidden state over the period when
         # validation in done. We should find a way to fix in the future.
         x = tensor.lmatrix('x')
-        init_states = shared_floatx_zeros((batch_size, dim), name='init_states')
+        init_states = shared_floatx_zeros((batch_size, dim),
+                                          name='init_states')
         reset = tensor.scalar('reset')
         cost = Cost(generator.cost(x, states=init_states * reset).sum())
         # This is why we need hierarchy of blocks: to replace
@@ -131,7 +135,8 @@ def main():
         state['on_nan'] = 'warn'
         state['cutoff'] = 1.
 
-        main_loop = MainLoop(train, valid, None, gh_model, trainer, state, None)
+        main_loop = MainLoop(train, valid, None, gh_model,
+                             trainer, state, None)
         if not args.restart:
             main_loop.load()
         main_loop.main()
@@ -146,8 +151,8 @@ def main():
         states, outputs, costs = sample()
 
         for i in range(10):
-            print "Generation cost: {}".format(costs[:, i].sum())
-            print "".join([chars[o] for o in outputs[:, i]])
+            print("Generation cost: {}".format(costs[:, i].sum()))
+            print("".join([chars[o] for o in outputs[:, i]]))
     else:
         assert False
 

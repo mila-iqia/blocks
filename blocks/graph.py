@@ -38,7 +38,7 @@ class ComputationGraph(object):
         def recursion(current):
             if current.owner:
                 owner = current.owner
-                if not owner in self.applies:
+                if owner not in self.applies:
                     if hasattr(owner.tag, 'updates'):
                         logger.debug("updates of {}".format(owner))
                         self.updates.extend(owner.tag.updates.items())
@@ -48,7 +48,6 @@ class ComputationGraph(object):
                     if inp not in self.variables:
                         recursion(inp)
                 self.variables.add(inp)
-
 
         def is_input(variable):
             return (not variable.owner

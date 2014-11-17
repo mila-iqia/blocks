@@ -1,6 +1,8 @@
-import re
 import logging
+import re
 from collections import OrderedDict
+
+import six
 
 from blocks.bricks import Brick
 from blocks.utils import dict_union
@@ -128,14 +130,14 @@ class Selector(object):
         * A list of shared Theano variables.
 
         """
-        if isinstance(path, basestring):
+        if isinstance(path, six.string_types):
             path = Path.parse(path)
 
         current_bricks = [None]
         for node in path.nodes:
             next_bricks = []
             if isinstance(node, Path.ParamName):
-                return Selector(current_bricks).get_params(node).values()
+                return list(Selector(current_bricks).get_params(node).values())
             if isinstance(node, Path.BrickName):
                 for brick in current_bricks:
                     children = brick.children if brick else self.bricks
