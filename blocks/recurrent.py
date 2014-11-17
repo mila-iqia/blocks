@@ -3,10 +3,35 @@ import inspect
 import theano
 from theano import tensor
 
-from blocks.bricks import (Application, application_wrapper, DefaultRNG,
-                           Identity, lazy, Tanh)
+from blocks.bricks import (
+    Brick, Application, application_wrapper,
+    DefaultRNG, Identity, lazy, Tanh)
 from blocks.initialization import Constant, NdarrayInitialization
-from blocks.utils import shared_floatx_zeros
+from blocks.utils import pack, shared_floatx_zeros
+
+
+class BaseRecurrent(object):
+    """Base class for brick with recurrent application method."""
+
+    def initial_state(self, state_name, batch_size, *args, **kwargs):
+        """Return an initial state for an application call.
+
+        Parameters
+        ----------
+        state_name : str
+            The name of the state.
+        batch_size : int
+            The batch size.
+        *args
+            The positional arguments of the application call.
+        **kwargs
+            The keyword arguments of the application call.
+
+        """
+        dim = self.get_dim(state_name)
+        return tensor.alloc(Constant(0).generate(self.rng, (1, dim)),
+                            batch_size, dim)
+
 
 
 def recurrent(*args, **kwargs):
@@ -47,11 +72,13 @@ def recurrent(*args, **kwargs):
             Parameters
             ----------
             iterate : bool
-                If ``True`` iteration is made. By default ``True``
-                which means that transition function is applied as is.
+                If ``True`` iteration is made. By default ``True``.
             reverse : bool
                 If ``True``, the sequences are processed in backward
                 direction. ``False`` by default.
+            return_initial_states : bool
+                If ``True``, initial states are included in the returned
+                state tensors. ``False`` by default.
 
             .. todo::
 
@@ -64,6 +91,7 @@ def recurrent(*args, **kwargs):
             # Extract arguments related to iteration.
             iterate = kwargs.pop('iterate', True)
             reverse = kwargs.pop('reverse', False)
+            return_initial_states = kwargs.pop('return_initial_states', False)
 
             # Push everything to kwargs
             for arg, arg_name in zip(args, arg_names):
@@ -104,18 +132,11 @@ def recurrent(*args, **kwargs):
                             batch_size, dim)
                     elif isinstance(kwargs[state_name], Application):
                         kwargs[state_name] = \
-                            kwargs[state_name].application_method(state_name,
-                                                                  batch_size)
+                            kwargs[state_name](state_name, batch_size)
                 else:
                     # TODO init_func returns 2D-tensor, fails for iterate=False
-                    if hasattr(brick, 'initial_state'):
-                        kwargs[state_name] = \
-                            brick.initial_state.application_method(state_name,
-                                                                   batch_size)
-                    else:
-                        kwargs[state_name] = tensor.alloc(
-                            Constant(0).generate(brick.rng, (1, dim)),
-                            batch_size, dim)
+                    kwargs[state_name] = \
+                            brick.initial_state(state_name, batch_size)
             states_given = only_given(application.states)
             assert len(states_given) == len(application.states)
 
@@ -135,13 +156,24 @@ def recurrent(*args, **kwargs):
                 kwargs = dict(zip(arg_names, args))
                 kwargs.update(rest_kwargs)
                 return application_method(brick, **kwargs)
+            outputs_info = (list(states_given.values())
+                + [None] * (len(application.outputs)
+                            - len(application.states)))
             result, updates = theano.scan(
                 scan_function, sequences=list(sequences_given.values()),
-                outputs_info=list(states_given.values()),
+                outputs_info=outputs_info,
                 non_sequences=list(contexts_given.values()),
                 n_steps=n_steps,
                 go_backwards=reverse)
-            assert not updates  # TODO Handle updates
+            result = pack(result)
+            if return_initial_states:
+                # Undo Subtensor
+                for i in range(len(states_given)):
+                    assert isinstance(result[i].owner.op,
+                                      tensor.subtensor.Subtensor)
+                    result[i] = result[i].owner.inputs[0]
+            if updates:
+                updates.values()[0].owner.tag.updates = updates
             return result
 
         return recurrent_apply
@@ -188,7 +220,7 @@ def zero_state(dim, batch_size, *args, **kwargs):
     return tensor.zeros((batch_size, dim), dtype=theano.config.floatX)
 
 
-class Recurrent(DefaultRNG):
+class Recurrent(BaseRecurrent, DefaultRNG):
     """Simple recurrent layer with optional activation.
 
     Parameters
@@ -227,7 +259,7 @@ class Recurrent(DefaultRNG):
         return self.params[0]
 
     def get_dim(self, name):
-        if name in ['state']:
+        if name in ['inp', 'state']:
             return self.dim
         return super(Recurrent, self).get_dim()
 
@@ -271,7 +303,7 @@ class Recurrent(DefaultRNG):
         return next_state
 
 
-class GatedRecurrent(DefaultRNG):
+class GatedRecurrent(BaseRecurrent, DefaultRNG):
     """Gated recurrent neural network.
 
     Gated recurrent neural network (GRNN) as introduced in [1]. Every unit
@@ -331,7 +363,7 @@ class GatedRecurrent(DefaultRNG):
         return self.params[2]
 
     def get_dim(self, name):
-        if name in ['states']:
+        if name in ['inps', 'reset_inps', 'update_inps', 'states']:
             return self.dim
         return super(GatedRecurrent, self).get_dim(name)
 

@@ -3,7 +3,8 @@ import numpy
 import theano
 from theano import tensor
 
-from blocks.bricks import Brick, GatedRecurrent, Tanh
+from blocks.bricks import Tanh, application
+from blocks.recurrent import GatedRecurrent
 from blocks.sequence_generators import (
     SequenceGenerator, LinearReadout, TrivialEmitter,
     SoftmaxEmitter, LookupFeedback)
@@ -21,7 +22,7 @@ def test_sequence_generator():
     n_steps = 10
 
     class Emitter(TrivialEmitter):
-        @Brick.apply_method
+        @application
         def cost(self, readouts, outputs):
             """Compute MSE."""
             return ((readouts - outputs) ** 2).sum(axis=readouts.ndim - 1)

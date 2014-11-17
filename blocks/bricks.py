@@ -5,6 +5,7 @@ This defines the basic interface of bricks.
 import inspect
 import logging
 from abc import ABCMeta
+from collections import OrderedDict
 
 import numpy as np
 from theano import tensor
@@ -458,6 +459,10 @@ class Application(object):
                              " list."
                              .format(last, self.brick))
 
+        return_dict = kwargs.pop('return_dict', False)
+        return_list = kwargs.pop('return_list', False)
+        assert not return_list or not return_dict
+
         if not self.brick.allocated:
             self.brick.allocate()
         if not self.brick.initialized and not self.brick.lazy:
@@ -486,6 +491,10 @@ class Application(object):
                 outputs[i] = output.copy()
                 outputs[i].tag.owner = self.brick
                 outputs[i].name = self.brick.name + OUTPUT_SUFFIX
+        if return_list:
+            return outputs
+        if return_dict:
+            return OrderedDict(zip(self.outputs, outputs))
         return unpack(outputs)
 
     def __get__(self, instance, owner):
@@ -638,24 +647,29 @@ def application(*args, **kwargs):
 
 
 class DefaultRNG(Brick):
-    """A mixin class for Bricks which need a RNG to initialize.
+    """A mixin class for Bricks which need random number generators.
 
     Parameters
     ----------
     rng : object
         A ``numpy.RandomState`` instance.
+    theano_rng : object
+        A ``tensor.shared_randomstreams.RandomStreams`` instance.
 
     Attributes
     ----------
     rng : object
-        If the RNG has been set, return it. Otherwise, return a RNG with a
+        If a RNG has been set, return it. Otherwise, return a RNG with a
         default seed which can be set at a module level using
         ``blocks.bricks.DEFAULT_SEED = seed``.
+    theano_rng : object
+        If a RandomStreams was given in the constructor, return it.
+        Otherwise, return one seeded with ``blocks.bricks.DEFAULT_SEED``.
 
     """
-    def __init__(self, rng=None, **kwargs):
-        self.rng = rng
+    def __init__(self, rng=None, theano_rng=None, **kwargs):
         super(DefaultRNG, self).__init__(**kwargs)
+        update_instance(self, locals())
 
     @property
     def rng(self):
@@ -667,6 +681,17 @@ class DefaultRNG(Brick):
     @rng.setter
     def rng(self, rng):
         self._rng = rng
+
+    @property
+    def theano_rng(self):
+        if getattr(self, '_rng', None) is not None:
+            return self._rng
+        else:
+            return tensor.shared_randomstreams.RandomStreams(DEFAULT_SEED)
+
+    @theano_rng.setter
+    def theano_rng(self, theano_rng):
+        self._theano_rng = theano_rng
 
 
 class Linear(DefaultRNG):
