@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import numpy
 import argparse
 import logging
@@ -91,7 +93,7 @@ def main():
         LinearReadout(readout_dim=num_states, source_names=["states"],
                       emitter=SoftmaxEmitter(name="emitter"),
                       feedbacker=LookupFeedback(
-                        num_states, feedback_dim, name='feedback'),
+                          num_states, feedback_dim, name='feedback'),
                       name="readout"),
         transition,
         weights_init=IsotropicGaussian(0.01), biases_init=Constant(0),
@@ -99,9 +101,9 @@ def main():
     generator.allocate()
     logger.debug("Parameters:\n" +
                  pprint.pformat(
-                    [(key, value.get_value().shape) for key, value
-                     in Selector(generator).get_params().items()],
-                    width=120))
+                     [(key, value.get_value().shape) for key, value
+                      in Selector(generator).get_params().items()],
+                     width=120))
 
     if args.mode == "train":
         rng = numpy.random.RandomState(1)
@@ -126,18 +128,19 @@ def main():
         states, outputs, costs = [data[:, 0] for data in sample()]
 
         numpy.set_printoptions(precision=3, suppress=True)
-        print "Generation cost:\n{}".format(costs.sum())
+        print("Generation cost:\n{}".format(costs.sum()))
 
         freqs = numpy.bincount(outputs).astype(floatX)
         freqs /= freqs.sum()
-        print "Frequencies:\n {} vs {}".format(freqs, ChainIterator.equilibrium)
+        print("Frequencies:\n {} vs {}".format(freqs,
+                                               ChainIterator.equilibrium))
 
         trans_freqs = numpy.zeros((num_states, num_states), dtype=floatX)
         for a, b in zip(outputs, outputs[1:]):
             trans_freqs[a, b] += 1
         trans_freqs /= trans_freqs.sum(axis=1)[:, None]
-        print "Transition frequencies:\n{}\nvs\n{}".format(
-            trans_freqs, ChainIterator.trans_prob)
+        print("Transition frequencies:\n{}\nvs\n{}".format(
+            trans_freqs, ChainIterator.trans_prob))
     else:
         assert False
 

@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import argparse
 import logging
 import inspect
@@ -199,7 +201,7 @@ def main():
 
         desired = numpy.array([function(*(list(param_values) + [T]))
                                for T in range(args.steps)])
-        print "MSE: {}".format(((actual - desired) ** 2).sum())
+        print("MSE: {}".format(((actual - desired) ** 2).sum()))
 
         pyplot.plot(numpy.hstack([actual[:, None], desired[:, None]]))
         pyplot.show()

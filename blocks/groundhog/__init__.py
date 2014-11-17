@@ -126,7 +126,7 @@ class GroundhogState(object):
         self.seed = 1
 
         # Early stopping
-        self.cost_threshold = 10 ** 3 # effectively disables early stopping
+        self.cost_threshold = 10 ** 3  # effectively disables early stopping
         self.patience = 1
         self.divide_lr = False
         self.minerr = -1
