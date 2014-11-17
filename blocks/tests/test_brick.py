@@ -188,6 +188,7 @@ def test_tagging():
 
 
 def test_apply_not_child():
+    Brick.lazy = True
     child = TestBrick()
     parent = ParentBrick(child)
     parent.children = []

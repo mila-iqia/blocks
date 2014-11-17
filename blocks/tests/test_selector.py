@@ -58,7 +58,7 @@ def test_selector():
 
     assert s2.select("/t2/b2.V")[0] == b2.params[0]
 
-    params = s1.get_params().items()
+    params = list(s1.get_params().items())
     assert params[0][0] == "/t1/b1.V"
     assert params[0][1] == b1.params[0]
     assert params[1][0] == "/t1/b1.W"
