@@ -249,3 +249,22 @@ def repr_attrs(instance, *attrs):
                                            for attr in attrs])
     repr_template += '>'
     return repr_template.format(instance, id(instance))
+
+
+def update_instance(self, kwargs, ignore=True):
+    """Set attributes of an instance from a dictionary.
+
+    Parameters
+    ----------
+    self : object
+        The instance on which to set the attributes and values given.
+    kwargs : dict
+        A dictionary with attributes and their values as keys and values.
+    ignore : bool
+        If ``True`` then ignore the keys ``self``, ``args`` and ``kwargs``.
+        Is ``True`` by default.
+
+    """
+    for key, value in kwargs.items():
+        if ignore and key not in ['self', 'args', 'kwargs']:
+            setattr(self, key, value)

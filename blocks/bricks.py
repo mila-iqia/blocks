@@ -10,7 +10,7 @@ import numpy as np
 from theano import tensor
 
 from blocks.utils import (pack, repr_attrs, reraise_as, shared_floatx_zeros,
-                          unpack)
+                          unpack, update_instance)
 
 INPUT_SUFFIX = '_input'
 OUTPUT_SUFFIX = '_output'
@@ -145,21 +145,23 @@ class Brick(object):
     By default, bricks have lazy initialization enabled.
 
     >>> import theano
-    ... from blocks.initialization import IsotropicGaussian, Constant
-    ... linear = Linear(input_dim=5, weights_init=IsotropicGaussian(),
+    >>> from blocks.initialization import IsotropicGaussian, Constant
+    >>> linear = Linear(input_dim=5, output_dim=3,
+    ...                 weights_init=IsotropicGaussian(),
     ...                 biases_init=Constant(0))
-    ... x = theano.tensor.vector()
-    ... linear.apply(x)  # Calls linear.allocate() automatically
-    ... linear.output_dim = 3
-    ... linear.initialize()  # Initializes the weight matrix
+    >>> x = theano.tensor.vector()
+    >>> linear.apply(x)  # Calls linear.allocate() automatically
+    linear_output
+    >>> linear.initialize()  # Initializes the weight matrix
 
     In simple cases, eager bricks are easier to deal with.
 
     >>> from blocks.initialization import IsotropicGaussian, Constant
-    ... Brick.lazy = False
-    ... linear = Linear(5, 3, weights_init=IsotropicGaussian(),
+    >>> Brick.lazy = False
+    >>> linear = Linear(5, 3, weights_init=IsotropicGaussian(),
     ...                 biases_init=Constant(0))
-    ... linear.apply(x)
+    >>> linear.apply(x)
+    linear_output
 
     """
     __metaclass__ = ABCMeta
@@ -361,11 +363,11 @@ def lazy(func):
 
     Examples
     --------
-
+    >>> from __future__ import print_function
     >>> class SomeBrick(Brick):
     ...     @lazy
     ...     def __init__(self, a, b, c='c', d=None):
-    ...         print a, b, c, d
+    ...         print(a, b, c, d)
     >>> brick = SomeBrick('a')
     a None c None
     >>> brick = SomeBrick(d='d', b='b')
@@ -702,8 +704,7 @@ class Linear(DefaultRNG):
     @lazy
     def __init__(self, input_dim, output_dim, weights_init,
                  biases_init=None, use_bias=True, **kwargs):
-        self.__dict__.update(locals())
-        del self.self
+        update_instance(self, locals())
         super(Linear, self).__init__(**kwargs)
 
     def _allocate(self):
@@ -807,8 +808,9 @@ class MLP(DefaultRNG):
     configuration to the child layers manually before initialization.
 
     >>> from blocks.initialization import IsotropicGaussian, Constant
-    >>> mlp = MLP([Tanh(), None], [30, 20, 10],
-    ...           IsotropicGaussian(), Constant(0))
+    >>> Brick.lazy = True
+    >>> mlp = MLP(activations=[Tanh(), None], dims=[30, 20, 10],
+    ...           weights_init=IsotropicGaussian(), biases_init=Constant(1))
     >>> mlp.push_initialization_config()  # Configure children
     >>> mlp.children[0].weights_init = IsotropicGaussian(0.1)
     >>> mlp.initialize()
@@ -826,8 +828,7 @@ class MLP(DefaultRNG):
                           if activation is not None])
         if not dims:
             dims = [None] * (len(activations) + 1)
-        self.__dict__.update(locals())
-        del self.self
+        update_instance(self, locals())
 
     def _push_allocation_config(self):
         assert len(self.dims) - 1 == len(self.linear_transformations)
