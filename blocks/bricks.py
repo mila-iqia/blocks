@@ -10,7 +10,7 @@ import numpy as np
 from theano import tensor
 
 from blocks.utils import (pack, repr_attrs, reraise_as, shared_floatx_zeros,
-                          unpack)
+                          unpack, update_instance)
 
 INPUT_SUFFIX = '_input'
 OUTPUT_SUFFIX = '_output'
@@ -692,8 +692,7 @@ class Linear(DefaultRNG):
     @lazy
     def __init__(self, input_dim, output_dim, weights_init,
                  biases_init=None, use_bias=True, **kwargs):
-        self.__dict__.update(locals())
-        del self.self
+        update_instance(self, locals())
         super(Linear, self).__init__(**kwargs)
 
     def _allocate(self):
@@ -817,8 +816,7 @@ class MLP(DefaultRNG):
                           if activation is not None])
         if not dims:
             dims = [None] * (len(activations) + 1)
-        self.__dict__.update(locals())
-        del self.self
+        update_instance(self, locals())
 
     def _push_allocation_config(self):
         assert len(self.dims) - 1 == len(self.linear_transformations)
