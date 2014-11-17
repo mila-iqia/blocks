@@ -194,6 +194,11 @@ def test_apply_not_child():
     assert_raises(ValueError, parent.apply, tensor.matrix())
 
 
+def test_request_unknown_dimension():
+    brick = TestBrick()
+    assert_raises(ValueError, brick.dimension, 'unknown')
+
+
 def test_application():
     Brick.lazy = True
     brick = TestBrick()

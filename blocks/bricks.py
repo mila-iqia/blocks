@@ -337,6 +337,18 @@ class Brick(object):
         """
         pass
 
+    def dimension(self, name):
+        """Get dimension of an input/output variable of a brick.
+
+        Parameters
+        ----------
+        name : str
+            The name of the variable.
+
+        """
+        raise ValueError("No dimension information for {} available"
+                         .format(name))
+
 
 def lazy(func):
     """Makes the initialization lazy.
