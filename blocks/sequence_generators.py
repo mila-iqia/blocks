@@ -286,7 +286,7 @@ class AbstractAttentionTransition(Brick):
         pass
 
     @abstractmethod
-    def initial_state(self, name, batch_size, **kwargs):
+    def initial_state(self, name, batch_size, *args, **kwargs):
         pass
 
 

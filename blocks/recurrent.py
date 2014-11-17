@@ -132,11 +132,13 @@ def recurrent(*args, **kwargs):
                             batch_size, dim)
                     elif isinstance(kwargs[state_name], Application):
                         kwargs[state_name] = \
-                            kwargs[state_name](state_name, batch_size)
+                            kwargs[state_name](state_name, batch_size,
+                                               *args, **kwargs)
                 else:
                     # TODO init_func returns 2D-tensor, fails for iterate=False
                     kwargs[state_name] = \
-                            brick.initial_state(state_name, batch_size)
+                            brick.initial_state(state_name, batch_size,
+                                                *args, **kwargs)
             states_given = only_given(application.states)
             assert len(states_given) == len(application.states)
 
