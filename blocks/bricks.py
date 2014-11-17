@@ -344,8 +344,6 @@ class Brick(object):
             The name of the variable.
 
         """
-        if hasattr(self, '_dims') and name in self._dims:
-            return self._dims[name]
         raise ValueError("No dimension information for {} available"
                          .format(name))
 

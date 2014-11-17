@@ -220,12 +220,16 @@ class Recurrent(DefaultRNG):
         self.__dict__.update(locals())
         del self.self
         del self.kwargs
-        self._dims = {state: dim for state in self.apply.states}
         self.children = [activation]
 
     @property
     def W(self):
         return self.params[0]
+
+    def dimension(self, name):
+        if name in ['state']:
+            return self.dim
+        return super(Recurrent, self).dimension()
 
     def _allocate(self):
         self.params.append(shared_floatx_zeros((self.dim, self.dim)))
@@ -312,7 +316,6 @@ class GatedRecurrent(DefaultRNG):
         self.__dict__.update(locals())
         del self.self
         del self.kwargs
-        self._dims = {'inps': dim, 'states': dim}
         self.children = [activation, gate_activation]
 
     @property
@@ -326,6 +329,11 @@ class GatedRecurrent(DefaultRNG):
     @property
     def state_to_reset(self):
         return self.params[2]
+
+    def dimension(self, name):
+        if name in ['states']:
+            return self.dim
+        return super(GatedRecurrent, self).dimension(name)
 
     def _allocate(self):
         new_param = lambda: shared_floatx_zeros((self.dim, self.dim))
