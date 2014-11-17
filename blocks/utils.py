@@ -256,6 +256,8 @@ def update_instance(self, kwargs, ignore=True):
 
     Parameters
     ----------
+    self : object
+        The instance on which to set the attributes and values given.
     kwargs : dict
         A dictionary with attributes and their values as keys and values.
     ignore : bool
