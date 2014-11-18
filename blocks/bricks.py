@@ -14,10 +14,7 @@ from theano import tensor
 from blocks.utils import (pack, repr_attrs, reraise_as, shared_floatx_zeros,
                           unpack, update_instance)
 
-INPUT_SUFFIX = '_input'
-OUTPUT_SUFFIX = '_output'
 DEFAULT_SEED = [2014, 10, 5]
-PARAM_OWNER_TAG = 'param_owner'
 
 logger = logging.getLogger(__name__)
 
@@ -436,6 +433,8 @@ class Application(object):
         self.delegate_method = None
 
     _last_brick_applied = None
+    INPUT_VARIABLE = 'input'
+    OUTPUT_VARIABLE = 'output'
 
     def __call__(self, *inputs, **kwargs):
         """Wraps an application method.
@@ -469,21 +468,31 @@ class Application(object):
         return_list = kwargs.pop('return_list', False)
         assert not return_list or not return_dict
 
+        arg_names, varargs_name, _1, _2 = inspect.getargspec(self.application_method)
+        arg_names = arg_names[1:]
+
+        def tag_variable(variable, role, name):
+            variable.name = "{}_{}_{}".format(self.brick.name, self.__name__, name)
+            variable.tag.owner = self.brick
+            variable.tag.application = self
+            variable.tag.name = name
+            variable.tag.role = role
+
         if not self.brick.allocated:
             self.brick.allocate()
         if not self.brick.initialized and not self.brick.lazy:
             self.brick.initialize()
         inputs = list(inputs)
         for i, inp in enumerate(inputs):
+            name = (arg_names[i] if i < len(arg_names) else
+                    "{}_{}".format(varargs_name, i - len(arg_names)))
             if isinstance(inp, tensor.Variable):
                 inputs[i] = inp.copy()
-                inputs[i].tag.owner = self.brick
-                inputs[i].name = self.brick.name + INPUT_SUFFIX
+                tag_variable(inputs[i], Application.INPUT_VARIABLE, name)
         for key, value in kwargs.items():
             if isinstance(value, tensor.Variable):
                 kwargs[key] = value.copy()
-                kwargs[key].tag.owner = self.brick
-                kwargs[key].name = self.brick.name + INPUT_SUFFIX
+                tag_variable(kwargs[key], Application.INPUT_VARIABLE, key)
         Application._last_brick_applied = self.brick
         try:
             outputs = self.application_method(self.brick, *inputs, **kwargs)
@@ -492,11 +501,14 @@ class Application(object):
         # TODO allow user to return an OrderedDict
         outputs = pack(outputs)
         for i, output in enumerate(outputs):
+            try:
+                name = self.outputs[i]
+            except:
+                name = "output_{}".format(i)
             if isinstance(output, tensor.Variable):
                 # TODO Tag with dimensions, axes, etc. for error-checking
                 outputs[i] = output.copy()
-                outputs[i].tag.owner = self.brick
-                outputs[i].name = self.brick.name + OUTPUT_SUFFIX
+                tag_variable(outputs[i], Application.OUTPUT_VARIABLE, name)
         if return_list:
             return outputs
         if return_dict:
