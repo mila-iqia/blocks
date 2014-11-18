@@ -1,4 +1,5 @@
 import inspect
+from collections import OrderedDict
 
 import theano
 from theano import tensor
@@ -103,8 +104,9 @@ def recurrent(*args, **kwargs):
 
             # Check what is given and what is not
             def only_given(arg_names):
-                return {arg_name: kwargs[arg_name] for arg_name in arg_names
-                        if arg_name in kwargs}
+                return OrderedDict((arg_name, kwargs[arg_name])
+                                   for arg_name in arg_names
+                                   if arg_name in kwargs)
             sequences_given = only_given(application.sequences)
             contexts_given = only_given(application.contexts)
 
