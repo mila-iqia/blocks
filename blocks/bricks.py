@@ -3,6 +3,7 @@
 This defines the basic interface of bricks.
 """
 import inspect
+import functools
 import logging
 from abc import ABCMeta
 from collections import OrderedDict
@@ -426,6 +427,7 @@ class Application(object):
     """
     def __init__(self, application_method):
         self.application_method = application_method
+        functools.update_wrapper(self, application_method)
         self.f = {}
         self.delegate_method = None
 
@@ -538,7 +540,10 @@ class Application(object):
         will lose the signature of the application method.
 
         """
-        self.application_method = wrapper(self, self.application_method)
+        new_application_method = wrapper(self, self.application_method)
+        functools.update_wrapper(new_application_method,
+                                 self.application_method)
+        self.application_method = new_application_method
         return self
 
     def property(self, label):
