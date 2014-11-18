@@ -15,15 +15,16 @@ except:
     pass  # TODO matplotlib as dependency?
 from theano import tensor
 
-from blocks.bricks import Brick, GatedRecurrent, Identity, Tanh, MLP
+from blocks.bricks import Brick, Identity, Tanh, MLP, lazy, application
+from blocks.recurrent import recurrent, GatedRecurrent
 from blocks.select import Selector
 from blocks.graph import Cost
 from blocks.sequence_generators import (
-    SequenceGenerator, LinearReadout, TrivialEmitter)
+    SequenceGenerator, LinearReadout, TrivialEmitter, Fork)
 from blocks.initialization import Orthogonal, IsotropicGaussian, Constant
 from blocks.groundhog import GroundhogIterator, GroundhogState, GroundhogModel
 from blocks.serialization import load_params
-from blocks.utils import update_instance
+from blocks.utils import update_instance, dict_union
 
 floatX = theano.config.floatX
 logger = logging.getLogger()
@@ -37,31 +38,28 @@ class AddParameters(Brick):
     (e.g. it can be a part of Encoder-Decoder translation model.
 
     """
-    @Brick.lazy_method
+    @lazy
     def __init__(self, transition, num_params, params_name,
                  weights_init, biases_init, **kwargs):
         super(AddParameters, self).__init__(**kwargs)
         update_instance(self, locals())
 
-        signature = self.transition.apply.signature()
-        self.input_names = signature.forkable_input_names
-        self.state_name = signature.state_names[0]
-        assert len(signature.state_names) == 1
+        self.input_names = [name for name in transition.apply.sequences
+                            if name != 'mask']
+        self.state_name = transition.apply.states[0]
+        assert len(transition.apply.states) == 1
 
-        self.adders = [MLP([Identity()], name="add_{}".format(input_name))
-                       for input_name in self.input_names]
+        self.fork = Fork(self.input_names)
         # Could be also several init bricks, one for each of the states
         self.init = MLP([Identity()], name="init")
-        self.children = [self.transition] + self.adders + [self.init]
+        self.children = [self.transition, self.fork, self.init]
 
     def _push_allocation_config(self):
-        signature = self.transition.apply.signature()
-        for adder, input_name in zip(self.adders, self.input_names):
-            adder.dims[0] = self.num_params
-            adder.dims[-1] = signature.dims[input_name]
+        self.fork.input_dim = self.num_params
+        self.fork.fork_dims = {name: self.transition.get_dim(name)
+                               for name in self.input_names}
         self.init.dims[0] = self.num_params
-        self.init.dims[-1] = signature.dims[signature.state_names[0]]
-        assert len(signature.state_names) == 1
+        self.init.dims[-1] = self.transition.get_dim(self.state_name)
 
     def _push_initialization_config(self):
         for child in self.children:
@@ -70,26 +68,34 @@ class AddParameters(Brick):
             if self.biases_init:
                 child.biases_init = self.biases_init
 
-    @Brick.apply_method
+    @application
     def apply(self, **kwargs):
         inputs = {name: kwargs.pop(name) for name in self.input_names}
         params = kwargs.pop("params")
-        for name, adder in zip(self.input_names, self.adders):
-            inputs[name] = inputs[name] + adder.apply(params)
+        forks = self.fork.apply(params, return_dict=True)
+        for name in self.input_names:
+            inputs[name] = inputs[name] + forks[name]
         kwargs.update(inputs)
+        if kwargs.get('iterate'):
+            kwargs[self.state_name] = self.initial_state(None, params=params)
         return self.transition.apply(**kwargs)
 
-    @apply.signature_method
-    def apply_signature(self, **kwargs):
-        signature = self.transition.apply.signature()
-        signature.context_names.append(self.params_name)
-        signature.state_init_funcs[self.state_name] = self.initialize_state
-        signature.dims[self.params_name] = self.num_params
-        return signature
+    @apply.delegate
+    def apply_delegate(self):
+        return self.transition.apply
 
-    @Brick.apply_method
-    def initialize_state(self, *args, **kwargs):
-        return self.init.apply(kwargs[self.params_name])
+    @apply.property('contexts')
+    def apply_contexts(self):
+        return [self.params_name] + self.transition.apply.contexts
+
+    @application
+    def initial_state(self, batch_size, *args, **kwargs):
+        return self.init.apply(kwargs['params'])
+
+    def get_dim(self, name):
+        if name == 'params':
+            return self.num_params
+        return self.transition.get_dim(name)
 
 
 class SeriesIterator(GroundhogIterator):
@@ -147,7 +153,7 @@ def main():
     num_params = len(inspect.getargspec(function).args) - 1
 
     class Emitter(TrivialEmitter):
-        @Brick.apply_method
+        @application
         def cost(self, readouts, outputs):
             """Compute MSE."""
             return ((readouts - outputs) ** 2).sum(axis=readouts.ndim - 1)
@@ -176,7 +182,8 @@ def main():
 
         cost = Cost(generator.cost(tensor.tensor3('x'),
                                    params=tensor.matrix("params")).sum())
-        cost.apply_noise(cost.inputs, args.input_noise)
+        if args.input_noise:
+            cost.apply_noise(cost.inputs, args.input_noise)
 
         gh_model = GroundhogModel(generator, cost)
         state = GroundhogState(args.prefix, batch_size,
@@ -184,19 +191,19 @@ def main():
         data = SeriesIterator(rng, function, 100, batch_size)
         trainer = SGD(gh_model, state, data)
         main_loop = MainLoop(data, None, None, gh_model, trainer, state, None)
+        main_loop.load()
         main_loop.main()
     elif args.mode == "plot":
         load_params(generator,  args.prefix + "model.npz")
 
         params = tensor.matrix("params")
         sample = theano.function([params], generator.generate(
-            params=params, n_steps=args.steps, batch_size=1, iterate=True))
+            params=params, n_steps=args.steps, batch_size=1))
 
         param_values = numpy.array(map(float, args.params.split()),
                                    dtype=floatX)
-        states, outputs, costs = sample(param_values[None, :])
+        states, outputs, _ = sample(param_values[None, :])
         actual = outputs[:, 0, 0]
-
         desired = numpy.array([function(*(list(param_values) + [T]))
                                for T in range(args.steps)])
         print("MSE: {}".format(((actual - desired) ** 2).sum()))

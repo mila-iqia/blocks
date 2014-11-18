@@ -206,7 +206,7 @@ class BaseSequenceGenerator(Brick):
                        if self.fork else {'feedback': next_feedback})
         next_states = self.transition.apply(
             return_list=True, iterate=False,
-            **dict_union(next_inputs, states, glimpses, contexts))
+            **dict_union(next_inputs, states, next_glimpses, contexts))
         return (next_states + [next_outputs]
                 + list(next_glimpses.values()) + [next_costs])
 
@@ -548,10 +548,9 @@ class FakeAttentionTransition(AbstractAttentionTransition):
             if self.biases_init:
                 child.biases_init = self.biases_init
 
-    @recurrent
+    @application
     def apply(self, *args, **kwargs):
-        return self.transition.apply(*args,
-                                     **dict_union(kwargs, iterate=False))
+        return self.transition.apply(*args, **kwargs)
 
     @apply.delegate
     def apply_delegate(self):
