@@ -61,10 +61,12 @@ class TestRecurrent(unittest.TestCase):
 class TestGatedRecurrent(unittest.TestCase):
     def setUp(self):
         self.gated = GatedRecurrent(
-            dim=3, weights_init=Constant(2), activation=Tanh())
+            dim=3, weights_init=Constant(2),
+            activation=Tanh(), gate_activation=Tanh())
         self.gated.initialize()
         self.reset_only = GatedRecurrent(
-            dim=3, weights_init=IsotropicGaussian(), activation=Tanh(),
+            dim=3, weights_init=IsotropicGaussian(),
+            activation=Tanh(), gate_activation=Tanh(),
             use_update_gate=False, rng=numpy.random.RandomState(1))
         self.reset_only.initialize()
 

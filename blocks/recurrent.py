@@ -6,7 +6,7 @@ from theano import tensor
 
 from blocks.bricks import (
     Application, application_wrapper,
-    DefaultRNG, Identity, lazy, Tanh)
+    DefaultRNG, Identity, Sigmoid, lazy)
 from blocks.initialization import Constant, NdarrayInitialization
 from blocks.utils import pack, shared_floatx_zeros, update_instance
 
@@ -106,7 +106,7 @@ def recurrent(*args, **kwargs):
             def only_given(arg_names):
                 return OrderedDict((arg_name, kwargs[arg_name])
                                    for arg_name in arg_names
-                                   if arg_name in kwargs)
+                                   if kwargs.get(arg_name))
             sequences_given = only_given(application.sequences)
             contexts_given = only_given(application.contexts)
 
@@ -344,7 +344,7 @@ class GatedRecurrent(BaseRecurrent, DefaultRNG):
         if not activation:
             activation = Identity()
         if not gate_activation:
-            gate_activation = Tanh()
+            gate_activation = Sigmoid()
 
         update_instance(self, locals())
         self.children = [activation, gate_activation]
@@ -367,10 +367,11 @@ class GatedRecurrent(BaseRecurrent, DefaultRNG):
         return super(GatedRecurrent, self).get_dim(name)
 
     def _allocate(self):
-        new_param = lambda: shared_floatx_zeros((self.dim, self.dim))
-        self.params.append(new_param())
-        self.params.append(new_param() if self.use_update_gate else None)
-        self.params.append(new_param() if self.use_reset_gate else None)
+        new_param = lambda name: shared_floatx_zeros((self.dim, self.dim),
+                                                     name=name)
+        self.params.append(new_param('s2s'))
+        self.params.append(new_param('s2u') if self.use_update_gate else None)
+        self.params.append(new_param('s2r') if self.use_reset_gate else None)
 
     def _initialize(self):
         self.weights_init.initialize(self.state_to_state, self.rng)
