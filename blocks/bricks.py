@@ -468,11 +468,13 @@ class Application(object):
         return_list = kwargs.pop('return_list', False)
         assert not return_list or not return_dict
 
-        arg_names, varargs_name, _1, _2 = inspect.getargspec(self.application_method)
+        arg_names, varargs_name, _1, _2 = inspect.getargspec(
+            self.application_method)
         arg_names = arg_names[1:]
 
         def tag_variable(variable, role, name):
-            variable.name = "{}_{}_{}".format(self.brick.name, self.__name__, name)
+            variable.name = "{}_{}_{}".format(self.brick.name, self.__name__,
+                                              name)
             variable.tag.owner = self.brick
             variable.tag.application = self
             variable.tag.name = name
