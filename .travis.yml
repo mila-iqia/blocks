@@ -1,7 +1,6 @@
 language: python
 python:
   - "2.7"
-  - "3.4"
 env:
   - FLAKE8
   - FLOATX=float32
@@ -21,6 +20,7 @@ install:
   - pip install -q coveralls
 script:
   - if [ ${FLAKE8+1} ]; then flake8 blocks; fi
-  - if [ ${FLOATX+1} ]; then THEANO_FLAGS=floatX=$FLOATX,blas.ldflags='-lblas -lgfortran' coverage run --parallel-mode --source=blocks -m nose2.__main__; fi
+  - if [ $FLOATX = float32 ]; then THEANO_FLAGS=floatX=$FLOATX,blas.ldflags='-lblas -lgfortran' coverage run --source=blocks -m nose2.__main__ blocks.tests.test_brick; fi
+  - if [ $FLOATX = float64 ]; then THEANO_FLAGS=floatX=$FLOATX,blas.ldflags='-lblas -lgfortran' coverage run --source=blocks -m nose2.__main__ blocks.tests.test_rnn; fi
 after_script:
   - coveralls
