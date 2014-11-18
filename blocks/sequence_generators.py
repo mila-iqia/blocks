@@ -21,46 +21,49 @@ class BaseSequenceGenerator(Brick):
 
     This class combines two components, a readout network and an
     attention-equipped recurrent transition, into a context-dependent
-    sequence generator. The generation algorithm description follows.
+    sequence generator. Optionally a third component can be used which forks
+    feedback from the readout network to obtain inputs for the transition.
 
-    *Definitions:*
+    **Definitions:**
 
-    * states of the generator are the states of the transition as specified
-      by its `apply` method signature
+    * *States* of the generator are the states of the transition as specified
+      in `transition.state_names`.
 
-    * contexts of the generator are the contexts of the transition as specified
-      in its `apply` method signature
+    * *Contexts* of the generator are the contexts of the transition as
+      specified in `transition.context_names`.
 
-    * glimpses are intermediate entities computed from the states, the contexts
-      and the previous step glimpses. They are computed by in the transition's
-      `apply` method when not given or by explicitly calling the transition's
-      `take_look` method. The output names of `take_look` specify the set of
-      glimpses taken by the generator.
+    * *Glimpses* are intermediate entities computed at every generation step
+      from states, contexts and the previous step glimpses. They are computed
+      in the transition's `apply` method when not given or by explicitly
+      calling the transition's `take_look` method. The set of glimpses
+      considered is specified in `transition.glimpse_names`.
 
-    *Algorithm:*
+    The generation algorithm description follows.
 
-    0. The initial states are computed from the contexts. The transition
-       signature is assumed to contain the initialization logic. Fake previous
-       outputs and fake previous glimpses are created using `initial_outputs`
-       and `initial_glimpses` methods of the readout and the transition
-       respectively.
+    **Algorithm:**
 
-    1. Given the contexts, the current state and glimpses from the previous
+    0. The initial states are computed from the contexts. This includes fake
+       initial outputs given by the `initial_outputs` method of the readout,
+       initial states and glimpses given by the `initial_state` method of the
+       transition.
+
+    1. Given the contexts, the current state and the glimpses from the previous
        step the attention mechanism hidden in the transition produces current
        step glimpses. This happens in the `take_look` method of the transition.
 
-    2. Using the contexts, the fed back output from the previous step,
-       the current states and glimpses, the readout brick is used to generate
-       the new output by calling its `readout` and `emit` methods.
+    2. Using the contexts, the fed back output from the previous step, the
+       current states and glimpses, the readout brick is used to generate the
+       new output by calling its `readout` and `emit` methods.
 
     3. The new output is fed back in the `feedback` method of the readout
-       brick. This feedback, together with the contexts, the glimpses and
-       the previous states is used to get the new states in the transition's
-       `apply` method.
+       brick. This feedback, together with the contexts, the glimpses and the
+       previous states is used to get the new states in the transition's
+       `apply` method. Optionally the `fork` brick is used in between to
+       compute the transition's inputs from the feedback.
 
-    4. Back to step 1, if desired sequence length is not yet reached.
+    4. Back to step 1 if desired sequence length is not yet reached.
 
-    *Notes:*
+    **Notes:**
 
     * For machine translation we would have only one glimpse: the weighted
       average of the annotations.
@@ -70,14 +73,16 @@ class BaseSequenceGenerator(Brick):
 
     Parameters
     ----------
-        readout : a subclass of AbstractReadout
-            The readout component of the sequence generator.
-        transition : a subclass of AbstractAttentionTransition
-            The transition component of the sequence generator.
+    readout : instance of :class:`AbstractReadout`
+        The readout component of the sequence generator.
+    transition : instance of :class:`AbstractAttentionTransition`
+        The transition component of the sequence generator.
+    fork : :class:`Brick`
+        The brick to compute the transition's inputs from the feedback.
 
     """
     @lazy
-    def __init__(self, readout, fork, transition,
+    def __init__(self, readout, transition, fork=None,
                  weights_init=None, biases_init=None, **kwargs):
         super(BaseSequenceGenerator, self).__init__(**kwargs)
         update_instance(self, locals())
@@ -119,7 +124,7 @@ class BaseSequenceGenerator(Brick):
         """Returns generation costs for output sequences.
 
         Parameters
-        1----------
+        ----------
         outputs : Theano variable
             The 3(2) dimensional tensor containing output sequences.
             The dimension 0 must stand for time, the dimension 1 for the
@@ -184,7 +189,6 @@ class BaseSequenceGenerator(Brick):
             as keyword arguments.
 
         """
-
         states = {name: kwargs[name] for name in self.state_names}
         contexts = {name: kwargs[name] for name in self.context_names}
         glimpses = {name: kwargs[name] for name in self.glimpse_names}
@@ -238,6 +242,7 @@ class BaseSequenceGenerator(Brick):
 
 
 class AbstractEmitter(Brick):
+    """The interface for the emitter component of a readout."""
 
     @abstractmethod
     def emit(self, readouts):
@@ -253,6 +258,7 @@ class AbstractEmitter(Brick):
 
 
 class AbstractFeedback(Brick):
+    """The interface for the feedback component of a readout."""
 
     @abstractmethod
     def feedback(self, outputs):
@@ -260,9 +266,11 @@ class AbstractFeedback(Brick):
 
 
 class AbstractReadout(AbstractEmitter, AbstractFeedback):
-    """A base class for a readout component of a sequence generator.
+    """The interface for the readout component of a sequence generator.
 
-    Yields outputs combining information from multiple sources.
+    .. todo::
+
+       Explain what the methods should do.
 
     """
     @abstractmethod
@@ -290,10 +298,21 @@ class AbstractAttentionTransition(Brick):
 
 
 class Readout(AbstractReadout):
-    """Readout brick with separated emitting and feedback parts."""
+    """Readout brick with separated emitting and feedback parts.
 
+    Parameters
+    ----------
+    readout_dim : int
+        The dimension of the readout.
+    emitter : an instance of :class:`AbstractEmitter`
+        The emitter component.
+    feedbacker : an instance of :class:`AbstractFeedback`
+        The feedback component.
+
+    """
     @lazy
-    def __init__(self, readout_dim, emitter=None, feedbacker=None, **kwargs):
+    def __init__(self, readout_dim=None, emitter=None, feedbacker=None,
+                 **kwargs):
         super(Readout, self).__init__(**kwargs)
 
         if not emitter:
@@ -340,7 +359,7 @@ class LinearReadout(Readout):
     Parameters
     ----------
     readout_dim : int
-        The dimensionality of the readout.
+        The dimension of the readout.
     source_names : list of strs
         The names of information sources.
 
@@ -379,7 +398,14 @@ class LinearReadout(Readout):
 
 
 class TrivialEmitter(AbstractEmitter):
+    """An emitter for the trivial case when readouts are outputs.
 
+    Parameters
+    ----------
+    readout_dim : int
+        The dimension of the readout.
+
+    """
     @lazy
     def __init__(self, readout_dim, **kwargs):
         super(TrivialEmitter, self).__init__(**kwargs)
@@ -400,6 +426,12 @@ class TrivialEmitter(AbstractEmitter):
 
 
 class SoftmaxEmitter(AbstractEmitter, DefaultRNG):
+    """A softmax emitter for the case of integer outputs.
+
+    Interprets readout elements as energies corresponding to their indices.
+
+    """
+
     def _probs(self, readouts):
         shape = readouts.shape
         return tensor.nnet.softmax(readouts.reshape(
@@ -431,6 +463,7 @@ class SoftmaxEmitter(AbstractEmitter, DefaultRNG):
 
 
 class TrivialFeedback(AbstractFeedback):
+    """A feedback brick for the case when readout are outputs."""
 
     @lazy
     def __init__(self, output_dim, **kwargs):
@@ -448,12 +481,19 @@ class TrivialFeedback(AbstractFeedback):
 
 
 class LookupFeedback(AbstractFeedback):
+    """A feedback brick for the case when readout are integers.
 
-    @lazy
-    def __init__(self, num_outputs, feedback_dim, **kwargs):
+    Stores and retrieves distributed representations of integers.
+
+    Notes
+    -----
+        Currently works only with lazy initialization
+        (can not be initialized with a single constructor call).
+
+    """
+    def __init__(self, num_outputs=None, feedback_dim=None, **kwargs):
         super(LookupFeedback, self).__init__(**kwargs)
-        self.num_outputs = num_outputs
-        self.feedback_dim = feedback_dim
+        update_instance(self, locals())
 
         self.lookup = LookupTable(num_outputs, feedback_dim,
                                   kwargs.get("weights_init"))
@@ -482,8 +522,14 @@ class LookupFeedback(AbstractFeedback):
 
 
 class FakeAttentionTransition(AbstractAttentionTransition):
-    """Adds fake attention interface to a transition."""
+    """Adds fake attention interface to a transition.
 
+    Notes
+    -----
+        Currently works only with lazy initialization
+        (can not be initialized with a single constructor call).
+
+    """
     def __init__(self, transition, **kwargs):
         super(FakeAttentionTransition, self).__init__(**kwargs)
         update_instance(self, locals())
@@ -525,8 +571,22 @@ class FakeAttentionTransition(AbstractAttentionTransition):
 
 
 class Fork(Brick):
+    """Forks single input into multiple channels.
 
-    @lazy
+    Parameters
+    ----------
+    fork_names : list of str
+        Names of the channels to fork.
+    prototype : instance of :class:`Brick`
+        A prototype for the input-to-fork transformations. A copy will be
+        created for every output channel.
+
+    Notes
+    -----
+        Currently works only with lazy initialization
+        (can not be initialized with a single constructor call).
+
+    """
     def __init__(self, fork_names, prototype=None, **kwargs):
         super(Fork, self).__init__(**kwargs)
         update_instance(self, locals())
@@ -561,11 +621,29 @@ class Fork(Brick):
 
 
 class SequenceGenerator(BaseSequenceGenerator):
-    """A more user-friendly interface for BaseSequenceGenerator."""
+    """A more user-friendly interface for BaseSequenceGenerator.
 
+    Parameters
+    ----------
+    readout : instance of :class:`AbstractReadout`
+        The readout component for the sequence generator.
+    transition : instance of :class:`BaseRecurrent`
+        The recurrent transition to be used in the sequence generator.
+        Will be combined with `attention`, if that one is given.
+    attention : :class:`Brick`
+        The attention mechanism to be added to `transition`. Can be ``None``,
+        in which case no attention mechanism is used.
+
+    Notes
+    -----
+
+        Currently works only with lazy initialization
+        (uses blocks that can not be constructed with a single call).
+
+    """
     def __init__(self, readout, transition, attention=None,
-                 fork_inputs=None,
-                 weights_init=None, biases_init=None, **kwargs):
+                 fork_inputs=None, weights_init=None, biases_init=None,
+                 **kwargs):
         if attention:
             raise NotImplementedError()
         if not fork_inputs:
