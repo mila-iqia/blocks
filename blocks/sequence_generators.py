@@ -654,4 +654,4 @@ class SequenceGenerator(BaseSequenceGenerator):
         transition = FakeAttentionTransition(transition,
                                              name="with_fake_attention")
         super(SequenceGenerator, self).__init__(
-            readout, fork, transition, weights_init, biases_init, **kwargs)
+            readout, transition, fork, weights_init, biases_init, **kwargs)
