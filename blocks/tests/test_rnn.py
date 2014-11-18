@@ -55,7 +55,7 @@ class TestRecurrent(unittest.TestCase):
             h_val[i] = (mask_val[i - 1, :, None] * h_val[i] +
                         (1 - mask_val[i - 1, :, None]) * h_val[i - 1])
         h_val = h_val[1:]
-        assert_allclose(h_val, calc_h(x_val, mask_val)[0])
+        assert_allclose(h_val, calc_h(x_val, mask_val)[0], rtol=1e-04)
 
 
 class TestGatedRecurrent(unittest.TestCase):
