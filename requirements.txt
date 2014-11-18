@@ -1,3 +1,4 @@
 sphinxcontrib-napoleon
 numpy
 -e git://github.com/Theano/Theano.git#egg=Theano-master
+six
