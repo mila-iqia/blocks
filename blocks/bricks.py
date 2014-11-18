@@ -213,11 +213,7 @@ class Brick(object):
         if not self.allocation_config_pushed:
             self.push_allocation_config()
         for child in self.children:
-            try:
-                child.allocate()
-            except:
-                self.allocation_config_pushed = False
-                raise
+            child.allocate()
         self.params = []
         try:
             self._allocate()
@@ -258,11 +254,7 @@ class Brick(object):
         if not self.initialization_config_pushed:
             self.push_initialization_config()
         for child in self.children:
-            try:
-                child.initialize()
-            except:
-                self.initialization_config_pushed = False
-                raise
+            child.initialize()
         try:
             self._initialize()
         except Exception:
@@ -298,6 +290,12 @@ class Brick(object):
         """
         self._push_allocation_config()
         self.allocation_config_pushed = True
+        for child in self.children:
+            try:
+                child.push_allocation_config()
+            except:
+                self.allocation_config_pushed = False
+                raise
 
     def _push_allocation_config(self):
         """Brick implementation of configuring child before allocation.
@@ -324,6 +322,12 @@ class Brick(object):
         """
         self._push_initialization_config()
         self.initialization_config_pushed = True
+        for child in self.children:
+            try:
+                child.push_initialization_config()
+            except:
+                self.initialization_config_pushed = False
+                raise
 
     def _push_initialization_config(self):
         """Brick implementation of configuring child before initialization.

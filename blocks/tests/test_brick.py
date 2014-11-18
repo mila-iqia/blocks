@@ -52,6 +52,9 @@ class ParentBrick(Brick):
 
 
 class BrokenAllocateBrick(Brick):
+    def _push_allocation_config(self):
+        raise AttributeError
+
     def _allocate(self):
         raise AttributeError
 
