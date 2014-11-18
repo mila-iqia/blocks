@@ -1,7 +1,7 @@
 .. _serialization:
 
-Sequence Generation
-========================
+Serialization
+=============
 
 .. automodule:: blocks.serialization
     :members:

@@ -1,7 +1,7 @@
 .. _graph:
 
-Sequence Generation
-========================
+Computational graph
+===================
 
 .. automodule:: blocks.graph
     :members:

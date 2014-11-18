@@ -15,8 +15,6 @@ Indices and tables
    blocks
    initialization
    utils
-   sequence_generators
    model
    serialization
    graph
-   lookup
