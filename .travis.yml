@@ -3,8 +3,9 @@ python:
   - "2.7"
   - "3.4"
 env:
-  - THEANO_FLAGS=floatX=float32
-  - THEANO_FLAGS=floatX=float64
+  - FLAKE8=true
+  - FLOATX=float32
+  - FLOATX=float64
 before_install:
   - sudo apt-get install -qq libatlas3gf-base libatlas-dev liblapack-dev gfortran
   - wget -q http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
@@ -19,7 +20,7 @@ install:
   - pip install -q nose2[coverage-plugin]
   - pip install -q coveralls
 script:
-  - flake8 blocks
-  - THEANO_FLAGS=$THEANO_FLAGS,blas.ldflags='-lblas -lgfortran' coverage run --source=blocks -m nose2.__main__
+  - if [ $FLAKE8 ]; then flake8 blocks; fi
+  - if [ $FLOATX ]; then THEANO_FLAGS=floatX=$FLOATX,blas.ldflags='-lblas -lgfortran' coverage run --source=blocks -m nose2.__main__; fi
 after_script:
-  - coveralls
+  - if [ ! $FLAKE8 ]; then coveralls; fi
