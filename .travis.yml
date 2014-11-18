@@ -20,7 +20,7 @@ install:
   - pip install -q nose2[coverage-plugin]
   - pip install -q coveralls
 script:
-  - "[ $FLAKE8 ] && flake8 blocks"
-  - "[ $FLOATX ] && THEANO_FLAGS=floatX=$FLOATX,blas.ldflags='-lblas -lgfortran' coverage run --parallel-mode --source=blocks -m nose2.__main__"
+  - if [ ${FLAKE8+1} ]; then flake8 blocks; fi
+  - if [ ${FLOATX+1} ]; then THEANO_FLAGS=floatX=$FLOATX,blas.ldflags='-lblas -lgfortran' coverage run --parallel-mode --source=blocks -m nose2.__main__; fi
 after_script:
   - coveralls
