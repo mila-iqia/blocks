@@ -55,6 +55,7 @@ def test_sequence_generator():
     assert outputs.shape == (n_steps, batch_size, output_dim)
     assert costs.shape == (n_steps, batch_size)
 
+
 def test_integer_sequence_generator():
     # Disclaimer: here we only check shapes, not values.
 

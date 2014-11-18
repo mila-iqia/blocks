@@ -4,10 +4,10 @@ import theano
 from theano import tensor
 
 from blocks.bricks import (
-    Brick, Application, application_wrapper,
+    Application, application_wrapper,
     DefaultRNG, Identity, lazy, Tanh)
 from blocks.initialization import Constant, NdarrayInitialization
-from blocks.utils import pack, shared_floatx_zeros
+from blocks.utils import pack, shared_floatx_zeros, update_instance
 
 
 class BaseRecurrent(object):
@@ -31,7 +31,6 @@ class BaseRecurrent(object):
         dim = self.get_dim(state_name)
         return tensor.alloc(Constant(0).generate(self.rng, (1, dim)),
                             batch_size, dim)
-
 
 
 def recurrent(*args, **kwargs):
@@ -137,8 +136,8 @@ def recurrent(*args, **kwargs):
                 else:
                     # TODO init_func returns 2D-tensor, fails for iterate=False
                     kwargs[state_name] = \
-                            brick.initial_state(state_name, batch_size,
-                                                *args, **kwargs)
+                        brick.initial_state(state_name, batch_size,
+                                            *args, **kwargs)
             states_given = only_given(application.states)
             assert len(states_given) == len(application.states)
 
@@ -159,8 +158,8 @@ def recurrent(*args, **kwargs):
                 kwargs.update(rest_kwargs)
                 return application_method(brick, **kwargs)
             outputs_info = (list(states_given.values())
-                + [None] * (len(application.outputs)
-                            - len(application.states)))
+                            + [None] * (len(application.outputs) -
+                                        len(application.states)))
             result, updates = theano.scan(
                 scan_function, sequences=list(sequences_given.values()),
                 outputs_info=outputs_info,
@@ -175,7 +174,7 @@ def recurrent(*args, **kwargs):
                                       tensor.subtensor.Subtensor)
                     result[i] = result[i].owner.inputs[0]
             if updates:
-                updates.values()[0].owner.tag.updates = updates
+                list(updates.values())[0].owner.tag.updates = updates
             return result
 
         return recurrent_apply
@@ -251,9 +250,7 @@ class Recurrent(BaseRecurrent, DefaultRNG):
         super(Recurrent, self).__init__(**kwargs)
         if activation is None:
             activation = Identity()
-        self.__dict__.update(locals())
-        del self.self
-        del self.kwargs
+        update_instance(self, locals())
         self.children = [activation]
 
     @property
@@ -347,9 +344,7 @@ class GatedRecurrent(BaseRecurrent, DefaultRNG):
         if not gate_activation:
             gate_activation = Tanh()
 
-        self.__dict__.update(locals())
-        del self.self
-        del self.kwargs
+        update_instance(self, locals())
         self.children = [activation, gate_activation]
 
     @property
@@ -457,8 +452,7 @@ class BidirectionalRecurrent(DefaultRNG):
         super(BidirectionalRecurrent, self).__init__(**kwargs)
         if hidden_init is None:
             hidden_init = Constant(0)
-        self.__dict__.update(locals())
-        del self.self
+        update_instance(self, locals())
         self.children = [Recurrent(), Recurrent()]
 
     def _push_allocation_config(self):

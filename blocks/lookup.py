@@ -3,7 +3,8 @@
 from theano import tensor
 
 from blocks.bricks import DefaultRNG, lazy, application
-from blocks.utils import shared_floatx_zeros, check_theano_variable
+from blocks.utils import (shared_floatx_zeros, update_instance,
+                          check_theano_variable)
 
 
 class LookupTable(DefaultRNG):
@@ -21,9 +22,7 @@ class LookupTable(DefaultRNG):
     @lazy
     def __init__(self, length, dim, weights_init, **kwargs):
         super(LookupTable, self).__init__(**kwargs)
-        self.__dict__.update(**locals())
-        del self.self
-        del self.kwargs
+        update_instance(self, locals())
 
     @property
     def W(self):

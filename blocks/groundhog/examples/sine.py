@@ -23,6 +23,7 @@ from blocks.sequence_generators import (
 from blocks.initialization import Orthogonal, IsotropicGaussian, Constant
 from blocks.groundhog import GroundhogIterator, GroundhogState, GroundhogModel
 from blocks.serialization import load_params
+from blocks.utils import update_instance
 
 floatX = theano.config.floatX
 logger = logging.getLogger()
@@ -40,9 +41,7 @@ class AddParameters(Brick):
     def __init__(self, transition, num_params, params_name,
                  weights_init, biases_init, **kwargs):
         super(AddParameters, self).__init__(**kwargs)
-        self.__dict__.update(**locals())
-        del self.self
-        del self.kwargs
+        update_instance(self, locals())
 
         signature = self.transition.apply.signature()
         self.input_names = signature.forkable_input_names
@@ -97,8 +96,7 @@ class SeriesIterator(GroundhogIterator):
     """Training data generator."""
 
     def __init__(self, rng, func, seq_len, batch_size):
-        self.__dict__.update(**locals())
-        del self.self
+        update_instance(self, locals())
         self.num_params = len(inspect.getargspec(self.func).args) - 1
 
     def next(self):

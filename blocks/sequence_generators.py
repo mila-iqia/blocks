@@ -11,7 +11,7 @@ from blocks.bricks import (
     DefaultRNG, lazy, application)
 from blocks.recurrent import recurrent
 from blocks.lookup import LookupTable
-from blocks.utils import dict_union
+from blocks.utils import dict_union, update_instance
 
 logger = logging.getLogger(__name__)
 
@@ -80,8 +80,7 @@ class BaseSequenceGenerator(Brick):
     def __init__(self, readout, fork, transition,
                  weights_init=None, biases_init=None, **kwargs):
         super(BaseSequenceGenerator, self).__init__(**kwargs)
-        self.__dict__.update(**locals())
-        del self.self
+        update_instance(self, locals())
 
         self.state_names = transition.state_names
         self.context_names = transition.context_names
@@ -140,8 +139,8 @@ class BaseSequenceGenerator(Brick):
         contexts = {name: kwargs[name] for name in self.context_names}
         feedback = self.readout.feedback(outputs)
         inputs = (self.fork.apply(feedback, return_dict=True)
-            if self.fork
-            else {'feedback' : feedback})
+                  if self.fork
+                  else {'feedback': feedback})
 
         # Run the recurrent network
         results = self.transition.apply(
@@ -200,12 +199,12 @@ class BaseSequenceGenerator(Brick):
         next_costs = self.readout.cost(next_readouts, next_outputs)
         next_feedback = self.readout.feedback(next_outputs)
         next_inputs = (self.fork.apply(next_feedback, return_dict=True)
-            if self.fork else {'feedback' : next_feedback})
+                       if self.fork else {'feedback': next_feedback})
         next_states = self.transition.apply(
-             return_list=True, iterate=False,
+            return_list=True, iterate=False,
             **dict_union(next_inputs, states, glimpses, contexts))
         return (next_states + [next_outputs]
-                + next_glimpses.values() + [next_costs])
+                + list(next_glimpses.values()) + [next_costs])
 
     @generate.delegate
     def generate_delegate(self):
@@ -301,9 +300,7 @@ class Readout(AbstractReadout):
             emitter = TrivialEmitter(readout_dim)
         if not feedbacker:
             feedbacker = TrivialFeedback(readout_dim)
-        self.__dict__.update(**locals())
-        del self.self
-        del self.kwargs
+        update_instance(self, locals())
 
         self.children = [self.emitter, self.feedbacker]
 
@@ -352,9 +349,7 @@ class LinearReadout(Readout):
     def __init__(self, readout_dim, source_names,
                  weights_init, biases_init, **kwargs):
         super(LinearReadout, self).__init__(readout_dim, **kwargs)
-        self.__dict__.update(**locals())
-        del self.self
-        del self.kwargs
+        update_instance(self, locals())
 
         self.projectors = [MLP(name="project_{}".format(name),
                                activations=[Identity()])
@@ -405,8 +400,6 @@ class TrivialEmitter(AbstractEmitter):
 
 
 class SoftmaxEmitter(AbstractEmitter, DefaultRNG):
-
-
     def _probs(self, readouts):
         shape = readouts.shape
         return tensor.nnet.softmax(readouts.reshape(
@@ -454,7 +447,6 @@ class TrivialFeedback(AbstractFeedback):
         return super(TrivialFeedback, self).get_dim(name)
 
 
-
 class LookupFeedback(AbstractFeedback):
 
     @lazy
@@ -494,9 +486,7 @@ class FakeAttentionTransition(AbstractAttentionTransition):
 
     def __init__(self, transition, **kwargs):
         super(FakeAttentionTransition, self).__init__(**kwargs)
-        self.__dict__.update(**locals())
-        del self.self
-        del self.kwargs
+        update_instance(self, locals())
 
         self.state_names = transition.apply.states
         self.context_names = transition.apply.contexts
@@ -514,7 +504,8 @@ class FakeAttentionTransition(AbstractAttentionTransition):
 
     @recurrent
     def apply(self, *args, **kwargs):
-        return self.transition.apply(*args, **dict_union(kwargs, iterate=False))
+        return self.transition.apply(*args,
+                                     **dict_union(kwargs, iterate=False))
 
     @apply.delegate
     def apply_delegate(self):
@@ -532,15 +523,13 @@ class FakeAttentionTransition(AbstractAttentionTransition):
     def get_dim(self, name):
         return self.transition.get_dim(name)
 
+
 class Fork(Brick):
 
     @lazy
     def __init__(self, fork_names, prototype=None, **kwargs):
         super(Fork, self).__init__(**kwargs)
-
-        self.__dict__.update(**locals())
-        del self.self
-        del self.kwargs
+        update_instance(self, locals())
 
         if not self.prototype:
             self.prototype = MLP([Identity()])

@@ -729,8 +729,8 @@ class Linear(DefaultRNG):
     @lazy
     def __init__(self, input_dim, output_dim, weights_init,
                  biases_init=None, use_bias=True, **kwargs):
-        update_instance(self, locals())
         super(Linear, self).__init__(**kwargs)
+        update_instance(self, locals())
 
     def _allocate(self):
         self.params.append(shared_floatx_zeros((self.input_dim,
@@ -846,6 +846,8 @@ class MLP(DefaultRNG):
     def __init__(self, activations, dims, weights_init, biases_init=None,
                  use_bias=True, **kwargs):
         super(MLP, self).__init__(**kwargs)
+        if activations is None:
+            activations = []
         self.linear_transformations = [Linear(name='linear_{}'.format(i))
                                        for i in range(len(activations))]
         self.children = (self.linear_transformations +

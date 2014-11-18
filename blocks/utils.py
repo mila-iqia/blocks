@@ -242,13 +242,18 @@ def repr_attrs(instance, *attrs):
     <blocks.utils.A object at 0x7fb2b4741a10: value=a_value>
 
     """
-    repr_template = ("<{0.__class__.__module__}.{0.__class__.__name__} "
-                     "object at {1:#x}")
+    orig_repr_template = ("<{0.__class__.__module__}.{0.__class__.__name__} "
+                          "object at {1:#x}")
     if attrs:
-        repr_template += ": " + ", ".join(["{0}={{0.{0}}}".format(attr)
-                                           for attr in attrs])
+        repr_template = (orig_repr_template + ": " +
+                         ", ".join(["{0}={{0.{0}}}".format(attr)
+                                    for attr in attrs]))
     repr_template += '>'
-    return repr_template.format(instance, id(instance))
+    orig_repr_template += '>'
+    try:
+        return repr_template.format(instance, id(instance))
+    except:
+        return orig_repr_template.format(instance, id(instance))
 
 
 def update_instance(self, kwargs, ignore=True):
@@ -266,5 +271,5 @@ def update_instance(self, kwargs, ignore=True):
 
     """
     for key, value in kwargs.items():
-        if ignore and key not in ['self', 'args', 'kwargs']:
+        if ignore and key not in ['self', 'args', 'kwargs', '__class__']:
             setattr(self, key, value)
