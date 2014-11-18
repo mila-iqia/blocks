@@ -36,6 +36,7 @@ class ComputationGraph(object):
 
     def _get_variables(self):
         def recursion(current):
+            self.variables.add(current)
             if current.owner:
                 owner = current.owner
                 if owner not in self.applies:
@@ -47,7 +48,6 @@ class ComputationGraph(object):
                 for inp in owner.inputs:
                     if inp not in self.variables:
                         recursion(inp)
-                self.variables.add(inp)
 
         def is_input(variable):
             return (not variable.owner
