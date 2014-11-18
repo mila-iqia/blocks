@@ -150,7 +150,7 @@ class Brick(object):
     ...                 biases_init=Constant(0))
     >>> x = theano.tensor.vector()
     >>> linear.apply(x)  # Calls linear.allocate() automatically
-    linear_output
+    linear_apply_output
     >>> linear.initialize()  # Initializes the weight matrix
 
     In simple cases, eager bricks are easier to deal with.
@@ -160,7 +160,7 @@ class Brick(object):
     >>> linear = Linear(5, 3, weights_init=IsotropicGaussian(),
     ...                 biases_init=Constant(0))
     >>> linear.apply(x)
-    linear_output
+    linear_apply_output
 
     """
     __metaclass__ = ABCMeta
