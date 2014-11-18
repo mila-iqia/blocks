@@ -16,7 +16,7 @@ Bricks
 Sequence generators
 -------------------
 
-.. automodule:: blocks.lookup
+.. automodule:: blocks.sequence_generators
     :members:
     :undoc-members:
     :show-inheritance:
