@@ -23,4 +23,4 @@ script:
   - if [ $FLOATX = float32 ]; then THEANO_FLAGS=floatX=$FLOATX,blas.ldflags='-lblas -lgfortran' coverage run --source=blocks -m nose2.__main__ blocks.tests.test_brick; fi
   - if [ $FLOATX = float64 ]; then THEANO_FLAGS=floatX=$FLOATX,blas.ldflags='-lblas -lgfortran' coverage run --source=blocks -m nose2.__main__ blocks.tests.test_rnn; fi
 after_script:
-  - coveralls
+  - if [ ${FLAKE8-1} ]; then coveralls; fi
