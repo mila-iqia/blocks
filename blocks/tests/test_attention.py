@@ -8,6 +8,8 @@ from blocks.attention import SequenceContentAttention
 floatX = theano.config.floatX
 
 def test_sequence_content_attention():
+    # Disclaimer: only check dimensions, not values
+
     seq_len = 5
     batch_size = 6
     state_dim = 2

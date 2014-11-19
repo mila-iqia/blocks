@@ -1,4 +1,5 @@
 import inspect
+import copy
 from collections import OrderedDict
 
 import theano
@@ -6,7 +7,7 @@ from theano import tensor
 
 from blocks.bricks import (
     Application, application_wrapper,
-    DefaultRNG, Identity, Sigmoid, lazy)
+    DefaultRNG, Identity, Sigmoid, lazy, application)
 from blocks.initialization import Constant, NdarrayInitialization
 from blocks.utils import pack, shared_floatx_zeros, update_instance
 
@@ -448,32 +449,38 @@ class GatedRecurrent(BaseRecurrent, DefaultRNG):
         return sequences
 
 
-class BidirectionalRecurrent(DefaultRNG):
-    @lazy
-    def __init__(self, dim, weights_init, activation=None, hidden_init=None,
-                 combine='concatenate', **kwargs):
-        super(BidirectionalRecurrent, self).__init__(**kwargs)
-        if hidden_init is None:
-            hidden_init = Constant(0)
-        update_instance(self, locals())
-        self.children = [Recurrent(), Recurrent()]
+class Bidirectional(DefaultRNG):
+    """Bidirectional network.
 
-    def _push_allocation_config(self):
-        for child in self.children:
-            for attr in ['dim', 'activation', 'hidden_init']:
-                setattr(child, attr, getattr(self, attr))
+    A bidirectional network is a combination of forward and backward
+    recurrent networks which process inputs in different order.
+
+    Parameters
+    ----------
+    prototype : instance of :class:`BaseRecurrent`
+        A prototype brick from which the forward and backward bricks are
+        cloned.
+
+    """
+    @lazy
+    def __init__(self, prototype, weights_init, **kwargs):
+        super(Bidirectional, self).__init__(**kwargs)
+        update_instance(self, locals())
+        self.children = [copy.deepcopy(prototype) for i in range(2)]
+        self.children[0].name = 'forward'
+        self.children[1].name = 'backward'
 
     def _push_initialization_config(self):
         for child in self.children:
-            child.weights_init = self.weights_init
+            if self.weights_init:
+                child.weights_init = self.weights_init
 
-    @recurrent
+    @application
     def apply(self, *args, **kwargs):
-        forward = self.children[0].apply(*args, **kwargs)
-        backward = self.children[1].apply(reverse=True, *args, **kwargs)
-        output = tensor.concatenate([forward, backward], axis=2)
-        return output
-
-    @apply.delegate
-    def apply_delegate(self):
-        return self.children[0]
+        """Applys forward and backward networks and concatenates outputs."""
+        forward = self.children[0].apply(return_list=True, *args, **kwargs)
+        backward = [x[::-1] for x in
+                    self.children[1].apply(reverse=True, return_list=True,
+                                           *args, **kwargs)]
+        return [tensor.concatenate([f, b], axis=2)
+                for f, b in zip(forward, backward)]
