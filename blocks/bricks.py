@@ -468,7 +468,7 @@ class Application(object):
         return_list = kwargs.pop('return_list', False)
         assert not return_list or not return_dict
 
-        arg_names, varargs_name, _1, _2 = inspect.getargspec(
+        arg_names, varargs_name, _, _ = inspect.getargspec(
             self.application_method)
         arg_names = arg_names[1:]
 
@@ -869,8 +869,6 @@ class MLP(DefaultRNG):
     def __init__(self, activations, dims, weights_init, biases_init=None,
                  use_bias=True, **kwargs):
         super(MLP, self).__init__(**kwargs)
-        if activations is None:
-            activations = []
         self.linear_transformations = [Linear(name='linear_{}'.format(i))
                                        for i in range(len(activations))]
         self.children = (self.linear_transformations +

@@ -1,18 +1,19 @@
 import inspect
+from abc import ABCMeta
 from collections import OrderedDict
 
 import theano
 from theano import tensor
 
-from blocks.bricks import (
-    Application, application_wrapper,
-    DefaultRNG, Identity, Sigmoid, lazy)
+from blocks.bricks import (Application, application_wrapper, DefaultRNG,
+                           Identity, Sigmoid, lazy)
 from blocks.initialization import Constant, NdarrayInitialization
 from blocks.utils import pack, shared_floatx_zeros, update_instance
 
 
 class BaseRecurrent(object):
     """Base class for brick with recurrent application method."""
+    __metaclass__ = ABCMeta
 
     def initial_state(self, state_name, batch_size, *args, **kwargs):
         """Return an initial state for an application call.
@@ -194,35 +195,6 @@ def recurrent(*args, **kwargs):
         return wrapper
 
 
-# class Wrap3D(Brick):
-#     """Convert 3D arrays to 2D and back in order to apply 2D bricks."""
-#     @lazy
-#     def __init__(self, wrapped, apply_method='apply', **kwargs):
-#         super(Wrap3D, self).__init__(**kwargs)
-#         self.children = [wrapped]
-#         self.apply_method = apply_method
-#
-#     @application
-#     def apply(self, inp):
-#         wrapped, = self.children
-#         flat_shape = ([inp.shape[0] * inp.shape[1]] +
-#                       [inp.shape[i] for i in range(2, inp.ndim)])
-#         output = getattr(wrapped, self.apply_method)(inp.reshape(flat_shape))
-#         full_shape = ([inp.shape[0], inp.shape[1]] +
-#                       [output.shape[i] for i in range(1, output.ndim)])
-#         return output.reshape(full_shape)
-
-
-def zero_state(dim, batch_size, *args, **kwargs):
-    """Create an initial state consisting of zeros.
-
-    The default state initialization routine. It is not made a method
-    to ensure that the brick argument can be omitted.
-
-    """
-    return tensor.zeros((batch_size, dim), dtype=theano.config.floatX)
-
-
 class Recurrent(BaseRecurrent, DefaultRNG):
     """Simple recurrent layer with optional activation.
 
@@ -369,9 +341,11 @@ class GatedRecurrent(BaseRecurrent, DefaultRNG):
     def _allocate(self):
         new_param = lambda name: shared_floatx_zeros((self.dim, self.dim),
                                                      name=name)
-        self.params.append(new_param('s2s'))
-        self.params.append(new_param('s2u') if self.use_update_gate else None)
-        self.params.append(new_param('s2r') if self.use_reset_gate else None)
+        self.params.append(new_param('state_to_state'))
+        self.params.append(new_param('state_to_update')
+                           if self.use_update_gate else None)
+        self.params.append(new_param('state_to_reset')
+                           if self.use_reset_gate else None)
 
     def _initialize(self):
         self.weights_init.initialize(self.state_to_state, self.rng)
@@ -409,6 +383,7 @@ class GatedRecurrent(BaseRecurrent, DefaultRNG):
         -------
         output : Theano variable
             Next states of the network.
+
         """
         if (self.use_update_gate != (update_inps is not None)) or \
                 (self.use_reset_gate != (reset_inps is not None)):
