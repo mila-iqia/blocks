@@ -9,6 +9,7 @@ from theano import tensor
 from blocks.bricks import (
     Brick, MLP, Identity,
     DefaultRNG, lazy, application)
+from blocks.parallel import Fork
 from blocks.recurrent import recurrent
 from blocks.lookup import LookupTable
 from blocks.utils import dict_union, update_instance
@@ -567,56 +568,6 @@ class FakeAttentionTransition(AbstractAttentionTransition):
 
     def get_dim(self, name):
         return self.transition.get_dim(name)
-
-
-class Fork(Brick):
-    """Forks single input into multiple channels.
-
-    Parameters
-    ----------
-    fork_names : list of str
-        Names of the channels to fork.
-    prototype : instance of :class:`Brick`
-        A prototype for the input-to-fork transformations. A copy will be
-        created for every output channel.
-
-    Notes
-    -----
-        Currently works only with lazy initialization
-        (can not be initialized with a single constructor call).
-
-    """
-    def __init__(self, fork_names, prototype=None, **kwargs):
-        super(Fork, self).__init__(**kwargs)
-        update_instance(self, locals())
-
-        if not self.prototype:
-            self.prototype = MLP([Identity()])
-        self.forkers = []
-        for name in self.fork_names:
-            self.forkers.append(copy.deepcopy(self.prototype))
-            self.forkers[-1].name = "fork_" + name
-        self.children = self.forkers
-
-    def _push_allocation_config(self):
-        for name, forker in zip(self.fork_names, self.forkers):
-            forker.dims[0] = self.input_dim
-            forker.dims[-1] = self.fork_dims[name]
-
-    def _push_initialization_config(self):
-        for child in self.children:
-            if self.weights_init:
-                child.weights_init = self.weights_init
-            if self.biases_init:
-                child.biases_init = self.biases_init
-
-    @application
-    def apply(self, inp):
-        return [forker.apply(inp) for forker in self.forkers]
-
-    @apply.property('outputs')
-    def apply_outputs(self):
-        return self.fork_names
 
 
 class SequenceGenerator(BaseSequenceGenerator):
