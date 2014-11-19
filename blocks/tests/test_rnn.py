@@ -133,8 +133,8 @@ class TestBidirectional(unittest.TestCase):
         self.x_val = 0.1 * numpy.asarray(
             list(itertools.permutations(range(4))),
             dtype=floatX)
-        self.x_val = numpy.ones((24, 4, 3),
-                           dtype=floatX) * self.x_val[..., None]
+        self.x_val = (numpy.ones((24, 4, 3), dtype=floatX)
+                      * self.x_val[..., None])
         self.mask_val = numpy.ones((24, 4), dtype=floatX)
         self.mask_val[12:24, 3] = 0
 

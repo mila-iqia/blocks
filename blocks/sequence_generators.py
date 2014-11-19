@@ -1,6 +1,5 @@
 """Sequence generation framework"""
 
-import copy
 import logging
 from abc import abstractmethod
 

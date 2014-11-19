@@ -84,7 +84,6 @@ class SequenceContentAttention(Brick):
         """
         return self.take_look_preprocessed(self.preprocess(sequence), **states)
 
-
     @application
     def take_look_preprocessed(self, preprocessed_sequence, **states):
         """Compute attention weights for a preprocessed sequence.

@@ -7,6 +7,7 @@ from blocks.attention import SequenceContentAttention
 
 floatX = theano.config.floatX
 
+
 def test_sequence_content_attention():
     # Disclaimer: only check dimensions, not values
 
@@ -17,7 +18,7 @@ def test_sequence_content_attention():
     match_dim = 4
 
     attention = SequenceContentAttention(
-        state_names=["states"], state_dims={"states" : state_dim},
+        state_names=["states"], state_dims={"states": state_dim},
         sequence_dim=sequence_dim, match_dim=match_dim)
     attention.allocate()
 
@@ -34,4 +35,3 @@ def test_sequence_content_attention():
     assert weight_values.shape == (seq_len, batch_size)
     assert numpy.all(weight_values >= 0)
     assert numpy.all(weight_values <= 1)
-
