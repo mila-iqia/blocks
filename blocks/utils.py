@@ -1,7 +1,11 @@
 import sys
+from collections import OrderedDict
 
 import numpy
+import six
 import theano
+from theano import tensor
+from theano import printing
 
 
 def pack(arg):
@@ -127,7 +131,7 @@ def reraise_as(new_exc):
     """
     orig_exc_type, orig_exc_value, orig_exc_traceback = sys.exc_info()
 
-    if isinstance(new_exc, basestring):
+    if isinstance(new_exc, six.string_types):
         new_exc = orig_exc_type(new_exc)
 
     if hasattr(new_exc, 'args'):
@@ -148,4 +152,156 @@ def reraise_as(new_exc):
 
     new_exc.__cause__ = orig_exc_value
     new_exc.reraised = True
-    raise type(new_exc), new_exc, orig_exc_traceback
+    six.reraise(type(new_exc), new_exc, orig_exc_traceback)
+
+
+def check_theano_variable(variable, n_dim, dtype_prefix):
+    """Check number of dimensions and dtype of a Theano variable.
+
+    If the input is not a Theano variable, it is converted to one. `None` input
+    is handled as a special case: no checks are done.
+
+    Parameters
+    ----------
+    variable : Theano variable or convertable to one
+        A variable to check.
+    n_dim : int
+        Expected number of dimensions or None. If None, no check is performed.
+    dtype : str
+        Expected dtype prefix or None. If None, no check is performed.
+    """
+
+    if variable is None:
+        return
+
+    if not isinstance(variable, tensor.Variable):
+        variable = tensor.as_tensor_variable(variable)
+
+    if n_dim and variable.ndim != n_dim:
+        raise ValueError("Wrong number of dimensions:"
+                         "\n\texpected {}, got {}".format(
+                             n_dim, variable.ndim))
+
+    if dtype_prefix and not variable.dtype.startswith(dtype_prefix):
+        raise ValueError("Wrong dtype prefix:"
+                         "\n\texpected starting with {}, got {}".format(
+                             dtype_prefix, variable.dtype))
+
+
+def dict_union(*dicts, **kwargs):
+    """Return union of a sequence of disjoint dictionaries.
+
+    Parameters
+    ----------
+    dicts : dicts
+        A set of dictionaries with no keys in common. If the first
+        dictionary in the sequence is an instance of `OrderedDict`, the
+        result will be OrderedDict.
+    **kwargs
+        Keywords and values to add to the resulting dictionary.
+
+    Raises
+    ------
+    ValueError
+        If a key appears twice in the dictionaries or keyword arguments.
+
+    """
+    dicts = list(dicts)
+    if dicts and isinstance(dicts[0], OrderedDict):
+        result = OrderedDict()
+    else:
+        result = {}
+    for d in list(dicts) + [kwargs]:
+        duplicate_keys = set(result.keys()) & set(d.keys())
+        if duplicate_keys:
+            raise ValueError("The following keys have duplicate entries: {}"
+                             .format(", ".join(str(key) for key in
+                                               duplicate_keys)))
+        result.update(d)
+    return result
+
+
+def repr_attrs(instance, *attrs):
+    """Prints a representation of an object with certain attributes.
+
+    Parameters
+    ----------
+    instance : object
+        The object of which to print the string representation
+    *attrs
+        Names of attributes that should be printed.
+
+    Examples
+    --------
+    >>> class A(object):
+    ...     def __init__(self, value):
+    ...         self.value = value
+    >>> a = A('a_value')
+    >>> repr(a)  # doctest: +SKIP
+    <blocks.utils.A object at 0x7fb2b4741a10>
+    >>> repr_attrs(a, 'value')  # doctest: +SKIP
+    <blocks.utils.A object at 0x7fb2b4741a10: value=a_value>
+
+    """
+    orig_repr_template = ("<{0.__class__.__module__}.{0.__class__.__name__} "
+                          "object at {1:#x}")
+    if attrs:
+        repr_template = (orig_repr_template + ": " +
+                         ", ".join(["{0}={{0.{0}}}".format(attr)
+                                    for attr in attrs]))
+    repr_template += '>'
+    orig_repr_template += '>'
+    try:
+        return repr_template.format(instance, id(instance))
+    except:
+        return orig_repr_template.format(instance, id(instance))
+
+
+def update_instance(self, kwargs, ignore=True):
+    """Set attributes of an instance from a dictionary.
+
+    Parameters
+    ----------
+    self : object
+        The instance on which to set the attributes and values given.
+    kwargs : dict
+        A dictionary with attributes and their values as keys and values.
+    ignore : bool
+        If ``True`` then ignore the keys ``self``, ``args`` and ``kwargs``.
+        Is ``True`` by default.
+
+    """
+    for key, value in kwargs.items():
+        if ignore and key not in ['self', 'args', 'kwargs', '__class__']:
+            setattr(self, key, value)
+
+
+def put_hook(variable, hook_fn):
+    """Put a hook on a Theano variables.
+
+    Ensures that the hook function is executed every time when the value
+    of the Theano variable is available.
+
+    Parameters
+    ----------
+    variable : Theano variable
+        The variable to put a hook on.
+    hook_fn : function
+        The hook function. Should take a single argument: the variable's
+        value.
+
+    """
+    return printing.Print(global_fn=lambda _, x: hook_fn(x))(variable)
+
+
+def ipdb_breakpoint(x):
+    """A simple hook function for :fun:`put_hook` that runs ipdb.
+
+    Parameters
+    ----------
+    x : :class:`numpy.ndarray`
+        The value of the hooked variable.
+
+    """
+    import ipdb
+    ipdb.set_trace()

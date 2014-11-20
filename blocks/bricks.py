@@ -2,26 +2,20 @@
 
 This defines the basic interface of bricks.
 """
-from abc import ABCMeta
-from functools import wraps
 import inspect
+import functools
 import logging
+from abc import ABCMeta
 from collections import OrderedDict
 
 import numpy as np
-import theano
 from theano import tensor
 
-from blocks.utils import pack, reraise_as, shared_floatx_zeros, unpack
-from blocks.initialization import Constant
+from blocks.utils import (pack, repr_attrs, reraise_as, shared_floatx_zeros,
+                          unpack, update_instance)
 
-BRICK_PREFIX = 'brick_'
-INPUT_SUFFIX = '_input'
-OUTPUT_SUFFIX = '_output'
 DEFAULT_SEED = [2014, 10, 5]
-PARAM_OWNER_TAG = 'param_owner'
 
-logging.basicConfig()
 logger = logging.getLogger(__name__)
 
 
@@ -150,21 +144,23 @@ class Brick(object):
     By default, bricks have lazy initialization enabled.
 
     >>> import theano
-    ... from blocks.initialization import IsotropicGaussian, Constant
-    ... linear = Linear(input_dim=5, weights_init=IsotropicGaussian(),
+    >>> from blocks.initialization import IsotropicGaussian, Constant
+    >>> linear = Linear(input_dim=5, output_dim=3,
+    ...                 weights_init=IsotropicGaussian(),
     ...                 biases_init=Constant(0))
-    ... x = theano.tensor.vector()
-    ... linear.apply(x)  # Calls linear.allocate() automatically
-    ... linear.output_dim = 3
-    ... linear.initialize()
+    >>> x = theano.tensor.vector()
+    >>> linear.apply(x)  # Calls linear.allocate() automatically
+    linear_apply_output
+    >>> linear.initialize()  # Initializes the weight matrix
 
     In simple cases, eager bricks are easier to deal with.
 
     >>> from blocks.initialization import IsotropicGaussian, Constant
-    ... Brick.lazy = False
-    ... linear = Linear(5, 3, weights_init=IsotropicGaussian(),
+    >>> Brick.lazy = False
+    >>> linear = Linear(5, 3, weights_init=IsotropicGaussian(),
     ...                 biases_init=Constant(0))
-    ... linear.apply(x)
+    >>> linear.apply(x)
+    linear_apply_output
 
     """
     __metaclass__ = ABCMeta
@@ -174,7 +170,7 @@ class Brick(object):
     def __init__(self, name=None):
         if name is None:
             name = self.__class__.__name__.lower()
-        self.name = '{}{}'.format(BRICK_PREFIX, name)
+        self.name = name
 
         self.children = []
 
@@ -183,124 +179,8 @@ class Brick(object):
         self.initialized = False
         self.initialization_config_pushed = False
 
-    @staticmethod
-    def apply_method(func):
-        """Wraps methods that apply a brick to inputs in different ways.
-
-        This decorator will provide some necessary pre- and post-processing
-        of the Theano variables, such as tagging them with the brick that
-        created them and naming them. These changes will apply to
-        Theano variables given as positional arguments and keywords arguments.
-
-        .. warning::
-
-            Properly set tags are important for correct functioning of the
-            framework. Do not provide inputs to your apply method in a way
-            different than passing them as positional or keyword arguments,
-            e.g. as list or tuple elements.
-
-        Application methods will allocate the brick parameters with a call
-        :meth:`allocate` if they have not been allocated already.
-
-        Parameters
-        ----------
-        func : method
-            A method which takes Theano variables as an input, and returns
-            the output of the Brick
-
-        Raises
-        ------
-        LazyInitializationError
-            If parameters needed to perform the application of this brick
-            have not been provided yet.
-
-        """
-        @wraps(func)
-        def wrapped_apply(self, *inputs, **kwargs):
-            if not self.allocated:
-                self.allocate()
-            if not self.initialized and not self.lazy:
-                self.initialize()
-            inputs = list(inputs)
-            for i, inp in enumerate(inputs):
-                if isinstance(inp, tensor.Variable):
-                    inputs[i] = inp.copy()
-                    inputs[i].tag.owner = self
-                    inputs[i].name = self.name + INPUT_SUFFIX
-            for key, value in kwargs.items():
-                if isinstance(value, tensor.Variable):
-                    kwargs[key] = value.copy()
-                    kwargs[key].tag.owner = self
-                    kwargs[key].name = self.name + INPUT_SUFFIX
-            outputs = pack(func(self, *inputs, **kwargs))
-            for i, output in enumerate(outputs):
-                if isinstance(output, tensor.Variable):
-                    # TODO Tag with dimensions, axes, etc. for error-checking
-                    outputs[i] = output.copy()
-                    outputs[i].tag.owner = self
-                    outputs[i].name = self.name + OUTPUT_SUFFIX
-            return unpack(outputs)
-        return wrapped_apply
-
-    @staticmethod
-    def lazy_method(func):
-        """Makes the initialization lazy.
-
-        Any positional argument not given will be set to ``None``.
-        Positional arguments can also be given as keyword arguments.
-
-        .. todo::
-
-           Use ``UNDEF`` or ``None`` as a default?
-
-
-        Parameters
-        ----------
-        func : method
-            The __init__ method to make lazy.
-
-        Examples
-        --------
-
-        >>> class SomeBrick(Brick):
-        ...     @Brick.lazy_method
-        ...     def __init__(self, a, b, c='c', d=None):
-        ...         print a, b, c, d
-        >>> brick = SomeBrick('a')
-        a None c None
-        >>> brick = SomeBrick(d='d', b='b')
-        None b c d
-        >>> Brick.lazy = False
-        >>> brick = SomeBrick('a')
-        Traceback (most recent call last):
-          File "<stdin>", line 1, in <module>
-        TypeError: __init__() takes at least 3 arguments (2 given)
-        >>> Brick.lazy = True  # Reset for other doctests
-
-        """
-        arg_spec = inspect.getargspec(func)
-        arg_names = arg_spec.args[1:]
-        defaults = arg_spec.defaults
-        if defaults is None:
-            defaults = []
-
-        def init(self, *args, **kwargs):
-            if not self.lazy:
-                return func(self, *args, **kwargs)
-            # Fill any missing positional arguments with None
-            args = args + (None,) * (len(arg_names) - len(defaults) -
-                                     len(args))
-
-            # Check if positional arguments were passed as keyword arguments
-            args = list(args)
-            for i, arg_name in enumerate(arg_names[:-len(defaults)]):
-                if arg_name in kwargs:
-                    if args[i] is not None:
-                        raise ValueError
-                    args[i] = kwargs.pop(arg_name)
-
-            return func(self, *args, **kwargs)
-        return init
+    def __repr__(self):
+        return repr_attrs(self, 'name')
 
     def allocate(self):
         """Allocate shared variables for parameters.
@@ -330,11 +210,7 @@ class Brick(object):
         if not self.allocation_config_pushed:
             self.push_allocation_config()
         for child in self.children:
-            try:
-                child.allocate()
-            except:
-                self.allocation_config_pushed = False
-                raise
+            child.allocate()
         self.params = []
         try:
             self._allocate()
@@ -375,11 +251,7 @@ class Brick(object):
         if not self.initialization_config_pushed:
             self.push_initialization_config()
         for child in self.children:
-            try:
-                child.initialize()
-            except:
-                self.initialization_config_pushed = False
-                raise
+            child.initialize()
         try:
             self._initialize()
         except Exception:
@@ -415,6 +287,12 @@ class Brick(object):
         """
         self._push_allocation_config()
         self.allocation_config_pushed = True
+        for child in self.children:
+            try:
+                child.push_allocation_config()
+            except:
+                self.allocation_config_pushed = False
+                raise
 
     def _push_allocation_config(self):
         """Brick implementation of configuring child before allocation.
@@ -441,6 +319,12 @@ class Brick(object):
         """
         self._push_initialization_config()
         self.initialization_config_pushed = True
+        for child in self.children:
+            try:
+                child.push_initialization_config()
+            except:
+                self.initialization_config_pushed = False
+                raise
 
     def _push_initialization_config(self):
         """Brick implementation of configuring child before initialization.
@@ -456,28 +340,359 @@ class Brick(object):
         """
         pass
 
+    def get_dim(self, name):
+        """Get dimension of an input/output variable of a brick.
+
+        Parameters
+        ----------
+        name : str
+            The name of the variable.
+
+        """
+        raise ValueError("No dimension information for {} available"
+                         .format(name))
+
+
+def lazy(func):
+    """Makes the initialization lazy.
+
+    Any positional argument not given will be set to ``None``. Positional
+    arguments can also be given as keyword arguments.
+
+    Parameters
+    ----------
+    func : method
+        The __init__ method to make lazy.
+
+    Examples
+    --------
+    >>> from __future__ import print_function
+    >>> class SomeBrick(Brick):
+    ...     @lazy
+    ...     def __init__(self, a, b, c='c', d=None):
+    ...         print(a, b, c, d)
+    >>> brick = SomeBrick('a')
+    a None c None
+    >>> brick = SomeBrick(d='d', b='b')
+    None b c d
+    >>> Brick.lazy = False
+    >>> brick = SomeBrick('a')
+    Traceback (most recent call last):
+      File "<stdin>", line 1, in <module>
+    TypeError: __init__() takes at least 3 arguments (2 given)
+    >>> Brick.lazy = True  # Reset for other doctests
+
+    """
+    arg_spec = inspect.getargspec(func)
+    arg_names = arg_spec.args[1:]
+    defaults = arg_spec.defaults
+    if defaults is None:
+        defaults = []
+
+    def init(self, *args, **kwargs):
+        if not self.lazy:
+            return func(self, *args, **kwargs)
+        # Fill any missing positional arguments with None
+        args = args + (None,) * (len(arg_names) - len(defaults) -
+                                 len(args))
+
+        # Check if positional arguments were passed as keyword arguments
+        args = list(args)
+        for i, arg_name in enumerate(arg_names[:len(arg_names)
+                                               - len(defaults)]):
+            if arg_name in kwargs:
+                if args[i] is not None:
+                    raise ValueError
+                args[i] = kwargs.pop(arg_name)
+
+        return func(self, *args, **kwargs)
+    return init
+
+
+class Application(object):
+    """A particular application of a brick.
+
+    Used by the :meth:`application` decorator. This wraps the original
+    application method.
+
+    Parameters
+    ----------
+    application : object
+        The application method (member of a brick) to wrap
+
+    Raises
+    ------
+    ValueError
+        If this class is used without being a member of a brick.
+
+    """
+    def __init__(self, application_method):
+        self.application_method = application_method
+        functools.update_wrapper(self, application_method)
+        self.f = {}
+        self.delegate_method = None
+
+    _last_brick_applied = None
+    INPUT_VARIABLE = 'input'
+    OUTPUT_VARIABLE = 'output'
+
+    def __call__(self, *inputs, **kwargs):
+        """Wraps an application method.
+
+        This wrapper will provide some necessary pre- and post-processing
+        of the Theano variables, such as tagging them with the brick that
+        created them and naming them. These changes will apply to
+        Theano variables given as positional arguments and keywords arguments.
+
+        .. warning::
+
+            Properly set tags are important for correct functioning of the
+            framework. Do not provide inputs to your apply method in a way
+            different than passing them as positional or keyword arguments,
+            e.g. as list or tuple elements.
+
+        Notes
+        -----
+        Application methods will allocate the brick parameters with a call
+        :meth:`allocate` if they have not been allocated already.
+
+        """
+        last = Application._last_brick_applied
+        if last and last != self.brick and self.brick not in last.children:
+            raise ValueError("The brick {} called an apply method of the"
+                             " brick {} without having it in the children"
+                             " list."
+                             .format(last, self.brick))
+
+        return_dict = kwargs.pop('return_dict', False)
+        return_list = kwargs.pop('return_list', False)
+        assert not return_list or not return_dict
+
+        arg_names, varargs_name, _, _ = inspect.getargspec(
+            self.application_method)
+        arg_names = arg_names[1:]
+
+        def tag_variable(variable, role, name):
+            variable.name = "{}_{}_{}".format(self.brick.name, self.__name__,
+                                              name)
+            variable.tag.owner = self.brick
+            variable.tag.application = self
+            variable.tag.name = name
+            variable.tag.role = role
+
+        if not self.brick.allocated:
+            self.brick.allocate()
+        if not self.brick.initialized and not self.brick.lazy:
+            self.brick.initialize()
+        inputs = list(inputs)
+        for i, inp in enumerate(inputs):
+            name = (arg_names[i] if i < len(arg_names) else
+                    "{}_{}".format(varargs_name, i - len(arg_names)))
+            if isinstance(inp, tensor.Variable):
+                inputs[i] = inp.copy()
+                tag_variable(inputs[i], Application.INPUT_VARIABLE, name)
+        for key, value in kwargs.items():
+            if isinstance(value, tensor.Variable):
+                kwargs[key] = value.copy()
+                tag_variable(kwargs[key], Application.INPUT_VARIABLE, key)
+        Application._last_brick_applied = self.brick
+        try:
+            outputs = self.application_method(self.brick, *inputs, **kwargs)
+        finally:
+            Application._last_brick_applied = last
+        # TODO allow user to return an OrderedDict
+        outputs = pack(outputs)
+        for i, output in enumerate(outputs):
+            try:
+                name = self.outputs[i]
+            except:
+                name = "output_{}".format(i)
+            if isinstance(output, tensor.Variable):
+                # TODO Tag with dimensions, axes, etc. for error-checking
+                outputs[i] = output.copy()
+                tag_variable(outputs[i], Application.OUTPUT_VARIABLE, name)
+        if return_list:
+            return outputs
+        if return_dict:
+            return OrderedDict(zip(self.outputs, outputs))
+        return unpack(outputs)
+
+    def __get__(self, instance, owner):
+        # Making this class a descriptor gives us access to the owning brick
+        if instance:
+            self.brick = instance
+        return self
+
+    @property
+    def brick(self):
+        if not hasattr(self, '_brick'):
+            raise ValueError("Application instance must be a member of Brick "
+                             "instance")
+        return self._brick
+
+    @brick.setter
+    def brick(self, value):
+        self._brick = value
+
+    def delegate(self, f):
+        self.delegate_method = f
+        return f
+
+    def wrap(self, wrapper):
+        """Wraps this application method.
+
+        Parameters
+        ----------
+        wrapper : method
+            A method which takes two arguments: An :class:`Application`
+            instance and an application method, and returns a new
+            application method.
+
+        Returns
+        -------
+        The current instance with the wrapped application.
+
+        Notes
+        -----
+        Don't wrap this method naively (e.g. using a decorator), because it
+        will lose the signature of the application method.
+
+        """
+        new_application_method = wrapper(self, self.application_method)
+        functools.update_wrapper(new_application_method,
+                                 self.application_method)
+        self.application_method = new_application_method
+        return self
+
+    def property(self, label):
+        """Decorator to add properties to applications.
+
+        Parameters
+        ----------
+        label : str
+            The name of the attribute
+
+        Examples
+        --------
+        See :meth:`_application` for examples.
+
+        """
+        def add_property(f):
+            self.f[label] = f
+            return f
+        return add_property
+
+    def __getattr__(self, attr):
+        if attr == '_brick':
+            raise AttributeError
+        elif attr in self.f:
+            return self.f[attr](self.brick)
+        elif hasattr(self, '_brick') and self.delegate_method is not None:
+            return getattr(self.delegate_method(self.brick), attr)
+        else:
+            super(Application, self).__getattribute__(attr)
+
+
+def application_wrapper(**kwargs):
+    """Replaces application methods with :class:`Application` instances.
+
+    This method transparently replaces a brick's application method by a
+    class. This allows attributes and properties to be used, giving other
+    bricks access to important information about this application.
+
+    This method can also be used as a decorator, but in practice it should
+    probably only be called by decorators such as :meth:`application` and
+    :meth:`recurrent.recurrent`.
+
+    Parameters
+    ----------
+    kwargs
+        The attributes to add to the returned :class:`Application`
+        instance.
+
+    Examples
+    --------
+    >>> class SomeBrick(Brick):
+    ...     @application_wrapper(inputs=['x'])
+    ...     def apply(self, x):
+    ...         return x + 1
+    ...
+    ...     @apply.property('outputs')
+    ...     def apply_outputs(self):
+    ...         return ['y']
+    >>> some_brick = SomeBrick()
+    >>> some_brick.apply.inputs
+    ['x']
+    >>> some_brick.apply.outputs
+    ['y']
+
+    """
+    def wrap_application(application_method):
+        assert not isinstance(application_method, Application)
+        application = Application(application_method)
+        for key, value in kwargs.items():
+            setattr(application, key, value)
+        return application
+    return wrap_application
+
+
+def application(*args, **kwargs):
+    """Decorator for methods that apply a brick to inputs.
+
+    This decorator performs two functions: It creates an application method
+    (tagging the inputs and outputs as such in the Theano graph) and
+    creates a signature for this method (allowing other bricks to query the
+    in- and outputs of this method).
+
+    Parameters
+    ----------
+    *args, optional
+        The application method to wrap.
+    **kwargs, optional
+        See :meth:`signature`
+
+    Notes
+    -----
+    This decorator can be used both with and without passing attributes
+    that will become part of the signature.
+
+    """
+    assert (args and not kwargs) or (not args and kwargs)
+    if args:
+        application_method, = args
+        application = application_wrapper()(application_method)
+        return application
+    else:
+        def application(application_method):
+            application = application_wrapper(**kwargs)(application_method)
+            return application
+        return application
+
 
 class DefaultRNG(Brick):
-    """A mixin class for Bricks which need a RNG to initialize.
+    """A mixin class for Bricks which need random number generators.
 
     Parameters
     ----------
     rng : object
         A ``numpy.RandomState`` instance.
-    **kwargs
-        Keyword arguments to pass on to the :meth:`Brick` base class.
+    theano_rng : object
+        A ``tensor.shared_randomstreams.RandomStreams`` instance.
 
     Attributes
     ----------
     rng : object
-        If the RNG has been set, return it. Otherwise, return a RNG with a
+        If a RNG has been set, return it. Otherwise, return a RNG with a
         default seed which can be set at a module level using
         ``blocks.bricks.DEFAULT_SEED = seed``.
+    theano_rng : object
+        If a RandomStreams was given in the constructor, return it.
+        Otherwise, return one seeded with ``blocks.bricks.DEFAULT_SEED``.
 
     """
-    def __init__(self, rng=None, **kwargs):
-        self.rng = rng
+    def __init__(self, rng=None, theano_rng=None, **kwargs):
         super(DefaultRNG, self).__init__(**kwargs)
+        update_instance(self, locals())
 
     @property
     def rng(self):
@@ -489,6 +704,17 @@ class DefaultRNG(Brick):
     @rng.setter
     def rng(self, rng):
         self._rng = rng
+
+    @property
+    def theano_rng(self):
+        if getattr(self, '_rng', None) is not None:
+            return self._rng
+        else:
+            return tensor.shared_randomstreams.RandomStreams(DEFAULT_SEED)
+
+    @theano_rng.setter
+    def theano_rng(self, theano_rng):
+        self._theano_rng = theano_rng
 
 
 class Linear(DefaultRNG):
@@ -523,18 +749,19 @@ class Linear(DefaultRNG):
     .. math:: f(\mathbf{x}) = \mathbf{W}\mathbf{x} + \mathbf{b}
 
     """
-    @Brick.lazy_method
+    @lazy
     def __init__(self, input_dim, output_dim, weights_init,
                  biases_init=None, use_bias=True, **kwargs):
-        self.__dict__.update(locals())
-        del self.self
         super(Linear, self).__init__(**kwargs)
+        update_instance(self, locals())
 
     def _allocate(self):
         self.params.append(shared_floatx_zeros((self.input_dim,
-                                                self.output_dim)))
+                                                self.output_dim),
+                           name="W"))
         if self.use_bias:
-            self.params.append(shared_floatx_zeros((self.output_dim,)))
+            self.params.append(shared_floatx_zeros((self.output_dim,),
+                               name="b"))
 
     def _initialize(self):
         if self.use_bias:
@@ -544,7 +771,7 @@ class Linear(DefaultRNG):
             W, = self.params
         self.weights_init.initialize(W, self.rng)
 
-    @Brick.apply_method
+    @application(inputs=['inp'], outputs=['output'])
     def apply(self, inp):
         """Apply the linear transformation.
 
@@ -572,20 +799,8 @@ class Linear(DefaultRNG):
 def _activation_factory(name, activation):
     """Class factory for Bricks which perform simple Theano calls."""
     class Activation(Brick):
-        """Element-wise application of {0} function.
-
-        Parameters
-        ----------
-        inp : Theano variable
-            The Theano variable on which to apply the {0} function..
-
-        Returns
-        -------
-        output : Theano variable
-            The Theano variable with the {0} function applied.
-
-        """
-        @Brick.apply_method
+        """Element-wise application of {0} function."""
+        @application(inputs=['inp'], outputs=['output'])
         def apply(self, inp):
             """Apply the {0} function element-wise.
 
@@ -604,10 +819,11 @@ def _activation_factory(name, activation):
             return output
     Activation.__name__ = name
     Activation.__doc__ = Activation.__doc__.format(name.lower())
-    Activation.apply.__func__.__doc__ = \
-        Activation.apply.__func__.__doc__.format(name.lower())
+    Activation.apply.__doc__ = \
+        Activation.apply.__doc__.format(name.lower())
     return Activation
 
+Identity = _activation_factory('Identity', lambda x: x)
 Tanh = _activation_factory('Tanh', tensor.tanh)
 Sigmoid = _activation_factory('Sigmoid', tensor.nnet.sigmoid)
 Softmax = _activation_factory('Softmax', tensor.nnet.softmax)
@@ -640,15 +856,16 @@ class MLP(DefaultRNG):
     configuration to the child layers manually before initialization.
 
     >>> from blocks.initialization import IsotropicGaussian, Constant
-    >>> mlp = MLP([Tanh(), None], [30, 20, 10],
-    ...           IsotropicGaussian(), Constant(0))
+    >>> Brick.lazy = True
+    >>> mlp = MLP(activations=[Tanh(), None], dims=[30, 20, 10],
+    ...           weights_init=IsotropicGaussian(), biases_init=Constant(1))
     >>> mlp.push_initialization_config()  # Configure children
     >>> mlp.children[0].weights_init = IsotropicGaussian(0.1)
     >>> mlp.initialize()
 
     """
 
-    @Brick.lazy_method
+    @lazy
     def __init__(self, activations, dims, weights_init, biases_init=None,
                  use_bias=True, **kwargs):
         super(MLP, self).__init__(**kwargs)
@@ -657,8 +874,9 @@ class MLP(DefaultRNG):
         self.children = (self.linear_transformations +
                          [activation for activation in activations
                           if activation is not None])
-        self.__dict__.update(locals())
-        del self.self
+        if not dims:
+            dims = [None] * (len(activations) + 1)
+        update_instance(self, locals())
 
     def _push_allocation_config(self):
         assert len(self.dims) - 1 == len(self.linear_transformations)
@@ -666,13 +884,14 @@ class MLP(DefaultRNG):
                                                 self.linear_transformations):
             layer.input_dim = input_dim
             layer.output_dim = output_dim
+            layer.use_bias = self.use_bias
 
     def _push_initialization_config(self):
         for layer in self.linear_transformations:
-            for attr in ['weights_init', 'use_bias', 'biases_init']:
+            for attr in ['weights_init', 'biases_init']:
                 setattr(layer, attr, getattr(self, attr))
 
-    @Brick.apply_method
+    @application(inputs=['inp'], outputs=['output'])
     def apply(self, inp):
         output = inp
         for activation, linear in zip(self.activations,
@@ -681,267 +900,4 @@ class MLP(DefaultRNG):
                 output = linear.apply(output)
             else:
                 output = activation.apply(linear.apply(output))
-        return output
-
-
-class Wrap3D(Brick):
-    """Convert 3D arrays to 2D and back in order to apply 2D bricks."""
-    @Brick.lazy_method
-    def __init__(self, child, apply_method='apply', **kwargs):
-        super(Wrap3D, self).__init__(**kwargs)
-        self.children = [child]
-        self.apply_method = apply_method
-
-    @Brick.apply_method
-    def apply(self, inp):
-        child, = self.children
-        flat_shape = ([inp.shape[0] * inp.shape[1]] +
-                      [inp.shape[i] for i in range(2, inp.ndim)])
-        output = getattr(child, self.apply_method)(inp.reshape(flat_shape))
-        full_shape = ([inp.shape[0], inp.shape[1]] +
-                      [output.shape[i] for i in range(1, output.ndim)])
-        return output.reshape(full_shape)
-
-
-class BaseRecurrent(Brick):
-    """Base class for recurrent bricks.
-
-    A recurrent network processes sequences by applying recursively
-    a transition operator. This class contains some useful routine
-    that fascilitate simple and boilerplate code free implementation
-    of recurrent bricks.
-
-    """
-    def zero_state(self, batch_size):
-        """Create an initial state consisting of zeros.
-
-        The default state initialization routine. The dtype of the
-        state is extracted from `self.params`. If there are parameters
-        with different dtypes, a smarter method should be used.
-
-        """
-        return tensor.zeros((batch_size, self.dim), dtype=theano.config.floatX)
-
-    @staticmethod
-    def recurrent_apply_method(inputs, states, contexts=None, num_outputs=0):
-        """Wraps an apply method to allow its recurrent application.
-
-        This decorator allows you to use implementation
-        of an RNN transition to process sequences without writing
-        the iteration-related code again and again. In the most general
-        form information flow of a recurrent network
-        can be described as follows: depending on the context variables
-        and driven by input sequences the RNN updates its states and
-        produces output sequences. Thus the input variables of
-        your transition function play one of three roles: an input,
-        a context or a state. These roles should be specified it the
-        decorator call to make iteration possible.
-
-        Parameters
-        ----------
-        contexts : list of strs
-            Names of transition function arguments that play context role.
-        inputs : list of strs
-            Names of transition function argument that play input role.
-        states : list of str or (str, function) tuples.
-            Names of transition function arguments that play state role.
-            Additionaly a state initialization function can be passed. The
-            function should take ``self`` and the batch sizes as arguments.
-            By default :meth:`zero_state` is used.
-        num_outputs : int
-            Number of outputs of the transition function.
-
-        """
-        # Take care of default initialization.
-        for i, state in enumerate(states):
-            if isinstance(state, basestring):
-                states[i] = (state, BaseRecurrent.zero_state)
-        states, state_init_funcs = [list(_) for _ in zip(*states)]
-        if contexts is None:
-            contexts = []
-        scan_names = contexts + inputs + states
-
-        def decorator(fun):
-            arg_spec = inspect.getargspec(fun)
-            arg_names = arg_spec.args[1:]
-
-            def actual_apply(self, *args, **kwargs):
-                """Iterates a transition function.
-
-                Parameters
-                ----------
-                one_step : bool
-                    If ``True``, no iteration is made and transition
-                    function is simply applied to the arguments. ``False``
-                    by default.
-                reverse : bool
-                    If ``True``, the inputs are processed in backward
-                    direction. ``False`` by default.
-
-                .. todo::
-
-                   * Handle `updates` returned by the `theano.scan`
-                     routine.
-                   * ``kwargs`` has a random order; check if this is a
-                     problem.
-
-                """
-                # Extract arguments related to iteration.
-                one_step = kwargs.pop("one_step", False)
-                if one_step:
-                    return fun(self, *args, **kwargs)
-                reverse = kwargs.pop("reverse", False)
-                assert not reverse or not one_step
-
-                # Push everything to kwargs
-                for arg, arg_name in zip(args, arg_names):
-                    kwargs[arg_name] = arg
-                # Separate kwargs that aren't input, context or state variables
-                rest_kwargs = {key: value for key, value in kwargs.items()
-                               if key not in scan_names}
-
-                # Check what is given and what is not
-                def only_given(arg_names):
-                    return OrderedDict((arg_name, kwargs[arg_name])
-                                       for arg_name in arg_names
-                                       if arg_name in kwargs)
-                inputs_given = only_given(inputs)
-                contexts_given = only_given(contexts)
-
-                # At least one input, please
-                assert len(inputs_given) > 0
-                # TODO Assumes 1 time dim!
-                batch_size = inputs_given.values()[0].shape[1]
-
-                # Ensure that all initial states are available.
-                for state, init_func in zip(states, state_init_funcs):
-                    if not kwargs.get(state):
-                        kwargs[state] = init_func(self, batch_size)
-                states_given = only_given(states)
-                assert len(states_given) == len(states)
-
-                def scan_function(*args):
-                    args = list(args)
-                    arg_names = (inputs_given.keys() + states_given.keys() +
-                                 contexts_given.keys())
-                    kwargs = dict(zip(arg_names, args))
-                    kwargs.update(rest_kwargs)
-                    return fun(self, **kwargs)
-                result, updates = theano.scan(
-                    scan_function, sequences=inputs_given.values(),
-                    outputs_info=states_given.values() + [None] * num_outputs,
-                    non_sequences=contexts_given.values(),
-                    go_backwards=reverse)
-                assert not updates  # TODO Handle updates
-                return result
-
-            return Brick.apply_method(actual_apply)
-
-        return decorator
-
-
-class Recurrent(BaseRecurrent, DefaultRNG):
-    """Simple recurrent layer with optional activation.
-
-    Parameters
-    ----------
-    dim : int
-        The dimension of the hidden state
-    weights_init : object
-        The :class:`utils.NdarrayInitialization` object to initialize the
-        weight matrix with.
-    activation : Brick
-        The brick to apply as activation.
-
-    .. todo::
-
-       Implement deep transitions (by using other bricks). Currently, this
-       probably re-implements too much from the Linear brick.
-
-       Other important features:
-
-       * Carrying over hidden state between batches
-       * Return k last hidden states
-
-    """
-    @Brick.lazy_method
-    def __init__(self, dim, weights_init, activation=None, **kwargs):
-        super(Recurrent, self).__init__(**kwargs)
-        self.__dict__.update(locals())
-        del self.self
-
-    @property
-    def W(self):
-        return self.params[0]
-
-    def _allocate(self):
-        self.params.append(shared_floatx_zeros((self.dim, self.dim)))
-
-    def _initialize(self):
-        self.weights_init.initialize(self.W, self.rng)
-
-    @BaseRecurrent.recurrent_apply_method(inputs=['inp', 'mask'],
-                                          states=['state'])
-    def apply(self, inp, state, mask=None):
-        """Given data and mask, apply recurrent layer.
-
-        Parameters
-        ----------
-        inp : Theano variable
-            The 2 dimensional input, in the shape (batch, features).
-        state : Theano variable
-            The 2 dimensional state, in the shape (batch, features).
-        mask : Theano variable
-            A 1D binary array in the shape (batch,) which is 1 if
-            there is data available, 0 if not. Assumed to be 1-s
-            only if not given.
-
-        .. todo::
-
-           * Mask should become part of ``MaskedTensorVariable`` type so
-             that it can be passed around transparently.
-           * We should stop assuming that batches are the second dimension,
-             in order to support nested RNNs i.e. where the first n axes
-             are time, n + 1 is the batch, and n + 2, ... are features.
-             Masks will become n + 1 dimensional as well then.
-
-        """
-        assert inp.ndim == 2
-        assert state.ndim == 2
-        assert mask.ndim == 1
-
-        next_state = inp + tensor.dot(state, self.W)
-        if self.activation is not None:
-            next_state = self.activation.apply(next_state)
-        if mask:
-            next_state = (mask[:, None] * next_state +
-                          (1 - mask[:, None]) * state)
-        return next_state
-
-
-class BidirectionalRecurrent(DefaultRNG):
-    @Brick.lazy_method
-    def __init__(self, dim, weights_init, activation=None, hidden_init=None,
-                 combine='concatenate', **kwargs):
-        super(BidirectionalRecurrent, self).__init__(**kwargs)
-        if hidden_init is None:
-            hidden_init = Constant(0)
-        self.__dict__.update(locals())
-        del self.self
-        self.children = [Recurrent(), Recurrent()]
-
-    def _push_allocation_config(self):
-        for child in self.children:
-            for attr in ['dim', 'activation', 'hidden_init']:
-                setattr(child, attr, getattr(self, attr))
-
-    def _push_initialization_config(self):
-        for child in self.children:
-            child.weights_init = self.weights_init
-
-    @Brick.apply_method
-    def apply(self, inp, mask):
-        forward = self.children[0].apply(inp, mask)
-        backward = self.children[1].apply(inp, mask, reverse=True)
-        output = tensor.concatenate([forward[-1], backward[-1]], axis=1)
         return output

@@ -15,3 +15,6 @@ Indices and tables
    blocks
    initialization
    utils
+   model
+   serialization
+   graph
