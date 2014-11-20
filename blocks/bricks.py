@@ -8,7 +8,7 @@ import logging
 from abc import ABCMeta
 from collections import OrderedDict
 
-import numpy as np
+import numpy
 from theano import tensor
 
 from blocks.utils import (pack, repr_attrs, reraise_as, shared_floatx_zeros,
@@ -699,7 +699,7 @@ class DefaultRNG(Brick):
         if getattr(self, '_rng', None) is not None:
             return self._rng
         else:
-            return np.random.RandomState(DEFAULT_SEED)
+            return numpy.random.RandomState(DEFAULT_SEED)
 
     @rng.setter
     def rng(self, rng):

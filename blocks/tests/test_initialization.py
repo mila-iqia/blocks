@@ -1,4 +1,4 @@
-import numpy as np
+import numpy
 from numpy.testing import assert_, assert_equal, assert_allclose, assert_raises
 import theano
 
@@ -15,16 +15,16 @@ def test_constant():
 
     # Test scalar init.
     yield (check_constant, 5, (5, 5),
-           5 * np.ones((5, 5), dtype=theano.config.floatX))
+           5 * numpy.ones((5, 5), dtype=theano.config.floatX))
     # Test broadcasting.
     yield (check_constant, [1, 2, 3], (7, 3),
-           np.array([[1, 2, 3]] * 7, dtype=theano.config.floatX))
-    yield (check_constant, np.array([[1], [2], [3]]), (3, 2),
-           np.array([[1, 1], [2, 2], [3, 3]], dtype=theano.config.floatX))
+           numpy.array([[1, 2, 3]] * 7, dtype=theano.config.floatX))
+    yield (check_constant, numpy.array([[1], [2], [3]]), (3, 2),
+           numpy.array([[1, 1], [2, 2], [3, 3]], dtype=theano.config.floatX))
 
 
 def test_gaussian():
-    rng = np.random.RandomState([2014, 1, 20])
+    rng = numpy.random.RandomState([2014, 1, 20])
 
     def check_gaussian(rng, mean, std, shape):
         weights = IsotropicGaussian(mean, std).generate(rng, shape)
@@ -37,7 +37,7 @@ def test_gaussian():
 
 
 def test_uniform():
-    rng = np.random.RandomState([2014, 1, 20])
+    rng = numpy.random.RandomState([2014, 1, 20])
 
     def check_uniform(rng, mean, width, std, shape):
         weights = Uniform(mean=mean, width=width,
@@ -46,7 +46,7 @@ def test_uniform():
         assert_(weights.dtype == theano.config.floatX)
         assert_allclose(weights.mean(), mean, atol=1e-2)
         if width is not None:
-            std_ = width / np.sqrt(12)
+            std_ = width / numpy.sqrt(12)
         else:
             std_ = std
         assert_allclose(std_, weights.std(), atol=1e-2)
