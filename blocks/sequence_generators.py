@@ -1,19 +1,13 @@
 """Sequence generation framework"""
-
-import logging
-from abc import abstractmethod
+from abc import ABCMeta, abstractmethod
 
 from theano import tensor
 
-from blocks.bricks import (
-    Brick, MLP, Identity,
-    DefaultRNG, lazy, application)
+from blocks.bricks import application, Brick, DefaultRNG, Identity, lazy, MLP
 from blocks.parallel import Fork
-from blocks.recurrent import recurrent
 from blocks.lookup import LookupTable
+from blocks.recurrent import recurrent
 from blocks.utils import dict_union, update_instance
-
-logger = logging.getLogger(__name__)
 
 
 class BaseSequenceGenerator(Brick):
@@ -82,8 +76,8 @@ class BaseSequenceGenerator(Brick):
 
     """
     @lazy
-    def __init__(self, readout, transition, fork=None,
-                 weights_init=None, biases_init=None, **kwargs):
+    def __init__(self, readout, transition, fork=None, weights_init=None,
+                 biases_init=None, **kwargs):
         super(BaseSequenceGenerator, self).__init__(**kwargs)
         update_instance(self, locals())
 
@@ -136,7 +130,7 @@ class BaseSequenceGenerator(Brick):
         The contexts are expected as keyword arguments.
 
         """
-        batch_size = outputs.shape[-2]
+        batch_size = outputs.shape[-2]  # TODO Assumes only 1 features dim
 
         # Prepare input for the iterative part
         states = {name: kwargs[name] for name in self.state_names
@@ -144,8 +138,7 @@ class BaseSequenceGenerator(Brick):
         contexts = {name: kwargs[name] for name in self.context_names}
         feedback = self.readout.feedback(outputs)
         inputs = (self.fork.apply(feedback, return_dict=True)
-                  if self.fork
-                  else {'feedback': feedback})
+                  if self.fork else {'feedback': feedback})
 
         # Run the recurrent network
         results = self.transition.apply(
@@ -194,8 +187,7 @@ class BaseSequenceGenerator(Brick):
         glimpses = {name: kwargs[name] for name in self.glimpse_names}
 
         next_glimpses = self.transition.take_look(
-            return_dict=True,
-            **dict_union(states, glimpses, contexts))
+            return_dict=True, **dict_union(states, glimpses, contexts))
         next_readouts = self.readout.readout(
             feedback=self.readout.feedback(outputs),
             **dict_union(states, next_glimpses, contexts))
@@ -243,6 +235,7 @@ class BaseSequenceGenerator(Brick):
 
 class AbstractEmitter(Brick):
     """The interface for the emitter component of a readout."""
+    __metaclass__ = ABCMeta
 
     @abstractmethod
     def emit(self, readouts):
@@ -259,6 +252,7 @@ class AbstractEmitter(Brick):
 
 class AbstractFeedback(Brick):
     """The interface for the feedback component of a readout."""
+    __metaclass__ = ABCMeta
 
     @abstractmethod
     def feedback(self, outputs):
@@ -273,6 +267,8 @@ class AbstractReadout(AbstractEmitter, AbstractFeedback):
        Explain what the methods should do.
 
     """
+    __metaclass__ = ABCMeta
+
     @abstractmethod
     def readout(self, **kwargs):
         pass
@@ -284,6 +280,8 @@ class AbstractAttentionTransition(Brick):
     A recurrent transition combined with an attention mechanism.
 
     """
+    __metaclass__ = ABCMeta
+
     @abstractmethod
     def apply(self, **kwargs):
         pass

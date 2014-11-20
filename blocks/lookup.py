@@ -1,18 +1,15 @@
 """Introduces Lookup brick."""
-
-from theano import tensor
-
-from blocks.bricks import DefaultRNG, lazy, application
-from blocks.utils import (shared_floatx_zeros, update_instance,
-                          check_theano_variable)
+from blocks.bricks import application, DefaultRNG, lazy
+from blocks.utils import (check_theano_variable, shared_floatx_zeros,
+                          update_instance)
 
 
 class LookupTable(DefaultRNG):
-    """Incapsulates representations of a range of integers.
+    """Encapsulates representations of a range of integers.
 
     Parameters
     ----------
-    size : int
+    length : int
         The size of the lookup table, or in other words, one plus the
         maximum index for which a representation is contained.
     dim : int
@@ -30,7 +27,7 @@ class LookupTable(DefaultRNG):
 
     def _allocate(self):
         self.params.append(shared_floatx_zeros((self.length, self.dim),
-                           name="W"))
+                           name='W'))
 
     def _initialize(self):
         self.weights_init.initialize(self.W, self.rng)
@@ -53,12 +50,7 @@ class LookupTable(DefaultRNG):
             representation element.
 
         """
-
         check_theano_variable(indices, None, "int")
-        output_ndim = indices.ndim + 1
-        output_shape = self.dim * tensor.ones((output_ndim,),
-                                              dtype=indices.dtype)
-        output_shape = tensor.set_subtensor(output_shape[:indices.ndim],
-                                            indices.shape)
-        return self.W[indices.flatten()].reshape(output_shape,
-                                                 ndim=output_ndim)
+        output_shape = [indices.shape[i]
+                        for i in range(indices.ndim)] + [self.dim]
+        return self.W[indices.flatten()].reshape(output_shape)

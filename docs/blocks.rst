@@ -13,6 +13,14 @@ Bricks
     :undoc-members:
     :show-inheritance:
 
+Recurrent bricks
+----------------
+
+.. automodule:: blocks.recurrent
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 Sequence generators
 -------------------
 
