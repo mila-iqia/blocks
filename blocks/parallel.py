@@ -90,13 +90,6 @@ class Fork(Parallel):
         self.output_dims = self.fork_dims
         super(Fork, self)._push_allocation_config()
 
-    def _push_initialization_config(self):
-        for child in self.children:
-            if self.weights_init:
-                child.weights_init = self.weights_init
-            if self.biases_init:
-                child.biases_init = self.biases_init
-
     @application(inputs='inp')
     def apply(self, inp):
         return super(Fork, self).apply(**{name: inp
