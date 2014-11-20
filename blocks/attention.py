@@ -2,11 +2,10 @@
 
 We consider a hypothetical agent that wants to concentrate on particular parts
 of a structured input. To do that the agent needs an *attention mechanism*
-that given the *state* of the agent and the input signal outputs *attention
-weights*. The attention weights indicate relevance of input positions for the
-agent in its current state. For technical reasons we permit an agent to have
-a composite state consisting of several components, to which we will refer as
-*states of the agent* or simply *states*.
+that given the *state* of the agent and the input signal outputs *glimpses*.
+For technical reasons we permit an agent to have a composite state consisting
+of several components, to which we will refer as *states of the agent* or
+simply *states*.
 
 """
 
@@ -27,11 +26,36 @@ class SequenceContentAttention(Brick):
     2. the transformed states are summed with every transformed sequence
        element to obtain *match vectors*,
 
-    3. a linear combination of a match vector elements is computed and
-       interpreted as *energy*,
+    3. a match vector is transformed into a single number interpreted as
+       *energy*,
 
     4. energies are normalized in softmax-like fashion. The resulting summing
-       to one weights are called *attention weights*.
+       to one weights are called *attention weights*,
+
+    5. linear combination of the sequence elements with attention weights is
+       computed.
+
+    This linear combinations from 5 and the attention weights from 4 form the
+    set of glimpses produced by this attention mechanism. The former will be
+    refered to as *glimpses* in method documentation.
+
+    Parameters
+    ----------
+    state_names : list of str
+        The names of the agent states.
+    sequence_dim : int
+        The dimension of the sequence elements.
+    match_dim : int
+        The dimension of the match vector.
+    state_transformer : :class:`Brick`
+        A prototype for state transformations. If ``None``, the default
+        transformation from :class:`Parallel` is used.
+    sequence_transformer : :class:`Brick`
+        The transformation to be applied to the sequence. If ``None`` an
+        affine transformation is used.
+    energy_computer : :class:`Brick`
+        Computes energy from the match vector. If ``None``, an affine
+        transformations is used.
 
     .. [1] Dzmitry Bahdanau, Kyunghyun Cho and Yoshua Bengio. Neural Machine
     Translation by Jointly Learning to Align and Translate
@@ -70,32 +94,30 @@ class SequenceContentAttention(Brick):
             if self.biases_init:
                 child.biases_init = self.biases_init
 
-    @application
-    def take_look(self, sequence, **states):
-        """Compute attention weights for a sequence.
+    @application(output=['glimpses', 'weights'])
+    def take_look(self, sequence, preprocessed_sequence=None, **states):
+        """Compute attention weights and produce glimpses.
 
         Parameters
         ----------
         sequence : Theano variable
             The sequence, time is the 1-st dimension.
-        **states
-            The states of the agent.
-
-        """
-        return self.take_look_preprocessed(self.preprocess(sequence), **states)
-
-    @application
-    def take_look_preprocessed(self, preprocessed_sequence, **states):
-        """Compute attention weights for a preprocessed sequence.
-
-        Parameters
-        ----------
         preprocessed_sequence : Theano variable
-            The sequence, time is the 1-st dimension.
+            The preprocessed sequence. If ``None``, is computed by calling
+            :meth:`preprocess`.
         **states
             The states of the agent.
 
+        Returns
+        -------
+        glimpses : theano variable
+            linear combinations of sequence elements with attention weights.
+        weights : theano variable
+            attention weights.
+
         """
+        if not preprocessed_sequence:
+            preprocessed_sequence = self.preprocess(sequence)
         transformed_states = self.state_transformers.apply(return_dict=True,
                                                            **states)
         # Broadcasting of transformed states should be done automatically
@@ -103,7 +125,9 @@ class SequenceContentAttention(Brick):
                             preprocessed_sequence)
         energies = self.energy_computer.apply(match_vectors).reshape(
             match_vectors.shape[:-1], ndim=match_vectors.ndim - 1)
-        return tensor.nnet.softmax(energies)
+        weights = tensor.nnet.softmax(energies)
+        glimpses = (tensor.shape_padright(weights) * sequence).sum(axis=0)
+        return glimpses, weights
 
     @application
     def preprocess(self, sequence):
