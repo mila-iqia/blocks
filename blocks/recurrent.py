@@ -1,21 +1,20 @@
 import copy
 import inspect
-from abc import ABCMeta
 from collections import OrderedDict
 
 import theano
 from theano import tensor
 
 from blocks.bricks import (Application, application, application_wrapper,
-                           DefaultRNG, Identity, Sigmoid, lazy)
+                           Brick, DefaultRNG, Identity, Sigmoid, lazy)
 from blocks.initialization import Constant, NdarrayInitialization
 from blocks.utils import pack, shared_floatx_zeros, update_instance
 
 
-class BaseRecurrent(object):
+class BaseRecurrent(Brick):
     """Base class for brick with recurrent application method."""
-    __metaclass__ = ABCMeta
 
+    @application
     def initial_state(self, state_name, batch_size, *args, **kwargs):
         """Return an initial state for an application call.
 
