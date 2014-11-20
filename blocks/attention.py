@@ -19,7 +19,7 @@ from blocks.utils import update_instance
 class SequenceContentAttention(Brick):
     """An attention mechanism that looks for relevant content in a sequence.
 
-    This is the attention mechanism is used in [1]. The idea in a nutshell:
+    This is the attention mechanism used in [2]. The idea in a nutshell:
 
     1. the states and the sequence are transformed indepently,
 
@@ -58,8 +58,8 @@ class SequenceContentAttention(Brick):
         transformations is used.
 
 
-    .. [1] Dzmitry Bahdanau, Kyunghyun Cho and Yoshua Bengio. Neural Machine
-    Translation by Jointly Learning to Align and Translate.
+    .. [2] Dzmitry Bahdanau, Kyunghyun Cho and Yoshua Bengio. Neural Machine
+           Translation by Jointly Learning to Align and Translate.
 
     """
     @lazy
