@@ -5,6 +5,7 @@ import numpy
 import six
 import theano
 from theano import tensor
+from theano import printing
 
 
 def pack(arg):
@@ -271,5 +272,36 @@ def update_instance(self, kwargs, ignore=True):
 
     """
     for key, value in kwargs.items():
-        if ignore and key not in ['self', 'args', 'kwargs']:
+        if ignore and key not in ['self', 'args', 'kwargs', '__class__']:
             setattr(self, key, value)
+
+
+def put_hook(variable, hook_fn):
+    """Put a hook on a Theano variables.
+
+    Ensures that the hook function is executed every time when the value
+    of the Theano variable is available.
+
+    Parameters
+    ----------
+    variable : Theano variable
+        The variable to put a hook on.
+    hook_fn : function
+        The hook function. Should take a single argument: the variable's
+        value.
+
+    """
+    return printing.Print(global_fn=lambda _, x: hook_fn(x))(variable)
+
+
+def ipdb_breakpoint(x):
+    """A simple hook function for :fun:`put_hook` that runs ipdb.
+
+    Parameters
+    ----------
+    x : :class:`numpy.ndarray`
+        The value of the hooked variable.
+
+    """
+    import ipdb
+    ipdb.set_trace()

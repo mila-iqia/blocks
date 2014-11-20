@@ -12,8 +12,8 @@ from groundhog.mainLoop import MainLoop
 from groundhog.datasets import LMIterator
 from groundhog.trainer.SGD import SGD
 
-from blocks import bricks
-from blocks.bricks import GatedRecurrent, Tanh
+from blocks.bricks import Application, Tanh
+from blocks.recurrent import GatedRecurrent
 from blocks.select import Selector
 from blocks.graph import ComputationGraph, Cost
 from blocks.sequence_generators import (
@@ -97,13 +97,15 @@ def main():
                                           name='init_states')
         reset = tensor.scalar('reset')
         cost = Cost(generator.cost(x, states=init_states * reset).sum())
-        # This is why we need hierarchy of blocks: to replace
-        # this pathetic mechanism of addressing variables of the
-        # computation graph with a conceptually consistent one.
+        # TODO: better search routine
         states = [v for v in cost.variables
-                  if v.name and hasattr(v.tag, 'typ')
-                  and v.tag.typ == bricks.OUTPUT
-                  and v.name == 'with_fork_apply_states'][0]
+                  if hasattr(v.tag, 'owner')
+                  and v.tag.owner == generator.transition
+                  and v.tag.application == generator.transition.apply
+                  and v.tag.role == Application.OUTPUT_VARIABLE
+                  and v.tag.name == 'states']
+        assert len(states) == 1
+        states = states[0]
 
         gh_model = GroundhogModel(generator, cost)
         gh_model.properties.append(

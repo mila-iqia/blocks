@@ -1,12 +1,38 @@
 import inspect
+from abc import ABCMeta
+from collections import OrderedDict
 
 import theano
 from theano import tensor
 
 from blocks.bricks import (Application, application_wrapper, DefaultRNG,
-                           Identity, lazy, Tanh)
+                           Identity, Sigmoid, lazy)
 from blocks.initialization import Constant, NdarrayInitialization
-from blocks.utils import shared_floatx_zeros
+from blocks.utils import pack, shared_floatx_zeros, update_instance
+
+
+class BaseRecurrent(object):
+    """Base class for brick with recurrent application method."""
+    __metaclass__ = ABCMeta
+
+    def initial_state(self, state_name, batch_size, *args, **kwargs):
+        """Return an initial state for an application call.
+
+        Parameters
+        ----------
+        state_name : str
+            The name of the state.
+        batch_size : int
+            The batch size.
+        *args
+            The positional arguments of the application call.
+        **kwargs
+            The keyword arguments of the application call.
+
+        """
+        dim = self.get_dim(state_name)
+        return tensor.alloc(Constant(0).generate(self.rng, (1, dim)),
+                            batch_size, dim)
 
 
 def recurrent(*args, **kwargs):
@@ -47,11 +73,13 @@ def recurrent(*args, **kwargs):
             Parameters
             ----------
             iterate : bool
-                If ``True`` iteration is made. By default ``True``
-                which means that transition function is applied as is.
+                If ``True`` iteration is made. By default ``True``.
             reverse : bool
                 If ``True``, the sequences are processed in backward
                 direction. ``False`` by default.
+            return_initial_states : bool
+                If ``True``, initial states are included in the returned
+                state tensors. ``False`` by default.
 
             .. todo::
 
@@ -64,6 +92,7 @@ def recurrent(*args, **kwargs):
             # Extract arguments related to iteration.
             iterate = kwargs.pop('iterate', True)
             reverse = kwargs.pop('reverse', False)
+            return_initial_states = kwargs.pop('return_initial_states', False)
 
             # Push everything to kwargs
             for arg, arg_name in zip(args, arg_names):
@@ -76,8 +105,9 @@ def recurrent(*args, **kwargs):
 
             # Check what is given and what is not
             def only_given(arg_names):
-                return {arg_name: kwargs[arg_name] for arg_name in arg_names
-                        if arg_name in kwargs}
+                return OrderedDict((arg_name, kwargs[arg_name])
+                                   for arg_name in arg_names
+                                   if kwargs.get(arg_name))
             sequences_given = only_given(application.sequences)
             contexts_given = only_given(application.contexts)
 
@@ -104,18 +134,13 @@ def recurrent(*args, **kwargs):
                             batch_size, dim)
                     elif isinstance(kwargs[state_name], Application):
                         kwargs[state_name] = \
-                            kwargs[state_name].application_method(state_name,
-                                                                  batch_size)
+                            kwargs[state_name](state_name, batch_size,
+                                               *args, **kwargs)
                 else:
                     # TODO init_func returns 2D-tensor, fails for iterate=False
-                    if hasattr(brick, 'initial_state'):
-                        kwargs[state_name] = \
-                            brick.initial_state.application_method(state_name,
-                                                                   batch_size)
-                    else:
-                        kwargs[state_name] = tensor.alloc(
-                            Constant(0).generate(brick.rng, (1, dim)),
-                            batch_size, dim)
+                    kwargs[state_name] = \
+                        brick.initial_state(state_name, batch_size,
+                                            *args, **kwargs)
             states_given = only_given(application.states)
             assert len(states_given) == len(application.states)
 
@@ -135,13 +160,24 @@ def recurrent(*args, **kwargs):
                 kwargs = dict(zip(arg_names, args))
                 kwargs.update(rest_kwargs)
                 return application_method(brick, **kwargs)
+            outputs_info = (list(states_given.values())
+                            + [None] * (len(application.outputs) -
+                                        len(application.states)))
             result, updates = theano.scan(
                 scan_function, sequences=list(sequences_given.values()),
-                outputs_info=list(states_given.values()),
+                outputs_info=outputs_info,
                 non_sequences=list(contexts_given.values()),
                 n_steps=n_steps,
                 go_backwards=reverse)
-            assert not updates  # TODO Handle updates
+            result = pack(result)
+            if return_initial_states:
+                # Undo Subtensor
+                for i in range(len(states_given)):
+                    assert isinstance(result[i].owner.op,
+                                      tensor.subtensor.Subtensor)
+                    result[i] = result[i].owner.inputs[0]
+            if updates:
+                list(updates.values())[0].owner.tag.updates = updates
             return result
 
         return recurrent_apply
@@ -159,36 +195,7 @@ def recurrent(*args, **kwargs):
         return wrapper
 
 
-# class Wrap3D(Brick):
-#     """Convert 3D arrays to 2D and back in order to apply 2D bricks."""
-#     @lazy
-#     def __init__(self, wrapped, apply_method='apply', **kwargs):
-#         super(Wrap3D, self).__init__(**kwargs)
-#         self.children = [wrapped]
-#         self.apply_method = apply_method
-#
-#     @application
-#     def apply(self, inp):
-#         wrapped, = self.children
-#         flat_shape = ([inp.shape[0] * inp.shape[1]] +
-#                       [inp.shape[i] for i in range(2, inp.ndim)])
-#         output = getattr(wrapped, self.apply_method)(inp.reshape(flat_shape))
-#         full_shape = ([inp.shape[0], inp.shape[1]] +
-#                       [output.shape[i] for i in range(1, output.ndim)])
-#         return output.reshape(full_shape)
-
-
-def zero_state(dim, batch_size, *args, **kwargs):
-    """Create an initial state consisting of zeros.
-
-    The default state initialization routine. It is not made a method
-    to ensure that the brick argument can be omitted.
-
-    """
-    return tensor.zeros((batch_size, dim), dtype=theano.config.floatX)
-
-
-class Recurrent(DefaultRNG):
+class Recurrent(BaseRecurrent, DefaultRNG):
     """Simple recurrent layer with optional activation.
 
     Parameters
@@ -217,9 +224,7 @@ class Recurrent(DefaultRNG):
         super(Recurrent, self).__init__(**kwargs)
         if activation is None:
             activation = Identity()
-        self.__dict__.update(locals())
-        del self.self
-        del self.kwargs
+        update_instance(self, locals())
         self.children = [activation]
 
     @property
@@ -227,7 +232,7 @@ class Recurrent(DefaultRNG):
         return self.params[0]
 
     def get_dim(self, name):
-        if name in ['state']:
+        if name in ['inp', 'state']:
             return self.dim
         return super(Recurrent, self).get_dim()
 
@@ -271,7 +276,7 @@ class Recurrent(DefaultRNG):
         return next_state
 
 
-class GatedRecurrent(DefaultRNG):
+class GatedRecurrent(BaseRecurrent, DefaultRNG):
     """Gated recurrent neural network.
 
     Gated recurrent neural network (GRNN) as introduced in [1]. Every unit
@@ -311,11 +316,9 @@ class GatedRecurrent(DefaultRNG):
         if not activation:
             activation = Identity()
         if not gate_activation:
-            gate_activation = Tanh()
+            gate_activation = Sigmoid()
 
-        self.__dict__.update(locals())
-        del self.self
-        del self.kwargs
+        update_instance(self, locals())
         self.children = [activation, gate_activation]
 
     @property
@@ -331,15 +334,18 @@ class GatedRecurrent(DefaultRNG):
         return self.params[2]
 
     def get_dim(self, name):
-        if name in ['states']:
+        if name in ['inps', 'reset_inps', 'update_inps', 'states']:
             return self.dim
         return super(GatedRecurrent, self).get_dim(name)
 
     def _allocate(self):
-        new_param = lambda: shared_floatx_zeros((self.dim, self.dim))
-        self.params.append(new_param())
-        self.params.append(new_param() if self.use_update_gate else None)
-        self.params.append(new_param() if self.use_reset_gate else None)
+        new_param = lambda name: shared_floatx_zeros((self.dim, self.dim),
+                                                     name=name)
+        self.params.append(new_param('state_to_state'))
+        self.params.append(new_param('state_to_update')
+                           if self.use_update_gate else None)
+        self.params.append(new_param('state_to_reset')
+                           if self.use_reset_gate else None)
 
     def _initialize(self):
         self.weights_init.initialize(self.state_to_state, self.rng)
@@ -377,6 +383,7 @@ class GatedRecurrent(DefaultRNG):
         -------
         output : Theano variable
             Next states of the network.
+
         """
         if (self.use_update_gate != (update_inps is not None)) or \
                 (self.use_reset_gate != (reset_inps is not None)):
@@ -423,8 +430,7 @@ class BidirectionalRecurrent(DefaultRNG):
         super(BidirectionalRecurrent, self).__init__(**kwargs)
         if hidden_init is None:
             hidden_init = Constant(0)
-        self.__dict__.update(locals())
-        del self.self
+        update_instance(self, locals())
         self.children = [Recurrent(), Recurrent()]
 
     def _push_allocation_config(self):

@@ -6,6 +6,7 @@ import inspect
 import functools
 import logging
 from abc import ABCMeta
+from collections import OrderedDict
 
 import numpy as np
 from theano import tensor
@@ -13,10 +14,7 @@ from theano import tensor
 from blocks.utils import (pack, repr_attrs, reraise_as, shared_floatx_zeros,
                           unpack, update_instance)
 
-INPUT_SUFFIX = '_input'
-OUTPUT_SUFFIX = '_output'
 DEFAULT_SEED = [2014, 10, 5]
-PARAM_OWNER_TAG = 'param_owner'
 
 logger = logging.getLogger(__name__)
 
@@ -152,7 +150,7 @@ class Brick(object):
     ...                 biases_init=Constant(0))
     >>> x = theano.tensor.vector()
     >>> linear.apply(x)  # Calls linear.allocate() automatically
-    linear_output
+    linear_apply_output
     >>> linear.initialize()  # Initializes the weight matrix
 
     In simple cases, eager bricks are easier to deal with.
@@ -162,7 +160,7 @@ class Brick(object):
     >>> linear = Linear(5, 3, weights_init=IsotropicGaussian(),
     ...                 biases_init=Constant(0))
     >>> linear.apply(x)
-    linear_output
+    linear_apply_output
 
     """
     __metaclass__ = ABCMeta
@@ -212,11 +210,7 @@ class Brick(object):
         if not self.allocation_config_pushed:
             self.push_allocation_config()
         for child in self.children:
-            try:
-                child.allocate()
-            except:
-                self.allocation_config_pushed = False
-                raise
+            child.allocate()
         self.params = []
         try:
             self._allocate()
@@ -257,11 +251,7 @@ class Brick(object):
         if not self.initialization_config_pushed:
             self.push_initialization_config()
         for child in self.children:
-            try:
-                child.initialize()
-            except:
-                self.initialization_config_pushed = False
-                raise
+            child.initialize()
         try:
             self._initialize()
         except Exception:
@@ -297,6 +287,12 @@ class Brick(object):
         """
         self._push_allocation_config()
         self.allocation_config_pushed = True
+        for child in self.children:
+            try:
+                child.push_allocation_config()
+            except:
+                self.allocation_config_pushed = False
+                raise
 
     def _push_allocation_config(self):
         """Brick implementation of configuring child before allocation.
@@ -323,6 +319,12 @@ class Brick(object):
         """
         self._push_initialization_config()
         self.initialization_config_pushed = True
+        for child in self.children:
+            try:
+                child.push_initialization_config()
+            except:
+                self.initialization_config_pushed = False
+                raise
 
     def _push_initialization_config(self):
         """Brick implementation of configuring child before initialization.
@@ -431,6 +433,8 @@ class Application(object):
         self.delegate_method = None
 
     _last_brick_applied = None
+    INPUT_VARIABLE = 'input'
+    OUTPUT_VARIABLE = 'output'
 
     def __call__(self, *inputs, **kwargs):
         """Wraps an application method.
@@ -460,21 +464,37 @@ class Application(object):
                              " list."
                              .format(last, self.brick))
 
+        return_dict = kwargs.pop('return_dict', False)
+        return_list = kwargs.pop('return_list', False)
+        assert not return_list or not return_dict
+
+        arg_names, varargs_name, _, _ = inspect.getargspec(
+            self.application_method)
+        arg_names = arg_names[1:]
+
+        def tag_variable(variable, role, name):
+            variable.name = "{}_{}_{}".format(self.brick.name, self.__name__,
+                                              name)
+            variable.tag.owner = self.brick
+            variable.tag.application = self
+            variable.tag.name = name
+            variable.tag.role = role
+
         if not self.brick.allocated:
             self.brick.allocate()
         if not self.brick.initialized and not self.brick.lazy:
             self.brick.initialize()
         inputs = list(inputs)
         for i, inp in enumerate(inputs):
+            name = (arg_names[i] if i < len(arg_names) else
+                    "{}_{}".format(varargs_name, i - len(arg_names)))
             if isinstance(inp, tensor.Variable):
                 inputs[i] = inp.copy()
-                inputs[i].tag.owner = self.brick
-                inputs[i].name = self.brick.name + INPUT_SUFFIX
+                tag_variable(inputs[i], Application.INPUT_VARIABLE, name)
         for key, value in kwargs.items():
             if isinstance(value, tensor.Variable):
                 kwargs[key] = value.copy()
-                kwargs[key].tag.owner = self.brick
-                kwargs[key].name = self.brick.name + INPUT_SUFFIX
+                tag_variable(kwargs[key], Application.INPUT_VARIABLE, key)
         Application._last_brick_applied = self.brick
         try:
             outputs = self.application_method(self.brick, *inputs, **kwargs)
@@ -483,11 +503,18 @@ class Application(object):
         # TODO allow user to return an OrderedDict
         outputs = pack(outputs)
         for i, output in enumerate(outputs):
+            try:
+                name = self.outputs[i]
+            except:
+                name = "output_{}".format(i)
             if isinstance(output, tensor.Variable):
                 # TODO Tag with dimensions, axes, etc. for error-checking
                 outputs[i] = output.copy()
-                outputs[i].tag.owner = self.brick
-                outputs[i].name = self.brick.name + OUTPUT_SUFFIX
+                tag_variable(outputs[i], Application.OUTPUT_VARIABLE, name)
+        if return_list:
+            return outputs
+        if return_dict:
+            return OrderedDict(zip(self.outputs, outputs))
         return unpack(outputs)
 
     def __get__(self, instance, owner):
@@ -643,24 +670,29 @@ def application(*args, **kwargs):
 
 
 class DefaultRNG(Brick):
-    """A mixin class for Bricks which need a RNG to initialize.
+    """A mixin class for Bricks which need random number generators.
 
     Parameters
     ----------
     rng : object
         A ``numpy.RandomState`` instance.
+    theano_rng : object
+        A ``tensor.shared_randomstreams.RandomStreams`` instance.
 
     Attributes
     ----------
     rng : object
-        If the RNG has been set, return it. Otherwise, return a RNG with a
+        If a RNG has been set, return it. Otherwise, return a RNG with a
         default seed which can be set at a module level using
         ``blocks.bricks.DEFAULT_SEED = seed``.
+    theano_rng : object
+        If a RandomStreams was given in the constructor, return it.
+        Otherwise, return one seeded with ``blocks.bricks.DEFAULT_SEED``.
 
     """
-    def __init__(self, rng=None, **kwargs):
-        self.rng = rng
+    def __init__(self, rng=None, theano_rng=None, **kwargs):
         super(DefaultRNG, self).__init__(**kwargs)
+        update_instance(self, locals())
 
     @property
     def rng(self):
@@ -672,6 +704,17 @@ class DefaultRNG(Brick):
     @rng.setter
     def rng(self, rng):
         self._rng = rng
+
+    @property
+    def theano_rng(self):
+        if getattr(self, '_rng', None) is not None:
+            return self._rng
+        else:
+            return tensor.shared_randomstreams.RandomStreams(DEFAULT_SEED)
+
+    @theano_rng.setter
+    def theano_rng(self, theano_rng):
+        self._theano_rng = theano_rng
 
 
 class Linear(DefaultRNG):
@@ -709,8 +752,8 @@ class Linear(DefaultRNG):
     @lazy
     def __init__(self, input_dim, output_dim, weights_init,
                  biases_init=None, use_bias=True, **kwargs):
-        update_instance(self, locals())
         super(Linear, self).__init__(**kwargs)
+        update_instance(self, locals())
 
     def _allocate(self):
         self.params.append(shared_floatx_zeros((self.input_dim,

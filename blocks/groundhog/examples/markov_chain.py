@@ -11,7 +11,8 @@ from theano import tensor
 from groundhog.mainLoop import MainLoop
 from groundhog.trainer.SGD import SGD
 
-from blocks.bricks import GatedRecurrent, Tanh
+from blocks.bricks import Tanh
+from blocks.recurrent import GatedRecurrent
 from blocks.select import Selector
 from blocks.graph import ComputationGraph, Cost
 from blocks.sequence_generators import (
@@ -19,6 +20,7 @@ from blocks.sequence_generators import (
 from blocks.initialization import Orthogonal, IsotropicGaussian, Constant
 from blocks.groundhog import GroundhogIterator, GroundhogState, GroundhogModel
 from blocks.serialization import load_params
+from blocks.utils import update_instance
 
 floatX = theano.config.floatX
 
@@ -39,8 +41,7 @@ class ChainIterator(GroundhogIterator):
     entropy = equilibrium.dot(trans_entropy).sum()
 
     def __init__(self, rng, seq_len, batch_size):
-        self.__dict__.update(**locals())
-        del self.self
+        update_instance(self, locals())
 
         logger.debug("Markov chain entropy: {}".format(self.entropy))
         logger.debug("Expected min error: {}".format(
@@ -86,9 +87,7 @@ def main():
     num_states = ChainIterator.num_states
     feedback_dim = 8
 
-    transition = GatedRecurrent(
-        name="transition", activation=Tanh(), dim=dim,
-        weights_init=Orthogonal())
+    transition = GatedRecurrent(name="transition", activation=Tanh(), dim=dim)
     generator = SequenceGenerator(
         LinearReadout(readout_dim=num_states, source_names=["states"],
                       emitter=SoftmaxEmitter(name="emitter"),
@@ -109,7 +108,12 @@ def main():
         rng = numpy.random.RandomState(1)
         batch_size = 50
 
+        generator.push_initialization_config()
+        transition.weights_init = Orthogonal()
         generator.initialize()
+        logger.debug("transition.weights_init={}".format(
+            transition.weights_init))
+
         cost = Cost(generator.cost(tensor.lmatrix('x')).sum())
 
         gh_model = GroundhogModel(generator, cost)
