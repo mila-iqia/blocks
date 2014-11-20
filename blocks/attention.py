@@ -96,7 +96,8 @@ class SequenceContentAttention(Brick):
                 child.biases_init = self.biases_init
 
     @application(output=['glimpses', 'weights'])
-    def take_look(self, sequence, preprocessed_sequence=None, **states):
+    def take_look(self, sequence, preprocessed_sequence=None, mask=None,
+                  **states):
         """Compute attention weights and produce glimpses.
 
         Parameters
@@ -106,6 +107,9 @@ class SequenceContentAttention(Brick):
         preprocessed_sequence : Theano variable
             The preprocessed sequence. If ``None``, is computed by calling
             :meth:`preprocess`.
+        mask : Theano variable
+            A 0/1 mask specifying available data. 0 means that the
+            corresponding sequence element is fake.
         \*\*states
             The states of the agent.
 
@@ -127,6 +131,8 @@ class SequenceContentAttention(Brick):
                             preprocessed_sequence)
         energies = self.energy_computer.apply(match_vectors).reshape(
             match_vectors.shape[:-1], ndim=match_vectors.ndim - 1)
+        if mask:
+            energies *= mask
         weights = tensor.nnet.softmax(energies)
         glimpses = (tensor.shape_padright(weights) * sequence).sum(axis=0)
         return glimpses, weights

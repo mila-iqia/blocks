@@ -24,15 +24,18 @@ def test_sequence_content_attention():
 
     sequences = tensor.tensor3('sequences')
     states = tensor.matrix('states')
-    glimpses, weights = attention.take_look(sequences, states=states)
+    mask = tensor.matrix('mask')
+    glimpses, weights = attention.take_look(sequences, states=states,
+                                            mask=mask)
     assert glimpses.ndim == 2
     assert weights.ndim == 2
 
     seq_values = numpy.zeros((seq_len, batch_size, sequence_dim), dtype=floatX)
     states_values = numpy.zeros((batch_size, state_dim), dtype=floatX)
+    mask_values = numpy.zeros((seq_len, batch_size), dtype=floatX)
     glimpses_values, weight_values = theano.function(
-        [sequences, states], [glimpses, weights])(
-            seq_values, states_values)
+        [sequences, states, mask], [glimpses, weights])(
+            seq_values, states_values, mask_values)
     assert glimpses_values.shape == (batch_size, sequence_dim)
     assert weight_values.shape == (seq_len, batch_size)
     assert numpy.all(weight_values >= 0)
