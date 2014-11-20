@@ -14,11 +14,14 @@ before_install:
   - export PATH=/home/travis/miniconda/bin:$PATH
   - conda update -q --yes conda
 install:
-  - conda install -q --yes python=$TRAVIS_PYTHON_VERSION nose numpy pip coverage six flake8
+  - conda install -q --yes python=$TRAVIS_PYTHON_VERSION nose numpy pip coverage six flake8 scipy
   - pip install -q --no-deps git+git://github.com/Theano/Theano.git
   - pip install -q nose2
   - pip install -q nose2[coverage-plugin]
   - pip install -q coveralls
+  - git clone git://github.com/lisa-lab/pylearn2.git
+  - cd pylearn2
+  - python setup.py develop
 script:
   - if [ $FLAKE8 ]; then flake8 blocks; fi
   - if [ $FLOATX ]; then THEANO_FLAGS=floatX=$FLOATX,blas.ldflags='-lblas -lgfortran' coverage run --source=blocks -m nose2.__main__; fi
