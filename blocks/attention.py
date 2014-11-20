@@ -57,8 +57,9 @@ class SequenceContentAttention(Brick):
         Computes energy from the match vector. If ``None``, an affine
         transformations is used.
 
+
     .. [1] Dzmitry Bahdanau, Kyunghyun Cho and Yoshua Bengio. Neural Machine
-    Translation by Jointly Learning to Align and Translate
+    Translation by Jointly Learning to Align and Translate.
 
     """
     @lazy
@@ -105,15 +106,16 @@ class SequenceContentAttention(Brick):
         preprocessed_sequence : Theano variable
             The preprocessed sequence. If ``None``, is computed by calling
             :meth:`preprocess`.
-        **states
+        \*\*states
             The states of the agent.
 
         Returns
         -------
         glimpses : theano variable
-            linear combinations of sequence elements with attention weights.
+            Linear combinations of sequence elements with the ttention
+            weights.
         weights : theano variable
-            attention weights.
+            The attention weights.
 
         """
         if not preprocessed_sequence:
