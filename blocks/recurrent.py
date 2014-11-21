@@ -31,8 +31,9 @@ class BaseRecurrent(Brick):
 
         """
         dim = self.get_dim(state_name)
-        return tensor.alloc(Constant(0).generate(self.rng, (1, dim)),
-                            batch_size, dim)
+        if dim == 0:
+            return tensor.zeros((batch_size,))
+        return tensor.zeros((batch_size, dim))
 
 
 def recurrent(*args, **kwargs):
@@ -141,6 +142,7 @@ def recurrent(*args, **kwargs):
                     kwargs[state_name] = \
                         brick.initial_state(state_name, batch_size,
                                             *args, **kwargs)
+                    assert kwargs[state_name]
             states_given = only_given(application.states)
             assert len(states_given) == len(application.states)
 
@@ -232,9 +234,11 @@ class Recurrent(BaseRecurrent, DefaultRNG):
         return self.params[0]
 
     def get_dim(self, name):
-        if name in ['inp', 'state']:
+        if name == 'mask':
+            return 0
+        if name in Recurrent.apply.sequences + Recurrent.apply.states:
             return self.dim
-        return super(Recurrent, self).get_dim()
+        return super(Recurrent, self).get_dim(name)
 
     def _allocate(self):
         self.params.append(shared_floatx_zeros((self.dim, self.dim)))
@@ -334,7 +338,10 @@ class GatedRecurrent(BaseRecurrent, DefaultRNG):
         return self.params[2]
 
     def get_dim(self, name):
-        if name in ['inps', 'reset_inps', 'update_inps', 'states']:
+        if name == 'mask':
+            return 0
+        if name in (GatedRecurrent.apply.sequences
+                    + GatedRecurrent.apply.states):
             return self.dim
         return super(GatedRecurrent, self).get_dim(name)
 
