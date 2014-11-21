@@ -130,8 +130,8 @@ class Identity(NdarrayInitialization):
     Only works for 2D arrays. If the number of columns is not equal to the
     number of rows, the array will be truncated or padded with zeros.
 
-    Params
-    ------
+    Parameters
+    ----------
     mult : float, optional
         Multiply the identity matrix with a scalar. Defaults to 1.
 

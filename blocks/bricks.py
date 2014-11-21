@@ -164,7 +164,7 @@ class Brick(object):
 
     """
     __metaclass__ = ABCMeta
-    #: See :attr:`lazy`
+    #: See :attr:`Brick.lazy`
     lazy = True
 
     def __init__(self, name=None):
@@ -378,7 +378,7 @@ def lazy(func):
     >>> Brick.lazy = False
     >>> brick = SomeBrick('a')
     Traceback (most recent call last):
-      File "<stdin>", line 1, in <module>
+      ...
     TypeError: __init__() takes at least 3 arguments (2 given)
     >>> Brick.lazy = True  # Reset for other doctests
 
@@ -559,8 +559,6 @@ class Application(object):
 
         """
         new_application_method = wrapper(self, self.application_method)
-        functools.update_wrapper(new_application_method,
-                                 self.application_method)
         self.application_method = new_application_method
         return self
 
@@ -679,16 +677,6 @@ class DefaultRNG(Brick):
     theano_rng : object
         A ``tensor.shared_randomstreams.RandomStreams`` instance.
 
-    Attributes
-    ----------
-    rng : object
-        If a RNG has been set, return it. Otherwise, return a RNG with a
-        default seed which can be set at a module level using
-        ``blocks.bricks.DEFAULT_SEED = seed``.
-    theano_rng : object
-        If a RandomStreams was given in the constructor, return it.
-        Otherwise, return one seeded with ``blocks.bricks.DEFAULT_SEED``.
-
     """
     def __init__(self, rng=None, theano_rng=None, **kwargs):
         super(DefaultRNG, self).__init__(**kwargs)
@@ -696,6 +684,11 @@ class DefaultRNG(Brick):
 
     @property
     def rng(self):
+        """
+        If a RNG has been set, return it. Otherwise, return a RNG with a
+        default seed which can be set at a module level using
+        ``blocks.bricks.DEFAULT_SEED = seed``.
+        """
         if getattr(self, '_rng', None) is not None:
             return self._rng
         else:
@@ -707,6 +700,10 @@ class DefaultRNG(Brick):
 
     @property
     def theano_rng(self):
+        """
+        If a RandomStreams was given in the constructor, return it.
+        Otherwise, return one seeded with ``blocks.bricks.DEFAULT_SEED``.
+        """
         if getattr(self, '_rng', None) is not None:
             return self._rng
         else:
@@ -893,6 +890,19 @@ class MLP(DefaultRNG):
 
     @application(inputs=['inp'], outputs=['output'])
     def apply(self, inp):
+        """Perform the forward propagation.
+
+        Parameters
+        ----------
+        inp : Theano variable
+            Perform the forward propogation of the MLP.
+
+        Returns
+        -------
+        output : Theano variable
+            The output of the last layer.
+
+        """
         output = inp
         for activation, linear in zip(self.activations,
                                       self.linear_transformations):
