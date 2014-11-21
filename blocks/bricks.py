@@ -352,6 +352,22 @@ class Brick(object):
         raise ValueError("No dimension information for {} available"
                          .format(name))
 
+    def get_dims(self, names):
+        """Get dictionary of dimensions for a set of input/output variables.
+
+        Parameters
+        ----------
+        names : list of str
+            The dictinonary of variable names.
+
+        Returns
+        -------
+        dims : dict
+            Dictionary of (variable name, variable dimension) pairs.
+
+        """
+        return {name: self.get_dim(name) for name in names}
+
 
 def lazy(func):
     """Makes the initialization lazy.
