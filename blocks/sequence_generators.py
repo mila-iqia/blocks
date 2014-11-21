@@ -82,9 +82,9 @@ class BaseSequenceGenerator(Brick):
         super(BaseSequenceGenerator, self).__init__(**kwargs)
         update_instance(self, locals())
 
-        self.state_names = transition.state_names
-        self.context_names = transition.context_names
-        self.glimpse_names = transition.glimpse_names
+        self.state_names = transition.compute_states.outputs
+        self.context_names = transition.apply.contexts
+        self.glimpse_names = transition.take_look.outputs
         self.children = [self.readout, self.fork, self.transition]
 
     def _push_allocation_config(self):
@@ -630,6 +630,10 @@ class AttentionTransition(AbstractAttentionTransition, DefaultRNG):
             iterate=False, return_list=True,
             **dict_union(sequences, states, kwargs))
         return current_states
+
+    @compute_states.property('outputs')
+    def compute_states_outputs(self):
+        return self.state_names
 
     @recurrent
     def do_apply(self, **kwargs):
