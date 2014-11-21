@@ -188,6 +188,44 @@ def check_theano_variable(variable, n_dim, dtype_prefix):
                              dtype_prefix, variable.dtype))
 
 
+def dict_subset(dikt, keys, pop=False, must_have=True):
+    """Return a subset of a dictionary corresponding to a set of keys.
+
+    Parameters
+    ----------
+    dikt : dict
+        The dictionary.
+    keys : iterable
+        The keys of interest.
+    pop : bool
+        If ``True``, the pairs corresponding to the keys of interest are popped
+        from the dictionary.
+    must_have : bool
+        If ``True``, a ValueError will be raised when trying to retrieve a key
+        not present in the dictionary.
+
+    Returns
+    -------
+    result : :class:`OrderedDict`
+        An ordered dictionary of retrieved pairs. The order is the same as
+        in the `keys` argument.
+
+    """
+    not_found = object()
+
+    def extract(k):
+        if pop:
+            if must_have:
+                return dikt.pop(k)
+            return dikt.pop(k, not_found)
+        if must_have:
+            return dikt[k]
+        return dikt.get(k, not_found)
+
+    result = [(key, extract(key)) for key in keys]
+    return OrderedDict([(k, v) for k, v in result if v != not_found])
+
+
 def dict_union(*dicts, **kwargs):
     """Return union of a sequence of disjoint dictionaries.
 

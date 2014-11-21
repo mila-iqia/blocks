@@ -153,7 +153,7 @@ class Orthogonal(NdarrayInitialization):
 
     """
     def generate(self, rng, shape):
-        M = numpy.random.randn(*shape).astype(theano.config.floatX)
+        M = rng.randn(*shape).astype(theano.config.floatX)
         # QR decomposition of matrix with entries in N(0, 1) is random
         Q, R = numpy.linalg.qr(M)
         # Correct that NumPy doesn't force diagonal of R to be non-negative

@@ -21,6 +21,15 @@ Recurrent bricks
     :undoc-members:
     :show-inheritance:
 
+Attention brick
+---------------
+
+.. automodule:: blocks.attention
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
 Sequence generators
 -------------------
 

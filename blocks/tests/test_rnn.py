@@ -7,8 +7,8 @@ from numpy.testing import assert_allclose
 from theano import tensor
 
 from blocks.bricks import Tanh
-from blocks.recurrent import GatedRecurrent, Recurrent
-from blocks.initialization import Constant, IsotropicGaussian
+from blocks.recurrent import GatedRecurrent, Recurrent, Bidirectional
+from blocks.initialization import Constant, IsotropicGaussian, Orthogonal
 
 
 floatX = theano.config.floatX
@@ -119,3 +119,35 @@ class TestGatedRecurrent(unittest.TestCase):
         h_val = h_val[1:]
         # TODO Figure out why this tolerance needs to be so big
         assert_allclose(h_val, calc_h(x_val, ri_val,  mask_val)[0], 1e-03)
+
+
+class TestBidirectional(unittest.TestCase):
+    def setUp(self):
+        self.bidir = Bidirectional(weights_init=Orthogonal(),
+                                   prototype=Recurrent(
+                                       dim=3, activation=Tanh()))
+        self.simple = Recurrent(dim=3, weights_init=Orthogonal(),
+                                activation=Tanh())
+        self.bidir.initialize()
+        self.simple.initialize()
+        self.x_val = 0.1 * numpy.asarray(
+            list(itertools.permutations(range(4))),
+            dtype=floatX)
+        self.x_val = (numpy.ones((24, 4, 3), dtype=floatX)
+                      * self.x_val[..., None])
+        self.mask_val = numpy.ones((24, 4), dtype=floatX)
+        self.mask_val[12:24, 3] = 0
+
+    def test(self):
+        x = tensor.tensor3('x')
+        mask = tensor.matrix('mask')
+        calc_bidir = theano.function([x, mask],
+                                     [self.bidir.apply(x, mask=mask)])
+        calc_simple = theano.function([x, mask],
+                                      [self.simple.apply(x, mask=mask)])
+        h_bidir = calc_bidir(self.x_val, self.mask_val)[0]
+        h_simple = calc_simple(self.x_val, self.mask_val)[0]
+        h_simple_rev = calc_simple(self.x_val[::-1], self.mask_val[::-1])[0]
+
+        assert_allclose(h_simple, h_bidir[..., :3], rtol=1e-04)
+        assert_allclose(h_simple_rev, h_bidir[::-1, ...,  3:], rtol=1e-04)

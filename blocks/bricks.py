@@ -12,7 +12,7 @@ import numpy
 from theano import tensor
 
 from blocks.utils import (pack, repr_attrs, reraise_as, shared_floatx_zeros,
-                          unpack, update_instance)
+                          unpack, update_instance, put_hook)
 
 DEFAULT_SEED = [2014, 10, 5]
 
@@ -166,6 +166,8 @@ class Brick(object):
     __metaclass__ = ABCMeta
     #: See :attr:`Brick.lazy`
     lazy = True
+    # Turns on debug logging of input/output shapes
+    print_shapes = False
 
     def __init__(self, name=None):
         if name is None:
@@ -352,6 +354,22 @@ class Brick(object):
         raise ValueError("No dimension information for {} available"
                          .format(name))
 
+    def get_dims(self, names):
+        """Get dictionary of dimensions for a set of input/output variables.
+
+        Parameters
+        ----------
+        names : list of str
+            The dictinonary of variable names.
+
+        Returns
+        -------
+        dims : dict
+            Dictionary of (variable name, variable dimension) pairs.
+
+        """
+        return {name: self.get_dim(name) for name in names}
+
 
 def lazy(func):
     """Makes the initialization lazy.
@@ -472,13 +490,19 @@ class Application(object):
             self.application_method)
         arg_names = arg_names[1:]
 
-        def tag_variable(variable, role, name):
-            variable.name = "{}_{}_{}".format(self.brick.name, self.__name__,
-                                              name)
-            variable.tag.owner = self.brick
-            variable.tag.application = self
-            variable.tag.name = name
-            variable.tag.role = role
+        def copy_and_tag(variable, role, name):
+            if Brick.print_shapes:
+                variable = put_hook(
+                    variable, lambda x: logger.debug(
+                        "{}.{}.{}.shape = {}".format(
+                            self.brick.name, self.__name__, name, x.shape)))
+            copy = variable.copy()
+            copy.name = "{}_{}_{}".format(self.brick.name, self.__name__, name)
+            copy.tag.owner = self.brick
+            copy.tag.application = self
+            copy.tag.name = name
+            copy.tag.role = role
+            return copy
 
         if not self.brick.allocated:
             self.brick.allocate()
@@ -489,12 +513,12 @@ class Application(object):
             name = (arg_names[i] if i < len(arg_names) else
                     "{}_{}".format(varargs_name, i - len(arg_names)))
             if isinstance(inp, tensor.Variable):
-                inputs[i] = inp.copy()
-                tag_variable(inputs[i], Application.INPUT_VARIABLE, name)
+                inputs[i] = copy_and_tag(inp, Application.INPUT_VARIABLE,
+                                         name)
         for key, value in kwargs.items():
             if isinstance(value, tensor.Variable):
-                kwargs[key] = value.copy()
-                tag_variable(kwargs[key], Application.INPUT_VARIABLE, key)
+                kwargs[key] = copy_and_tag(value, Application.INPUT_VARIABLE,
+                                           key)
         Application._last_brick_applied = self.brick
         try:
             outputs = self.application_method(self.brick, *inputs, **kwargs)
@@ -509,8 +533,8 @@ class Application(object):
                 name = "output_{}".format(i)
             if isinstance(output, tensor.Variable):
                 # TODO Tag with dimensions, axes, etc. for error-checking
-                outputs[i] = output.copy()
-                tag_variable(outputs[i], Application.OUTPUT_VARIABLE, name)
+                outputs[i] = copy_and_tag(outputs[i],
+                                          Application.OUTPUT_VARIABLE, name)
         if return_list:
             return outputs
         if return_dict:
