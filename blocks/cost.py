@@ -1,8 +1,6 @@
-from abc import ABCMeta
-
 from theano import tensor
 
-from blocks.bricks import Brick
+from blocks.bricks import application, Brick
 
 
 class Cost(Brick):
@@ -14,29 +12,28 @@ class CostMatrix(Cost):
 
     Assumes that the data has format (batch, features).
     """
-    __metaclass__ = ABCMeta
-
-    @Brick.apply_method
+    @application
     def apply(self, y, y_hat):
-        self.cost_matrix._raw(y, y_hat).sum(axis=1).mean()
+        return self.cost_matrix.application_method(
+            self, y, y_hat).sum(axis=1).mean()
 
 
 class BinaryCrossEntropy(CostMatrix):
-    @Brick.apply_method
+    @application
     def cost_matrix(self, y, y_hat):
         cost = tensor.nnet.binary_crossentropy(y_hat, y)
         return cost
 
 
 class AbsoluteError(CostMatrix):
-    @Brick.apply_method
+    @application
     def cost_matrix(self, y, y_hat):
         cost = tensor.abs(y - y_hat)
         return cost
 
 
 class SquaredError(CostMatrix):
-    @Brick.apply_method
-    def apply(self, y, y_hat):
+    @application
+    def cost_matrix(self, y, y_hat):
         cost = tensor.sqr(y - y_hat)
         return cost
