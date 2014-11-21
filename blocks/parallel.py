@@ -1,3 +1,9 @@
+"""Generic transformations with multiple inputs and/or outputs.
+
+As bricks from this module are intended to serve as adapters, most of them
+are lazy-only, i.e. can not be initialized with a single constructor call.
+
+"""
 import copy
 
 from blocks.bricks import Brick, lazy, application, MLP, Identity
@@ -75,15 +81,21 @@ class Fork(Parallel):
         A prototype for the input-to-fork transformations. A copy will be
         created for every output channel.
 
+    Attributes
+    ----------
+    input_dim : int
+        The input dimension. Required for allocation.
+    output_dims : dict of (output_name, int) pairs
+        The dimesions of the outputs. Required for allocation.
+
     Notes
     -----
-        Currently works only with lazy initialization
-        (can not be initialized with a single constructor call).
+        Lazy initialization only.
 
     """
     def __init__(self, fork_names, prototype=None, **kwargs):
         super(Fork, self).__init__(fork_names, prototype=prototype, **kwargs)
-        update_instance(self, locals())
+        self.fork_names = fork_names
 
     def _push_allocation_config(self):
         self.input_dims = {name: self.input_dim for name in self.fork_names}
@@ -98,3 +110,50 @@ class Fork(Parallel):
     @apply.property('outputs')
     def apply_outputs(self):
         return super(Fork, self).apply.outputs
+
+
+class Mixer(Parallel):
+    """Mixes a new channel with old ones.
+
+    Parameters
+    ----------
+    old_names : list of str
+        The names of the old channels.
+    new_name : list of str
+        The new channel's name.
+
+    Attributes
+    ----------
+    channel_dims : dict of (channel_name, int) pairs
+        The dimensions of the channels. Required for allocation.
+
+    """
+    def __init__(self, old_names, new_name, prototype=None, **kwargs):
+        super(Mixer, self).__init__(old_names, prototype=prototype, **kwargs)
+        self.old_names = old_names
+        self.new_name = new_name
+
+    def _push_allocation_config(self):
+        self.input_dims = {name: self.channel_dims[self.new_name]
+                           for name in self.old_names}
+        self.output_dims = {name: self.channel_dims[name]
+                            for name in self.old_names}
+        super(Mixer, self)._push_allocation_config()
+
+    @application
+    def apply(self, **kwargs):
+        new = kwargs.pop(self.new_name)
+        assert set(kwargs.keys()) == set(self.old_names)
+        result = super(Mixer, self).apply(
+            return_list=True, **{name: new for name in self.old_names})
+        for i, name in enumerate(self.old_names):
+            result[i] += kwargs[name]
+        return result
+
+    @apply.property('inputs')
+    def apply_inputs(self):
+        return [self.new_name] + self.old_names
+
+    @apply.property('outputs')
+    def apply_outputs(self):
+        return self.old_names
