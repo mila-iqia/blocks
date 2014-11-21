@@ -676,8 +676,8 @@ class AttentionTransition(AbstractAttentionTransition, DefaultRNG):
             mask=attended_mask, return_dict=True,
             **dict_union(
                 states, glimpses,
-                {self.attended_name : attended,
-                 self.preprocessed_attended_name : preprocessed_attended}))
+                {self.attended_name: attended,
+                 self.preprocessed_attended_name: preprocessed_attended}))
         current_states = self.compute_states(
             return_list=True,
             **dict_union(sequences, states, current_glimpses, kwargs))
