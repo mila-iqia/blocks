@@ -619,6 +619,20 @@ class AttentionTransition(AbstractAttentionTransition, DefaultRNG):
 
     @application
     def compute_states(self, **kwargs):
+        """Compute current states when glimpses have already been computed.
+
+        Parameters
+        ----------
+        **kwargs
+            Should contain everything what `self.transition` needs
+            and in addition current glimpses.
+
+        Returns
+        -------
+        current_states : list of Theano variables
+            Current states computed by `self.transition`.
+
+        """
         sequences = dict_subset(kwargs, self.sequence_names, pop=True)
         states = dict_subset(kwargs, self.state_names, pop=True)
         glimpses = dict_subset(kwargs, self.glimpse_names, pop=True)
