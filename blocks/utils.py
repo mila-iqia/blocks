@@ -188,8 +188,29 @@ def check_theano_variable(variable, n_dim, dtype_prefix):
                              dtype_prefix, variable.dtype))
 
 
-def dict_subset(dikt, keys, return_dict=True, return_list=False,
-             pop=False, must_have=True):
+def dict_subset(dikt, keys, pop=False, must_have=True):
+    """Return a subset of a dictionary corresponding to a set of keys.
+
+    Parameters
+    ----------
+    dikt : dict
+        The dictionary.
+    keys : iterable
+        The keys of interest.
+    pop : bool
+        If ``True``, the pairs corresponding to the keys of interest are popped
+        from the dictionary.
+    must_have : bool
+        If ``True``, a ValueError will be raised when trying to retrieve a key
+        not present in the dictionary.
+
+    Returns
+    -------
+    result : :class:`OrderedDict`
+        An ordered dictionary of retrieved pairs. The order is the same as
+        in the `keys` argument.
+
+    """
     not_found = object()
     def extract(k):
         if pop:
@@ -200,13 +221,8 @@ def dict_subset(dikt, keys, return_dict=True, return_list=False,
             return dikt[k]
         return dikt.get(k, not_found)
 
-    assert bool(return_dict) != bool(return_list)
-    if return_list:
-        result = [extract(key) for key in keys]
-        return [r for r in result if r != not_found]
-    if return_dict:
-        result = [(key, extract(key)) for key in keys]
-        return OrderedDict([(k, v) for k, v in result if v != not_found])
+    result = [(key, extract(key)) for key in keys]
+    return OrderedDict([(k, v) for k, v in result if v != not_found])
 
 
 def dict_union(*dicts, **kwargs):
