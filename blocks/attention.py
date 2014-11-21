@@ -67,7 +67,7 @@ class SequenceContentAttention(Brick):
                  state_transformer=None, sequence_transformer=None,
                  energy_computer=None, weights_init=None, biases_init=None,
                  **kwargs):
-        super(SequenceContentAttention, self).__init__()
+        super(SequenceContentAttention, self).__init__(**kwargs)
         update_instance(self, locals())
 
         self.state_transformers = Parallel(state_names, self.state_transformer,
@@ -95,7 +95,7 @@ class SequenceContentAttention(Brick):
             if self.biases_init:
                 child.biases_init = self.biases_init
 
-    @application(output=['glimpses', 'weights'])
+    @application(outputs=['glimpses', 'weights'])
     def take_look(self, sequence, preprocessed_sequence=None, mask=None,
                   **states):
         """Compute attention weights and produce glimpses.
@@ -135,7 +135,21 @@ class SequenceContentAttention(Brick):
             energies *= mask
         weights = tensor.nnet.softmax(energies)
         glimpses = (tensor.shape_padright(weights) * sequence).sum(axis=0)
-        return glimpses, weights
+        return glimpses, weights.dimshuffle(1, 0)
+
+    @take_look.property('inputs')
+    def take_look_inputs(self):
+        return (['sequence', 'preprocessed_sequence', 'mask']
+                + self.state_names)
+
+    @application
+    def initial_glimpses(self, name, batch_size, sequence):
+        if name == "glimpses":
+            return tensor.zeros((batch_size, self.sequence_dim))
+        elif name == "weights":
+            return tensor.zeros((batch_size, sequence.shape[0]))
+        else:
+            raise ValueError("Unknown glimpse name {}".format(name))
 
     @application
     def preprocess(self, sequence):
@@ -148,3 +162,10 @@ class SequenceContentAttention(Brick):
 
         """
         return self.sequence_transformer.apply(sequence)
+
+    def get_dim(self, name):
+        if name in ['glimpses', 'sequence', 'preprocessed_sequence']:
+            return self.sequence_dim
+        if name in ['mask', 'weights']:
+            return 0
+        return super(SequenceContentAttention, self).get_dim(name)

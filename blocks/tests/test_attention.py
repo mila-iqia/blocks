@@ -37,6 +37,6 @@ def test_sequence_content_attention():
         [sequences, states, mask], [glimpses, weights])(
             seq_values, states_values, mask_values)
     assert glimpses_values.shape == (batch_size, sequence_dim)
-    assert weight_values.shape == (seq_len, batch_size)
+    assert weight_values.shape == (batch_size, seq_len)
     assert numpy.all(weight_values >= 0)
     assert numpy.all(weight_values <= 1)
