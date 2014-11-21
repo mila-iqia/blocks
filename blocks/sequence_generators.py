@@ -4,10 +4,11 @@ from abc import ABCMeta, abstractmethod
 from theano import tensor
 
 from blocks.bricks import application, Brick, DefaultRNG, Identity, lazy, MLP
+from blocks.recurrent import BaseRecurrent
 from blocks.parallel import Fork
 from blocks.lookup import LookupTable
 from blocks.recurrent import recurrent
-from blocks.utils import dict_union, update_instance
+from blocks.utils import dict_subset, dict_union, update_instance
 
 
 class BaseSequenceGenerator(Brick):
@@ -197,7 +198,7 @@ class BaseSequenceGenerator(Brick):
         next_inputs = (self.fork.apply(next_feedback, return_dict=True)
                        if self.fork else {'feedback': next_feedback})
         next_states = self.transition.apply(
-            return_list=True, iterate=False,
+            compute_new_glimpses=False, return_list=True, iterate=False,
             **dict_union(next_inputs, states, next_glimpses, contexts))
         return (next_states + [next_outputs]
                 + list(next_glimpses.values()) + [next_costs])
@@ -222,6 +223,7 @@ class BaseSequenceGenerator(Brick):
             return self.readout.get_dim(name)
         return super(BaseSequenceGenerator, self).get_dim(name)
 
+    @application
     def initial_state(self, name, batch_size, *args, **kwargs):
         if name == 'outputs':
             return self.readout.initial_outputs(batch_size)
@@ -274,7 +276,7 @@ class AbstractReadout(AbstractEmitter, AbstractFeedback):
         pass
 
 
-class AbstractAttentionTransition(Brick):
+class AbstractAttentionTransition(BaseRecurrent):
     """A base class for a transition component of a sequence generator.
 
     A recurrent transition combined with an attention mechanism.
@@ -288,10 +290,6 @@ class AbstractAttentionTransition(Brick):
 
     @abstractmethod
     def take_look(self, **kwargs):
-        pass
-
-    @abstractmethod
-    def initial_state(self, name, batch_size, *args, **kwargs):
         pass
 
 
@@ -519,6 +517,184 @@ class LookupFeedback(AbstractFeedback):
         return super(LookupFeedback, self).get_dim(name)
 
 
+class AttentionTransition(AbstractAttentionTransition, DefaultRNG):
+    """Combines an attention mechanism and a recurrent transition.
+
+    This brick is assembled from three components: an attention mechanism, a
+    recurrent transition and a mixer brick to make the first two work together.
+    It is expected that among the contexts of the transition's `apply` methods
+    there is one, intended to be attended by the attention mechanism, and
+    another one serving as a mask for the first one.
+
+    Parameters
+    ----------
+    transition : :class:`Brick`
+        The recurrent transition.
+    attention : :class:`Brick`
+        The attention mechanism.
+    attended_name : str
+        The name of the attended context. If ``None``, the first context is
+        used.
+    attended_mask_name : str
+        The name of the mask for the attended context. If ``None``, the second
+        context is used.
+
+    Notes
+    -----
+
+        Currently lazy-only.
+
+    """
+    def __init__(self, transition, attention, mixer,
+                 attended_name=None, attended_mask_name=None,
+                 **kwargs):
+        super(AttentionTransition, self).__init__(**kwargs)
+        update_instance(self, locals())
+
+        self.sequence_names = self.transition.apply.sequences
+        self.state_names = self.transition.apply.states
+        self.context_names = self.transition.apply.contexts
+
+        if not self.attended_name:
+            self.attended_name = self.context_names[0]
+        if not self.attended_mask_name:
+            self.attended_mask_name = self.context_names[1]
+        self.preprocessed_attended_name = "preprocessed_" + self.attended_name
+
+        self.glimpse_names = self.attention.take_look.outputs
+        # We need to determine which glimpses are fed back.
+        # Currently we extract it from `take_look` signature.
+        self.previous_glimpses_needed = [
+            name for name in self.glimpse_names
+            if name in self.attention.take_look.inputs]
+
+        self.children = [self.transition, self.attention, self.mixer]
+
+    def _push_allocation_config(self):
+        self.attention.state_dims = self.transition.get_dims(self.state_names)
+        self.attention.sequence_dim = self.transition.get_dim(
+            self.attended_name)
+        self.mixer.channel_dims = dict_subset(
+            dict_union(
+                self.transition.get_dims(self.sequence_names),
+                self.attention.get_dims(self.glimpse_names)),
+            self.mixer.apply.inputs)
+
+    def _push_initialization_config(self):
+        # TODO: stop copy-pasting this code
+        for child in self.children:
+            if self.weights_init:
+                child.weights_init = self.weights_init
+            if self.biases_init:
+                child.biases_init = self.biases_init
+
+    @recurrent
+    def do_apply(self, compute_new_glimpses=True, **kwargs):
+        """Process a sequence attending the attended context at every step.
+
+        Parameters
+        ----------
+        compute_new_glimpses : bool
+            If ``True`` it is assumed that previous step glimpses are provided
+            in `kwargs` and the current step glimpses are computed using them. If
+            ``False``, expects already computed current step glimpses.
+        **kwargs
+            Should contain current inputs, previous step states, contexts,
+            the preprocessed attended context. Either previous or current step
+            glimpses are expected depending on the value of
+            `compute_new_glimpses` flag.
+
+        Returns
+        -------
+        outputs : list of Theano variables
+            The current step states. Also the current step glimpses if
+            `compute_new_glimpses` is ``True``.
+
+        """
+        attended = kwargs[self.attended_name]
+        preprocessed_attended = kwargs.pop(self.preprocessed_attended_name)
+        attended_mask = kwargs.get(self.attended_mask_name)
+
+        sequences = dict_subset(kwargs, self.sequence_names, pop=True)
+        states = dict_subset(kwargs, self.state_names, pop=True)
+        glimpses = dict_subset(kwargs, self.glimpse_names,
+                               pop=True, must_have=False)
+
+        if compute_new_glimpses:
+            glimpses = self.attention.take_look(
+                attended, preprocessed_attended, mask=attended_mask,
+                return_dict=True, **dict_union(
+                    states, dict_subset(
+                        glimpses, self.previous_glimpses_needed)))
+
+        sequences.update(self.mixer.apply(
+            return_dict=True,
+            **dict_subset(dict_union(sequences, glimpses),
+                          self.mixer.apply.inputs)))
+        current_states = self.transition.apply(
+            iterate=False, return_list=True,
+            **dict_union(sequences, states, kwargs))
+
+        return current_states + (list(glimpses.values())
+                                 if compute_new_glimpses else [])
+
+    @do_apply.delegate
+    def do_apply_delegate(self):
+        return self.transition.apply
+
+    @do_apply.property('states')
+    def do_apply_states(self):
+        return self.transition.apply.states + self.glimpse_names
+
+    @application
+    def apply(self, **kwargs):
+        """Preprocess a sequence attending the attended context at every step.
+
+        Preprocesses the attended context and runs :meth:`do_apply`. See
+        :meth:`do_apply` documentation for further information.
+
+        """
+        preprocessed_attended = self.attention.preprocess(
+            kwargs[self.attended_name])
+        return self.do_apply(**dict_union(kwargs, {self.preprocessed_attended_name:
+                                                   preprocessed_attended}))
+
+    @application
+    def take_look(self, **kwargs):
+        """Compute glimpses with the attention mechanism.
+
+        Parameters
+        ----------
+        **kwargs
+            Should contain previous step states and glimpses.
+
+        Returns
+        -------
+        glimpses : list of Theano variables
+            Current step glimpses.
+
+        """
+        return self.attention.take_look(
+            **dict_subset(kwargs, self.state_names
+                                  + self.previous_glimpses_needed))
+
+    @take_look.property('outputs')
+    def take_look_outputs(self):
+        return self.glimpse_names
+
+    @application
+    def initial_state(self, state_name, batch_size, **kwargs):
+        if state_name in self.glimpse_names:
+            return self.attention.initial_glimpses(
+                state_name, batch_size, kwargs[self.attended_name])
+        return self.transition.initial_state(state_name, batch_size, **kwargs)
+
+    def get_dim(self, name):
+        if name in self.glimpse_names:
+            return self.attention.get_dim(name)
+        return self.transition.get_dim(name)
+
+
 class FakeAttentionTransition(AbstractAttentionTransition):
     """Adds fake attention interface to a transition.
 
@@ -548,6 +724,7 @@ class FakeAttentionTransition(AbstractAttentionTransition):
 
     @application
     def apply(self, *args, **kwargs):
+        kwargs.pop('compute_new_glimpses', None)
         return self.transition.apply(*args, **kwargs)
 
     @apply.delegate
