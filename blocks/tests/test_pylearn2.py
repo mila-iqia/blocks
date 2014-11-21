@@ -1,9 +1,7 @@
 import logging
-import unittest
 
 import numpy
 import pylearn2
-import six
 from pylearn2.space import VectorSpace
 from pylearn2.testing.datasets import random_dense_design_matrix
 from pylearn2.train import Train
@@ -16,10 +14,6 @@ from blocks.pylearn2 import BlocksModel, BlocksCost
 
 
 def test_pylearn2_trainin():
-    if six.PY3:
-        # Skip this test since Pylearn2 isn't Python 3 compatible
-        raise unittest.SkipTest
-
     # Construct the model
     mlp = MLP(activations=[Sigmoid(), Sigmoid()], dims=[784, 100, 784],
               weights_init=IsotropicGaussian(), biases_init=Constant(0.01))
