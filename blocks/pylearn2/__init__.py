@@ -10,10 +10,12 @@ from blocks.select import Selector
 class BlocksModel(Pylearn2Model):
     supervised = False
 
-    def __init__(self, brick, data_specs, application_method='apply'):
+    def __init__(self, brick, data_specs, application_method='apply',
+                 **kwargs):
         self.application_method = application_method
         self.brick = brick
         self.data_specs = data_specs
+        super(BlocksModel, self).__init__(**kwargs)
 
     def get_params(self):
         return Selector(self.brick).get_params().values()

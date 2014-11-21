@@ -1,6 +1,8 @@
+import logging
 import unittest
 
 import numpy
+import pylearn2
 import six
 from pylearn2.space import VectorSpace
 from pylearn2.testing.datasets import random_dense_design_matrix
@@ -31,6 +33,10 @@ def test_pylearn2_trainin():
     rng = numpy.random.RandomState(14)
     train_dataset = random_dense_design_matrix(rng, 1024, 784, 10)
     valid_dataset = random_dense_design_matrix(rng, 1024, 784, 10)
+
+    # Silence Pylearn2's logger
+    logger = logging.getLogger(pylearn2.__name__)
+    logger.setLevel(logging.ERROR)
 
     # Training algorithm
     sgd = SGD(learning_rate=0.01, cost=block_cost, batch_size=128,
