@@ -1,12 +1,13 @@
+import numpy
+from pylearn2.space import VectorSpace
+from pylearn2.testing.datasets import random_dense_design_matrix
+from pylearn2.train import Train
+from pylearn2.training_algorithms.sgd import SGD
+
 from blocks.bricks import Sigmoid, MLP
 from blocks.cost import SquaredError
 from blocks.initialization import IsotropicGaussian, Constant
 from blocks.pylearn2 import BlocksModel, BlocksCost
-
-from pylearn2.datasets.mnist import MNIST
-from pylearn2.space import VectorSpace
-from pylearn2.train import Train
-from pylearn2.training_algorithms.sgd import SGD
 
 
 def test_pylearn2_trainin():
@@ -20,11 +21,12 @@ def test_pylearn2_trainin():
     block_model = BlocksModel(mlp, (VectorSpace(dim=784), 'features'))
 
     # Load the data
-    mnist_train = MNIST('train')
-    mnist_test = MNIST('test')
+    rng = numpy.random.RandomState(14)
+    train_dataset = random_dense_design_matrix(rng, 1024, 784, 10)
+    valid_dataset = random_dense_design_matrix(rng, 1024, 784, 10)
 
     # Training algorithm
     sgd = SGD(learning_rate=0.01, cost=block_cost, batch_size=128,
-              monitoring_dataset=mnist_test)
-    train = Train(mnist_train, block_model, algorithm=sgd)
-    train.main_loop(time_budget=5)
+              monitoring_dataset=valid_dataset)
+    train = Train(train_dataset, block_model, algorithm=sgd)
+    train.main_loop(time_budget=3)
