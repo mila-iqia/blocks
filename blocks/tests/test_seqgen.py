@@ -156,13 +156,13 @@ def test_attention_transition():
     assert weights.ndim == 3
 
     input_values = numpy.zeros((inp_len, batch_size, inp_dim),
-                                  dtype=floatX)
+                               dtype=floatX)
     input_mask_values = numpy.ones((inp_len, batch_size),
-                                    dtype=floatX)
-    attended_values = numpy.zeros((attended_len, batch_size, attended_dim),
                                    dtype=floatX)
+    attended_values = numpy.zeros((attended_len, batch_size, attended_dim),
+                                  dtype=floatX)
     attended_mask_values = numpy.ones((attended_len, batch_size),
-                                       dtype=floatX)
+                                      dtype=floatX)
 
     func = theano.function([inputs, inputs_mask, attended, attended_mask],
                            [states, glimpses, weights])
@@ -173,5 +173,3 @@ def test_attention_transition():
     assert states_values.shape == input_values.shape
     assert glimpses_values.shape == (inp_len, batch_size, attended_dim)
     assert weight_values.shape == (inp_len, batch_size, attended_len)
-
-

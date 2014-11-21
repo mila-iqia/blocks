@@ -497,8 +497,7 @@ class Application(object):
                         "{}.{}.{}.shape = {}".format(
                             self.brick.name, self.__name__, name, x.shape)))
             copy = variable.copy()
-            copy.name = "{}_{}_{}".format(self.brick.name, self.__name__,
-                                              name)
+            copy.name = "{}_{}_{}".format(self.brick.name, self.__name__, name)
             copy.tag.owner = self.brick
             copy.tag.application = self
             copy.tag.name = name

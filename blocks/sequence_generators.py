@@ -596,11 +596,11 @@ class AttentionTransition(AbstractAttentionTransition, DefaultRNG):
         ----------
         compute_new_glimpses : bool
             If ``True`` it is assumed that previous step glimpses are provided
-            in `kwargs` and the current step glimpses are computed using them. If
-            ``False``, expects already computed current step glimpses.
+            in `kwargs` and the current step glimpses are computed using them.
+            If ``False``, expects already computed current step glimpses.
         **kwargs
-            Should contain current inputs, previous step states, contexts,
-            the preprocessed attended context. Either previous or current step
+            Should contain current inputs, previous step states, contexts, the
+            preprocessed attended context. Either previous or current step
             glimpses are expected depending on the value of
             `compute_new_glimpses` flag.
 
@@ -656,8 +656,10 @@ class AttentionTransition(AbstractAttentionTransition, DefaultRNG):
         """
         preprocessed_attended = self.attention.preprocess(
             kwargs[self.attended_name])
-        return self.do_apply(**dict_union(kwargs, {self.preprocessed_attended_name:
-                                                   preprocessed_attended}))
+        return self.do_apply(
+            **dict_union(kwargs,
+                         {self.preprocessed_attended_name:
+                          preprocessed_attended}))
 
     @application
     def take_look(self, **kwargs):
@@ -675,8 +677,8 @@ class AttentionTransition(AbstractAttentionTransition, DefaultRNG):
 
         """
         return self.attention.take_look(
-            **dict_subset(kwargs, self.state_names
-                                  + self.previous_glimpses_needed))
+            **dict_subset(kwargs,
+                          self.state_names + self.previous_glimpses_needed))
 
     @take_look.property('outputs')
     def take_look_outputs(self):

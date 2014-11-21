@@ -212,6 +212,7 @@ def dict_subset(dikt, keys, pop=False, must_have=True):
 
     """
     not_found = object()
+
     def extract(k):
         if pop:
             if must_have:
