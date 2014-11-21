@@ -295,7 +295,7 @@ def put_hook(variable, hook_fn):
 
 
 def ipdb_breakpoint(x):
-    """A simple hook function for :fun:`put_hook` that runs ipdb.
+    """A simple hook function for :func:`put_hook` that runs ipdb.
 
     Parameters
     ----------

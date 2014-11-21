@@ -1,6 +1,6 @@
 """Objects for encapsulating parameter initialization strategies."""
 from abc import ABCMeta, abstractmethod
-import numpy as np
+import numpy
 import theano
 
 
@@ -61,10 +61,10 @@ class Constant(NdarrayInitialization):
         broadcastable with any shape requested by `initialize`.
     """
     def __init__(self, constant):
-        self._constant = np.asarray(constant)
+        self._constant = numpy.asarray(constant)
 
     def generate(self, rng, shape):
-        dest = np.empty(shape, dtype=theano.config.floatX)
+        dest = numpy.empty(shape, dtype=theano.config.floatX)
         dest[...] = self._constant
         return dest
 
@@ -113,7 +113,7 @@ class Uniform(NdarrayInitialization):
                              "but not both")
         if std is not None:
             # Variance of a uniform is 1/12 * width^2
-            self._width = np.sqrt(12) * std
+            self._width = numpy.sqrt(12) * std
         else:
             self._width = width
         self._mean = mean
@@ -130,8 +130,8 @@ class Identity(NdarrayInitialization):
     Only works for 2D arrays. If the number of columns is not equal to the
     number of rows, the array will be truncated or padded with zeros.
 
-    Params
-    ------
+    Parameters
+    ----------
     mult : float, optional
         Multiply the identity matrix with a scalar. Defaults to 1.
 
@@ -143,7 +143,7 @@ class Identity(NdarrayInitialization):
         if len(shape) != 2:
             raise ValueError
         rows, cols = shape
-        return self.mult * np.eye(rows, cols, dtype=theano.config.floatX)
+        return self.mult * numpy.eye(rows, cols, dtype=theano.config.floatX)
 
 
 class Orthogonal(NdarrayInitialization):
@@ -155,7 +155,7 @@ class Orthogonal(NdarrayInitialization):
     def generate(self, rng, shape):
         M = rng.randn(*shape).astype(theano.config.floatX)
         # QR decomposition of matrix with entries in N(0, 1) is random
-        Q, R = np.linalg.qr(M)
+        Q, R = numpy.linalg.qr(M)
         # Correct that NumPy doesn't force diagonal of R to be non-negative
-        Q = Q * np.sign(np.diag(R))
+        Q = Q * numpy.sign(numpy.diag(R))
         return Q

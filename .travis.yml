@@ -4,23 +4,38 @@ python:
   - "3.4"
 env:
   - FLAKE8=true
-  - FLOATX=float32
-  - FLOATX=float64
+  - TESTS=float32
+  - TESTS=float64
 before_install:
-  - sudo apt-get install -qq libatlas3gf-base libatlas-dev liblapack-dev gfortran
-  - wget -q http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
-  - chmod +x miniconda.sh
-  - ./miniconda.sh -b
-  - export PATH=/home/travis/miniconda/bin:$PATH
-  - conda update -q --yes conda
+  - |
+      if [ $TESTS ]; then
+        sudo apt-get install -qq libatlas3gf-base libatlas-dev liblapack-dev gfortran
+        wget -q http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
+        chmod +x miniconda.sh
+        ./miniconda.sh -b
+        export PATH=/home/travis/miniconda/bin:$PATH
+        conda update -q --yes conda
+      fi
 install:
-  - conda install -q --yes python=$TRAVIS_PYTHON_VERSION nose numpy pip coverage six flake8
-  - pip install -q --no-deps git+git://github.com/Theano/Theano.git
-  - pip install -q nose2
-  - pip install -q nose2[coverage-plugin]
-  - pip install -q coveralls
+  - |
+      if [ $TESTS ]; then
+        conda install -q --yes python=$TRAVIS_PYTHON_VERSION nose numpy pip coverage six scipy
+        pip install -q --no-deps git+git://github.com/Theano/Theano.git
+        pip install -q nose2
+        pip install -q nose2[coverage-plugin]
+        pip install -q coveralls
+        cd
+        git clone git://github.com/lisa-lab/pylearn2.git
+        cd pylearn2
+        python setup.py develop
+        cd $TRAVIS_BUILD_DIR
+      fi
+  - |
+      if [ $FLAKE8 ]; then
+        pip install flake8
+      fi
 script:
+  - if [ $TESTS ]; then THEANO_FLAGS=floatX=$TESTS,blas.ldflags='-lblas -lgfortran' coverage run --source=blocks -m nose2.__main__; fi
   - if [ $FLAKE8 ]; then flake8 blocks; fi
-  - if [ $FLOATX ]; then THEANO_FLAGS=floatX=$FLOATX,blas.ldflags='-lblas -lgfortran' coverage run --source=blocks -m nose2.__main__; fi
 after_script:
-  - if [ ! $FLAKE8 ]; then coveralls; fi
+  - if [ $TESTS ]; then coveralls; fi
