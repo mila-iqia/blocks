@@ -5,7 +5,7 @@ from theano import tensor
 
 from blocks.bricks import application, Brick, DefaultRNG, Identity, lazy, MLP
 from blocks.recurrent import BaseRecurrent
-from blocks.parallel import Fork
+from blocks.parallel import Fork, Mixer
 from blocks.lookup import LookupTable
 from blocks.recurrent import recurrent
 from blocks.utils import dict_subset, dict_union, update_instance
@@ -143,8 +143,7 @@ class BaseSequenceGenerator(Brick):
 
         # Run the recurrent network
         results = self.transition.apply(
-            mask=mask, iterate=True,
-            return_initial_states=True, return_dict=True,
+            mask=mask, return_initial_states=True, return_dict=True,
             **dict_union(inputs, states, contexts))
 
         # Separate the deliverables
@@ -198,7 +197,7 @@ class BaseSequenceGenerator(Brick):
         next_inputs = (self.fork.apply(next_feedback, return_dict=True)
                        if self.fork else {'feedback': next_feedback})
         next_states = self.transition.compute_states(
-            return_list=True, iterate=False,
+            return_list=True,
             **dict_union(next_inputs, states, next_glimpses, contexts))
         return (next_states + [next_outputs]
                 + list(next_glimpses.values()) + [next_costs])
@@ -609,7 +608,7 @@ class AttentionTransition(AbstractAttentionTransition, DefaultRNG):
         """
         return self.attention.take_look(
             kwargs[self.attended_name],
-            kwargs[self.preprocessed_attended_name],
+            kwargs.get(self.preprocessed_attended_name),
             **dict_subset(kwargs,
                           self.state_names + self.previous_glimpses_needed))
 
@@ -633,7 +632,8 @@ class AttentionTransition(AbstractAttentionTransition, DefaultRNG):
             Current states computed by `self.transition`.
 
         """
-        sequences = dict_subset(kwargs, self.sequence_names, pop=True)
+        sequences = dict_subset(kwargs, self.sequence_names, pop=True,
+                                must_have=False)
         states = dict_subset(kwargs, self.state_names, pop=True)
         glimpses = dict_subset(kwargs, self.glimpse_names, pop=True)
         sequences.update(self.mixer.apply(
@@ -668,7 +668,8 @@ class AttentionTransition(AbstractAttentionTransition, DefaultRNG):
         preprocessed_attended = kwargs.pop(self.preprocessed_attended_name)
         attended_mask = kwargs.get(self.attended_mask_name)
 
-        sequences = dict_subset(kwargs, self.sequence_names, pop=True)
+        sequences = dict_subset(kwargs, self.sequence_names, pop=True,
+                                must_have=False)
         states = dict_subset(kwargs, self.state_names, pop=True)
         glimpses = dict_subset(kwargs, self.glimpse_names, pop=True)
 
@@ -691,6 +692,10 @@ class AttentionTransition(AbstractAttentionTransition, DefaultRNG):
     def do_apply_states(self):
         return self.transition.apply.states + self.glimpse_names
 
+    @do_apply.property('outputs')
+    def do_apply_outputs(self):
+        return self.transition.apply.states + self.glimpse_names
+
     @application
     def apply(self, **kwargs):
         """Preprocess a sequence attending the attended context at every step.
@@ -711,8 +716,8 @@ class AttentionTransition(AbstractAttentionTransition, DefaultRNG):
         # I can write self.apply because it can be overriden.
         # Thus I have to hack.
         # TODO: nice interface for this trick.
-        AttentionTransition.apply.__get__(self, None)
-        return AttentionTransition.apply
+        AttentionTransition.do_apply.__get__(self, None)
+        return AttentionTransition.do_apply
 
     @application
     def initial_state(self, state_name, batch_size, **kwargs):
@@ -764,7 +769,7 @@ class FakeAttentionTransition(AbstractAttentionTransition):
 
     @application
     def compute_states(self, *args, **kwargs):
-        return self.transition.apply(*args, **kwargs)
+        return self.transition.apply(iterate=False, *args, **kwargs)
 
     @compute_states.delegate
     def compute_states_delegate(self):
@@ -807,14 +812,18 @@ class SequenceGenerator(BaseSequenceGenerator):
     def __init__(self, readout, transition, attention=None,
                  fork_inputs=None, weights_init=None, biases_init=None,
                  **kwargs):
-        if attention:
-            raise NotImplementedError()
         if not fork_inputs:
             fork_inputs = [name for name in transition.apply.sequences
                            if name != 'mask']
 
         fork = Fork(fork_inputs)
-        transition = FakeAttentionTransition(transition,
-                                             name="with_fake_attention")
+        if attention:
+            mixer = Mixer(fork_inputs, attention.take_look.outputs[0],
+                          name="mixer")
+            transition = AttentionTransition(transition, attention, mixer,
+                                             name="att_trans")
+        else:
+            transition = FakeAttentionTransition(transition,
+                                                 name="with_fake_attention")
         super(SequenceGenerator, self).__init__(
             readout, transition, fork, weights_init, biases_init, **kwargs)

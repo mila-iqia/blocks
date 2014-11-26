@@ -15,6 +15,13 @@ from blocks.initialization import Orthogonal, IsotropicGaussian, Constant
 floatX = theano.config.floatX
 
 
+class TestEmitter(TrivialEmitter):
+    @application
+    def cost(self, readouts, outputs):
+        """Compute MSE."""
+        return ((readouts - outputs) ** 2).sum(axis=readouts.ndim - 1)
+
+
 def test_sequence_generator():
     # Disclaimer: here we only check shapes, not values.
 
@@ -23,18 +30,12 @@ def test_sequence_generator():
     batch_size = 30
     n_steps = 10
 
-    class Emitter(TrivialEmitter):
-        @application
-        def cost(self, readouts, outputs):
-            """Compute MSE."""
-            return ((readouts - outputs) ** 2).sum(axis=readouts.ndim - 1)
-
     transition = GatedRecurrent(
         name="transition", activation=Tanh(), dim=dim,
         weights_init=Orthogonal())
     generator = SequenceGenerator(
         LinearReadout(readout_dim=output_dim, source_names=["states"],
-                      emitter=Emitter(name="emitter"), name="readout"),
+                      emitter=TestEmitter(name="emitter"), name="readout"),
         transition,
         weights_init=IsotropicGaussian(0.01), biases_init=Constant(0),
         name="generator")
@@ -129,6 +130,7 @@ def test_attention_transition():
     attended_dim = 3
     attended_len = 11
     batch_size = 4
+    n_steps = 30
 
     transition = TestTransition(dim=inp_dim, attended_dim=attended_dim,
                                 name="transition")
@@ -155,21 +157,52 @@ def test_attention_transition():
     assert glimpses.ndim == 3
     assert weights.ndim == 3
 
-    input_values = numpy.zeros((inp_len, batch_size, inp_dim),
-                               dtype=floatX)
-    input_mask_values = numpy.ones((inp_len, batch_size),
-                                   dtype=floatX)
-    attended_values = numpy.zeros((attended_len, batch_size, attended_dim),
-                                  dtype=floatX)
-    attended_mask_values = numpy.ones((attended_len, batch_size),
-                                      dtype=floatX)
+    input_vals = numpy.zeros((inp_len, batch_size, inp_dim),
+                             dtype=floatX)
+    input_mask_vals = numpy.ones((inp_len, batch_size),
+                                 dtype=floatX)
+    attended_vals = numpy.zeros((attended_len, batch_size, attended_dim),
+                                dtype=floatX)
+    attended_mask_vals = numpy.ones((attended_len, batch_size),
+                                    dtype=floatX)
 
     func = theano.function([inputs, inputs_mask, attended, attended_mask],
                            [states, glimpses, weights])
-    states_values, glimpses_values, weight_values = func(
-        input_values, input_mask_values,
-        attended_values, attended_mask_values)
+    states_vals, glimpses_vals, weight_vals = func(
+        input_vals, input_mask_vals,
+        attended_vals, attended_mask_vals)
 
-    assert states_values.shape == input_values.shape
-    assert glimpses_values.shape == (inp_len, batch_size, attended_dim)
-    assert weight_values.shape == (inp_len, batch_size, attended_len)
+    assert states_vals.shape == input_vals.shape
+    assert glimpses_vals.shape == (inp_len, batch_size, attended_dim)
+    assert weight_vals.shape == (inp_len, batch_size, attended_len)
+
+    # Test SequenceGenerator using AttentionTransition
+    generator = SequenceGenerator(
+        LinearReadout(readout_dim=inp_dim, source_names=["state"],
+                      emitter=TestEmitter(name="emitter"),
+                      name="readout"),
+        transition=transition,
+        attention=attention,
+        weights_init=IsotropicGaussian(0.01), biases_init=Constant(0),
+        name="generator")
+
+    outputs = tensor.tensor3('outputs')
+    costs = generator.cost(outputs, attended=attended,
+                           attended_mask=attended_mask)
+    costs_vals = costs.eval({outputs: input_vals,
+                            attended: attended_vals,
+                            attended_mask: attended_mask_vals})
+    assert costs_vals.shape == (inp_len, batch_size)
+
+    results = (
+        generator.generate(n_steps=n_steps, batch_size=attended.shape[1],
+                           attended=attended, attended_mask=attended_mask))
+    assert len(results) == 5
+    states_vals, outputs_vals, glimpses_vals, weights_vals, costs_vals = (
+        theano.function([attended, attended_mask], results)
+        (attended_vals, attended_mask_vals))
+    assert states_vals.shape == (n_steps, batch_size, inp_dim)
+    assert states_vals.shape == outputs_vals.shape
+    assert glimpses_vals.shape == (n_steps, batch_size, attended_dim)
+    assert weights_vals.shape == (n_steps, batch_size, attended_len)
+    assert costs_vals.shape == (n_steps, batch_size)
