@@ -176,18 +176,3 @@ bricks' configuration.
 
 .. _machine translation models: http://arxiv.org/abs/1409.0473
 .. _here: :class:`blocks.bricks.Brick`
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-
-.. toctree::
-   :hidden:
-
-   blocks
-   initialization
-   utils
-   serialization
-   graph
