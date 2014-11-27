@@ -7,6 +7,8 @@
 .. image:: https://readthedocs.org/projects/blocks/badge/?version=latest
    :target: https://readthedocs.org/projects/blocks/?badge=latest
    :alt: Documentation Status
+   
+|
 
 Welcome to Blocks's documentation!
 ==================================
