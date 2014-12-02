@@ -817,12 +817,64 @@ class Linear(DefaultRNG):
         return output
 
 
-class Maxout(DefaultRNG):
-    """A maxout transformation.
+class Maxout(Brick):
+    """Maxout pooling transformation.
 
-    A brick that does max pooling over groups of linear
-    units. If you use this code in a research project, please
-    cite
+    A brick that does max pooling over groups of input units. If you use this
+    code in a research project, please cite
+
+    This code combines the Linear brick with a Maxout brick.
+
+    "Maxout Networks" Ian J. Goodfellow, David Warde-Farley,
+    Mehdi Mirza, Aaron Courville, and Yoshua Bengio. ICML 2013
+
+    Parameters
+    ----------
+    num_pieces : int
+        The size of the groups the maximum is taken over.
+
+    Notes
+    -----
+
+    Maxout applies a set of linear transformations to a vector and selects for
+    each output dimension the result with the highest value.
+
+    """
+
+    @lazy
+    def __init__(self, num_pieces, **kwargs):
+        super(Maxout, self).__init__(**kwargs)
+        self.num_pieces = num_pieces
+
+    @application(inputs=['inp'], outputs=['output'])
+    def apply(self, inp):
+        """Apply the maxout transformation.
+
+        Parameters
+        ----------
+        inp : Theano variable
+            The input on which to apply the transformation
+
+        Returns
+        -------
+        output : Theano variable
+            The transformed input
+
+        """
+        N, D = inp.shape
+        output_dim = D / self.num_pieces
+        output = tensor.max(inp.reshape((N, output_dim,
+                                            self.num_pieces)), 2)
+        return output
+
+
+class LinearMaxout(DefaultRNG):
+    """Maxout pooling following a linear transformation.
+
+    A brick that does max pooling over groups of linear units. If you use this
+    code in a research project, please cite
+
+    This code combines the Linear brick with a Maxout brick.
 
     "Maxout Networks" Ian J. Goodfellow, David Warde-Farley,
     Mehdi Mirza, Aaron Courville, and Yoshua Bengio. ICML 2013
@@ -845,37 +897,32 @@ class Maxout(DefaultRNG):
     Notes
     -----
 
-    Maxout applies a set of linear transformations to a vector and selects for
-    each output dimension the result with the highest value.
+    LinearMaxout applies a set of linear transformations to a vector and selects
+    for each output dimension the result with the highest value.
+
     """
     @lazy
     def __init__(self, input_dim, output_dim, num_pieces, weights_init,
                  biases_init, **kwargs):
-        super(Maxout, self).__init__(**kwargs)
+        super(LinearMaxout, self).__init__(**kwargs)
         update_instance(self, locals())
-
-    def _allocate(self):
-        self.params.append(shared_floatx_zeros((self.input_dim,
-                                                self.output_dim *
-                                                self.num_pieces),
-                                               name="W"))
-        self.params.append(shared_floatx_zeros((self.output_dim *
-                                                self.num_pieces),
-                                               name="b"))
-
-    def _initialize(self):
-        W, b = self.params
-        self.biases_init.initialize(b, self.rng)
-        self.weights_init.initialize(W, self.rng)
+        self.linear_transformation = Linear(name='linear_to_maxout',
+                                            input_dim=input_dim,
+                                            output_dim=output_dim * num_pieces,
+                                            weights_init=weights_init,
+                                            biases_init=biases_init)
+        self.maxout_transformation = Maxout(name='maxout',
+                                            num_pieces=num_pieces)
+        self.children = [self.linear_transformation, self.maxout_transformation]
 
     @application(inputs=['inp'], outputs=['output'])
     def apply(self, inp):
-        """Apply the maxout transformation.
+        """Apply the linear transformation followed by maxout.
 
         Parameters
         ----------
         inp : Theano variable
-            The input on which to apply the transformation
+            The input on which to apply the transformations
 
         Returns
         -------
@@ -883,12 +930,8 @@ class Maxout(DefaultRNG):
             The transformed input
 
         """
-        W, b = self.params
-        output = tensor.dot(inp, W)
-        output += b
-        N = inp.shape[0]
-        output = tensor.max(output.reshape((N, self.output_dim,
-                                            self.num_pieces)), 2)
+        pre_activation = self.linear_transformation.apply(inp)
+        output = self.maxout_transformation.apply(pre_activation)
         return output
 
 

@@ -5,7 +5,7 @@ from numpy.testing import assert_allclose, assert_raises
 from theano import tensor
 
 from blocks.bricks import (Application, application, Brick, DEFAULT_SEED,
-                           Identity, lazy, Linear, Maxout, MLP, Tanh)
+                           Identity, lazy, Linear, LinearMaxout, MLP, Tanh)
 from blocks.initialization import Constant
 
 
@@ -252,13 +252,13 @@ def test_linear():
     assert_allclose(y.eval({x: x_val}), x_val.dot(2 * numpy.ones((16, 8))))
     
 
-def test_maxout():
+def test_linear_maxout():
     x = tensor.matrix()
 
-    maxout = Maxout(input_dim=16, output_dim=8, num_pieces=3,
-                    weights_init=Constant(2), biases_init=Constant(1))
-    y = maxout.apply(x)
-    maxout.initialize()
+    linear_maxout = LinearMaxout(input_dim=16, output_dim=8, num_pieces=3,
+                            weights_init=Constant(2), biases_init=Constant(1))
+    y = linear_maxout.apply(x)
+    linear_maxout.initialize()
     x_val = numpy.ones((4, 16), dtype=theano.config.floatX)
     assert_allclose(
         y.eval({x: x_val}),
