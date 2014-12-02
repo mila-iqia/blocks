@@ -862,22 +862,22 @@ class Maxout(Brick):
 
         """
         N, D = inp.shape
-        output_dim = D / self.num_pieces
-        output = tensor.max(inp.reshape((N, output_dim,
-                                            self.num_pieces)), 2)
+        output_dim = D // self.num_pieces
+        output = tensor.max(inp.reshape((N, output_dim, self.num_pieces)),
+                            axis=2)
         return output
 
 
 class LinearMaxout(DefaultRNG):
     """Maxout pooling following a linear transformation.
 
-    A brick that does max pooling over groups of linear units. If you use this
-    code in a research project, please cite
+    A brick that does max pooling over groups of linear units. If you use
+    this code in a research project, please cite [1]_
 
     This code combines the Linear brick with a Maxout brick.
 
-    "Maxout Networks" Ian J. Goodfellow, David Warde-Farley,
-    Mehdi Mirza, Aaron Courville, and Yoshua Bengio. ICML 2013
+    .. [1] "Maxout Networks" Ian J. Goodfellow, David Warde-Farley,
+       Mehdi Mirza, Aaron Courville, and Yoshua Bengio. ICML 2013
 
     Parameters
     ----------
@@ -897,8 +897,8 @@ class LinearMaxout(DefaultRNG):
     Notes
     -----
 
-    LinearMaxout applies a set of linear transformations to a vector and selects
-    for each output dimension the result with the highest value.
+    LinearMaxout applies a set of linear transformations to a vector and
+    selects for each output dimension the result with the highest value.
 
     """
     @lazy
@@ -913,7 +913,8 @@ class LinearMaxout(DefaultRNG):
                                             biases_init=biases_init)
         self.maxout_transformation = Maxout(name='maxout',
                                             num_pieces=num_pieces)
-        self.children = [self.linear_transformation, self.maxout_transformation]
+        self.children = [self.linear_transformation,
+                         self.maxout_transformation]
 
     @application(inputs=['inp'], outputs=['output'])
     def apply(self, inp):
