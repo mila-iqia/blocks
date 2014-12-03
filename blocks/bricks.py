@@ -821,10 +821,11 @@ class Maxout(Brick):
     """Maxout pooling transformation.
 
     A brick that does max pooling over groups of input units. If you use this
-    code in a research project, please cite [2]_.
+    code in a research project, please cite [GWFM1313]_.
 
-    .. [2] "Maxout Networks" Ian J. Goodfellow, David Warde-Farley,
-       Mehdi Mirza, Aaron Courville, and Yoshua Bengio. ICML 2013
+    .. [GWFM1313] Ian J. Goodfellow, David Warde-Farley,
+       Mehdi Mirza, Aaron Courville, and Yoshua Bengio, *Maxout networks*,
+       ICML (2013), pp. 1319-1327.
 
     Parameters
     ----------
