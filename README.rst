@@ -8,36 +8,18 @@
    :target: https://readthedocs.org/projects/blocks/?badge=latest
    :alt: Documentation Status
 
-|
+Blocks
+======
 
-Welcome to Blocks's documentation!
-==================================
+Bricks and blocks are Theano functions with parameters. Furthermore, the
+plan is to support:
 
-Blocks is a framework that helps you build neural network models on top of
-Theano. It also helps you manage your model by doing error-checking, creating
-monitoring channels, and allowing for easy configuration of your model. Features
-include:
-
+* Lazy initialization
 * Dimension, type and axes-checking
 * Automatic creation of monitoring channels
 * Easy pattern matching to select the bricks you want in large graphs
-* Lazy initialization of bricks
 * Application of graph transformations, such as dropout
 
-Table of contents
------------------
+Please see the documentation_ for more information.
 
-.. toctree::
-
-   getting_started
-   blocks
-   initialization
-   utils
-   serialization
-   graph
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
+.. _documentation: http://blocks.readthedocs.org
