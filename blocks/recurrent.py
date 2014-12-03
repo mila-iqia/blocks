@@ -283,7 +283,7 @@ class Recurrent(BaseRecurrent, DefaultRNG):
 class GatedRecurrent(BaseRecurrent, DefaultRNG):
     """Gated recurrent neural network.
 
-    Gated recurrent neural network (GRNN) as introduced in [1]. Every unit
+    Gated recurrent neural network (GRNN) as introduced in [CvMG14]_. Every unit
     of a GRNN is equiped with update and reset gates that facilitate better
     gradient propagation.
 
@@ -306,10 +306,10 @@ class GatedRecurrent(BaseRecurrent, DefaultRNG):
         If True the reset gates are used.
 
 
-    .. [1] Kyunghyun Cho, Bart van Merrienboer, Caglar Gulcehre,
-        Dzmitry Bahdanau, Fethi Bougares, Holger Schwenk and Yoshua Bengio.
-        Learning Phrase Representations using RNN Encoder-Decoder
-        for Statistical Machine Translation. EMNLP 2014.
+    .. [CvMG14] Kyunghyun Cho, Bart van Merriënboer, Çağlar Gülçehre,
+        Dzmitry Bahdanau, Fethi Bougares, Holger Schwenk, and Yoshua Bengio,
+        *Learning Phrase Representations using RNN Encoder-Decoder
+        for Statistical Machine Translation*, EMNLP (2014), pp. 1724-1734.
     """
 
     @lazy
