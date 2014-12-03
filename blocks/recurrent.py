@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*- 
+# -*- coding: utf-8 -*-
 import copy
 import inspect
 from collections import OrderedDict
@@ -284,9 +284,9 @@ class Recurrent(BaseRecurrent, DefaultRNG):
 class GatedRecurrent(BaseRecurrent, DefaultRNG):
     """Gated recurrent neural network.
 
-    Gated recurrent neural network (GRNN) as introduced in [CvMG14]_. Every unit
-    of a GRNN is equiped with update and reset gates that facilitate better
-    gradient propagation.
+    Gated recurrent neural network (GRNN) as introduced in [CvMG14]_. Every
+    unit of a GRNN is equiped with update and reset gates that facilitate
+    better gradient propagation.
 
     Parameters
     ----------
