@@ -70,7 +70,8 @@ class SequenceContentAttention(Brick):
         super(SequenceContentAttention, self).__init__(**kwargs)
         update_instance(self, locals())
 
-        self.state_transformers = Parallel(state_names, self.state_transformer,
+        self.state_transformers = Parallel(channel_names=state_names,
+                                           prototype=self.state_transformer,
                                            name="state_trans")
         if not self.sequence_transformer:
             self.sequence_transformer = MLP([Identity()], name="seq_trans")
@@ -116,10 +117,11 @@ class SequenceContentAttention(Brick):
         Returns
         -------
         glimpses : theano variable
-            Linear combinations of sequence elements with the ttention
+            Linear combinations of sequence elements with the attention
             weights.
         weights : theano variable
-            The attention weights.
+            The attention weights. The first dimension is batch, the second
+            is time.
 
         """
         if not preprocessed_sequence:
@@ -131,9 +133,10 @@ class SequenceContentAttention(Brick):
                             preprocessed_sequence)
         energies = self.energy_computer.apply(match_vectors).reshape(
             match_vectors.shape[:-1], ndim=match_vectors.ndim - 1)
+        unormalized_weights = tensor.exp(energies)
         if mask:
-            energies *= mask
-        weights = tensor.nnet.softmax(energies)
+            unormalized_weights *= mask
+        weights = unormalized_weights/unormalized_weights.sum(axis=0)
         glimpses = (tensor.shape_padright(weights) * sequence).sum(axis=0)
         return glimpses, weights.dimshuffle(1, 0)
 
