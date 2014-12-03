@@ -28,7 +28,9 @@ class Mock(MagicMock):
     def __getattr__(cls, name):
             return Mock()
 
-MOCK_MODULES = ['numpy', 'six', 'scipy', 'theano']
+MOCK_MODULES = ['numpy', 'six', 'scipy', 'theano', 'theano.scalar',
+                'theano.tensor', 'theano.tensor.sharedvar',
+                'theano.tensor.shared_randomstreams']
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 # -- General configuration ------------------------------------------------
