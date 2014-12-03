@@ -46,4 +46,3 @@ def test_sequence_content_attention():
     assert numpy.all(weight_values <= 1)
     assert numpy.all(weight_values.sum(axis=1) == 1)
     assert numpy.all((weight_values.T == 0) == (mask_values == 0))
-
