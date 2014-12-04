@@ -3,7 +3,7 @@ import numpy
 import theano
 from theano import tensor
 
-from blocks.attention import SequenceContentAttention
+from blocks.bricks.attention import SequenceContentAttention
 
 floatX = theano.config.floatX
 

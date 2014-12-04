@@ -13,10 +13,10 @@ from groundhog.datasets import LMIterator
 from groundhog.trainer.SGD import SGD
 
 from blocks.bricks import Application, Tanh
-from blocks.recurrent import GatedRecurrent
+from blocks.bricks.recurrent import GatedRecurrent
 from blocks.select import Selector
 from blocks.graph import ComputationGraph, Cost
-from blocks.sequence_generators import (
+from blocks.bricks.sequence_generators import (
     SequenceGenerator, LinearReadout, SoftmaxEmitter, LookupFeedback)
 from blocks.initialization import Orthogonal, IsotropicGaussian, Constant
 from blocks.groundhog import GroundhogState, GroundhogModel
