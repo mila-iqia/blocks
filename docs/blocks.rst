@@ -8,7 +8,15 @@ Bricks
     :undoc-members:
     :show-inheritance:
 
-.. automodule:: blocks.lookup
+.. automodule:: blocks.bricks.lookup
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+Routing bricks
+--------------
+
+.. automodule:: blocks.bricks.parallel
     :members:
     :undoc-members:
     :show-inheritance:
@@ -16,7 +24,7 @@ Bricks
 Recurrent bricks
 ----------------
 
-.. automodule:: blocks.recurrent
+.. automodule:: blocks.bricks.recurrent
     :members:
     :undoc-members:
     :show-inheritance:
@@ -24,7 +32,7 @@ Recurrent bricks
 Attention brick
 ---------------
 
-.. automodule:: blocks.attention
+.. automodule:: blocks.bricks.attention
     :members:
     :undoc-members:
     :show-inheritance:
@@ -33,7 +41,7 @@ Attention brick
 Sequence generators
 -------------------
 
-.. automodule:: blocks.sequence_generators
+.. automodule:: blocks.bricks.sequence_generators
     :members:
     :undoc-members:
     :show-inheritance:

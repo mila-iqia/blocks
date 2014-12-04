@@ -46,6 +46,7 @@ extensions = [
     'sphinxcontrib.napoleon',
     'sphinx.ext.todo',
     'sphinx.ext.mathjax',
+    'sphinx.ext.graphviz'
 ]
 
 # Render todo lists
