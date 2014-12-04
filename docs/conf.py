@@ -49,6 +49,8 @@ extensions = [
     'sphinx.ext.graphviz'
 ]
 
+graphviz_dot_args = ['-Gbgcolor=#fcfcfc']  # To match the RTD theme
+
 # Render todo lists
 todo_include_todos = True
 
