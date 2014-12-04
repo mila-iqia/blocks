@@ -58,6 +58,14 @@ class BaseSequenceGenerator(Brick):
 
     4. Back to step 1 if desired sequence length is not yet reached.
 
+    | A scheme of the algorithm described above follows.
+
+    .. image:: sequence_generator_scheme.png
+            :height: 500px
+            :width: 500px
+
+    ..
+
     **Notes:**
 
     * For machine translation we would have only one glimpse: the weighted
