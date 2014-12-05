@@ -277,6 +277,7 @@ def test_maxout():
     assert_allclose(
         y.eval({x: x_val}),
         x_val.reshape(4, 5, 8, 3).max(3))
+    assert y.eval({x: x_val}).shape == (4, 5, 8)
 
 
 def test_activations():
