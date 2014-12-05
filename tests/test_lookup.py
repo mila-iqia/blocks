@@ -4,7 +4,7 @@ from numpy.testing import assert_equal
 import theano
 from theano import tensor
 
-from blocks.lookup import LookupTable
+from blocks.bricks.lookup import LookupTable
 
 floatX = theano.config.floatX
 

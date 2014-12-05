@@ -7,7 +7,7 @@ from numpy.testing import assert_allclose
 from theano import tensor
 
 from blocks.bricks import Tanh
-from blocks.recurrent import GatedRecurrent, Recurrent, Bidirectional
+from blocks.bricks.recurrent import GatedRecurrent, Recurrent, Bidirectional
 from blocks.initialization import Constant, IsotropicGaussian, Orthogonal
 
 

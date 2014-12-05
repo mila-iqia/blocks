@@ -821,12 +821,11 @@ class Maxout(Brick):
     """Maxout pooling transformation.
 
     A brick that does max pooling over groups of input units. If you use this
-    code in a research project, please cite
+    code in a research project, please cite [GWFM1313]_.
 
-    This code combines the Linear brick with a Maxout brick.
-
-    "Maxout Networks" Ian J. Goodfellow, David Warde-Farley,
-    Mehdi Mirza, Aaron Courville, and Yoshua Bengio. ICML 2013
+    .. [GWFM1313] Ian J. Goodfellow, David Warde-Farley,
+       Mehdi Mirza, Aaron Courville, and Yoshua Bengio, *Maxout networks*,
+       ICML (2013), pp. 1319-1327.
 
     Parameters
     ----------
@@ -835,7 +834,6 @@ class Maxout(Brick):
 
     Notes
     -----
-
     Maxout applies a set of linear transformations to a vector and selects for
     each output dimension the result with the highest value.
 
@@ -871,13 +869,8 @@ class Maxout(Brick):
 class LinearMaxout(DefaultRNG):
     """Maxout pooling following a linear transformation.
 
-    A brick that does max pooling over groups of linear units. If you use
-    this code in a research project, please cite [1]_
-
-    This code combines the Linear brick with a Maxout brick.
-
-    .. [1] "Maxout Networks" Ian J. Goodfellow, David Warde-Farley,
-       Mehdi Mirza, Aaron Courville, and Yoshua Bengio. ICML 2013
+    This code combines the :class:`Linear` brick with a :class:`Maxout`
+    brick.
 
     Parameters
     ----------
@@ -893,12 +886,6 @@ class LinearMaxout(DefaultRNG):
     biases_init : object
         A `NdarrayInitialization` instance that will be used to initialize
         the biases. Required by :meth:`initialize`.
-
-    Notes
-    -----
-
-    LinearMaxout applies a set of linear transformations to a vector and
-    selects for each output dimension the result with the highest value.
 
     """
     @lazy

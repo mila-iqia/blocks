@@ -176,3 +176,12 @@ bricks' configuration.
 
 .. _machine translation models: http://arxiv.org/abs/1409.0473
 .. _here: :class:`blocks.bricks.Brick`
+
+Examples
+========
+
+You can find examples using the Groundhog main loop in the folder 
+blocks/groundhog/examples (the path starts from the repository root).
+A language modeling, Markov Chain simulation and sinewave generation 
+case studies are available. They are planned to be replaced
+by PyLearn2 based examples in the nearest future.

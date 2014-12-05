@@ -4,10 +4,10 @@ from abc import ABCMeta, abstractmethod
 from theano import tensor
 
 from blocks.bricks import application, Brick, DefaultRNG, Identity, lazy, MLP
-from blocks.recurrent import BaseRecurrent
-from blocks.parallel import Fork, Mixer
-from blocks.lookup import LookupTable
-from blocks.recurrent import recurrent
+from blocks.bricks.recurrent import BaseRecurrent
+from blocks.bricks.parallel import Fork, Mixer
+from blocks.bricks.lookup import LookupTable
+from blocks.bricks.recurrent import recurrent
 from blocks.utils import dict_subset, dict_union, update_instance
 
 
@@ -57,6 +57,14 @@ class BaseSequenceGenerator(Brick):
        compute the transition's inputs from the feedback.
 
     4. Back to step 1 if desired sequence length is not yet reached.
+
+    | A scheme of the algorithm described above follows.
+
+    .. image:: sequence_generator_scheme.png
+            :height: 500px
+            :width: 500px
+
+    ..
 
     **Notes:**
 
