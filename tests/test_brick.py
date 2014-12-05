@@ -272,7 +272,8 @@ def test_maxout():
     x = tensor.tensor3()
     maxout = Maxout(num_pieces=3)
     y = maxout.apply(x)
-    x_val = numpy.ones((4, 5, 24), dtype=theano.config.floatX)
+    x_val = numpy.asarray(numpy.random.normal(0, 1, (4, 5, 24)),
+                          dtype=theano.config.floatX)
     assert_allclose(
         y.eval({x: x_val}),
         x_val.reshape(4, 5, 8, 3).max(3))
