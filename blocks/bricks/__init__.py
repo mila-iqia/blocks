@@ -859,10 +859,12 @@ class Maxout(Brick):
             The transformed input
 
         """
-        N, D = inp.shape
-        output_dim = D // self.num_pieces
-        output = tensor.max(inp.reshape((N, output_dim, self.num_pieces)),
-                            axis=2)
+        prefix, last_dim = inp.shape[:-1], inp.shape[-1]
+        output_dim = last_dim // self.num_pieces
+        suffix = tensor.as_tensor_variable((output_dim, self.num_pieces))
+        new_shape = tensor.concatenate((prefix, suffix))
+        output = tensor.max(inp.reshape(new_shape, ndim=inp.ndim + 1),
+                            axis=inp.ndim)
         return output
 
 
