@@ -8,11 +8,10 @@ import pprint
 import theano
 from theano import tensor
 
-from blocks.pylearn2 import Pylearn2Model, Pylearn2Cost
+from blocks.pylearn2 import Pylearn2Model, Pylearn2Cost, Pylearn2Train
 from pylearn2.training_algorithms.sgd import SGD
 from pylearn2.sandbox.rnn.space import SequenceDataSpace
 from pylearn2.space import IndexSpace
-from pylearn2.train import Train
 from pylearn2.datasets.dataset import Dataset
 from pylearn2.utils import serial
 
@@ -46,9 +45,9 @@ class ChainDataset(Dataset):
     trans_entropy = trans_prob * numpy.log(trans_prob + 1e-6)
     entropy = equilibrium.dot(trans_entropy).sum()
 
-    data_spec = (SequenceDataSpace(IndexSpace(max_labels=num_states,
-                                              dim=1)),
-                 'features')
+    data_specs = (SequenceDataSpace(IndexSpace(max_labels=num_states,
+                                               dim=1)),
+                  'x')
 
     def __init__(self, rng, seq_len):
         update_instance(self, locals())
@@ -158,17 +157,17 @@ def main():
 
         # Build the cost computation graph
         x = tensor.ltensor3('x')
-        cost = Pylearn2Cost(generator.cost(x[:, :, 0]).sum(), [x])
+        cost = Pylearn2Cost(generator.cost(x[:, :, 0]).sum())
 
-        model = Pylearn2Model(generator, ChainDataset.data_spec)
+        model = Pylearn2Model(generator)
         dataset = ChainDataset(rng, seq_len)
         sgd = SGD(learning_rate=0.0001, cost=cost,
                   batch_size=batch_size, batches_per_iter=10,
                   monitoring_dataset=dataset,
                   monitoring_batch_size=batch_size,
                   monitoring_batches=1)
-        train = Train(dataset, model, algorithm=sgd,
-                      save_path=args.save_path, save_freq=10)
+        train = Pylearn2Train(dataset, model, algorithm=sgd,
+                              save_path=args.save_path, save_freq=10)
         train.main_loop()
     elif args.mode == "sample":
         model = serial.load(args.save_path)

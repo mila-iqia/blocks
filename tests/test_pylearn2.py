@@ -4,15 +4,13 @@ import numpy
 import theano
 from theano import tensor
 import pylearn2
-from pylearn2.space import VectorSpace
 from pylearn2.testing.datasets import random_dense_design_matrix
-from pylearn2.train import Train
 from pylearn2.training_algorithms.sgd import SGD
 
 from blocks.bricks import Sigmoid, MLP
 from blocks.bricks.cost import SquaredError
 from blocks.initialization import IsotropicGaussian, Constant
-from blocks.pylearn2 import Pylearn2Model, Pylearn2Cost
+from blocks.pylearn2 import Pylearn2Model, Pylearn2Cost, Pylearn2Train
 
 
 def test_pylearn2_trainin():
@@ -27,9 +25,9 @@ def test_pylearn2_trainin():
     train_dataset = random_dense_design_matrix(rng, 1024, 784, 10)
     valid_dataset = random_dense_design_matrix(rng, 1024, 784, 10)
 
-    x = tensor.matrix('x')
-    block_cost = Pylearn2Cost(cost.apply(x, mlp.apply(x)), [x])
-    block_model = Pylearn2Model(mlp, (VectorSpace(dim=784), 'features'))
+    x = tensor.matrix('features')
+    block_cost = Pylearn2Cost(cost.apply(x, mlp.apply(x)))
+    block_model = Pylearn2Model(mlp)
 
     # Silence Pylearn2's logger
     logger = logging.getLogger(pylearn2.__name__)
@@ -38,5 +36,5 @@ def test_pylearn2_trainin():
     # Training algorithm
     sgd = SGD(learning_rate=0.01, cost=block_cost, batch_size=128,
               monitoring_dataset=valid_dataset)
-    train = Train(train_dataset, block_model, algorithm=sgd)
+    train = Pylearn2Train(train_dataset, block_model, algorithm=sgd)
     train.main_loop(time_budget=3)
