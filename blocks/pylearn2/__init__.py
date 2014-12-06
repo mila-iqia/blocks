@@ -1,39 +1,51 @@
 from collections import OrderedDict
 
-from pylearn2.costs.cost import Cost as Pylearn2Cost
-from pylearn2.models import Model as Pylearn2Model
+import theano
 from theano import tensor
+import pylearn2.costs.cost
+import pylearn2.models
 
 from blocks.select import Selector
+from blocks.utils import pack
 
 
-class BlocksModel(Pylearn2Model):
+class Pylearn2Model(pylearn2.models.Model):
     supervised = False
 
-    def __init__(self, brick, data_specs, application_method='apply',
-                 **kwargs):
-        self.application_method = application_method
+    def __init__(self, brick, data_specs, **kwargs):
         self.brick = brick
         self.data_specs = data_specs
-        super(BlocksModel, self).__init__(**kwargs)
+        super(Pylearn2Model, self).__init__(**kwargs)
 
     def get_params(self):
         return Selector(self.brick).get_params().values()
 
 
-class BlocksCost(Pylearn2Cost):
-    """A Pylearn2 Cost instance."""
-    def __init__(self, cost, application_method='apply'):
+class Pylearn2Cost(pylearn2.costs.cost.Cost):
+    """A Pylearn2 Cost instance.
+
+    Parameters
+    ----------
+    cost : Theano variable
+        A theano variable corresponding to the end of the cost
+        computation graph.
+    inputs : list of Theano variables
+        The input variables of the cost computation graph. The order
+        must correspond to the one of the iterator which is used
+        for training.
+
+    """
+    def __init__(self, cost, inputs):
         self.cost = cost
-        self.application_method = application_method
+        self.inputs = inputs
 
     def expr(self, model, data, **kwargs):
-        if model.supervised:
-            x, y = data
-        else:
-            x = y = data
-        return getattr(self.cost, self.application_method)(
-            y, getattr(model.brick, model.application_method)(x))
+        assert not model.supervised
+        data = pack(data)
+        data = [tensor.unbroadcast(var, *range(var.ndim))
+                for var in data]
+        return theano.clone(self.cost,
+                            replace=dict(zip(self.inputs, data)))
 
     def get_gradients(self, model, data, **kwargs):
         if not hasattr(self, "_grads"):

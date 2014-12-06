@@ -1,6 +1,8 @@
 import logging
 
 import numpy
+import theano
+from theano import tensor
 import pylearn2
 from pylearn2.space import VectorSpace
 from pylearn2.testing.datasets import random_dense_design_matrix
@@ -10,7 +12,7 @@ from pylearn2.training_algorithms.sgd import SGD
 from blocks.bricks import Sigmoid, MLP
 from blocks.bricks.cost import SquaredError
 from blocks.initialization import IsotropicGaussian, Constant
-from blocks.pylearn2 import BlocksModel, BlocksCost
+from blocks.pylearn2 import Pylearn2Model, Pylearn2Cost
 
 
 def test_pylearn2_trainin():
@@ -20,13 +22,14 @@ def test_pylearn2_trainin():
     mlp.initialize()
     cost = SquaredError()
 
-    block_cost = BlocksCost(cost)
-    block_model = BlocksModel(mlp, (VectorSpace(dim=784), 'features'))
-
     # Load the data
     rng = numpy.random.RandomState(14)
     train_dataset = random_dense_design_matrix(rng, 1024, 784, 10)
     valid_dataset = random_dense_design_matrix(rng, 1024, 784, 10)
+
+    x = tensor.matrix('x')
+    block_cost = Pylearn2Cost(cost.apply(x, mlp.apply(x)), [x])
+    block_model = Pylearn2Model(mlp, (VectorSpace(dim=784), 'features'))
 
     # Silence Pylearn2's logger
     logger = logging.getLogger(pylearn2.__name__)
