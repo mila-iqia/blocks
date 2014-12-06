@@ -4,8 +4,9 @@ import theano
 from numpy.testing import assert_allclose, assert_raises
 from theano import tensor
 
-from blocks.bricks import (Application, application, Brick, DEFAULT_SEED,
-                           Identity, lazy, Linear, LinearMaxout, MLP, Tanh)
+from blocks.bricks import (Application, application, Brick,
+                           DEFAULT_SEED, Identity, lazy, Linear,
+                           Maxout, LinearMaxout, MLP, Tanh)
 from blocks.initialization import Constant
 
 
@@ -265,6 +266,18 @@ def test_linear_maxout():
         y.eval({x: x_val}),
         (x_val.dot(2 * numpy.ones((16, 24))) +
             numpy.ones((4, 24))).reshape(4, 8, 3).max(2))
+
+
+def test_maxout():
+    x = tensor.tensor3()
+    maxout = Maxout(num_pieces=3)
+    y = maxout.apply(x)
+    x_val = numpy.asarray(numpy.random.normal(0, 1, (4, 5, 24)),
+                          dtype=theano.config.floatX)
+    assert_allclose(
+        y.eval({x: x_val}),
+        x_val.reshape(4, 5, 8, 3).max(3))
+    assert y.eval({x: x_val}).shape == (4, 5, 8)
 
 
 def test_activations():
