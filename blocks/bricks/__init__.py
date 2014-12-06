@@ -861,8 +861,8 @@ class Maxout(Brick):
         """
         last_dim = inp.shape[-1]
         output_dim = last_dim // self.num_pieces
-        new_shape = [inp.shape[i] for i in range(inp.ndim - 1)] + [output_dim,
-                                                                self.num_pieces]
+        new_shape = ([inp.shape[i] for i in range(inp.ndim - 1)] 
+                     + [output_dim, self.num_pieces])
         output = tensor.max(inp.reshape(new_shape, ndim=inp.ndim + 1),
                             axis=inp.ndim)
         return output
