@@ -81,7 +81,7 @@ class ComputationGraph(object):
 
 
 class Cost(ComputationGraph):
-    """Encapsulates a cost function of a ML model.
+    """Encapsulates a cost function of an ML model.
 
     Parameters
     ----------

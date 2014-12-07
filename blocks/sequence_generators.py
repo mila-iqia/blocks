@@ -246,6 +246,10 @@ class AbstractEmitter(Brick):
     def cost(self, readouts, outputs):
         pass
 
+    #@abstractmethod
+    #def probs(self, readouts):
+    #    pass
+
     @abstractmethod
     def initial_outputs(self, batch_size, *args, **kwargs):
         pass
