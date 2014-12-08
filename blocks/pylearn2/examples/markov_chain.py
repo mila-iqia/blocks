@@ -4,6 +4,7 @@ import numpy
 import argparse
 import logging
 import pprint
+import os
 
 import theano
 from theano import tensor
@@ -13,7 +14,6 @@ from pylearn2.training_algorithms.sgd import SGD
 from pylearn2.sandbox.rnn.space import SequenceDataSpace
 from pylearn2.space import IndexSpace
 from pylearn2.datasets.dataset import Dataset
-from pylearn2.utils import serial
 
 from blocks.bricks import Tanh
 from blocks.bricks.recurrent import GatedRecurrent
@@ -117,6 +117,9 @@ def main():
     parser.add_argument(
         "--steps", type=int, default=100,
         help="Number of steps to plot")
+    parser.add_argument(
+        "--reset", action="store_true", default=False,
+        help="Start training from scratch")
     args = parser.parse_args()
 
     num_states = ChainDataset.num_states
@@ -155,11 +158,16 @@ def main():
         logger.debug("Expected min error: {}".format(
             -ChainDataset.entropy * seq_len * batch_size))
 
-        # Build the cost computation graph
-        x = tensor.ltensor3('x')
-        cost = Pylearn2Cost(generator.cost(x[:, :, 0]).sum())
+        if os.path.isfile(args.save_path) and not args.reset:
+            model = Pylearn2Model.load(args.save_path)
+        else:
+            model = Pylearn2Model(generator)
 
-        model = Pylearn2Model(generator)
+        # Build the cost computation graph.
+        # Note: would be probably nicer to make cost part of the model.
+        x = tensor.ltensor3('x')
+        cost = Pylearn2Cost(model.brick.cost(x[:, :, 0]).sum())
+
         dataset = ChainDataset(rng, seq_len)
         sgd = SGD(learning_rate=0.0001, cost=cost,
                   batch_size=batch_size, batches_per_iter=10,
@@ -170,7 +178,7 @@ def main():
                               save_path=args.save_path, save_freq=10)
         train.main_loop()
     elif args.mode == "sample":
-        model = serial.load(args.save_path)
+        model = Pylearn2Model.load(args.save_path)
         generator = model.brick
 
         sample = ComputationGraph(generator.generate(

@@ -1,3 +1,4 @@
+import logging
 from collections import OrderedDict
 
 import theano
@@ -6,10 +7,14 @@ import pylearn2.costs.cost
 import pylearn2.models
 import pylearn2.train
 from pylearn2.space import CompositeSpace
+from pylearn2.utils import serial
+from pylearn2.monitor import push_monitor
 
 from blocks.select import Selector
 from blocks.utils import pack
 from blocks.graph import Cost
+
+logger = logging.getLogger()
 
 
 class Pylearn2Model(pylearn2.models.Model):
@@ -30,6 +35,25 @@ class Pylearn2Model(pylearn2.models.Model):
     def get_params(self):
         return Selector(self.brick).get_params().values()
 
+    @staticmethod
+    def load(path):
+        """Loads a model from path.
+
+        We need this wrapper to make the loaded monitor continuable.
+        In we had to create a new monitor and initialize with the data
+        from the old one.
+
+        Parameters
+        ----------
+        path : str
+            The model path.
+
+        """
+
+        model = push_monitor(serial.load(path), "_delete_me",
+                             transfer_experience=True, save_records=True)
+        del model._delete_me
+        return model
 
 class Pylearn2Cost(pylearn2.costs.cost.Cost):
     """Wraps a Theano cost to support the PyLearn2 Cost interface.
@@ -92,3 +116,13 @@ class Pylearn2Train(pylearn2.train.Train):
         model.data_specs = (spaces, sources)
         super(Pylearn2Train, self).__init__(dataset, model, algorithm,
                                             *args, **kwargs)
+
+    def setup(self):
+        """Make monitor persistency the default behaviour."""
+        if hasattr(self.model, 'monitor'):
+            # Cheat on monitor._sanity_check
+            # TODO: raise a discussion about it
+            for channel in self.model.monitor.channels.values():
+                channel.prereqs = None
+        super(Pylearn2Train, self).setup()
+        self.model.monitor.on_channel_conflict = 'copy_history'
