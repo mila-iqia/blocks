@@ -16,11 +16,11 @@ except:
 from theano import tensor
 
 from blocks.bricks import Brick, Identity, Tanh, MLP, lazy, application
-from blocks.parallel import Fork
-from blocks.recurrent import GatedRecurrent
+from blocks.bricks.parallel import Fork
+from blocks.bricks.recurrent import GatedRecurrent
 from blocks.select import Selector
 from blocks.graph import Cost
-from blocks.sequence_generators import (
+from blocks.bricks.sequence_generators import (
     SequenceGenerator, LinearReadout, TrivialEmitter)
 from blocks.initialization import Orthogonal, IsotropicGaussian, Constant
 from blocks.groundhog import GroundhogIterator, GroundhogState, GroundhogModel

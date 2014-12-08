@@ -4,10 +4,10 @@ import theano
 from theano import tensor
 
 from blocks.bricks import Tanh, application
-from blocks.parallel import Mixer
-from blocks.recurrent import Recurrent, GatedRecurrent
-from blocks.attention import SequenceContentAttention
-from blocks.sequence_generators import (
+from blocks.bricks.parallel import Mixer
+from blocks.bricks.recurrent import Recurrent, GatedRecurrent
+from blocks.bricks.attention import SequenceContentAttention
+from blocks.bricks.sequence_generators import (
     SequenceGenerator, LinearReadout, TrivialEmitter,
     SoftmaxEmitter, LookupFeedback, AttentionTransition)
 from blocks.initialization import Orthogonal, IsotropicGaussian, Constant

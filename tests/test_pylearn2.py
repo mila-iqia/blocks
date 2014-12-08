@@ -8,7 +8,7 @@ from pylearn2.train import Train
 from pylearn2.training_algorithms.sgd import SGD
 
 from blocks.bricks import Sigmoid, MLP
-from blocks.cost import SquaredError
+from blocks.bricks.cost import SquaredError
 from blocks.initialization import IsotropicGaussian, Constant
 from blocks.pylearn2 import BlocksModel, BlocksCost
 

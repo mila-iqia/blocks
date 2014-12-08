@@ -4,10 +4,10 @@ from abc import ABCMeta, abstractmethod
 from theano import tensor
 
 from blocks.bricks import application, Brick, DefaultRNG, Identity, lazy, MLP
-from blocks.recurrent import BaseRecurrent
-from blocks.parallel import Fork, Mixer
-from blocks.lookup import LookupTable
-from blocks.recurrent import recurrent
+from blocks.bricks.recurrent import BaseRecurrent
+from blocks.bricks.parallel import Fork, Mixer
+from blocks.bricks.lookup import LookupTable
+from blocks.bricks.recurrent import recurrent
 from blocks.utils import dict_subset, dict_union, update_instance
 
 
@@ -57,6 +57,14 @@ class BaseSequenceGenerator(Brick):
        compute the transition's inputs from the feedback.
 
     4. Back to step 1 if desired sequence length is not yet reached.
+
+    | A scheme of the algorithm described above follows.
+
+    .. image:: sequence_generator_scheme.png
+            :height: 500px
+            :width: 500px
+
+    ..
 
     **Notes:**
 
@@ -186,21 +194,57 @@ class BaseSequenceGenerator(Brick):
         contexts = {name: kwargs[name] for name in self.context_names}
         glimpses = {name: kwargs[name] for name in self.glimpse_names}
 
+        next_glimpses = self.compute_next_glimpses(**kwargs)
+        next_readouts = self.compute_next_readouts(outputs, next_glimpses,
+                                                   **kwargs)
+        (next_states, others) = \
+            self.compute_next_states(next_readouts,
+                                     next_glimpses,
+                                     also_return=['next_outputs',
+                                                  'next_costs'],
+                                     **kwargs)
+        return (next_states + [others['next_outputs']]
+                + list(next_glimpses.values()) + [others['next_costs']])
+
+    @application
+    def compute_next_glimpses(self, **kwargs):
+        states = {name: kwargs[name] for name in self.state_names}
+        contexts = {name: kwargs[name] for name in self.context_names}
+        glimpses = {name: kwargs[name] for name in self.glimpse_names}
+
         next_glimpses = self.transition.take_look(
             return_dict=True, **dict_union(states, glimpses, contexts))
+        return next_glimpses
+
+    @application
+    def compute_next_readouts(self, outputs, next_glimpses, **kwargs):
+        states = {name: kwargs[name] for name in self.state_names}
+        contexts = {name: kwargs[name] for name in self.context_names}
+
         next_readouts = self.readout.readout(
             feedback=self.readout.feedback(outputs),
             **dict_union(states, next_glimpses, contexts))
+        return next_readouts
+
+    @application
+    def compute_next_states(self, next_readouts, next_glimpses, **kwargs):
+        states = {name: kwargs[name] for name in self.state_names}
+        contexts = {name: kwargs[name] for name in self.context_names}
+
         next_outputs = self.readout.emit(next_readouts)
-        next_costs = self.readout.cost(next_readouts, next_outputs)
         next_feedback = self.readout.feedback(next_outputs)
         next_inputs = (self.fork.apply(next_feedback, return_dict=True)
                        if self.fork else {'feedback': next_feedback})
         next_states = self.transition.compute_states(
             return_list=True,
             **dict_union(next_inputs, states, next_glimpses, contexts))
-        return (next_states + [next_outputs]
-                + list(next_glimpses.values()) + [next_costs])
+        next_costs = self.readout.cost(next_readouts, next_outputs)
+        also_return = kwargs.get("also_return")
+        if also_return:
+            local_vars = locals()
+            others = {name: local_vars[name] for name in also_return}
+            return next_states, others
+        return next_states
 
     @generate.delegate
     def generate_delegate(self):
@@ -240,6 +284,10 @@ class AbstractEmitter(Brick):
 
     @abstractmethod
     def emit(self, readouts):
+        pass
+
+    @abstractmethod
+    def emit_probs(self, readouts):
         pass
 
     @abstractmethod
@@ -335,6 +383,10 @@ class Readout(AbstractReadout):
         return self.emitter.emit(readouts)
 
     @application
+    def emit_probs(self, readouts):
+        return self.emitter.emit_probs(readouts)
+
+    @application
     def cost(self, readouts, outputs):
         return self.emitter.cost(readouts, outputs)
 
@@ -419,6 +471,10 @@ class TrivialEmitter(AbstractEmitter):
         return readouts
 
     @application
+    def emit_probs(self, readouts):
+        raise ValueError('Cannot compute probabilities in TrivialEmitter')
+
+    @application
     def initial_outputs(self, batch_size, *args, **kwargs):
         return tensor.zeros((batch_size, self.readout_dim))
 
@@ -444,6 +500,11 @@ class SoftmaxEmitter(AbstractEmitter, DefaultRNG):
     def emit(self, readouts):
         probs = self._probs(readouts)
         return self.theano_rng.multinomial(pvals=probs).argmax(axis=-1)
+
+    @application
+    def emit_probs(self, readouts):
+        probs = self._probs(readouts)
+        return probs
 
     @application
     def cost(self, readouts, outputs):

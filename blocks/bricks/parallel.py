@@ -115,6 +115,25 @@ class Fork(Parallel):
 class Mixer(Parallel):
     """Mixes a new channel with old ones.
 
+    .. digraph:: mixer
+
+       rankdir=TB;
+       splines=line;
+       subgraph cluster_0 {
+         label="old_inputs";
+         a[label=""]; b[label=""]; c[label=""];
+       }
+       subgraph cluster_1 {
+         label="outputs"; labelloc=b;
+         d[label=""]; e[label=""]; f[label=""];
+       }
+       a -> d;
+       b -> e;
+       c -> f;
+       new_input -> d;
+       new_input -> e;
+       new_input -> f;
+
     Parameters
     ----------
     old_names : list of str
