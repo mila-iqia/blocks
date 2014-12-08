@@ -6,13 +6,17 @@ from theano import tensor
 import pylearn2.costs.cost
 import pylearn2.models
 import pylearn2.train
+import pylearn2.training_algorithms.learning_rule
+import pylearn2.train_extensions
+import pylearn2.space
 from pylearn2.space import CompositeSpace
 from pylearn2.utils import serial
 from pylearn2.monitor import push_monitor
 
 from blocks.select import Selector
 from blocks.utils import pack
-from blocks.graph import Cost
+from blocks.graph import ComputationGraph
+from blocks.utils import shared_floatx, unpack
 
 logger = logging.getLogger()
 
@@ -68,7 +72,7 @@ class Pylearn2Cost(pylearn2.costs.cost.Cost):
     """
     def __init__(self, cost):
         self.cost = cost
-        self.inputs = Cost(self.cost).dict_of_inputs()
+        self.inputs = ComputationGraph(self.cost).dict_of_inputs()
 
     def expr(self, model, data, **kwargs):
         """Substitutes the user's input variables with the PyLearn2 ones."""
@@ -92,6 +96,130 @@ class Pylearn2Cost(pylearn2.costs.cost.Cost):
         return model.data_specs
 
 
+class SGDLearningRule(pylearn2.training_algorithms.learning_rule.LearningRule):
+    """The default SGD learning rule.
+
+    .. todo::
+
+        Move this class to PyLearn2 and make it the default learning rule.
+
+    """
+    def get_updates(self, learning_rate, grads, lr_scalers):
+        return {param:
+                param - learning_rate * lr_scalers.get(param, 1.) * grad
+                for param, grad in grads.items()}
+
+
+class Pylearn2LearningRule(pylearn2.training_algorithms
+                           .learning_rule.LearningRule):
+    """Wraps a PyLearn2 learning rule to add per-update monitoring.
+
+    Parameters
+    ----------
+    learning_rule : :class:`LearningRule`
+        A PyLearn2 learning rule to wrap.
+    monitor_values : dict of (name, Theano variable) pairs
+        The values to monitor and their names.
+
+    """
+    def __init__(self, learning_rule, monitor_values=None):
+        self.learning_rule = learning_rule
+        self.values = []
+        self.accumulators = []
+        self._callback_called = False
+
+        if monitor_values:
+            for name, value in monitor_values.items():
+                self.monitor_value(name, value)
+
+    def monitor_value(self, name, value):
+        """Add monitoring to be performed with gradient computation.
+
+        Parameters
+        ----------
+        name : str
+            The name of the value to be monitored.
+        value : Theano variable
+            The value to be monitored.
+
+        """
+        if self._callback_called:
+            raise Exception("It is to add to monitoring to the {}:"
+                            "a callback has been called".format(self.__name__))
+        self.values.append(value)
+        self.accumulators.append(shared_floatx(0, name=name))
+
+    def add_channels_to_monitor(self, monitor, datasets):
+        self.learning_rule.add_channels_to_monitor(monitor, datasets)
+        for accumulator in self.accumulators:
+            monitor.add_channel(accumulator.name, ipt=None, val=accumulator,
+                                data_specs=(pylearn2.space.NullSpace(), ''),
+                                dataset=datasets)
+        self._callback_called = True
+
+    def get_updates(self, learning_rate, grads, lr_scalers):
+        """Wraps the respective method of the wrapped learning rule.
+
+        Performs name-based input substitution for the monitored values.
+        Currently very hacky: the inputs from the gradients are typically
+        named `$ALGO[$SOURCE]` in PyLearn2, where `$ALGO` is the algorithm
+        name and `$SOURCE` is a source name from the data specification.
+        This convention is exploited to match them with the inputs of
+        monitoring values, whose input names are expected to match source
+        names.
+
+        """
+        updates = self.learning_rule.get_updates(learning_rate, grads,
+                                                 lr_scalers)
+        grad_inputs = ComputationGraph(list(grads.values())).dict_of_inputs()
+        for value, accumulator in zip(self.values, self.accumulators):
+            value_inputs = ComputationGraph(value).dict_of_inputs()
+            replace_dict = dict()
+            for name, inp in value_inputs.items():
+                # See docstring to see how it works
+                grad_input = grad_inputs[unpack(
+                    [n for n in grad_inputs
+                     if n.endswith('[{}]'.format(name))],
+                    singleton=True)]
+                replace_dict[inp] = tensor.unbroadcast(
+                    grad_input, *range(grad_input.ndim))
+            updates[accumulator] = (
+                accumulator + theano.clone(value, replace_dict))
+        self._callback_called = True
+        return updates
+
+
+class DefaultExtension(pylearn2.train_extensions.TrainExtension):
+    """This extension helps Pylearn2LearningRule do its job.
+
+    The job of this extensions is to help the Pylearn2LearningRule in its
+    monitoring duties. Due to impossibility of reseting the accumulators of
+    monitored values, the gradient computation function simply adds values from
+    new batches to the accumulators. At the end of each epoch the accumulator's
+    value from the previous epoch should be subtracted and the difference
+    should be divided over the number of batches to get an average for the last
+    epoch. This is done in the `on_monitor` method.
+
+    """
+
+    def setup(self, model, dataset, algoritm):
+        self._last_batches_seen = model.monitor.get_batches_seen()
+        self._last_values = dict()
+
+    def on_monitor(self, model, dataset, algorithm):
+        learning_rule = algorithm.learning_rule
+        batches_seen = model.monitor.get_batches_seen()
+        if (isinstance(learning_rule, Pylearn2LearningRule) and
+                len(self._last_values)):
+            for accum in learning_rule.accumulators:
+                accum.set_value(
+                    (accum.get_value() - self._last_values[accum]) /
+                    (batches_seen - self._last_batches_seen))
+        for accum in learning_rule.accumulators:
+            self._last_values[accum] = accum.get_value()
+        batches_seen -= self._last_batches_seen
+
+
 class Pylearn2Train(pylearn2.train.Train):
     """Convinience wrapper over the PyLearn2 main loop.
 
@@ -99,7 +227,10 @@ class Pylearn2Train(pylearn2.train.Train):
     and the names of the input variables.
 
     """
-    def __init__(self, dataset, model, algorithm, *args, **kwargs):
+    def __init__(self, dataset, model, algorithm,
+                 save_path=None, save_freq=0, extensions=None,
+                 *args, **kwargs):
+        # Set data_specs
         spaces, sources = dataset.data_specs
         if isinstance(spaces, CompositeSpace):
             spaces = spaces.components
@@ -115,8 +246,15 @@ class Pylearn2Train(pylearn2.train.Train):
             spaces = spaces[0]
             sources = input_names[0]
         model.data_specs = (spaces, sources)
-        super(Pylearn2Train, self).__init__(dataset, model, algorithm,
-                                            *args, **kwargs)
+
+        # Add default extensions
+        if not extensions:
+            extensions = list()
+        extensions.append(DefaultExtension())
+
+        super(Pylearn2Train, self).__init__(
+            dataset, model, algorithm, save_path, save_freq, extensions,
+            *args, **kwargs)
 
     def setup(self):
         """Make monitor persistency the default behaviour."""

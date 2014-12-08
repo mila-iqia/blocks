@@ -9,7 +9,9 @@ import os
 import theano
 from theano import tensor
 
-from blocks.pylearn2 import Pylearn2Model, Pylearn2Cost, Pylearn2Train
+from blocks.pylearn2 import (
+    Pylearn2Model, Pylearn2Cost, Pylearn2Train, Pylearn2LearningRule,
+    SGDLearningRule)
 from pylearn2.training_algorithms.sgd import SGD
 from pylearn2.sandbox.rnn.space import SequenceDataSpace
 from pylearn2.space import IndexSpace
@@ -173,7 +175,10 @@ def main():
                   batch_size=batch_size, batches_per_iter=10,
                   monitoring_dataset=dataset,
                   monitoring_batch_size=batch_size,
-                  monitoring_batches=1)
+                  monitoring_batches=1,
+                  learning_rule=Pylearn2LearningRule(
+                      SGDLearningRule(),
+                      dict(training_objective=cost.cost)))
         train = Pylearn2Train(dataset, model, algorithm=sgd,
                               save_path=args.save_path, save_freq=10)
         train.main_loop()
