@@ -55,6 +55,7 @@ class Pylearn2Model(pylearn2.models.Model):
         del model._delete_me
         return model
 
+
 class Pylearn2Cost(pylearn2.costs.cost.Cost):
     """Wraps a Theano cost to support the PyLearn2 Cost interface.
 
