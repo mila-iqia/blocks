@@ -444,6 +444,7 @@ class Bidirectional(Initializeable, DefaultRNG):
         cloned.
 
     """
+    _no_bias_initialization = True
     @lazy
     def __init__(self, prototype, weights_init, **kwargs):
         super(Bidirectional, self).__init__(**kwargs)
@@ -451,7 +452,6 @@ class Bidirectional(Initializeable, DefaultRNG):
         self.children = [copy.deepcopy(prototype) for i in range(2)]
         self.children[0].name = 'forward'
         self.children[1].name = 'backward'
-        self._no_bias_initialization = True
 
     @application
     def apply(self, *args, **kwargs):
