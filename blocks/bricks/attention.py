@@ -11,12 +11,12 @@ simply *states*.
 
 from theano import tensor
 
-from blocks.bricks import Brick, MLP, Identity, lazy, application
+from blocks.bricks import Brick, MLP, Identity, lazy, application, Initializeable
 from blocks.bricks.parallel import Parallel
 from blocks.utils import update_instance
 
 
-class SequenceContentAttention(Brick):
+class SequenceContentAttention(Initializeable, Brick):
     """An attention mechanism that looks for relevant content in a sequence.
 
     This is the attention mechanism used in [2]. The idea in a nutshell:
@@ -89,12 +89,12 @@ class SequenceContentAttention(Brick):
         self.energy_computer.dims[0] = self.match_dim
         self.energy_computer.dims[-1] = 1
 
-    def _push_initialization_config(self):
-        for child in self.children:
-            if self.weights_init:
-                child.weights_init = self.weights_init
-            if self.biases_init:
-                child.biases_init = self.biases_init
+    # def _push_initialization_config(self):
+    #     for child in self.children:
+    #         if self.weights_init:
+    #             child.weights_init = self.weights_init
+    #         if self.biases_init:
+    #             child.biases_init = self.biases_init
 
     @application(outputs=['glimpses', 'weights'])
     def take_look(self, sequence, preprocessed_sequence=None, mask=None,

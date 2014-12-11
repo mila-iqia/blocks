@@ -1043,3 +1043,15 @@ class MLP(DefaultRNG):
             else:
                 output = activation.apply(linear.apply(output))
         return output
+
+class Initializeable(Brick):
+    def _push_initialization_config(self):
+        no_bias_initialization = hasattr(self, '_no_bias_initialization') and self._no_bias_initialization
+        for child in self.children:
+            if self.weights_init:
+                child.weights_init = self.weights_init
+        if not no_bias_initialization:  
+            for child in self.children:
+                if self.biases_init:
+                    child.biases_init = self.biases_init
+            super(Initializeable, self)._push_initialization_config()

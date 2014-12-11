@@ -6,11 +6,11 @@ are lazy-only, i.e. can not be initialized with a single constructor call.
 """
 import copy
 
-from blocks.bricks import Brick, lazy, application, MLP, Identity
+from blocks.bricks import Brick, lazy, application, MLP, Identity, Initializeable
 from blocks.utils import update_instance
 
 
-class Parallel(Brick):
+class Parallel(Initializeable, Brick):
     """Apply similar transformations to several channels.
 
     Parameters
@@ -48,12 +48,12 @@ class Parallel(Brick):
             transform.dims[0] = self.input_dims[name]
             transform.dims[-1] = self.output_dims[name]
 
-    def _push_initialization_config(self):
-        for child in self.children:
-            if self.weights_init:
-                child.weights_init = self.weights_init
-            if self.biases_init:
-                child.biases_init = self.biases_init
+    # def _push_initialization_config(self):
+    #     for child in self.children:
+    #         if self.weights_init:
+    #             child.weights_init = self.weights_init
+    #         if self.biases_init:
+    #             child.biases_init = self.biases_init
 
     @application
     def apply(self, **kwargs):
