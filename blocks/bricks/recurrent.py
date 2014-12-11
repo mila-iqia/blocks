@@ -7,7 +7,8 @@ import theano
 from theano import tensor
 
 from blocks.bricks import (Application, application, application_wrapper,
-                           Brick, DefaultRNG, Identity, Sigmoid, lazy, Initializeable)
+                           Brick, DefaultRNG, Identity, Sigmoid, lazy,
+                           Initializeable)
 from blocks.initialization import NdarrayInitialization
 from blocks.utils import pack, shared_floatx_zeros, update_instance
 
@@ -445,6 +446,7 @@ class Bidirectional(Initializeable, DefaultRNG):
 
     """
     _no_bias_initialization = True
+
     @lazy
     def __init__(self, prototype, weights_init, **kwargs):
         super(Bidirectional, self).__init__(**kwargs)

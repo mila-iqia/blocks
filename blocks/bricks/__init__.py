@@ -1044,10 +1044,12 @@ class MLP(DefaultRNG):
                 output = activation.apply(linear.apply(output))
         return output
 
+
 class Initializeable(Brick):
     """
-    Base class for all bricks which need to push initialization configs to children.
-    Set :meth:`_no_bias_initialization = True` if the brick should only push :meth:`weights_init`.
+    Base class for all bricks which need to push initialization
+    configs to children. Set :meth:`_no_bias_initialization = True`
+    if the brick should only push :meth:`weights_init`.
     For an example, see :class:`classBidirectional`.
 
     """
@@ -1055,7 +1057,7 @@ class Initializeable(Brick):
         for child in self.children:
             if self.weights_init:
                 child.weights_init = self.weights_init
-        if not getattr(self, '_no_bias_initialization', False): 
+        if not getattr(self, '_no_bias_initialization', False):
             for child in self.children:
                 if self.biases_init:
                     child.biases_init = self.biases_init

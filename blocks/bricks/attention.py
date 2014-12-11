@@ -11,7 +11,7 @@ simply *states*.
 
 from theano import tensor
 
-from blocks.bricks import Brick, MLP, Identity, lazy, application, Initializeable
+from blocks.bricks import MLP, Identity, lazy, application, Initializeable
 from blocks.bricks.parallel import Parallel
 from blocks.utils import update_instance
 

@@ -3,7 +3,8 @@ from abc import ABCMeta, abstractmethod
 
 from theano import tensor
 
-from blocks.bricks import application, Brick, DefaultRNG, Identity, lazy, MLP, Initializeable
+from blocks.bricks import (application, Brick, DefaultRNG, Identity, lazy, MLP,
+                           Initializeable)
 from blocks.bricks.recurrent import BaseRecurrent
 from blocks.bricks.parallel import Fork, Mixer
 from blocks.bricks.lookup import LookupTable
@@ -507,7 +508,9 @@ class LookupFeedback(Initializeable, AbstractFeedback):
         return super(LookupFeedback, self).get_dim(name)
 
 
-class AttentionTransition(Initializeable, AbstractAttentionTransition, DefaultRNG):
+class AttentionTransition(Initializeable,
+                          AbstractAttentionTransition,
+                          DefaultRNG):
     """Combines an attention mechanism and a recurrent transition.
 
     This brick is assembled from three components: an attention mechanism, a
