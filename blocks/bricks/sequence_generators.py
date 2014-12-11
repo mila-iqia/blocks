@@ -730,14 +730,6 @@ class FakeAttentionTransition(Initializeable, AbstractAttentionTransition):
 
         self.children = [self.transition]
 
-    # def _push_initialization_config(self):
-    #     # TODO: stop copy-pasting this code
-    #     for child in self.children:
-    #         if self.weights_init:
-    #             child.weights_init = self.weights_init
-    #         if self.biases_init:
-    #             child.biases_init = self.biases_init
-
     @application
     def apply(self, *args, **kwargs):
         return self.transition.apply(*args, **kwargs)
