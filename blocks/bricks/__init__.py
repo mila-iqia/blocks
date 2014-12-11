@@ -1046,11 +1046,11 @@ class MLP(DefaultRNG):
 
 
 class Initializeable(Brick):
-    """
-    Base class for all bricks which need to push initialization
-    configs to children. Set :meth:`_no_bias_initialization = True`
+    """Base class for bricks which push parameter initialization.
+
+    Set :meth:`_no_bias_initialization = True`
     if the brick should only push :meth:`weights_init`.
-    For an example, see :class:`classBidirectional`.
+    For an example, see :class:`Bidirectional`.
 
     """
     def _push_initialization_config(self):
