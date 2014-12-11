@@ -1046,11 +1046,10 @@ class MLP(DefaultRNG):
 
 class Initializeable(Brick):
     def _push_initialization_config(self):
-        no_bias_initialization = hasattr(self, '_no_bias_initialization') and self._no_bias_initialization
         for child in self.children:
             if self.weights_init:
                 child.weights_init = self.weights_init
-        if not no_bias_initialization:  
+        if not getattr(self, '_no_bias_initialization', False): 
             for child in self.children:
                 if self.biases_init:
                     child.biases_init = self.biases_init

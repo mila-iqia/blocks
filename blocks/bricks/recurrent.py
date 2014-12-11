@@ -453,11 +453,6 @@ class Bidirectional(Initializeable, DefaultRNG):
         self.children[1].name = 'backward'
         self._no_bias_initialization = True
 
-    # def _push_initialization_config(self):
-    #     for child in self.children:
-    #         if self.weights_init:
-    #             child.weights_init = self.weights_init
-
     @application
     def apply(self, *args, **kwargs):
         """Applys forward and backward networks and concatenates outputs."""

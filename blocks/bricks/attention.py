@@ -16,7 +16,7 @@ from blocks.bricks.parallel import Parallel
 from blocks.utils import update_instance
 
 
-class SequenceContentAttention(Initializeable, Brick):
+class SequenceContentAttention(Initializeable):
     """An attention mechanism that looks for relevant content in a sequence.
 
     This is the attention mechanism used in [2]. The idea in a nutshell:
@@ -88,13 +88,6 @@ class SequenceContentAttention(Initializeable, Brick):
         self.sequence_transformer.dims[-1] = self.match_dim
         self.energy_computer.dims[0] = self.match_dim
         self.energy_computer.dims[-1] = 1
-
-    # def _push_initialization_config(self):
-    #     for child in self.children:
-    #         if self.weights_init:
-    #             child.weights_init = self.weights_init
-    #         if self.biases_init:
-    #             child.biases_init = self.biases_init
 
     @application(outputs=['glimpses', 'weights'])
     def take_look(self, sequence, preprocessed_sequence=None, mask=None,

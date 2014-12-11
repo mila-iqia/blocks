@@ -10,7 +10,7 @@ from blocks.bricks import Brick, lazy, application, MLP, Identity, Initializeabl
 from blocks.utils import update_instance
 
 
-class Parallel(Initializeable, Brick):
+class Parallel(Initializeable):
     """Apply similar transformations to several channels.
 
     Parameters
@@ -47,13 +47,6 @@ class Parallel(Initializeable, Brick):
         for name, transform in zip(self.channel_names, self.transforms):
             transform.dims[0] = self.input_dims[name]
             transform.dims[-1] = self.output_dims[name]
-
-    # def _push_initialization_config(self):
-    #     for child in self.children:
-    #         if self.weights_init:
-    #             child.weights_init = self.weights_init
-    #         if self.biases_init:
-    #             child.biases_init = self.biases_init
 
     @application
     def apply(self, **kwargs):

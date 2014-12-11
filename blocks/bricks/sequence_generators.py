@@ -11,7 +11,7 @@ from blocks.bricks.recurrent import recurrent
 from blocks.utils import dict_subset, dict_union, update_instance
 
 
-class BaseSequenceGenerator(Initializeable, Brick):
+class BaseSequenceGenerator(Initializeable):
     """A generic sequence generator.
 
     This class combines two components, a readout network and an
@@ -114,13 +114,6 @@ class BaseSequenceGenerator(Initializeable, Brick):
         self.fork.fork_dims = {
             name: self.transition.get_dim(name)
             for name in self.fork.apply.outputs}
-
-    # def _push_initialization_config(self):
-    #     for brick in self.children:
-    #         if self.weights_init:
-    #             brick.weights_init = self.weights_init
-    #         if self.biases_init:
-    #             brick.biases_init = self.weights_init
 
     @application
     def cost(self, outputs, mask=None, **kwargs):
@@ -388,13 +381,6 @@ class LinearReadout(Initializeable, Readout):
             projector.dims[0] = self.source_dims[name]
             projector.dims[-1] = self.readout_dim
 
-    # def _push_initialization_config(self):
-    #     for child in self.children:
-    #         if self.weights_init:
-    #             child.weights_init = self.weights_init
-    #         if self.biases_init:
-    #             child.biases_init = self.biases_init
-
     @application
     def readout(self, **kwargs):
         projections = [projector.apply(kwargs[name]) for name, projector in
@@ -510,13 +496,6 @@ class LookupFeedback(Initializeable, AbstractFeedback):
         self.lookup.length = self.num_outputs
         self.lookup.dim = self.feedback_dim
 
-    # def _push_initialization_config(self):
-    #     for child in self.children:
-    #         if self.weights_init:
-    #             child.weights_init = self.weights_init
-    #         if self.biases_init:
-    #             child.biases_init = self.biases_init
-
     @application
     def feedback(self, outputs, **kwargs):
         assert self.output_dim == 0
@@ -590,14 +569,6 @@ class AttentionTransition(Initializeable, AbstractAttentionTransition, DefaultRN
                 self.transition.get_dims(self.sequence_names),
                 self.attention.get_dims(self.glimpse_names)),
             self.mixer.apply.inputs)
-
-    # def _push_initialization_config(self):
-    #     # TODO: stop copy-pasting this code
-    #     for child in self.children:
-    #         if self.weights_init:
-    #             child.weights_init = self.weights_init
-    #         if self.biases_init:
-    #             child.biases_init = self.biases_init
 
     @application
     def take_look(self, **kwargs):
