@@ -1059,6 +1059,8 @@ class Initializeable(Brick):
                 child.weights_init = self.weights_init
         if not getattr(self, '_no_bias_initialization', False):
             for child in self.children:
-                if not getattr(child, '_no_bias_initialization', False) and self.biases_init:
+                if getattr(child, '_no_bias_initialization', False):
+                    continue
+                if self.biases_init:
                     child.biases_init = self.biases_init
             super(Initializeable, self)._push_initialization_config()
