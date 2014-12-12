@@ -354,7 +354,7 @@ class Readout(AbstractReadout):
         return super(Readout, self).get_dim(name)
 
 
-class LinearReadout(Initializeable, Readout):
+class LinearReadout(Readout, Initializeable):
     """Readout computed as sum of linear projections.
 
     Parameters
@@ -474,7 +474,7 @@ class TrivialFeedback(AbstractFeedback):
         return super(TrivialFeedback, self).get_dim(name)
 
 
-class LookupFeedback(Initializeable, AbstractFeedback):
+class LookupFeedback(AbstractFeedback, Initializeable):
     """A feedback brick for the case when readout are integers.
 
     Stores and retrieves distributed representations of integers.
@@ -508,8 +508,8 @@ class LookupFeedback(Initializeable, AbstractFeedback):
         return super(LookupFeedback, self).get_dim(name)
 
 
-class AttentionTransition(Initializeable,
-                          AbstractAttentionTransition,
+class AttentionTransition(AbstractAttentionTransition,
+                          Initializeable,
                           DefaultRNG):
     """Combines an attention mechanism and a recurrent transition.
 
@@ -714,7 +714,7 @@ class AttentionTransition(Initializeable,
         return self.transition.get_dim(name)
 
 
-class FakeAttentionTransition(Initializeable, AbstractAttentionTransition):
+class FakeAttentionTransition(AbstractAttentionTransition, Initializeable):
     """Adds fake attention interface to a transition.
 
     Notes
