@@ -229,6 +229,8 @@ class DefaultExtension(pylearn2.train_extensions.TrainExtension):
 
     def on_monitor(self, model, dataset, algorithm):
         learning_rule = algorithm.learning_rule
+        if not learning_rule:
+            return
         batches_seen = model.monitor.get_batches_seen()
         if (isinstance(learning_rule, Pylearn2LearningRule) and
                 len(self._last_values)):
