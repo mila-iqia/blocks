@@ -1,3 +1,9 @@
+"""Wrappers for training bricks with PyLearn2.
+
+This module contains a set of wrappers that allows to outsource
+training and monitoring to Pylearn2.
+
+"""
 import logging
 from collections import OrderedDict
 
@@ -43,8 +49,9 @@ class Pylearn2Model(pylearn2.models.Model):
     def load(path):
         """Loads a model from path.
 
-        We need this wrapper to make the loaded monitor continuable.
-        In we had to create a new monitor and initialize with the data
+        We need this wrapper to make the loaded monitor continuable
+        (currently deserialized monitor is non-functional in PyLearn2).
+        For this we had to create a new monitor and initialize with the data
         from the old one.
 
         Parameters
@@ -53,7 +60,6 @@ class Pylearn2Model(pylearn2.models.Model):
             The model path.
 
         """
-
         model = push_monitor(serial.load(path), "_delete_me",
                              transfer_experience=True, save_records=True)
         del model._delete_me
@@ -66,8 +72,15 @@ class Pylearn2Cost(pylearn2.costs.cost.Cost):
     Parameters
     ----------
     cost : Theano variable
-        A theano variable corresponding to the end of the cost
+        The Theano variable corresponding to the end of the cost
         computation graph.
+
+    Notes
+    -----
+
+        The inputs of the computation graph must have names compatible with
+        names of the data sources. The is necessary in order to replace with
+        with the ones given by PyLearn2.
 
     """
     def __init__(self, cost):
@@ -75,7 +88,6 @@ class Pylearn2Cost(pylearn2.costs.cost.Cost):
         self.inputs = ComputationGraph(self.cost).dict_of_inputs()
 
     def expr(self, model, data, **kwargs):
-        """Substitutes the user's input variables with the PyLearn2 ones."""
         assert not model.supervised
         data = pack(data)
         data = [tensor.unbroadcast(var, *range(var.ndim))
@@ -120,9 +132,14 @@ class Pylearn2LearningRule(pylearn2.training_algorithms
         A PyLearn2 learning rule to wrap.
     monitor_values : dict of (name, Theano variable) pairs
         The values to monitor and their names.
+    updates : OrderedDict
+        Custom updates to perform when computing gradients.
+
+    .. todo::
+        `updates` are never used.
 
     """
-    def __init__(self, learning_rule, monitor_values=None):
+    def __init__(self, learning_rule, monitor_values=None, updates=None):
         self.learning_rule = learning_rule
         self.values = []
         self.accumulators = []
@@ -131,6 +148,9 @@ class Pylearn2LearningRule(pylearn2.training_algorithms
         if monitor_values:
             for name, value in monitor_values.items():
                 self.monitor_value(name, value)
+        if not updates:
+            updates = OrderedDict()
+        self.updates = updates
 
     def monitor_value(self, name, value):
         """Add monitoring to be performed with gradient computation.
@@ -186,6 +206,7 @@ class Pylearn2LearningRule(pylearn2.training_algorithms
             updates[accumulator] = (
                 accumulator + theano.clone(value, replace_dict))
         self._callback_called = True
+        updates.update(self.updates)
         return updates
 
 
@@ -223,8 +244,8 @@ class DefaultExtension(pylearn2.train_extensions.TrainExtension):
 class Pylearn2Train(pylearn2.train.Train):
     """Convinience wrapper over the PyLearn2 main loop.
 
-    Sets `model.data_specs` using `dataset.data_specs`
-    and the names of the input variables.
+    Sets `model.data_specs` using `dataset.data_specs` and the names of the
+    input variables.
 
     """
     def __init__(self, dataset, model, algorithm,
