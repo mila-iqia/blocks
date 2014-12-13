@@ -62,6 +62,10 @@ class ComputationGraph(object):
             recursion(output)
         self.inputs = [v for v in self.variables if is_input(v)]
 
+    def dict_of_inputs(self):
+        """Return a mapping from an input name to the input."""
+        return {var.name: var for var in self.inputs}
+
     def replace(self, replacements):
         """Replace certain variables in the computation graph.
 
