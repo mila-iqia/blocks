@@ -439,6 +439,7 @@ class ApplicationCall(object):
         self.brick = brick
         self.application = application
         self.auxiliary_variables = []
+        self.updates = []
         
     def add_auxiliary_variable(self, expression, role):
         #the copy destorys the name. I believe adding a role tag is pretty harmless, so don't copy

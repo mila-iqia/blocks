@@ -9,8 +9,8 @@ from theano.tensor import TensorConstant
 from theano.tensor.sharedvar import SharedVariable
 from theano.tensor.shared_randomstreams import RandomStreams
 
-logger = logging.getLogger(__name__)
 
+logger = logging.getLogger(__name__)
 
 class ComputationGraph(object):
     """Encapsulates a managed Theano computation graph.
@@ -35,29 +35,33 @@ class ComputationGraph(object):
         self._get_variables()
 
     def _get_variables(self):
+        self.variables = set()
+        self.applies = set()
+        self.updates = []
+        
+        processed_application_calls = set()
+        
         def recursion(current):
             self.variables.add(current)
-            #
-            # Dima: I think the tags are attached to variables, not to ops. Thus I copied the tag checking here
-            #
-            if hasattr(current.tag, 'updates'):
-                logger.debug("found updates of {}".format(current))
-                self.updates.extend(current.tag.updates.items())
+
             if hasattr(current.tag,'application_call'):
-                #do we want to continue the recursion over the auxiliaries?
-                logger.debug("found auxiliary outputs for updates of {}".format(current))
-                self.variables.update(current.tag.application_call.auxiliary_variables)
+                logger.debug("found application call of {}".format(current))
+                application_call = current.tag.application_call
+                if not application_call in processed_application_calls:
+                    processed_application_calls.add(application_call)
+                    for av in application_call.auxiliary_variables:
+                        av.tag.application_call = current.tag.application_call
+                        #do we want to continue the recursion over the auxiliaries?
+                        #recursion(av)
+                    self.variables.update(application_call.auxiliary_variables)
+                    self.updates.extend(application_call.updates)
             if current.owner:
                 owner = current.owner
                 if owner not in self.applies:
                     if hasattr(owner.tag, 'updates'):
                         logger.debug("found updates in application of {}".format(owner))
                         self.updates.extend(owner.tag.updates.items())
-                    if hasattr(owner.tag,'application_call'):
-                        logger.debug("found auxiliary outputs in application of {}".format(owner))
-                        self.variables.update(owner.tag.application_call.auxiliary_variables)
                     self.applies.add(owner)
-
                 for inp in owner.inputs:
                     if inp not in self.variables:
                         recursion(inp)
@@ -67,10 +71,7 @@ class ComputationGraph(object):
                     and not isinstance(variable, SharedVariable)
                     and not isinstance(variable, TensorConstant)
                     and not isinstance(variable, ScalarConstant))
-
-        self.variables = set()
-        self.applies = set()
-        self.updates = []
+        
         for output in self.outputs:
             if output not in self.variables:
                 recursion(output)
@@ -96,7 +97,6 @@ class ComputationGraph(object):
         """Create Theano function from the graph contained."""
         return theano.function(self.inputs, self.outputs,
                                updates=self.updates)
-
 
 class Cost(ComputationGraph):
     """Encapsulates a cost function of a ML model.
