@@ -426,6 +426,31 @@ def lazy(func):
         return func(self, *args, **kwargs)
     return init
 
+class ApplicationCall(object):
+    """A link between the tags in the Theano graph and the application and brick that created them.
+    
+    The application call can be used to attach to an apply call auxiliary variables (e.g. monitors or regularizers)
+    that do not form part of the main computation graph.
+    
+    The application call object is created before the call to the application method and can be accessed by 
+    specifying an application_call argument.
+    """
+    def __init__(self, brick, application):
+        self.brick = brick
+        self.application = application
+        self.auxiliary_variables = []
+        
+    def add_auxiliary_variable(self, expression, role):
+        #the copy destorys the name. I believe adding a role tag is pretty harmless, so don't copy
+        #expression = expression.copy()
+        expression.tag.role=role
+        self.auxiliary_variables.append(expression)
+        
+    def add_monitor(self, expression):
+        return self.add_auxiliary_variable(expression, role='monitor')
+        
+    def add_additional_cost(self, expression):
+        return self.add_auxiliary_variable(expression, role='add_cost')
 
 class Application(object):
     """A particular application of a brick.
@@ -489,7 +514,12 @@ class Application(object):
         arg_names, varargs_name, _, _ = inspect.getargspec(
             self.application_method)
         arg_names = arg_names[1:]
+        
+        call = ApplicationCall(self.brick, self)
 
+        if 'application_call' in arg_names:
+            kwargs['application_call'] = call
+        
         def copy_and_tag(variable, role, name):
             if Brick.print_shapes:
                 variable = put_hook(
@@ -498,8 +528,7 @@ class Application(object):
                             self.brick.name, self.__name__, name, x.shape)))
             copy = variable.copy()
             copy.name = "{}_{}_{}".format(self.brick.name, self.__name__, name)
-            copy.tag.owner = self.brick
-            copy.tag.application = self
+            copy.tag.application_call = call 
             copy.tag.name = name
             copy.tag.role = role
             return copy

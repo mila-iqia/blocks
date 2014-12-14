@@ -37,12 +37,25 @@ class ComputationGraph(object):
     def _get_variables(self):
         def recursion(current):
             self.variables.add(current)
+            #
+            # Dima: I think the tags are attached to variables, not to ops. Thus I copied the tag checking here
+            #
+            if hasattr(current.tag, 'updates'):
+                logger.debug("found updates of {}".format(current))
+                self.updates.extend(current.tag.updates.items())
+            if hasattr(current.tag,'application_call'):
+                #do we want to continue the recursion over the auxiliaries?
+                logger.debug("found auxiliary outputs for updates of {}".format(current))
+                self.variables.update(current.tag.application_call.auxiliary_variables)
             if current.owner:
                 owner = current.owner
                 if owner not in self.applies:
                     if hasattr(owner.tag, 'updates'):
-                        logger.debug("updates of {}".format(owner))
+                        logger.debug("found updates in application of {}".format(owner))
                         self.updates.extend(owner.tag.updates.items())
+                    if hasattr(owner.tag,'application_call'):
+                        logger.debug("found auxiliary outputs in application of {}".format(owner))
+                        self.variables.update(owner.tag.application_call.auxiliary_variables)
                     self.applies.add(owner)
 
                 for inp in owner.inputs:
@@ -59,7 +72,8 @@ class ComputationGraph(object):
         self.applies = set()
         self.updates = []
         for output in self.outputs:
-            recursion(output)
+            if output not in self.variables:
+                recursion(output)
         self.inputs = [v for v in self.variables if is_input(v)]
 
     def dict_of_inputs(self):
