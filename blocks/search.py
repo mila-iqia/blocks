@@ -1,7 +1,12 @@
+from blocks.utils import dict_union
+
 __author__ = "Dmitry Serdyuk <serdyuk.dmitriy@gmail.com>"
+
 from abc import ABCMeta, abstractmethod
 
-from sequence_generators import BaseSequenceGenerator
+from theano import function
+
+from blocks.bricks.sequence_generators import BaseSequenceGenerator
 
 
 class Search(object):
@@ -24,10 +29,9 @@ class Search(object):
 
         Parameters
         ----------
-        :param **kwargs: Arguments needed by sequence generator
+            **kwargs : Arguments needed by sequence generator
 
-        Outputs:
-            Generated sequence
+        outputs : Generated sequence
         """
         pass
 
@@ -39,11 +43,38 @@ class GreedySearch(Search):
 
 
 class BeamSearch(Search):
-    def compile(self):
+    def __init__(self, beam_size, batch_size, sequence_generator):
+        super(BeamSearch, self).__init__(sequence_generator)
+        assert batch_size % beam_size == 0
+        self.beam_size = beam_size
+        self.batch_size = batch_size
 
-        pass
+    def compile(self, *args, **kwargs):
+        initial_state = []
+        for name in self.generator.state_names + self.generator.glimpse_names:
+            initial_state += self.generator.initial_state(name,
+                                                          self.batch_size,
+                                                          *args,
+                                                          **kwargs)
 
-    def search(self, beam_size, **kwargs):
+        self.initial_state_computer = function([], initial_state)
+
+        next_glimpses = self.generator.compute_next_glimpses(**kwargs)
+        states = {name: kwargs[name] for name
+                  in self.generator.state_names}
+        contexts = {name: kwargs[name] for name
+                    in self.generator.context_names}
+        glimpses = {name: kwargs[name] for name
+                    in self.generator.glimpse_names}
+
+        self.next_glimpse_computer = function(dict_union(states, contexts, glimpses),
+                                              next_glimpses)
+
+        next_readouts = self.generator.compute_next_readouts()
+        self.next_readouts_computer = function([], )
+
+    def search(self, **kwargs):
+
         # Initial state
         # TODO: compute it
 

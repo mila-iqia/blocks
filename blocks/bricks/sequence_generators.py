@@ -72,8 +72,6 @@ class BaseSequenceGenerator(Brick):
       average of the annotations.
 
     * For speech recognition we would have three: the weighted average,
-      the alignment and the monotonicity penalty.
-
     Parameters
     ----------
     readout : instance of :class:`AbstractReadout`
@@ -105,7 +103,9 @@ class BaseSequenceGenerator(Brick):
         self.glimpse_dims = {name: self.transition.get_dim(name)
                              for name in self.glimpse_names}
         self.readout.source_dims = dict_union(
-            state_dims, context_dims, self.glimpse_dims)
+            state_dims, context_dims, self.glimpse_dims,
+            feedback=self.readout.get_dim('feedback'),
+            )
 
         # Configure fork
         feedback_names = self.readout.feedback.outputs
@@ -194,9 +194,11 @@ class BaseSequenceGenerator(Brick):
         contexts = {name: kwargs[name] for name in self.context_names}
         glimpses = {name: kwargs[name] for name in self.glimpse_names}
 
-        next_glimpses = self.compute_next_glimpses(**kwargs)
-        next_readouts = self.compute_next_readouts(outputs, next_glimpses,
-                                                   **kwargs)
+        next_glimpses = self.transition.take_look(
+            return_dict=True, **dict_union(states, glimpses, contexts))
+        next_readouts = self.readout.readout(
+            feedback=self.readout.feedback(outputs),
+            **dict_union(states, next_glimpses, contexts))
         (next_states, others) = \
             self.compute_next_states(next_readouts,
                                      next_glimpses,
@@ -205,26 +207,6 @@ class BaseSequenceGenerator(Brick):
                                      **kwargs)
         return (next_states + [others['next_outputs']]
                 + list(next_glimpses.values()) + [others['next_costs']])
-
-    @application
-    def compute_next_glimpses(self, **kwargs):
-        states = {name: kwargs[name] for name in self.state_names}
-        contexts = {name: kwargs[name] for name in self.context_names}
-        glimpses = {name: kwargs[name] for name in self.glimpse_names}
-
-        next_glimpses = self.transition.take_look(
-            return_dict=True, **dict_union(states, glimpses, contexts))
-        return next_glimpses
-
-    @application
-    def compute_next_readouts(self, outputs, next_glimpses, **kwargs):
-        states = {name: kwargs[name] for name in self.state_names}
-        contexts = {name: kwargs[name] for name in self.context_names}
-
-        next_readouts = self.readout.readout(
-            feedback=self.readout.feedback(outputs),
-            **dict_union(states, next_glimpses, contexts))
-        return next_readouts
 
     @application
     def compute_next_states(self, next_readouts, next_glimpses, **kwargs):
@@ -293,10 +275,6 @@ class AbstractEmitter(Brick):
     @abstractmethod
     def cost(self, readouts, outputs):
         pass
-
-    #@abstractmethod
-    #def probs(self, readouts):
-    #    pass
 
     @abstractmethod
     def initial_outputs(self, batch_size, *args, **kwargs):
@@ -450,6 +428,8 @@ class LinearReadout(Readout):
         if len(projections) == 1:
             return projections[0]
         return sum(projections[1:], projections[0])
+
+    # add  property input
 
 
 class TrivialEmitter(AbstractEmitter):
