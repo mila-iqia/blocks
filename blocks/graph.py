@@ -67,7 +67,15 @@ class ComputationGraph(object):
         return {var.name: var for var in self.inputs}
 
     def replace(self, replacements):
-        """Replace certain variables in the computation graph."""
+        """Replace certain variables in the computation graph.
+
+        Parameters
+        ----------
+        replacement : dict
+            The mapping from variables to be replaced to the corresponding
+            substitutes.
+
+        """
         return ComputationGraph(theano.clone(self.outputs,
                                              replace=replacements))
 
