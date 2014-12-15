@@ -67,16 +67,9 @@ class ComputationGraph(object):
         return {var.name: var for var in self.inputs}
 
     def replace(self, replacements):
-        """Replace certain variables in the computation graph.
-
-        .. todo::
-
-            Either implement more efficiently, or make the whole
-            ComputationGraph immutable and return a new one here.
-
-        """
-        self.outputs = theano.clone(self.outputs, replace=replacements)
-        self._get_variables()
+        """Replace certain variables in the computation graph."""
+        return ComputationGraph(theano.clone(self.outputs,
+                                             replace=replacements))
 
     def function(self):
         """Create Theano function from the graph contained."""
@@ -84,39 +77,25 @@ class ComputationGraph(object):
                                updates=self.updates)
 
 
-class Cost(ComputationGraph):
-    """Encapsulates a cost function of a ML model.
+def apply_noise(graph, variables, level, rng=None):
+    """Add Gaussian noise to certain variable of a computation graph.
 
     Parameters
     ----------
-    cost : Theano ScalarVariable
-        The end variable of a cost computation graph.
-    seed : int
-        Random seed for generation of disturbances.
+    graph : instance of :class:`ComputationGraph`
+        The computation graph.
+    varibles : Theano variables
+        Variables to add noise to.
+    level : float
+        Noise level.
+    rng : Theano random stream
+        The random stream to use.
 
     """
-    def __init__(self, cost, seed=1):
-        super(Cost, self).__init__([cost])
-        self.random = RandomStreams(seed)
-
-    def actual_cost(self):
-        """Actual cost after changes applied."""
-        return self.outputs[0]
-
-    def apply_noise(self, variables, level):
-        """Add Gaussian noise to certain variable of the cost graph.
-
-        Parameters
-        ----------
-        varibles : Theano variables
-            Variables to add noise to.
-        level : float
-            Noise level.
-
-        """
-        replace = {}
-        for variable in variables:
-            replace[variable] = (variable +
-                                 self.random.normal(variable.shape,
-                                                    std=level))
-        self.replace(replace)
+    if not rng:
+        rng = RandomStreams(1)
+    replace = {}
+    for variable in variables:
+        replace[variable] = (variable +
+                             rng.normal(variable.shape, std=level))
+    return graph.replace(replace)
