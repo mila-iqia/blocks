@@ -43,6 +43,15 @@ class GreedySearch(Search):
 
 
 class BeamSearch(Search):
+    """A class that provides an interface for search in any sequence
+    generator.
+
+    Parameters
+    ----------
+        beam_size : int, size of beam
+        batch_size : int, size of batch, should be dividable by `beam_size`
+        sequence_generator : a sequence generator brick
+    """
     def __init__(self, beam_size, batch_size, sequence_generator):
         super(BeamSearch, self).__init__(sequence_generator)
         assert batch_size % beam_size == 0
