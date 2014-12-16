@@ -7,7 +7,8 @@ import theano
 from theano import tensor
 
 from blocks.bricks import (Application, application, application_wrapper,
-                           Brick, DefaultRNG, Identity, Sigmoid, lazy)
+                           Brick, DefaultRNG, Identity, Sigmoid, lazy,
+                           Initializeable)
 from blocks.initialization import NdarrayInitialization
 from blocks.utils import pack, shared_floatx_zeros, update_instance
 
@@ -431,7 +432,7 @@ class GatedRecurrent(BaseRecurrent, DefaultRNG):
         return sequences
 
 
-class Bidirectional(DefaultRNG):
+class Bidirectional(Initializeable, DefaultRNG):
     """Bidirectional network.
 
     A bidirectional network is a combination of forward and backward
@@ -444,6 +445,8 @@ class Bidirectional(DefaultRNG):
         cloned.
 
     """
+    _no_bias_initialization = True
+
     @lazy
     def __init__(self, prototype, weights_init, **kwargs):
         super(Bidirectional, self).__init__(**kwargs)
@@ -451,11 +454,6 @@ class Bidirectional(DefaultRNG):
         self.children = [copy.deepcopy(prototype) for i in range(2)]
         self.children[0].name = 'forward'
         self.children[1].name = 'backward'
-
-    def _push_initialization_config(self):
-        for child in self.children:
-            if self.weights_init:
-                child.weights_init = self.weights_init
 
     @application
     def apply(self, *args, **kwargs):
