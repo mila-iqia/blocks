@@ -199,14 +199,12 @@ class BaseSequenceGenerator(Brick):
         next_readouts = self.readout.readout(
             feedback=self.readout.feedback(outputs),
             **dict_union(states, next_glimpses, contexts))
-        (next_states, others) = \
+        next_outputs, next_states, next_costs = \
             self.compute_next_states(next_readouts,
                                      next_glimpses,
-                                     also_return=['next_outputs',
-                                                  'next_costs'],
                                      **kwargs)
-        return (next_states + [others['next_outputs']]
-                + list(next_glimpses.values()) + [others['next_costs']])
+        return (next_states + [next_outputs]
+                + list(next_glimpses.values()) + [next_costs])
 
     @application
     def compute_next_states(self, next_readouts, next_glimpses, **kwargs):
@@ -221,12 +219,7 @@ class BaseSequenceGenerator(Brick):
             return_list=True,
             **dict_union(next_inputs, states, next_glimpses, contexts))
         next_costs = self.readout.cost(next_readouts, next_outputs)
-        also_return = kwargs.get("also_return")
-        if also_return:
-            local_vars = locals()
-            others = {name: local_vars[name] for name in also_return}
-            return next_states, others
-        return next_states
+        return next_outputs, next_states, next_costs
 
     @generate.delegate
     def generate_delegate(self):
@@ -261,23 +254,55 @@ class BaseSequenceGenerator(Brick):
 
 
 class AbstractEmitter(Brick):
-    """The interface for the emitter component of a readout."""
+    """
+    The interface for the emitter component of a readout.
+    For details see `BaseSequenceGenerator`
+    """
     __metaclass__ = ABCMeta
 
     @abstractmethod
     def emit(self, readouts):
+        """
+        Emits next readouts
+
+        :param readouts: current readouts
+        :return: next readouts
+        """
         pass
 
     @abstractmethod
     def emit_probs(self, readouts):
+        """
+        Emits next probabilities
+
+        :param readouts: readouts
+        :return: next probabilities
+        """
+
         pass
 
     @abstractmethod
     def cost(self, readouts, outputs):
+        """
+        Computes next costs
+
+        :param readouts: current readouts
+        :param outputs: previous outputs
+        :return: next costs
+        """
         pass
 
     @abstractmethod
     def initial_outputs(self, batch_size, *args, **kwargs):
+        """
+        Computes initial outputs
+        :param batch_size: int, size of batch
+        :return: initial outputs
+
+        Note
+        ----
+            All additional arguments are expected as keyword arguments
+        """
         pass
 
 
