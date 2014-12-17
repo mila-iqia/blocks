@@ -39,11 +39,13 @@ class TestBrick(Brick):
     @delegated_apply.delegate
     def delegate(self):
         return self.second_apply
-    
+
     @application
     def access_application_call(self, x, application_call):
-        application_call.add_monitor(shared_floatx(numpy.ones((1,)), name='test_val'))
+        application_call.add_monitor(shared_floatx(numpy.ones((1,)), 
+                                                   name='test_val'))
         return x
+
 
 class ParentBrick(Brick):
     def __init__(self, child=None, **kwargs):
@@ -314,12 +316,14 @@ def test_mlp():
     assert_allclose(x_val.dot(numpy.ones((16, 8))),
                     y.eval({x: x_val}), rtol=1e-06)
 
+
 def test_application_call():
     X = tensor.matrix('X')
     Brick.lazy = True
     brick = TestBrick()
     Y = brick.access_application_call(X)
-    assert Y.tag.application_call.auxiliary_variables[0].name=='test_val'
+    assert Y.tag.application_call.auxiliary_variables[0].name == 'test_val'
+
 
 def test_application_graph_auxiliary_vars():
     X = tensor.matrix('X')
@@ -329,9 +333,7 @@ def test_application_graph_auxiliary_vars():
     graph = ComputationGraph(outputs=[Y])
     test_val_found = False
     for var in graph.variables:
-        if var.name=='test_val':
+        if var.name == 'test_val':
             test_val_found = True
             break
     assert test_val_found
-
-

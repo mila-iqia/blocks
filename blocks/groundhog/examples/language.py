@@ -101,7 +101,8 @@ def main():
         states = [v for v in cost.variables
                   if hasattr(v.tag, 'application_call')
                   and v.tag.application_call.brick == generator.transition
-                  and v.tag.application == generator.transition.apply
+                  and (v.tag.application_call.application ==
+                       generator.transition.apply)
                   and v.tag.role == Application.OUTPUT_VARIABLE
                   and v.tag.name == 'states']
         assert len(states) == 1
