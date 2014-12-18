@@ -9,6 +9,7 @@ from theano.tensor import TensorConstant
 from theano.tensor.sharedvar import SharedVariable
 from theano.tensor.shared_randomstreams import RandomStreams
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -35,16 +36,34 @@ class ComputationGraph(object):
         self._get_variables()
 
     def _get_variables(self):
+        self.variables = set()
+        self.applies = set()
+        self.application_calls = set()
+        self.updates = []
+
         def recursion(current):
             self.variables.add(current)
+
+            if hasattr(current.tag, 'application_call'):
+                logger.debug("found application call of {}".format(current))
+                application_call = current.tag.application_call
+                if application_call not in self.application_calls:
+                    self.application_calls.add(application_call)
+                    for av in application_call.auxiliary_variables:
+                        av.tag.application_call = current.tag.application_call
+                        # do we want to continue the recursion over
+                        # the auxiliaries?
+                        # recursion(av)
+                    self.variables.update(application_call.auxiliary_variables)
+                    self.updates.extend(application_call.updates)
             if current.owner:
                 owner = current.owner
                 if owner not in self.applies:
                     if hasattr(owner.tag, 'updates'):
-                        logger.debug("updates of {}".format(owner))
+                        logger.debug("found updates in application of {}"
+                                     .format(owner))
                         self.updates.extend(owner.tag.updates.items())
                     self.applies.add(owner)
-
                 for inp in owner.inputs:
                     if inp not in self.variables:
                         recursion(inp)
@@ -55,11 +74,9 @@ class ComputationGraph(object):
                     and not isinstance(variable, TensorConstant)
                     and not isinstance(variable, ScalarConstant))
 
-        self.variables = set()
-        self.applies = set()
-        self.updates = []
         for output in self.outputs:
-            recursion(output)
+            if output not in self.variables:
+                recursion(output)
         self.inputs = [v for v in self.variables if is_input(v)]
 
     def dict_of_inputs(self):
