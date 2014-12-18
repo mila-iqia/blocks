@@ -8,6 +8,7 @@ from blocks.bricks import (Application, application, Brick,
                            DEFAULT_SEED, Identity, lazy, Linear,
                            Maxout, LinearMaxout, MLP, Tanh)
 from blocks.initialization import Constant
+from blocks.utils import shared_floatx
 
 
 class TestBrick(Brick):
@@ -37,6 +38,12 @@ class TestBrick(Brick):
     @delegated_apply.delegate
     def delegate(self):
         return self.second_apply
+
+    @application
+    def access_application_call(self, x, application_call):
+        application_call.add_monitor(shared_floatx(numpy.ones((1,)), 
+                                                   name='test_val'))
+        return x
 
 
 class ParentBrick(Brick):
@@ -163,8 +170,8 @@ def test_tagging():
     z = tensor.vector('z')
 
     def check_output_variable(o):
-        assert o.tag.owner is brick
-        assert o.owner.inputs[0].tag.owner is brick
+        assert o.tag.application_call.brick is brick
+        assert o.owner.inputs[0].tag.application_call.brick is brick
 
     # Case 1: both positional arguments are provided.
     u, v = brick.apply(x, y)
@@ -307,3 +314,11 @@ def test_mlp():
     mlp.initialize()
     assert_allclose(x_val.dot(numpy.ones((16, 8))),
                     y.eval({x: x_val}), rtol=1e-06)
+
+
+def test_application_call():
+    X = tensor.matrix('X')
+    Brick.lazy = True
+    brick = TestBrick()
+    Y = brick.access_application_call(X)
+    assert Y.tag.application_call.auxiliary_variables[0].name == 'test_val'

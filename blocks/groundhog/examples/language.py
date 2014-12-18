@@ -12,7 +12,7 @@ from groundhog.mainLoop import MainLoop
 from groundhog.datasets import LMIterator
 from groundhog.trainer.SGD import SGD
 
-from blocks.bricks import Application, Tanh
+from blocks.bricks import VariableRole, Tanh
 from blocks.bricks.recurrent import GatedRecurrent
 from blocks.select import Selector
 from blocks.graph import ComputationGraph
@@ -100,10 +100,11 @@ def main():
             generator.cost(x, states=init_states * reset).sum())
         # TODO: better search routine
         states = [v for v in cost.variables
-                  if hasattr(v.tag, 'owner')
-                  and v.tag.owner == generator.transition
-                  and v.tag.application == generator.transition.apply
-                  and v.tag.role == Application.OUTPUT_VARIABLE
+                  if hasattr(v.tag, 'application_call')
+                  and v.tag.application_call.brick == generator.transition
+                  and (v.tag.application_call.application ==
+                       generator.transition.apply)
+                  and v.tag.role == VariableRole.OUTPUT
                   and v.tag.name == 'states']
         assert len(states) == 1
         states = states[0]
