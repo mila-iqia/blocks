@@ -38,9 +38,8 @@ class ComputationGraph(object):
     def _get_variables(self):
         self.variables = set()
         self.applies = set()
+        self.application_calls = set()
         self.updates = []
-
-        processed_application_calls = set()
 
         def recursion(current):
             self.variables.add(current)
@@ -48,8 +47,8 @@ class ComputationGraph(object):
             if hasattr(current.tag, 'application_call'):
                 logger.debug("found application call of {}".format(current))
                 application_call = current.tag.application_call
-                if application_call not in processed_application_calls:
-                    processed_application_calls.add(application_call)
+                if application_call not in self.application_calls:
+                    self.application_calls.add(application_call)
                     for av in application_call.auxiliary_variables:
                         av.tag.application_call = current.tag.application_call
                         # do we want to continue the recursion over

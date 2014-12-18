@@ -439,6 +439,7 @@ class ApplicationCall(object):
     application method and can be accessed by
     specifying an application_call argument.
 
+
     Parameters
     ----------
     brick : object

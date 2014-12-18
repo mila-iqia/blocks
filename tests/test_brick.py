@@ -9,7 +9,6 @@ from blocks.bricks import (Application, application, Brick,
                            Maxout, LinearMaxout, MLP, Tanh)
 from blocks.initialization import Constant
 from blocks.utils import shared_floatx
-from blocks.graph import ComputationGraph
 
 
 class TestBrick(Brick):
@@ -323,17 +322,3 @@ def test_application_call():
     brick = TestBrick()
     Y = brick.access_application_call(X)
     assert Y.tag.application_call.auxiliary_variables[0].name == 'test_val'
-
-
-def test_application_graph_auxiliary_vars():
-    X = tensor.matrix('X')
-    Brick.lazy = True
-    brick = TestBrick()
-    Y = brick.access_application_call(X)
-    graph = ComputationGraph(outputs=[Y])
-    test_val_found = False
-    for var in graph.variables:
-        if var.name == 'test_val':
-            test_val_found = True
-            break
-    assert test_val_found
