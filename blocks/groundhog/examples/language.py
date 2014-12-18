@@ -15,7 +15,7 @@ from groundhog.trainer.SGD import SGD
 from blocks.bricks import VariableRole, Tanh
 from blocks.bricks.recurrent import GatedRecurrent
 from blocks.select import Selector
-from blocks.graph import ComputationGraph, Cost
+from blocks.graph import ComputationGraph
 from blocks.bricks.sequence_generators import (
     SequenceGenerator, LinearReadout, SoftmaxEmitter, LookupFeedback)
 from blocks.initialization import Orthogonal, IsotropicGaussian, Constant
@@ -96,7 +96,8 @@ def main():
         init_states = shared_floatx_zeros((batch_size, dim),
                                           name='init_states')
         reset = tensor.scalar('reset')
-        cost = Cost(generator.cost(x, states=init_states * reset).sum())
+        cost = ComputationGraph(
+            generator.cost(x, states=init_states * reset).sum())
         # TODO: better search routine
         states = [v for v in cost.variables
                   if hasattr(v.tag, 'application_call')
@@ -110,7 +111,7 @@ def main():
 
         gh_model = GroundhogModel(generator, cost)
         gh_model.properties.append(
-            ('bpc', cost.actual_cost() * numpy.log(2) / seq_len))
+            ('bpc', cost.outputs[0] * numpy.log(2) / seq_len))
         gh_model.properties.append(('mean_init_state', init_states.mean()))
         gh_model.properties.append(('reset', reset))
         if not args.reset:

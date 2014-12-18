@@ -6,7 +6,7 @@ import theano
 from theano import tensor
 from theano import Variable
 
-from blocks.graph import Cost
+from blocks.graph import ComputationGraph
 from blocks.select import Selector
 from blocks.serialization import save_params, load_params
 
@@ -41,8 +41,7 @@ class GroundhogModel(object):
         if not isinstance(bricks, Selector):
             bricks = Selector(bricks)
         if isinstance(cost, Variable):
-            cost = Cost(cost)
-        assert isinstance(cost, Cost)
+            cost = ComputationGraph(cost)
         self.bricks = bricks
         self.cost = cost
 
@@ -60,7 +59,7 @@ class GroundhogModel(object):
     def train_cost(self):
         # Caching to simplify the computation graph
         if not hasattr(self, "_train_cost"):
-            self._train_cost = self.cost.actual_cost()
+            self._train_cost = self.cost.outputs[0]
         return self._train_cost
 
     @property
