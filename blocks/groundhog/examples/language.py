@@ -12,7 +12,7 @@ from groundhog.mainLoop import MainLoop
 from groundhog.datasets import LMIterator
 from groundhog.trainer.SGD import SGD
 
-from blocks.bricks import Application, Tanh
+from blocks.bricks import VariableRole, Tanh
 from blocks.bricks.recurrent import GatedRecurrent
 from blocks.select import Selector
 from blocks.graph import ComputationGraph, Cost
@@ -103,7 +103,7 @@ def main():
                   and v.tag.application_call.brick == generator.transition
                   and (v.tag.application_call.application ==
                        generator.transition.apply)
-                  and v.tag.role == Application.OUTPUT_VARIABLE
+                  and v.tag.role == VariableRole.output
                   and v.tag.name == 'states']
         assert len(states) == 1
         states = states[0]

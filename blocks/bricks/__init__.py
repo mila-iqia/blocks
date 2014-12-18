@@ -427,6 +427,17 @@ def lazy(func):
     return init
 
 
+class VariableRole(object):
+    """
+    A dummy class to keep track of brick roles
+    """
+    cost = "cost"
+    input = "input"
+    output = "output"
+    monitor = "monitor"
+    additional_cost = "additional_cost"
+
+
 class ApplicationCall(object):
     """A link between the tags in the Theano graph and the application
     and brick that created them.
@@ -463,10 +474,12 @@ class ApplicationCall(object):
         self.auxiliary_variables.append(expression)
 
     def add_monitor(self, expression):
-        return self.add_auxiliary_variable(expression, role='monitor')
+        return self.add_auxiliary_variable(expression,
+                                           role=VariableRole.monitor)
 
     def add_additional_cost(self, expression):
-        return self.add_auxiliary_variable(expression, role='additional_cost')
+        return self.add_auxiliary_variable(expression,
+                                           role=VariableRole.additional_cost)
 
 
 class Application(object):
@@ -493,8 +506,6 @@ class Application(object):
         self.delegate_method = None
 
     _last_brick_applied = None
-    INPUT_VARIABLE = 'input'
-    OUTPUT_VARIABLE = 'output'
 
     def __call__(self, *inputs, **kwargs):
         """Wraps an application method.
@@ -559,11 +570,11 @@ class Application(object):
             name = (arg_names[i] if i < len(arg_names) else
                     "{}_{}".format(varargs_name, i - len(arg_names)))
             if isinstance(inp, tensor.Variable):
-                inputs[i] = copy_and_tag(inp, Application.INPUT_VARIABLE,
+                inputs[i] = copy_and_tag(inp, VariableRole.input,
                                          name)
         for key, value in kwargs.items():
             if isinstance(value, tensor.Variable):
-                kwargs[key] = copy_and_tag(value, Application.INPUT_VARIABLE,
+                kwargs[key] = copy_and_tag(value, VariableRole.input,
                                            key)
         Application._last_brick_applied = self.brick
         try:
@@ -580,7 +591,7 @@ class Application(object):
             if isinstance(output, tensor.Variable):
                 # TODO Tag with dimensions, axes, etc. for error-checking
                 outputs[i] = copy_and_tag(outputs[i],
-                                          Application.OUTPUT_VARIABLE, name)
+                                          VariableRole.output, name)
         if return_list:
             return outputs
         if return_dict:
