@@ -431,11 +431,11 @@ class VariableRole(object):
     """
     A dummy class to keep track of brick roles
     """
-    cost = "cost"
-    input = "input"
-    output = "output"
-    monitor = "monitor"
-    additional_cost = "additional_cost"
+    COST = "cost"
+    INPUT = "input"
+    OUTPUT = "output"
+    MONITOR = "monitor"
+    ADDITIONAL_COST = "additional_cost"
 
 
 class ApplicationCall(object):
@@ -475,11 +475,11 @@ class ApplicationCall(object):
 
     def add_monitor(self, expression):
         return self.add_auxiliary_variable(expression,
-                                           role=VariableRole.monitor)
+                                           role=VariableRole.MONITOR)
 
     def add_additional_cost(self, expression):
         return self.add_auxiliary_variable(expression,
-                                           role=VariableRole.additional_cost)
+                                           role=VariableRole.ADDITIONAL_COST)
 
 
 class Application(object):
@@ -570,11 +570,11 @@ class Application(object):
             name = (arg_names[i] if i < len(arg_names) else
                     "{}_{}".format(varargs_name, i - len(arg_names)))
             if isinstance(inp, tensor.Variable):
-                inputs[i] = copy_and_tag(inp, VariableRole.input,
+                inputs[i] = copy_and_tag(inp, VariableRole.INPUT,
                                          name)
         for key, value in kwargs.items():
             if isinstance(value, tensor.Variable):
-                kwargs[key] = copy_and_tag(value, VariableRole.input,
+                kwargs[key] = copy_and_tag(value, VariableRole.INPUT,
                                            key)
         Application._last_brick_applied = self.brick
         try:
@@ -591,7 +591,7 @@ class Application(object):
             if isinstance(output, tensor.Variable):
                 # TODO Tag with dimensions, axes, etc. for error-checking
                 outputs[i] = copy_and_tag(outputs[i],
-                                          VariableRole.output, name)
+                                          VariableRole.OUTPUT, name)
         if return_list:
             return outputs
         if return_dict:

@@ -104,7 +104,7 @@ def main():
                   and v.tag.application_call.brick == generator.transition
                   and (v.tag.application_call.application ==
                        generator.transition.apply)
-                  and v.tag.role == VariableRole.output
+                  and v.tag.role == VariableRole.OUTPUT
                   and v.tag.name == 'states']
         assert len(states) == 1
         states = states[0]
