@@ -30,7 +30,7 @@ def pack(arg):
         return [arg]
 
 
-def unpack(arg):
+def unpack(arg, singleton=False):
     """Unpack variables from a list or tuple.
 
     Parameters
@@ -41,6 +41,9 @@ def unpack(arg):
         be returned. If passed a tuple of length greater than one, it
         will be cast to a list before returning. Any other variable
         will be returned as is.
+    singleton : bool
+        If ``True``, `arg` is expected to be a singleton and an exception
+        is raised if this is not the case. ``False`` by default.
 
     Returns
     -------
@@ -53,6 +56,9 @@ def unpack(arg):
         if len(arg) == 1:
             return arg[0]
         else:
+            if singleton:
+                raise ValueError("Expected a singleton, got {}".
+                                 format(arg))
             return list(arg)
     else:
         return arg

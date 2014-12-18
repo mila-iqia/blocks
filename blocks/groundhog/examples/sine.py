@@ -19,7 +19,7 @@ from blocks.bricks import Brick, Identity, Tanh, MLP, lazy, application
 from blocks.bricks.parallel import Fork
 from blocks.bricks.recurrent import GatedRecurrent
 from blocks.select import Selector
-from blocks.graph import Cost
+from blocks.graph import apply_noise, ComputationGraph
 from blocks.bricks.sequence_generators import (
     SequenceGenerator, LinearReadout, TrivialEmitter)
 from blocks.initialization import Orthogonal, IsotropicGaussian, Constant
@@ -77,7 +77,7 @@ class AddParameters(Brick):
         for name in self.input_names:
             inputs[name] = inputs[name] + forks[name]
         kwargs.update(inputs)
-        if kwargs.get('iterate'):
+        if kwargs.get('iterate', True):
             kwargs[self.state_name] = self.initial_state(None, params=params)
         return self.transition.apply(**kwargs)
 
@@ -172,7 +172,10 @@ def main():
         name="generator")
     generator.allocate()
     logger.debug("Parameters:\n" +
-                 pprint.pformat(Selector(generator).get_params().keys()))
+                 pprint.pformat(
+                     [(key, value.get_value().shape) for key, value
+                      in Selector(generator).get_params().items()],
+                     width=120))
 
     if args.mode == "train":
         seed = 1
@@ -181,10 +184,10 @@ def main():
 
         generator.initialize()
 
-        cost = Cost(generator.cost(tensor.tensor3('x'),
-                                   params=tensor.matrix("params")).sum())
-        if args.input_noise:
-            cost.apply_noise(cost.inputs, args.input_noise)
+        cost = ComputationGraph(
+            generator.cost(tensor.tensor3('x'),
+                           params=tensor.matrix("params")).sum())
+        cost = apply_noise(cost, cost.inputs, args.input_noise)
 
         gh_model = GroundhogModel(generator, cost)
         state = GroundhogState(args.prefix, batch_size,

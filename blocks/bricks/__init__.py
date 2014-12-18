@@ -427,6 +427,61 @@ def lazy(func):
     return init
 
 
+class VariableRole(object):
+    """
+    A dummy class to keep track of brick roles
+    """
+    COST = "cost"
+    INPUT = "input"
+    OUTPUT = "output"
+    MONITOR = "monitor"
+    ADDITIONAL_COST = "additional_cost"
+
+
+class ApplicationCall(object):
+    """A link between the tags in the Theano graph and the application
+    and brick that created them.
+
+    The application call can be used to attach to an apply call auxiliary
+    variables (e.g. monitors or regularizers)
+    that do not form part of the main computation graph.
+
+    The application call object is created before the call to the
+    application method and can be accessed by
+    specifying an application_call argument.
+
+
+    Parameters
+    ----------
+    brick : object
+        The brick whose application is called
+
+    application : object
+        The application object being called
+    """
+    def __init__(self, brick, application):
+        self.brick = brick
+        self.application = application
+        self.auxiliary_variables = []
+        self.updates = []
+
+    def add_auxiliary_variable(self, expression, role):
+        # the copy destorys the name.
+        # I (JCh) believe adding a role tag is pretty harmless,
+        # so I don't copy
+        # expression = expression.copy()
+        expression.tag.role = role
+        self.auxiliary_variables.append(expression)
+
+    def add_monitor(self, expression):
+        return self.add_auxiliary_variable(expression,
+                                           role=VariableRole.MONITOR)
+
+    def add_additional_cost(self, expression):
+        return self.add_auxiliary_variable(expression,
+                                           role=VariableRole.ADDITIONAL_COST)
+
+
 class Application(object):
     """A particular application of a brick.
 
@@ -451,8 +506,6 @@ class Application(object):
         self.delegate_method = None
 
     _last_brick_applied = None
-    INPUT_VARIABLE = 'input'
-    OUTPUT_VARIABLE = 'output'
 
     def __call__(self, *inputs, **kwargs):
         """Wraps an application method.
@@ -490,6 +543,11 @@ class Application(object):
             self.application_method)
         arg_names = arg_names[1:]
 
+        call = ApplicationCall(self.brick, self)
+
+        if 'application_call' in arg_names:
+            kwargs['application_call'] = call
+
         def copy_and_tag(variable, role, name):
             if Brick.print_shapes:
                 variable = put_hook(
@@ -498,8 +556,7 @@ class Application(object):
                             self.brick.name, self.__name__, name, x.shape)))
             copy = variable.copy()
             copy.name = "{}_{}_{}".format(self.brick.name, self.__name__, name)
-            copy.tag.owner = self.brick
-            copy.tag.application = self
+            copy.tag.application_call = call
             copy.tag.name = name
             copy.tag.role = role
             return copy
@@ -513,11 +570,11 @@ class Application(object):
             name = (arg_names[i] if i < len(arg_names) else
                     "{}_{}".format(varargs_name, i - len(arg_names)))
             if isinstance(inp, tensor.Variable):
-                inputs[i] = copy_and_tag(inp, Application.INPUT_VARIABLE,
+                inputs[i] = copy_and_tag(inp, VariableRole.INPUT,
                                          name)
         for key, value in kwargs.items():
             if isinstance(value, tensor.Variable):
-                kwargs[key] = copy_and_tag(value, Application.INPUT_VARIABLE,
+                kwargs[key] = copy_and_tag(value, VariableRole.INPUT,
                                            key)
         Application._last_brick_applied = self.brick
         try:
@@ -534,7 +591,7 @@ class Application(object):
             if isinstance(output, tensor.Variable):
                 # TODO Tag with dimensions, axes, etc. for error-checking
                 outputs[i] = copy_and_tag(outputs[i],
-                                          Application.OUTPUT_VARIABLE, name)
+                                          VariableRole.OUTPUT, name)
         if return_list:
             return outputs
         if return_dict:
@@ -1043,3 +1100,24 @@ class MLP(DefaultRNG):
             else:
                 output = activation.apply(linear.apply(output))
         return output
+
+
+class Initializeable(Brick):
+    """Base class for bricks which push parameter initialization.
+
+    Set :meth:`_no_bias_initialization = True`
+    if the brick should only push :meth:`weights_init`.
+    For an example, see :class:`Bidirectional`.
+
+    """
+    def _push_initialization_config(self):
+        for child in self.children:
+            if self.weights_init:
+                child.weights_init = self.weights_init
+        if not getattr(self, '_no_bias_initialization', False):
+            for child in self.children:
+                if getattr(child, '_no_bias_initialization', False):
+                    continue
+                if self.biases_init:
+                    child.biases_init = self.biases_init
+            super(Initializeable, self)._push_initialization_config()

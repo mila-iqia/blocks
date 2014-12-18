@@ -3,7 +3,8 @@ from abc import ABCMeta, abstractmethod
 
 from theano import tensor
 
-from blocks.bricks import application, Brick, DefaultRNG, Identity, lazy, MLP
+from blocks.bricks import (application, Brick, DefaultRNG, Identity, lazy, MLP,
+                           Initializeable)
 from blocks.bricks.recurrent import BaseRecurrent
 from blocks.bricks.parallel import Fork, Mixer
 from blocks.bricks.lookup import LookupTable
@@ -11,7 +12,7 @@ from blocks.bricks.recurrent import recurrent
 from blocks.utils import dict_subset, dict_union, update_instance
 
 
-class BaseSequenceGenerator(Brick):
+class BaseSequenceGenerator(Initializeable):
     """A generic sequence generator.
 
     This class combines two components, a readout network and an
@@ -114,13 +115,6 @@ class BaseSequenceGenerator(Brick):
         self.fork.fork_dims = {
             name: self.transition.get_dim(name)
             for name in self.fork.apply.outputs}
-
-    def _push_initialization_config(self):
-        for brick in self.children:
-            if self.weights_init:
-                brick.weights_init = self.weights_init
-            if self.biases_init:
-                brick.biases_init = self.weights_init
 
     @application
     def cost(self, outputs, mask=None, **kwargs):
@@ -411,7 +405,7 @@ class Readout(AbstractReadout):
         return super(Readout, self).get_dim(name)
 
 
-class LinearReadout(Readout):
+class LinearReadout(Readout, Initializeable):
     """Readout computed as sum of linear projections.
 
     Parameters
@@ -438,13 +432,6 @@ class LinearReadout(Readout):
         for name, projector in zip(self.source_names, self.projectors):
             projector.dims[0] = self.source_dims[name]
             projector.dims[-1] = self.readout_dim
-
-    def _push_initialization_config(self):
-        for child in self.children:
-            if self.weights_init:
-                child.weights_init = self.weights_init
-            if self.biases_init:
-                child.biases_init = self.biases_init
 
     @application
     def readout(self, **kwargs):
@@ -549,7 +536,7 @@ class TrivialFeedback(AbstractFeedback):
         return super(TrivialFeedback, self).get_dim(name)
 
 
-class LookupFeedback(AbstractFeedback):
+class LookupFeedback(AbstractFeedback, Initializeable):
     """A feedback brick for the case when readout are integers.
 
     Stores and retrieves distributed representations of integers.
@@ -572,13 +559,6 @@ class LookupFeedback(AbstractFeedback):
         self.lookup.length = self.num_outputs
         self.lookup.dim = self.feedback_dim
 
-    def _push_initialization_config(self):
-        for child in self.children:
-            if self.weights_init:
-                child.weights_init = self.weights_init
-            if self.biases_init:
-                child.biases_init = self.biases_init
-
     @application
     def feedback(self, outputs, **kwargs):
         assert self.output_dim == 0
@@ -590,7 +570,9 @@ class LookupFeedback(AbstractFeedback):
         return super(LookupFeedback, self).get_dim(name)
 
 
-class AttentionTransition(AbstractAttentionTransition, DefaultRNG):
+class AttentionTransition(AbstractAttentionTransition,
+                          Initializeable,
+                          DefaultRNG):
     """Combines an attention mechanism and a recurrent transition.
 
     This brick is assembled from three components: an attention mechanism, a
@@ -652,14 +634,6 @@ class AttentionTransition(AbstractAttentionTransition, DefaultRNG):
                 self.transition.get_dims(self.sequence_names),
                 self.attention.get_dims(self.glimpse_names)),
             self.mixer.apply.inputs)
-
-    def _push_initialization_config(self):
-        # TODO: stop copy-pasting this code
-        for child in self.children:
-            if self.weights_init:
-                child.weights_init = self.weights_init
-            if self.biases_init:
-                child.biases_init = self.biases_init
 
     @application
     def take_look(self, **kwargs):
@@ -802,7 +776,7 @@ class AttentionTransition(AbstractAttentionTransition, DefaultRNG):
         return self.transition.get_dim(name)
 
 
-class FakeAttentionTransition(AbstractAttentionTransition):
+class FakeAttentionTransition(AbstractAttentionTransition, Initializeable):
     """Adds fake attention interface to a transition.
 
     Notes
@@ -820,14 +794,6 @@ class FakeAttentionTransition(AbstractAttentionTransition):
         self.glimpse_names = []
 
         self.children = [self.transition]
-
-    def _push_initialization_config(self):
-        # TODO: stop copy-pasting this code
-        for child in self.children:
-            if self.weights_init:
-                child.weights_init = self.weights_init
-            if self.biases_init:
-                child.biases_init = self.biases_init
 
     @application
     def apply(self, *args, **kwargs):

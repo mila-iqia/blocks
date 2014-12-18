@@ -14,7 +14,7 @@ from groundhog.trainer.SGD import SGD
 from blocks.bricks import Tanh
 from blocks.bricks.recurrent import GatedRecurrent
 from blocks.select import Selector
-from blocks.graph import ComputationGraph, Cost
+from blocks.graph import ComputationGraph
 from blocks.bricks.sequence_generators import (
     SequenceGenerator, LinearReadout, SoftmaxEmitter, LookupFeedback)
 from blocks.initialization import Orthogonal, IsotropicGaussian, Constant
@@ -114,8 +114,7 @@ def main():
         logger.debug("transition.weights_init={}".format(
             transition.weights_init))
 
-        cost = Cost(generator.cost(tensor.lmatrix('x')).sum())
-
+        cost = generator.cost(tensor.lmatrix('x')).sum()
         gh_model = GroundhogModel(generator, cost)
         state = GroundhogState(args.prefix, batch_size,
                                learning_rate=0.0001).as_dict()
