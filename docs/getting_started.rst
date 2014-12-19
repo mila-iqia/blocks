@@ -178,10 +178,9 @@ bricks' configuration.
 .. _here: :class:`blocks.bricks.Brick`
 
 Examples
-========
+--------
 
-You can find examples using the Groundhog main loop in the folder 
-blocks/groundhog/examples (the path starts from the repository root).
-A language modeling, Markov Chain simulation and sinewave generation 
-case studies are available. They are planned to be replaced
-by PyLearn2 based examples in the nearest future.
+You can find examples using the Groundhog main loop in the folder
+``blocks/groundhog/examples``.  Case studies of language modeling, Markov
+chains and sinewave generation are available. They are planned to be replaced
+by PyLearn2 based examples in the near future.
