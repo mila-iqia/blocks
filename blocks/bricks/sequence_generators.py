@@ -73,6 +73,8 @@ class BaseSequenceGenerator(Initializeable):
       average of the annotations.
 
     * For speech recognition we would have three: the weighted average,
+      the alignment and the monotonicity penalty.
+
     Parameters
     ----------
     readout : instance of :class:`AbstractReadout`
@@ -257,7 +259,7 @@ class AbstractEmitter(Brick):
     @abstractmethod
     def emit(self, readouts):
         """
-        Emits next readouts
+        Computes next outputs
 
         :param readouts: current readouts
         :return: next readouts
@@ -267,7 +269,7 @@ class AbstractEmitter(Brick):
     @abstractmethod
     def emit_probs(self, readouts):
         """
-        Emits next probabilities
+        Computes next probabilities
 
         :param readouts: readouts
         :return: next probabilities
@@ -483,7 +485,8 @@ class SoftmaxEmitter(AbstractEmitter, DefaultRNG):
 
     """
 
-    def _probs(self, readouts):
+    @application
+    def emit_probs(self, readouts):
         shape = readouts.shape
         return tensor.nnet.softmax(readouts.reshape(
             (tensor.prod(shape[:-1]), shape[-1]))).reshape(shape)
@@ -492,11 +495,6 @@ class SoftmaxEmitter(AbstractEmitter, DefaultRNG):
     def emit(self, readouts):
         probs = self._probs(readouts)
         return self.theano_rng.multinomial(pvals=probs).argmax(axis=-1)
-
-    @application
-    def emit_probs(self, readouts):
-        probs = self._probs(readouts)
-        return probs
 
     @application
     def cost(self, readouts, outputs):
