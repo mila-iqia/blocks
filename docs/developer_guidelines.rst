@@ -14,17 +14,23 @@ familiar with it. Our `Travis CI buildbot`_ runs flake8_ as part of every build,
 which checks for PEP8 compliance (using the pep8_ tool) and for some common
 coding erros using pyflakes_. You might want to install and run flake8_ on your
 code before submitting a PR to make sure that your build doesn't fail because of
-a bit of extra whitespace.
+e.g. a bit of extra whitespace.
 
 Note that passing flake8_ does not necessarily mean that your code is PEP8
-compliant. Some guidelines which aren't checked by flake8_:
+compliant! Some guidelines which aren't checked by flake8_:
 
 * Imports `should be grouped`_ into standard library, third party, and local
-  imports.
+  imports with a blank line in between groups.
 * Variable names should be explanatory. Please avoid using abbreviations, unless
   there is an abbreviation which is truly universal and saves a significant case
   of space. For example, use ``variable`` instead of ``var``, ``allocate``
   instead of ``alloc``, ``initialization`` instead of ``init``, etc.
+
+There are also some style guideline decisions that were made specifically for
+Blocks:
+
+* Do not rename imports i.e. do not use ``import theano.tensor as T`` or
+  ``import numpy as np``.
 
 .. _PEP8 style guide: https://www.python.org/dev/peps/pep-0008/
 .. _Travis CI buildbot: https://travis-ci.org/bartvm/blocks
@@ -32,3 +38,54 @@ compliant. Some guidelines which aren't checked by flake8_:
 .. _pep8: https://pypi.python.org/pypi/pep8
 .. _pyflakes: https://pypi.python.org/pypi/pyflakes
 .. _should be grouped: https://www.python.org/dev/peps/pep-0008/#imports
+
+Docstrings
+----------
+
+Blocks follows the `NumPy docstring standards`_. For a quick introduction, have
+a look at the NumPy_ or Napoleon_ examples of compliant docstrings. A few common
+mistakes to avoid:
+
+* There is no line break after the opening quotes (``"""``).
+* There is an empty line before the closing quotes (``"""``).
+* The summary should not be more than one line.
+
+The docstrings are formatted using reStructuredText_, and can make use of all
+the formatting capabilities this provides. They are rendered into HTML
+documentation using the `Read the Docs`_ service. After code has been merged,
+please ensure that documentation was built successfully and that your docstrings
+rendered as you intended by looking at the `online documentation`, which is
+automatically updated.
+
+Writing doctests_ is encouraged, and they are run as part of the test suite.
+They should be written to be Python 3 compliant.
+
+.. _NumPy docstring standards: https://github.com/numpy/numpy/blob/master/doc/HOWTO_DOCUMENT.rst.txt
+.. _NumPy: https://github.com/numpy/numpy/blob/master/doc/example.py
+.. _Napoleon: http://sphinxcontrib-napoleon.readthedocs.org/en/latest/example_numpy.html
+.. _reStructuredText: http://docutils.sourceforge.net/rst.html
+.. _doctests: https://docs.python.org/2/library/doctest.html
+.. _Read the Docs: https://readthedocs.org/
+.. _online documentation: http://blocks.readthedocs.org/
+
+Unit testing
+------------
+
+Blocks uses unit testing to ensure that individual parts of the library behave
+as intended. It's also essential in ensuring that parts of the library are not
+broken by proposed changes.
+
+All new code should be accompanied by extensive unit tests. Whenever a pull
+request is made, the full test suite is run on `Travis CI`_, and pull requests
+are not merged until all tests pass. Coverage analysis is performed using
+coveralls_. Please make sure that your unit tests execute all the lines of your
+newly committed code at least once.
+
+The test suite can be executed locally using nose2_.[#]
+
+.. [#] For all tests but the doctests, nose_ can also be used.
+
+.. _Travis CI: https://travis-ci.org/bartvm/blocks
+.. _coveralls: https://coveralls.io/r/bartvm/blocks
+.. _nose2: https://readthedocs.org/projects/nose2/
+.. _nose: http://nose.readthedocs.org/en/latest/
