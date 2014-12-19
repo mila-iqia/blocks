@@ -89,3 +89,17 @@ The test suite can be executed locally using nose2_.[#]_
 .. _coveralls: https://coveralls.io/r/bartvm/blocks
 .. _nose2: https://readthedocs.org/projects/nose2/
 .. _nose: http://nose.readthedocs.org/en/latest/
+
+Python 2 and 3
+--------------
+
+Blocks aims to be both Python 2 and Python 3 compliant using a single code-base,
+without using 2to3_. There are many online resources which discuss the writing
+compatible code. For a quick overview see `the cheatsheet from Python Charmers`.
+For non-trivial cases, we use the six_ compatibility library.
+
+Documentation should be written to be Python 3 compliant.
+
+.. _2to3: https://docs.python.org/2/library/2to3.html
+.. _the cheatseet from Python Charmers: http://python-future.org/compatible_idioms.html
+.. _six: https://pythonhosted.org/six/
