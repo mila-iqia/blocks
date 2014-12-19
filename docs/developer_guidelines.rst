@@ -54,7 +54,7 @@ The docstrings are formatted using reStructuredText_, and can make use of all
 the formatting capabilities this provides. They are rendered into HTML
 documentation using the `Read the Docs`_ service. After code has been merged,
 please ensure that documentation was built successfully and that your docstrings
-rendered as you intended by looking at the `online documentation`, which is
+rendered as you intended by looking at the `online documentation`_, which is
 automatically updated.
 
 Writing doctests_ is encouraged, and they are run as part of the test suite.
@@ -81,7 +81,7 @@ are not merged until all tests pass. Coverage analysis is performed using
 coveralls_. Please make sure that your unit tests execute all the lines of your
 newly committed code at least once.
 
-The test suite can be executed locally using nose2_.[#]
+The test suite can be executed locally using nose2_.[#]_
 
 .. [#] For all tests but the doctests, nose_ can also be used.
 
