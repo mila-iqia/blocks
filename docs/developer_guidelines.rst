@@ -21,10 +21,7 @@ compliant! Some guidelines which aren't checked by flake8_:
 
 * Imports `should be grouped`_ into standard library, third party, and local
   imports with a blank line in between groups.
-* Variable names should be explanatory. Please avoid using abbreviations, unless
-  there is an abbreviation which is truly universal and saves a significant case
-  of space. For example, use ``variable`` instead of ``var``, ``allocate``
-  instead of ``alloc``, ``initialization`` instead of ``init``, etc.
+* Variable names should be explanatory and unambiguous.
 
 There are also some style guideline decisions that were made specifically for
 Blocks:
@@ -33,6 +30,9 @@ Blocks:
   ``import numpy as np``.
 * Direct imports, ``import ...``, preceed ``from ... import ...`` statements.
 * Imports are otherwise listed alphabetically.
+* Don't recycle variable names, especially when they are arguments to functions.
+  Code is easier to read if a particular variable name has the name semantics
+  throughout.
 
 .. _PEP8 style guide: https://www.python.org/dev/peps/pep-0008/
 .. _Travis CI buildbot: https://travis-ci.org/bartvm/blocks
@@ -80,8 +80,9 @@ broken by proposed changes.
 All new code should be accompanied by extensive unit tests. Whenever a pull
 request is made, the full test suite is run on `Travis CI`_, and pull requests
 are not merged until all tests pass. Coverage analysis is performed using
-coveralls_. Please make sure that your unit tests execute all the lines of your
-newly committed code at least once.
+coveralls_. Please make sure that at the very least your unit tests cover the
+core parts of your committed code. In the ideal case, all of your code should be
+unit tested.
 
 The test suite can be executed locally using nose2_.[#]_
 
