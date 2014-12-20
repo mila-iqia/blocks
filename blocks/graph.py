@@ -51,9 +51,6 @@ class ComputationGraph(object):
                     self.application_calls.add(application_call)
                     for av in application_call.auxiliary_variables:
                         av.tag.application_call = current.tag.application_call
-                        # do we want to continue the recursion over
-                        # the auxiliaries?
-                        # recursion(av)
                     self.variables.update(application_call.auxiliary_variables)
                     self.updates.extend(application_call.updates)
             if current.owner:

@@ -96,6 +96,9 @@ class Brick(object):
         this behaviour. However, it does require a separate call to
         :meth:`initialize`. If set to ``False`` on the other hand, bricks
         will be ready to run after construction.
+    print_shapes : bool
+        ``False`` by default. If ``True`` it logs the shapes of all the
+        input and output variables, which can be useful for debugging.
     params : list of Theano shared variables
         After calling the :meth:`allocate` method this attribute will be
         populated with the shared variables storing this brick's
@@ -166,7 +169,7 @@ class Brick(object):
     __metaclass__ = ABCMeta
     #: See :attr:`Brick.lazy`
     lazy = True
-    # Turns on debug logging of input/output shapes
+    #: See :attr:`Brick.print_shapes`
     print_shapes = False
 
     def __init__(self, name=None):
@@ -428,9 +431,7 @@ def lazy(func):
 
 
 class VariableRole(object):
-    """
-    A dummy class to keep track of brick roles
-    """
+    """A collection of constants referring to variable roles."""
     COST = "cost"
     INPUT = "input"
     OUTPUT = "output"
@@ -439,25 +440,23 @@ class VariableRole(object):
 
 
 class ApplicationCall(object):
-    """A link between the tags in the Theano graph and the application
-    and brick that created them.
+    """A link between the variable tags and bricks.
 
     The application call can be used to attach to an apply call auxiliary
-    variables (e.g. monitors or regularizers)
-    that do not form part of the main computation graph.
+    variables (e.g. monitors or regularizers) that do not form part of the
+    main computation graph.
 
     The application call object is created before the call to the
-    application method and can be accessed by
-    specifying an application_call argument.
-
+    application method and can be accessed by specifying an
+    application_call argument.
 
     Parameters
     ----------
     brick : object
         The brick whose application is called
-
     application : object
         The application object being called
+
     """
     def __init__(self, brick, application):
         self.brick = brick
@@ -466,10 +465,6 @@ class ApplicationCall(object):
         self.updates = []
 
     def add_auxiliary_variable(self, expression, role):
-        # the copy destorys the name.
-        # I (JCh) believe adding a role tag is pretty harmless,
-        # so I don't copy
-        # expression = expression.copy()
         expression.tag.role = role
         self.auxiliary_variables.append(expression)
 
