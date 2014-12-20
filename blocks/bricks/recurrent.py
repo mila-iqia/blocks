@@ -445,7 +445,7 @@ class Bidirectional(Initializable, DefaultRNG):
         cloned.
 
     """
-    bias_initialization = False
+    push_biases_init = False
 
     @lazy
     def __init__(self, prototype, weights_init, **kwargs):

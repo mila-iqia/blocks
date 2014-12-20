@@ -1118,17 +1118,13 @@ class Initializable(Brick):
         :class:`Bidirectional`.
 
     """
-    bias_initialization = True
+    push_biases_init = True
 
     def _push_initialization_config(self):
         for child in self.children:
             if self.weights_init:
                 child.weights_init = self.weights_init
-        if self.bias_initialization:
+        if self.push_biases_init and self.biases_init:
             for child in self.children:
-                if not getattr(child, 'bias_initialization',
-                               Initializable.bias_initialization):
-                    continue
-                if self.biases_init:
-                    child.biases_init = self.biases_init
+                child.biases_init = self.biases_init
         super(Initializable, self)._push_initialization_config()
