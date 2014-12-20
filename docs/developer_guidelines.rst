@@ -31,6 +31,8 @@ Blocks:
 
 * Do not rename imports i.e. do not use ``import theano.tensor as T`` or
   ``import numpy as np``.
+* Direct imports, ``import ...``, preceed ``from ... import ...`` statements.
+* Imports are otherwise listed alphabetically.
 
 .. _PEP8 style guide: https://www.python.org/dev/peps/pep-0008/
 .. _Travis CI buildbot: https://travis-ci.org/bartvm/blocks
