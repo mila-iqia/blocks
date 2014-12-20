@@ -1,9 +1,7 @@
 from theano import tensor
 
 from blocks.bricks import Brick
-
 from blocks.graph import ComputationGraph
-
 from tests.bricks import TestBrick
 
 
