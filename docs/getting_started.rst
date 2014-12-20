@@ -63,7 +63,7 @@ Lazy initialization
 -------------------
 
 In the example above we configured the :class:`~blocks.bricks.Linear` brick
-during initialization: We specified input and output dimensions, and specified
+during initialization. We specified input and output dimensions, and specified
 the way in which weight matrices should be initialized. But consider the
 following case, which is quite common: We want to take the output of one model,
 and feed it as an input to another model, but the output and input dimension
