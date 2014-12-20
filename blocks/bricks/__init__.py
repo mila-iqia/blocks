@@ -1016,7 +1016,7 @@ Sigmoid = _activation_factory('Sigmoid', tensor.nnet.sigmoid)
 Softmax = _activation_factory('Softmax', tensor.nnet.softmax)
 
 
-class DaisyChain(Brick):
+class Sequence(Brick):
     """A sequence of bricks.
 
     This brick simply applies a sequence of bricks, assuming that their in-
@@ -1031,7 +1031,7 @@ class DaisyChain(Brick):
 
     """
     def __init__(self, bricks, application_methods=None, **kwargs):
-        super(DaisyChain, self).__init__(**kwargs)
+        super(Sequence, self).__init__(**kwargs)
         if application_methods is None:
             application_methods = ['apply' for brick in bricks]
         assert len(application_methods) == len(bricks)
@@ -1068,7 +1068,7 @@ class Initializeable(Brick):
             super(Initializeable, self)._push_initialization_config()
 
 
-class MLP(DaisyChain, Initializeable, DefaultRNG):
+class MLP(Sequence, Initializeable, DefaultRNG):
     """A simple multi-layer perceptron
 
     Parameters
