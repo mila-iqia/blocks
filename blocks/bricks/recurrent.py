@@ -248,8 +248,8 @@ class Recurrent(BaseRecurrent, DefaultRNG):
     def _initialize(self):
         self.weights_init.initialize(self.W, self.rng)
 
-    @recurrent(sequences=['input_', 'mask'], states=['state'], outputs=['state'],
-               contexts=[])
+    @recurrent(sequences=['input_', 'mask'], states=['state'],
+               outputs=['state'], contexts=[])
     def apply(self, input_=None, state=None, mask=None):
         """Given data and mask, apply recurrent layer.
 
