@@ -1112,8 +1112,7 @@ class MLP(DaisyChain, Initializeable, DefaultRNG):
                                        for i in range(len(activations))]
         # Interleave the transformations and activations
         children = [child for child in list(chain(*zip(
-            self.linear_transformations,
-            [activation for activation in activations]))) if child is not None]
+            self.linear_transformations, activations))) if child is not None]
         if not dims:
             dims = [None] * (len(activations) + 1)
         self.dims = dims
