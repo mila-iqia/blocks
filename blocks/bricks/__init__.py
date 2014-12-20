@@ -96,6 +96,9 @@ class Brick(object):
         this behaviour. However, it does require a separate call to
         :meth:`initialize`. If set to ``False`` on the other hand, bricks
         will be ready to run after construction.
+    print_shapes : bool
+        ``False`` by default. If ``True`` it logs the shapes of all the
+        input and output variables, which can be useful for debugging.
     params : list of Theano shared variables
         After calling the :meth:`allocate` method this attribute will be
         populated with the shared variables storing this brick's
@@ -166,7 +169,7 @@ class Brick(object):
     __metaclass__ = ABCMeta
     #: See :attr:`Brick.lazy`
     lazy = True
-    # Turns on debug logging of input/output shapes
+    #: See :attr:`Brick.print_shapes`
     print_shapes = False
 
     def __init__(self, name=None):
