@@ -30,9 +30,9 @@ Blocks:
   ``import numpy as np``.
 * Direct imports, ``import ...``, preceed ``from ... import ...`` statements.
 * Imports are otherwise listed alphabetically.
-* Don't recycle variable names, especially when they are arguments to functions.
-  Code is easier to read if a particular variable name has the name semantics
-  throughout.
+* Don't recycle variable names (i.e. use the same variable name to refer to
+  different things in a particular part of code), especially when they are
+  arguments to functions.
 
 .. _PEP8 style guide: https://www.python.org/dev/peps/pep-0008/
 .. _Travis CI buildbot: https://travis-ci.org/bartvm/blocks
