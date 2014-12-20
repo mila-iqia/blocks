@@ -108,15 +108,13 @@ Nested blocks
 -------------
 
 Many neural network models, especially more complex ones, can be considered
-hierarchical structures. When we consider `machine translation models`, they
-consist of a decoder and an encoder. The encoder in turn consists of two
-recurrent neural networks running in opposite directions.
+hierarchical structures. Even a simple multi-layer perceptron consists of
+layers, which in turn consist of a linear transformation followed by a
+non-linear transformation.
 
 As such, bricks can have *children*. Parent bricks are able to configure their
 children, to e.g. make sure their configurations are compatible, or have
-sensible defaults for a particular usecase. A good example is the multi-layer
-perceptron (MLP), which is a sequence of linear transformations followed by
-non-linear activation functions.
+sensible defaults for a particular usecase.
 
     >>> from blocks.bricks import MLP, Sigmoid
     >>> mlp = MLP(activations=[Sigmoid(name='sigmoid_0'),
@@ -154,10 +152,10 @@ brick:
 
 When dealing with children, the life cycle actually becomes a bit more
 complicated. (The full life cycle is documented as part of the
-:class:`~bricks.blocks.Brick` class.) Before allocating or initializing
+:class:`~blocks.bricks.Brick` class.) Before allocating or initializing
 parameters, the parent brick will call its
-:meth:`~bricks.blocks.Brick.push_allocation_config` and
-:meth:`~bricks.blocks.Brick.push_initialization_config` methods, which
+:meth:`~blocks.bricks.Brick.push_allocation_config` and
+:meth:`~blocks.bricks.Brick.push_initialization_config` methods, which
 configure the children. If you want to override the child configuration, you
 will need to call these methods manually, after which you can override the child
 bricks' configuration.
@@ -178,10 +176,9 @@ bricks' configuration.
 .. _here: :class:`blocks.bricks.Brick`
 
 Examples
-========
+--------
 
-You can find examples using the Groundhog main loop in the folder 
-blocks/groundhog/examples (the path starts from the repository root).
-A language modeling, Markov Chain simulation and sinewave generation 
-case studies are available. They are planned to be replaced
-by PyLearn2 based examples in the nearest future.
+You can find examples using the Groundhog main loop in the folder
+``blocks/groundhog/examples``.  Case studies of language modeling, Markov
+chains and sinewave generation are available. They are planned to be replaced
+by PyLearn2 based examples in the near future.
