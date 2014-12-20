@@ -195,13 +195,13 @@ class Pylearn2LearningRule(pylearn2.training_algorithms
         for value, accumulator in zip(self.values, self.accumulators):
             value_inputs = ComputationGraph(value).dict_of_inputs()
             replace_dict = dict()
-            for name, inp in value_inputs.items():
+            for name, input_ in value_inputs.items():
                 # See docstring to see how it works
                 grad_input = grad_inputs[unpack(
                     [n for n in grad_inputs
                      if n.endswith('[{}]'.format(name))],
                     singleton=True)]
-                replace_dict[inp] = tensor.unbroadcast(
+                replace_dict[input_] = tensor.unbroadcast(
                     grad_input, *range(grad_input.ndim))
             updates[accumulator] = (
                 accumulator + theano.clone(value, replace_dict))

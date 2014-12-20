@@ -90,7 +90,7 @@ class GroundhogModel(object):
                                                updates=self.updates)
         for batch in data:
             sums += numpy.hstack(self._valid_func(
-                *[batch[inp.name] for inp in self.inputs]))
+                *[batch[input_.name] for input_ in self.inputs]))
             num_batches += 1
         return zip(valid_names, sums / num_batches)
 
