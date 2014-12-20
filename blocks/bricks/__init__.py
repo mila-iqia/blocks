@@ -1105,19 +1105,29 @@ class MLP(DefaultRNG):
 class Initializeable(Brick):
     """Base class for bricks which push parameter initialization.
 
-    Set :meth:`_no_bias_initialization = True`
-    if the brick should only push :meth:`weights_init`.
-    For an example, see :class:`Bidirectional`.
+    Many bricks will initialize children which perform a linear
+    transformation, often with biases. This brick allows the weights
+    and biases initialization to be configured in the parent brick and
+    pushed down the hierarchy.
+
+    Attributes
+    ----------
+    bias_initialization : bool
+        Set to ``False`` if the brick should only push
+        :attr:`weights_init`. For an example of this behaviour, see
+        :class:`Bidirectional`.
 
     """
+    bias_initialization = True
+
     def _push_initialization_config(self):
         for child in self.children:
             if self.weights_init:
                 child.weights_init = self.weights_init
-        if not getattr(self, '_no_bias_initialization', False):
+        if self.bias_initialization:
             for child in self.children:
-                if getattr(child, '_no_bias_initialization', False):
+                if not child.bias_initialization:
                     continue
                 if self.biases_init:
                     child.biases_init = self.biases_init
-            super(Initializeable, self)._push_initialization_config()
+        super(Initializeable, self)._push_initialization_config()
