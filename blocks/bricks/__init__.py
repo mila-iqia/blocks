@@ -1126,7 +1126,8 @@ class Initializeable(Brick):
                 child.weights_init = self.weights_init
         if self.bias_initialization:
             for child in self.children:
-                if not child.bias_initialization:
+                if not getattr(child, 'bias_initialization',
+                               Initializeable.bias_initialization):
                     continue
                 if self.biases_init:
                     child.biases_init = self.biases_init
