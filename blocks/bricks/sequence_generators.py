@@ -4,7 +4,7 @@ from abc import ABCMeta, abstractmethod
 from theano import tensor
 
 from blocks.bricks import (application, Brick, DefaultRNG, Identity, lazy, MLP,
-                           Initializeable)
+                           Initializable)
 from blocks.bricks.recurrent import BaseRecurrent
 from blocks.bricks.parallel import Fork, Mixer
 from blocks.bricks.lookup import LookupTable
@@ -12,7 +12,7 @@ from blocks.bricks.recurrent import recurrent
 from blocks.utils import dict_subset, dict_union, update_instance
 
 
-class BaseSequenceGenerator(Initializeable):
+class BaseSequenceGenerator(Initializable):
     """A generic sequence generator.
 
     This class combines two components, a readout network and an
@@ -354,7 +354,7 @@ class Readout(AbstractReadout):
         return super(Readout, self).get_dim(name)
 
 
-class LinearReadout(Readout, Initializeable):
+class LinearReadout(Readout, Initializable):
     """Readout computed as sum of linear projections.
 
     Parameters
@@ -474,7 +474,7 @@ class TrivialFeedback(AbstractFeedback):
         return super(TrivialFeedback, self).get_dim(name)
 
 
-class LookupFeedback(AbstractFeedback, Initializeable):
+class LookupFeedback(AbstractFeedback, Initializable):
     """A feedback brick for the case when readout are integers.
 
     Stores and retrieves distributed representations of integers.
@@ -509,7 +509,7 @@ class LookupFeedback(AbstractFeedback, Initializeable):
 
 
 class AttentionTransition(AbstractAttentionTransition,
-                          Initializeable,
+                          Initializable,
                           DefaultRNG):
     """Combines an attention mechanism and a recurrent transition.
 
@@ -714,7 +714,7 @@ class AttentionTransition(AbstractAttentionTransition,
         return self.transition.get_dim(name)
 
 
-class FakeAttentionTransition(AbstractAttentionTransition, Initializeable):
+class FakeAttentionTransition(AbstractAttentionTransition, Initializable):
     """Adds fake attention interface to a transition.
 
     Notes

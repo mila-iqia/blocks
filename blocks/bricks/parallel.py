@@ -6,11 +6,11 @@ are lazy-only, i.e. can not be initialized with a single constructor call.
 """
 import copy
 
-from blocks.bricks import lazy, application, MLP, Identity, Initializeable
+from blocks.bricks import lazy, application, MLP, Identity, Initializable
 from blocks.utils import update_instance
 
 
-class Parallel(Initializeable):
+class Parallel(Initializable):
     """Apply similar transformations to several channels.
 
     Parameters

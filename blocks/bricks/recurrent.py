@@ -8,7 +8,7 @@ from theano import tensor
 
 from blocks.bricks import (Application, application, application_wrapper,
                            Brick, DefaultRNG, Identity, Sigmoid, lazy,
-                           Initializeable)
+                           Initializable)
 from blocks.initialization import NdarrayInitialization
 from blocks.utils import pack, shared_floatx_zeros, update_instance
 
@@ -432,7 +432,7 @@ class GatedRecurrent(BaseRecurrent, DefaultRNG):
         return sequences
 
 
-class Bidirectional(Initializeable, DefaultRNG):
+class Bidirectional(Initializable, DefaultRNG):
     """Bidirectional network.
 
     A bidirectional network is a combination of forward and backward

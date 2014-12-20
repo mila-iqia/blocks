@@ -11,12 +11,12 @@ simply *states*.
 
 from theano import tensor
 
-from blocks.bricks import MLP, Identity, lazy, application, Initializeable
+from blocks.bricks import MLP, Identity, lazy, application, Initializable
 from blocks.bricks.parallel import Parallel
 from blocks.utils import update_instance
 
 
-class SequenceContentAttention(Initializeable):
+class SequenceContentAttention(Initializable):
     """An attention mechanism that looks for relevant content in a sequence.
 
     This is the attention mechanism used in [2]. The idea in a nutshell:

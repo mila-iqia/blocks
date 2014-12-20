@@ -1102,7 +1102,7 @@ class MLP(DefaultRNG):
         return output
 
 
-class Initializeable(Brick):
+class Initializable(Brick):
     """Base class for bricks which push parameter initialization.
 
     Many bricks will initialize children which perform a linear
@@ -1127,8 +1127,8 @@ class Initializeable(Brick):
         if self.bias_initialization:
             for child in self.children:
                 if not getattr(child, 'bias_initialization',
-                               Initializeable.bias_initialization):
+                               Initializable.bias_initialization):
                     continue
                 if self.biases_init:
                     child.biases_init = self.biases_init
-        super(Initializeable, self)._push_initialization_config()
+        super(Initializable, self)._push_initialization_config()
