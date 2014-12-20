@@ -64,9 +64,9 @@ class ComputationGraph(object):
                                      .format(owner))
                         self.updates.extend(owner.tag.updates.items())
                     self.applies.add(owner)
-                for inp in owner.inputs:
-                    if inp not in self.variables:
-                        recursion(inp)
+                for input_ in owner.inputs:
+                    if input_ not in self.variables:
+                        recursion(input_)
 
         def is_input(variable):
             return (not variable.owner

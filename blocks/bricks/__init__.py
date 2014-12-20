@@ -566,11 +566,11 @@ class Application(object):
         if not self.brick.initialized and not self.brick.lazy:
             self.brick.initialize()
         inputs = list(inputs)
-        for i, inp in enumerate(inputs):
+        for i, input_ in enumerate(inputs):
             name = (arg_names[i] if i < len(arg_names) else
                     "{}_{}".format(varargs_name, i - len(arg_names)))
-            if isinstance(inp, tensor.Variable):
-                inputs[i] = copy_and_tag(inp, VariableRole.INPUT,
+            if isinstance(input_, tensor.Variable):
+                inputs[i] = copy_and_tag(input_, VariableRole.INPUT,
                                          name)
         for key, value in kwargs.items():
             if isinstance(value, tensor.Variable):
@@ -849,13 +849,13 @@ class Linear(DefaultRNG):
             W, = self.params
         self.weights_init.initialize(W, self.rng)
 
-    @application(inputs=['inp'], outputs=['output'])
-    def apply(self, inp):
+    @application(inputs=['input_'], outputs=['output'])
+    def apply(self, input_):
         """Apply the linear transformation.
 
         Parameters
         ----------
-        inp : Theano variable
+        input_ : Theano variable
             The input on which to apply the transformation
 
         Returns
@@ -868,7 +868,7 @@ class Linear(DefaultRNG):
             W, b = self.params
         else:
             W, = self.params
-        output = tensor.dot(inp, W)
+        output = tensor.dot(input_, W)
         if self.use_bias:
             output += b
         return output
@@ -901,13 +901,13 @@ class Maxout(Brick):
         super(Maxout, self).__init__(**kwargs)
         self.num_pieces = num_pieces
 
-    @application(inputs=['inp'], outputs=['output'])
-    def apply(self, inp):
+    @application(inputs=['input_'], outputs=['output'])
+    def apply(self, input_):
         """Apply the maxout transformation.
 
         Parameters
         ----------
-        inp : Theano variable
+        input_ : Theano variable
             The input on which to apply the transformation
 
         Returns
@@ -916,12 +916,12 @@ class Maxout(Brick):
             The transformed input
 
         """
-        last_dim = inp.shape[-1]
+        last_dim = input_.shape[-1]
         output_dim = last_dim // self.num_pieces
-        new_shape = ([inp.shape[i] for i in range(inp.ndim - 1)]
+        new_shape = ([input_.shape[i] for i in range(input_.ndim - 1)]
                      + [output_dim, self.num_pieces])
-        output = tensor.max(inp.reshape(new_shape, ndim=inp.ndim + 1),
-                            axis=inp.ndim)
+        output = tensor.max(input_.reshape(new_shape, ndim=input_.ndim + 1),
+                            axis=input_.ndim)
         return output
 
 
@@ -962,13 +962,13 @@ class LinearMaxout(DefaultRNG):
         self.children = [self.linear_transformation,
                          self.maxout_transformation]
 
-    @application(inputs=['inp'], outputs=['output'])
-    def apply(self, inp):
+    @application(inputs=['input_'], outputs=['output'])
+    def apply(self, input_):
         """Apply the linear transformation followed by maxout.
 
         Parameters
         ----------
-        inp : Theano variable
+        input_ : Theano variable
             The input on which to apply the transformations
 
         Returns
@@ -977,7 +977,7 @@ class LinearMaxout(DefaultRNG):
             The transformed input
 
         """
-        pre_activation = self.linear_transformation.apply(inp)
+        pre_activation = self.linear_transformation.apply(input_)
         output = self.maxout_transformation.apply(pre_activation)
         return output
 
@@ -986,13 +986,13 @@ def _activation_factory(name, activation):
     """Class factory for Bricks which perform simple Theano calls."""
     class Activation(Brick):
         """Element-wise application of {0} function."""
-        @application(inputs=['inp'], outputs=['output'])
-        def apply(self, inp):
+        @application(inputs=['input_'], outputs=['output'])
+        def apply(self, input_):
             """Apply the {0} function element-wise.
 
             Parameters
             ----------
-            inp : Theano variable
+            input_ : Theano variable
                 Theano variable to apply {0} to, element-wise.
 
             Returns
@@ -1001,7 +1001,7 @@ def _activation_factory(name, activation):
                 The input with the activation function applied.
 
             """
-            output = activation(inp)
+            output = activation(input_)
             return output
     Activation.__name__ = name
     Activation.__doc__ = Activation.__doc__.format(name.lower())
@@ -1077,13 +1077,13 @@ class MLP(DefaultRNG):
             for attr in ['weights_init', 'biases_init']:
                 setattr(layer, attr, getattr(self, attr))
 
-    @application(inputs=['inp'], outputs=['output'])
-    def apply(self, inp):
+    @application(inputs=['input_'], outputs=['output'])
+    def apply(self, input_):
         """Perform the forward propagation.
 
         Parameters
         ----------
-        inp : Theano variable
+        input_ : Theano variable
             Perform the forward propogation of the MLP.
 
         Returns
@@ -1092,7 +1092,7 @@ class MLP(DefaultRNG):
             The output of the last layer.
 
         """
-        output = inp
+        output = input_
         for activation, linear in zip(self.activations,
                                       self.linear_transformations):
             if activation is None:

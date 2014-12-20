@@ -151,7 +151,7 @@ def test_attention_transition():
     inputs = tensor.tensor3("inputs")
     inputs_mask = tensor.matrix("inputs_mask")
     states, glimpses, weights = att_trans.apply(
-        inp=inputs, mask=inputs_mask,
+        input_=inputs, mask=inputs_mask,
         attended=attended, attended_mask=attended_mask)
     assert states.ndim == 3
     assert glimpses.ndim == 3
