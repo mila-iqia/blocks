@@ -457,7 +457,7 @@ class Bidirectional(Initializeable, DefaultRNG):
 
     @application
     def apply(self, *args, **kwargs):
-        """Appliess forward and backward networks and concatenates outputs."""
+        """Applies forward and backward networks and concatenates outputs."""
         forward = self.children[0].apply(return_list=True, *args, **kwargs)
         backward = [x[::-1] for x in
                     self.children[1].apply(reverse=True, return_list=True,
