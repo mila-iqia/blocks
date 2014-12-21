@@ -1068,7 +1068,7 @@ class Initializeable(Brick):
             super(Initializeable, self)._push_initialization_config()
 
 
-class MLP(Sequence, Initializeable, DefaultRNG):
+class MLP(Sequence, DefaultRNG):
     """A simple multi-layer perceptron
 
     Parameters
@@ -1125,3 +1125,8 @@ class MLP(Sequence, Initializeable, DefaultRNG):
             layer.input_dim = input_dim
             layer.output_dim = output_dim
             layer.use_bias = self.use_bias
+
+    def _push_initialization_config(self):
+        for layer in self.linear_transformations:
+            for attr in ['weights_init', 'biases_init']:
+                setattr(layer, attr, getattr(self, attr))
