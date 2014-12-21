@@ -3,8 +3,8 @@ from abc import ABCMeta, abstractmethod
 
 from theano import tensor
 
-from blocks.bricks import (application, Brick, DefaultRNG, Identity, lazy, MLP,
-                           Initializable)
+from blocks.bricks import (application, Brick, Initializable, Identity, lazy,
+                           MLP, Random)
 from blocks.bricks.recurrent import BaseRecurrent
 from blocks.bricks.parallel import Fork, Mixer
 from blocks.bricks.lookup import LookupTable
@@ -419,13 +419,12 @@ class TrivialEmitter(AbstractEmitter):
         return super(TrivialEmitter, self).get_dim(name)
 
 
-class SoftmaxEmitter(AbstractEmitter, DefaultRNG):
+class SoftmaxEmitter(AbstractEmitter, Initializable, Random):
     """A softmax emitter for the case of integer outputs.
 
     Interprets readout elements as energies corresponding to their indices.
 
     """
-
     def _probs(self, readouts):
         shape = readouts.shape
         return tensor.nnet.softmax(readouts.reshape(
@@ -508,9 +507,7 @@ class LookupFeedback(AbstractFeedback, Initializable):
         return super(LookupFeedback, self).get_dim(name)
 
 
-class AttentionTransition(AbstractAttentionTransition,
-                          Initializable,
-                          DefaultRNG):
+class AttentionTransition(AbstractAttentionTransition, Initializable):
     """Combines an attention mechanism and a recurrent transition.
 
     This brick is assembled from three components: an attention mechanism, a

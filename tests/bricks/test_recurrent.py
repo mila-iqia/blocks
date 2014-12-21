@@ -97,7 +97,7 @@ class TestGatedRecurrent(unittest.TestCase):
         x = tensor.tensor3('x')
         ri = tensor.tensor3('ri')
         mask = tensor.matrix('mask')
-        h = self.reset_only.apply(x, reset_inps=ri, mask=mask)
+        h = self.reset_only.apply(x, reset_inputs=ri, mask=mask)
         calc_h = theano.function(inputs=[x, ri, mask], outputs=[h])
 
         x_val = 0.1 * numpy.asarray(list(itertools.permutations(range(4))),

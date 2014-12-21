@@ -1,10 +1,10 @@
 """Introduces Lookup brick."""
-from blocks.bricks import application, DefaultRNG, lazy
+from blocks.bricks import application, Initializable, lazy
 from blocks.utils import (check_theano_variable, shared_floatx_zeros,
                           update_instance)
 
 
-class LookupTable(DefaultRNG):
+class LookupTable(Initializable):
     """Encapsulates representations of a range of integers.
 
     Parameters

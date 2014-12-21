@@ -35,6 +35,7 @@ Table of contents
    utils
    serialization
    graph
+   developer_guidelines
 
 Indices and tables
 ==================

@@ -7,7 +7,7 @@ import theano
 from theano import tensor
 
 from blocks.bricks import (Application, application, application_wrapper,
-                           Brick, DefaultRNG, Identity, Sigmoid, lazy,
+                           Brick, Initializable, Identity, Sigmoid, lazy,
                            Initializable)
 from blocks.initialization import NdarrayInitialization
 from blocks.utils import pack, shared_floatx_zeros, update_instance
@@ -199,7 +199,7 @@ def recurrent(*args, **kwargs):
         return wrapper
 
 
-class Recurrent(BaseRecurrent, DefaultRNG):
+class Recurrent(BaseRecurrent, Initializable):
     """Simple recurrent layer with optional activation.
 
     Parameters
@@ -223,6 +223,8 @@ class Recurrent(BaseRecurrent, DefaultRNG):
        * Return k last hidden states
 
     """
+    push_biases_init = False
+
     @lazy
     def __init__(self, dim, weights_init, activation=None, **kwargs):
         super(Recurrent, self).__init__(**kwargs)
@@ -248,14 +250,14 @@ class Recurrent(BaseRecurrent, DefaultRNG):
     def _initialize(self):
         self.weights_init.initialize(self.W, self.rng)
 
-    @recurrent(sequences=['inp', 'mask'], states=['state'], outputs=['state'],
-               contexts=[])
-    def apply(self, inp=None, state=None, mask=None):
+    @recurrent(sequences=['input_', 'mask'], states=['state'],
+               outputs=['state'], contexts=[])
+    def apply(self, input_=None, state=None, mask=None):
         """Given data and mask, apply recurrent layer.
 
         Parameters
         ----------
-        inp : Theano variable
+        input_ : Theano variable
             The 2 dimensional input, in the shape (batch, features).
         state : Theano variable
             The 2 dimensional state, in the shape (batch, features).
@@ -274,7 +276,7 @@ class Recurrent(BaseRecurrent, DefaultRNG):
              Masks will become n + 1 dimensional as well then.
 
         """
-        next_state = inp + tensor.dot(state, self.W)
+        next_state = input_ + tensor.dot(state, self.W)
         next_state = self.activation.apply(next_state)
         if mask:
             next_state = (mask[:, None] * next_state +
@@ -282,7 +284,7 @@ class Recurrent(BaseRecurrent, DefaultRNG):
         return next_state
 
 
-class GatedRecurrent(BaseRecurrent, DefaultRNG):
+class GatedRecurrent(BaseRecurrent, Initializable):
     """Gated recurrent neural network.
 
     Gated recurrent neural network (GRNN) as introduced in [CvMG14]_. Every
@@ -313,6 +315,7 @@ class GatedRecurrent(BaseRecurrent, DefaultRNG):
         *Learning Phrase Representations using RNN Encoder-Decoder
         for Statistical Machine Translation*, EMNLP (2014), pp. 1724-1734.
     """
+    push_biases_init = False
 
     @lazy
     def __init__(self, activation, gate_activation, dim, weights_init,
@@ -364,7 +367,7 @@ class GatedRecurrent(BaseRecurrent, DefaultRNG):
             self.weights_init.initialize(self.state_to_reset, self.rng)
 
     @recurrent(states=['states'], outputs=['states'], contexts=[])
-    def apply(self, inps, update_inps=None, reset_inps=None,
+    def apply(self, inputs, update_inputs=None, reset_inputs=None,
               states=None, mask=None):
         """Apply the gated recurrent transition.
 
@@ -373,14 +376,14 @@ class GatedRecurrent(BaseRecurrent, DefaultRNG):
         states : Theano variable
             The 2 dimensional matrix of current states in the shape
             (batch_size, features). Required for `one_step` usage.
-        inps : Theano matrix of floats
+        inputs : Theano matrix of floats
             The 2 dimensional matrix of inputs in the shape (batch_size,
             features)
-        update_inps : Theano variable
+        update_inputs : Theano variable
             The 2 dimensional matrix of inputs to the update gates in the
             shape (batch_size, features). None when the update gates are
             not used.
-        reset_inps : Theano variable
+        reset_inputs : Theano variable
             The 2 dimensional matrix of inputs to the reset gates in the
             shape (batch_size, features). None when the reset gates are not
             used.
@@ -394,8 +397,8 @@ class GatedRecurrent(BaseRecurrent, DefaultRNG):
             Next states of the network.
 
         """
-        if (self.use_update_gate != (update_inps is not None)) or \
-                (self.use_reset_gate != (reset_inps is not None)):
+        if (self.use_update_gate != (update_inputs is not None)) or \
+                (self.use_reset_gate != (reset_inputs is not None)):
             raise ValueError("Configuration and input mismatch: You should "
                              "provide inputs for gates if and only if the "
                              "gates are on.")
@@ -404,15 +407,15 @@ class GatedRecurrent(BaseRecurrent, DefaultRNG):
 
         if self.use_reset_gate:
             reset_values = self.gate_activation.apply(
-                states.dot(self.state_to_reset) + reset_inps)
+                states.dot(self.state_to_reset) + reset_inputs)
             states_reset = states * reset_values
 
         next_states = self.activation.apply(
-            states_reset.dot(self.state_to_state) + inps)
+            states_reset.dot(self.state_to_state) + inputs)
 
         if self.use_update_gate:
             update_values = self.gate_activation.apply(
-                states.dot(self.state_to_update) + update_inps)
+                states.dot(self.state_to_update) + update_inputs)
             next_states = (next_states * update_values
                            + states * (1 - update_values))
 
@@ -424,15 +427,15 @@ class GatedRecurrent(BaseRecurrent, DefaultRNG):
 
     @apply.property('sequences')
     def apply_inputs(self):
-        sequences = ['mask', 'inps']
+        sequences = ['mask', 'inputs']
         if self.use_update_gate:
-            sequences.append('update_inps')
+            sequences.append('update_inputs')
         if self.use_reset_gate:
-            sequences.append('reset_inps')
+            sequences.append('reset_inputs')
         return sequences
 
 
-class Bidirectional(Initializable, DefaultRNG):
+class Bidirectional(Initializable):
     """Bidirectional network.
 
     A bidirectional network is a combination of forward and backward
@@ -457,7 +460,7 @@ class Bidirectional(Initializable, DefaultRNG):
 
     @application
     def apply(self, *args, **kwargs):
-        """Applys forward and backward networks and concatenates outputs."""
+        """Applies forward and backward networks and concatenates outputs."""
         forward = self.children[0].apply(return_list=True, *args, **kwargs)
         backward = [x[::-1] for x in
                     self.children[1].apply(reverse=True, return_list=True,
