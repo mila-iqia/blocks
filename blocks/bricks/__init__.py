@@ -761,7 +761,7 @@ class Random(Brick):
     def theano_rng(self):
         """Returns Brick's Theano RNG, or a default one.
 
-        The default default seed which can be set at a module level using
+        The default seed which can be set at a module level using
         ``blocks.bricks.DEFAULT_SEED = seed``.
         """
         if getattr(self, '_theano_rng', None) is not None:
