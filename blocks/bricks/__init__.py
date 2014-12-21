@@ -795,8 +795,6 @@ class Initializable(Brick):
         :class:`Bidirectional`.
 
     """
-    push_biases_init = True
-
     def __init__(self, rng=None, **kwargs):
         super(Initializable, self).__init__(**kwargs)
         update_instance(self, locals())
