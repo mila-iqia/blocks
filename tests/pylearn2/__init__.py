@@ -1,11 +1,10 @@
 import logging
 
 import numpy
-import theano
-from theano import tensor
 import pylearn2
 from pylearn2.testing.datasets import random_dense_design_matrix
 from pylearn2.training_algorithms.sgd import SGD
+from theano import tensor
 
 from blocks.bricks import Sigmoid, MLP
 from blocks.bricks.cost import SquaredError

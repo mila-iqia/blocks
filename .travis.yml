@@ -34,6 +34,6 @@ install:
       fi
 script:
   - if [ $TESTS ]; then THEANO_FLAGS=floatX=$TESTS,blas.ldflags='-lblas -lgfortran' coverage run --source=blocks -m nose2.__main__ tests; fi
-  - if [ $FLAKE8 ]; then flake8 blocks; fi
+  - if [ $FLAKE8 ]; then flake8 blocks tests; fi
 after_script:
   - if [ $TESTS ]; then coveralls; fi
