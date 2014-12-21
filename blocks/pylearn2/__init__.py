@@ -236,8 +236,9 @@ class DefaultExtension(pylearn2.train_extensions.TrainExtension):
                 len(self._last_values)):
             for accum in learning_rule.accumulators:
                 accum.set_value(
-                    (accum.get_value() - self._last_values[accum]) /
-                    (batches_seen - self._last_batches_seen))
+                    ((accum.get_value() - self._last_values[accum]) /
+                     (batches_seen - self._last_batches_seen)).astype(
+                         theano.config.floatX))
         for accum in learning_rule.accumulators:
             self._last_values[accum] = accum.get_value()
         batches_seen -= self._last_batches_seen
