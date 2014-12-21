@@ -42,6 +42,10 @@ def test_pylearn2_training():
 
 
 def test_markov_chain():
+    # Silence Pylearn2's logger
+    logger = logging.getLogger(pylearn2.__name__)
+    logger.setLevel(logging.ERROR)
+
     filename = 'unittest_markov_chain'
     main('train', filename, 0, 3, False)
     os.remove(filename)
