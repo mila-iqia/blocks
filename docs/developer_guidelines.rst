@@ -84,7 +84,7 @@ coveralls_. Please make sure that at the very least your unit tests cover the
 core parts of your committed code. In the ideal case, all of your code should be
 unit tested.
 
-The test suite can be executed locally using nose2_.[#]_
+The test suite can be executed locally using nose2_ [#]_.
 
 .. [#] For all tests but the doctests, nose_ can also be used.
 
