@@ -2,7 +2,7 @@ from theano import tensor
 
 from blocks.bricks import Brick
 from blocks.graph import ComputationGraph
-from tests.bricks import TestBrick
+from tests.bricks.test_bricks import TestBrick
 
 
 def test_application_graph_auxiliary_vars():
