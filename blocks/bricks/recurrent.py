@@ -222,8 +222,6 @@ class Recurrent(BaseRecurrent, Initializable):
        * Return k last hidden states
 
     """
-    push_biases_init = False
-
     @lazy
     def __init__(self, dim, weights_init, activation=None, **kwargs):
         super(Recurrent, self).__init__(**kwargs)
@@ -314,8 +312,6 @@ class GatedRecurrent(BaseRecurrent, Initializable):
         *Learning Phrase Representations using RNN Encoder-Decoder
         for Statistical Machine Translation*, EMNLP (2014), pp. 1724-1734.
     """
-    push_biases_init = False
-
     @lazy
     def __init__(self, activation, gate_activation, dim, weights_init,
                  use_update_gate=True, use_reset_gate=True, **kwargs):
@@ -447,8 +443,6 @@ class Bidirectional(Initializable):
         cloned.
 
     """
-    push_biases_init = False
-
     @lazy
     def __init__(self, prototype, weights_init, **kwargs):
         super(Bidirectional, self).__init__(**kwargs)

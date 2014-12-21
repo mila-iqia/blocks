@@ -818,9 +818,10 @@ class Initializable(Brick):
                 child.rng = self.rng
                 if self.weights_init:
                     child.weights_init = self.weights_init
-        if self.push_biases_init and self.biases_init:
+        if hasattr(self, 'biases_init') and self.biases_init:
             for child in self.children:
-                if isinstance(child, Initializable):
+                if (isinstance(child, Initializable) and
+                        hasattr(child, 'biases_init')):
                     child.biases_init = self.biases_init
         super(Initializable, self)._push_initialization_config()
 
