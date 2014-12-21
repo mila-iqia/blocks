@@ -11,33 +11,33 @@ simply *states*.
 
 from theano import tensor
 
-from blocks.bricks import MLP, Identity, lazy, application, Initializeable
+from blocks.bricks import MLP, Identity, lazy, application, Initializable
 from blocks.bricks.parallel import Parallel
 from blocks.utils import update_instance
 
 
-class SequenceContentAttention(Initializeable):
-    """An attention mechanism that looks for relevant content in a sequence.
+class SequenceContentAttention(Initializable):
+    """Attention mechanism that looks for relevant content in a sequence.
 
-    This is the attention mechanism used in [2]. The idea in a nutshell:
+    This is the attention mechanism used in [BCB]_. The idea in a nutshell:
 
-    1. the states and the sequence are transformed indepently,
+    1. The states and the sequence are transformed indepently,
 
-    2. the transformed states are summed with every transformed sequence
+    2. The transformed states are summed with every transformed sequence
        element to obtain *match vectors*,
 
-    3. a match vector is transformed into a single number interpreted as
+    3. A match vector is transformed into a single number interpreted as
        *energy*,
 
-    4. energies are normalized in softmax-like fashion. The resulting summing
-       to one weights are called *attention weights*,
+    4. Energies are normalized in softmax-like fashion. The resulting
+       summing to one weights are called *attention weights*,
 
-    5. linear combination of the sequence elements with attention weights is
-       computed.
+    5. Linear combination of the sequence elements with attention weights
+       is computed.
 
-    This linear combinations from 5 and the attention weights from 4 form the
-    set of glimpses produced by this attention mechanism. The former will be
-    refered to as *glimpses* in method documentation.
+    This linear combinations from 5 and the attention weights from 4 form
+    the set of glimpses produced by this attention mechanism. The former
+    will be refered to as *glimpses* in method documentation.
 
     Parameters
     ----------
@@ -57,15 +57,18 @@ class SequenceContentAttention(Initializeable):
         Computes energy from the match vector. If ``None``, an affine
         transformations is used.
 
+    Notes
+    -----
+    See :class:`Initializable` for initialization parameters.
 
-    .. [2] Dzmitry Bahdanau, Kyunghyun Cho and Yoshua Bengio. Neural Machine
-           Translation by Jointly Learning to Align and Translate.
+    .. [BCB] Dzmitry Bahdanau, Kyunghyun Cho and Yoshua Bengio. Neural
+       Machine Translation by Jointly Learning to Align and Translate.
 
     """
     @lazy
     def __init__(self, state_names, state_dims, sequence_dim, match_dim,
                  state_transformer=None, sequence_transformer=None,
-                 energy_computer=None, weights_init=None, biases_init=None,
+                 energy_computer=None,
                  **kwargs):
         super(SequenceContentAttention, self).__init__(**kwargs)
         update_instance(self, locals())

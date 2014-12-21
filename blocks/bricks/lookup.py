@@ -1,10 +1,10 @@
 """Introduces Lookup brick."""
-from blocks.bricks import application, DefaultRNG, lazy
+from blocks.bricks import application, Initializable, lazy
 from blocks.utils import (check_theano_variable, shared_floatx_zeros,
                           update_instance)
 
 
-class LookupTable(DefaultRNG):
+class LookupTable(Initializable):
     """Encapsulates representations of a range of integers.
 
     Parameters
@@ -15,9 +15,15 @@ class LookupTable(DefaultRNG):
     dim : int
         The dimensionality of representations.
 
+    Notes
+    -----
+    See :class:`Initializable` for initialization parameters.
+
     """
+    has_bias = False
+
     @lazy
-    def __init__(self, length, dim, weights_init, **kwargs):
+    def __init__(self, length, dim, **kwargs):
         super(LookupTable, self).__init__(**kwargs)
         update_instance(self, locals())
 

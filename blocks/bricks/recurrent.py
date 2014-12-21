@@ -7,14 +7,14 @@ import theano
 from theano import tensor
 
 from blocks.bricks import (Application, application, application_wrapper,
-                           Brick, DefaultRNG, Identity, Sigmoid, lazy,
-                           Initializeable)
+                           Brick, Initializable, Identity, Sigmoid, lazy)
 from blocks.initialization import NdarrayInitialization
 from blocks.utils import pack, shared_floatx_zeros, update_instance
 
 
 class BaseRecurrent(Brick):
     """Base class for brick with recurrent application method."""
+    has_bias = False
 
     @application
     def initial_state(self, state_name, batch_size, *args, **kwargs):
@@ -199,16 +199,13 @@ def recurrent(*args, **kwargs):
         return wrapper
 
 
-class Recurrent(BaseRecurrent, DefaultRNG):
+class Recurrent(BaseRecurrent, Initializable):
     """Simple recurrent layer with optional activation.
 
     Parameters
     ----------
     dim : int
         The dimension of the hidden state
-    weights_init : object
-        The :class:`utils.NdarrayInitialization` object to initialize the
-        weight matrix with.
     activation : Brick
         The brick to apply as activation.
 
@@ -222,9 +219,13 @@ class Recurrent(BaseRecurrent, DefaultRNG):
        * Carrying over hidden state between batches
        * Return k last hidden states
 
+    Notes
+    -----
+    See :class:`Initializable` for initialization parameters.
+
     """
     @lazy
-    def __init__(self, dim, weights_init, activation=None, **kwargs):
+    def __init__(self, dim, activation=None, **kwargs):
         super(Recurrent, self).__init__(**kwargs)
         if activation is None:
             activation = Identity()
@@ -282,7 +283,7 @@ class Recurrent(BaseRecurrent, DefaultRNG):
         return next_state
 
 
-class GatedRecurrent(BaseRecurrent, DefaultRNG):
+class GatedRecurrent(BaseRecurrent, Initializable):
     """Gated recurrent neural network.
 
     Gated recurrent neural network (GRNN) as introduced in [CvMG14]_. Every
@@ -299,23 +300,23 @@ class GatedRecurrent(BaseRecurrent, DefaultRNG):
         brick is used.
     dim : int
         The dimension of the hidden state.
-    weights_init : object
-        The :class:`utils.NdarrayInitialization` object to initialize the
-        weight matrix with.
     use_upgate_gate : bool
         If True the update gates are used.
     use_reset_gate : bool
         If True the reset gates are used.
 
+    Notes
+    -----
+    See :class:`Initializable` for initialization parameters.
 
     .. [CvMG14] Kyunghyun Cho, Bart van Merriënboer, Çağlar Gülçehre,
         Dzmitry Bahdanau, Fethi Bougares, Holger Schwenk, and Yoshua Bengio,
         *Learning Phrase Representations using RNN Encoder-Decoder
         for Statistical Machine Translation*, EMNLP (2014), pp. 1724-1734.
-    """
 
+    """
     @lazy
-    def __init__(self, activation, gate_activation, dim, weights_init,
+    def __init__(self, activation, gate_activation, dim,
                  use_update_gate=True, use_reset_gate=True, **kwargs):
         super(GatedRecurrent, self).__init__(**kwargs)
 
@@ -432,7 +433,7 @@ class GatedRecurrent(BaseRecurrent, DefaultRNG):
         return sequences
 
 
-class Bidirectional(Initializeable, DefaultRNG):
+class Bidirectional(Initializable):
     """Bidirectional network.
 
     A bidirectional network is a combination of forward and backward
@@ -444,11 +445,15 @@ class Bidirectional(Initializeable, DefaultRNG):
         A prototype brick from which the forward and backward bricks are
         cloned.
 
+    Notes
+    -----
+    See :class:`Initializable` for initialization parameters.
+
     """
-    _no_bias_initialization = True
+    has_bias = False
 
     @lazy
-    def __init__(self, prototype, weights_init, **kwargs):
+    def __init__(self, prototype, **kwargs):
         super(Bidirectional, self).__init__(**kwargs)
         update_instance(self, locals())
         self.children = [copy.deepcopy(prototype) for i in range(2)]
