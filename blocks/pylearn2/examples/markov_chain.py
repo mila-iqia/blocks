@@ -1,29 +1,29 @@
 from __future__ import print_function
 
-import numpy
 import argparse
 import logging
-import pprint
 import os
+import pprint
 
+import numpy
+import six
 import theano
-from theano import tensor
-
-from blocks.pylearn2 import (
-    Pylearn2Model, Pylearn2Cost, Pylearn2Train, Pylearn2LearningRule,
-    SGDLearningRule)
-from pylearn2.training_algorithms.sgd import SGD
+from pylearn2.datasets.dataset import Dataset
 from pylearn2.sandbox.rnn.space import SequenceDataSpace
 from pylearn2.space import IndexSpace
-from pylearn2.datasets.dataset import Dataset
+from pylearn2.training_algorithms.sgd import SGD
+from theano import tensor
 
 from blocks.bricks import Tanh
 from blocks.bricks.recurrent import GatedRecurrent
-from blocks.select import Selector
-from blocks.graph import ComputationGraph
 from blocks.bricks.sequence_generators import (
     SequenceGenerator, LinearReadout, SoftmaxEmitter, LookupFeedback)
+from blocks.graph import ComputationGraph
 from blocks.initialization import Orthogonal, IsotropicGaussian, Constant
+from blocks.pylearn2 import (
+    Pylearn2Model, Pylearn2Cost, Pylearn2Train, Pylearn2LearningRule,
+    SGDLearningRule)
+from blocks.select import Selector
 from blocks.utils import update_instance
 
 floatX = theano.config.floatX
@@ -61,7 +61,7 @@ class ChainDataset(Dataset):
 
         dataset = self
 
-        class Iterator(object):
+        class Iterator(six.Iterator):
             # This is not true, but let PyLearn2 think that this
             # iterator is not stochastic.
             # Makes life easier for now.
@@ -74,7 +74,7 @@ class ChainDataset(Dataset):
             def __iter__(self):
                 return self
 
-            def next(self):
+            def __next__(self):
                 if self.batches_retrieved < num_batches:
                     self.batches_retrieved += 1
                     return (dataset._next_batch(batch_size)[..., None],)
