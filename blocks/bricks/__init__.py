@@ -1038,12 +1038,13 @@ class Sequence(Brick):
         self.children = bricks
         self.application_methods = application_methods
 
-    @application(inputs=['inp'], outputs=['output'])
-    def apply(self, inp):
+    @application(inputs=['input_'], outputs=['output'])
+    def apply(self, input_):
+        child_input = input_
         for child, application_method in zip(self.children,
                                              self.application_methods):
-            output = getattr(child, application_method)(*pack(inp))
-            inp = output
+            output = getattr(child, application_method)(*pack(child_input))
+            child_input = output
         return output
 
 
