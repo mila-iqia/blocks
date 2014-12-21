@@ -3,8 +3,8 @@ from abc import ABCMeta, abstractmethod
 
 from theano import tensor
 
-from blocks.bricks import (application, Brick, DefaultRNG, Identity, lazy, MLP,
-                           Initializeable)
+from blocks.bricks import (application, Brick, Initializable, Identity, lazy,
+                           MLP, Random)
 from blocks.bricks.recurrent import BaseRecurrent
 from blocks.bricks.parallel import Fork, Mixer
 from blocks.bricks.lookup import LookupTable
@@ -12,7 +12,7 @@ from blocks.bricks.recurrent import recurrent
 from blocks.utils import dict_subset, dict_union, update_instance
 
 
-class BaseSequenceGenerator(Initializeable):
+class BaseSequenceGenerator(Initializable):
     """A generic sequence generator.
 
     This class combines two components, a readout network and an
@@ -84,10 +84,13 @@ class BaseSequenceGenerator(Initializeable):
     fork : :class:`Brick`
         The brick to compute the transition's inputs from the feedback.
 
+    Notes
+    -----
+    See :class:`Initializable` for initialization parameters.
+
     """
     @lazy
-    def __init__(self, readout, transition, fork=None, weights_init=None,
-                 biases_init=None, **kwargs):
+    def __init__(self, readout, transition, fork=None, **kwargs):
         super(BaseSequenceGenerator, self).__init__(**kwargs)
         update_instance(self, locals())
 
@@ -354,7 +357,7 @@ class Readout(AbstractReadout):
         return super(Readout, self).get_dim(name)
 
 
-class LinearReadout(Readout, Initializeable):
+class LinearReadout(Readout, Initializable):
     """Readout computed as sum of linear projections.
 
     Parameters
@@ -364,10 +367,13 @@ class LinearReadout(Readout, Initializeable):
     source_names : list of strs
         The names of information sources.
 
+    Notes
+    -----
+    See :class:`Initializable` for initialization parameters.
+
     """
     @lazy
-    def __init__(self, readout_dim, source_names,
-                 weights_init, biases_init, **kwargs):
+    def __init__(self, readout_dim, source_names, **kwargs):
         super(LinearReadout, self).__init__(readout_dim, **kwargs)
         update_instance(self, locals())
 
@@ -419,13 +425,12 @@ class TrivialEmitter(AbstractEmitter):
         return super(TrivialEmitter, self).get_dim(name)
 
 
-class SoftmaxEmitter(AbstractEmitter, DefaultRNG):
+class SoftmaxEmitter(AbstractEmitter, Initializable, Random):
     """A softmax emitter for the case of integer outputs.
 
     Interprets readout elements as energies corresponding to their indices.
 
     """
-
     def _probs(self, readouts):
         shape = readouts.shape
         return tensor.nnet.softmax(readouts.reshape(
@@ -474,15 +479,15 @@ class TrivialFeedback(AbstractFeedback):
         return super(TrivialFeedback, self).get_dim(name)
 
 
-class LookupFeedback(AbstractFeedback, Initializeable):
+class LookupFeedback(AbstractFeedback, Initializable):
     """A feedback brick for the case when readout are integers.
 
     Stores and retrieves distributed representations of integers.
 
     Notes
     -----
-        Currently works only with lazy initialization
-        (can not be initialized with a single constructor call).
+    Currently works only with lazy initialization (can not be initialized
+    with a single constructor call).
 
     """
     def __init__(self, num_outputs=None, feedback_dim=None, **kwargs):
@@ -490,7 +495,7 @@ class LookupFeedback(AbstractFeedback, Initializeable):
         update_instance(self, locals())
 
         self.lookup = LookupTable(num_outputs, feedback_dim,
-                                  kwargs.get("weights_init"))
+                                  weights_init=self.weights_init)
         self.children = [self.lookup]
 
     def _push_allocation_config(self):
@@ -508,16 +513,14 @@ class LookupFeedback(AbstractFeedback, Initializeable):
         return super(LookupFeedback, self).get_dim(name)
 
 
-class AttentionTransition(AbstractAttentionTransition,
-                          Initializeable,
-                          DefaultRNG):
+class AttentionTransition(AbstractAttentionTransition, Initializable):
     """Combines an attention mechanism and a recurrent transition.
 
-    This brick is assembled from three components: an attention mechanism, a
-    recurrent transition and a mixer brick to make the first two work together.
-    It is expected that among the contexts of the transition's `apply` methods
-    there is one, intended to be attended by the attention mechanism, and
-    another one serving as a mask for the first one.
+    This brick is assembled from three components: an attention mechanism,
+    a recurrent transition and a mixer brick to make the first two work
+    together.  It is expected that among the contexts of the transition's
+    `apply` methods there is one, intended to be attended by the attention
+    mechanism, and another one serving as a mask for the first one.
 
     Parameters
     ----------
@@ -534,8 +537,9 @@ class AttentionTransition(AbstractAttentionTransition,
 
     Notes
     -----
+    See :class:`Initializable` for initialization parameters.
 
-        Currently lazy-only.
+    Currently lazy-only.
 
     """
     def __init__(self, transition, attention, mixer,
@@ -714,13 +718,13 @@ class AttentionTransition(AbstractAttentionTransition,
         return self.transition.get_dim(name)
 
 
-class FakeAttentionTransition(AbstractAttentionTransition, Initializeable):
+class FakeAttentionTransition(AbstractAttentionTransition, Initializable):
     """Adds fake attention interface to a transition.
 
     Notes
     -----
-        Currently works only with lazy initialization
-        (can not be initialized with a single constructor call).
+    Currently works only with lazy initialization (can not be initialized
+    with a single constructor call).
 
     """
     def __init__(self, transition, **kwargs):
@@ -784,8 +788,7 @@ class SequenceGenerator(BaseSequenceGenerator):
 
     """
     def __init__(self, readout, transition, attention=None,
-                 fork_inputs=None, weights_init=None, biases_init=None,
-                 **kwargs):
+                 fork_inputs=None, **kwargs):
         if not fork_inputs:
             fork_inputs = [name for name in transition.apply.sequences
                            if name != 'mask']
@@ -800,4 +803,4 @@ class SequenceGenerator(BaseSequenceGenerator):
             transition = FakeAttentionTransition(transition,
                                                  name="with_fake_attention")
         super(SequenceGenerator, self).__init__(
-            readout, transition, fork, weights_init, biases_init, **kwargs)
+            readout, transition, fork, **kwargs)

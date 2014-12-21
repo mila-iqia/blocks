@@ -7,6 +7,7 @@ import functools
 import logging
 from abc import ABCMeta
 from collections import OrderedDict
+from itertools import chain
 
 import numpy
 from theano import tensor
@@ -743,28 +744,87 @@ def application(*args, **kwargs):
         return application
 
 
-class DefaultRNG(Brick):
-    """A mixin class for Bricks which need random number generators.
+class Random(Brick):
+    """A mixin class for Bricks which need Theano RNGs.
 
     Parameters
     ----------
-    rng : object
-        A ``numpy.RandomState`` instance.
     theano_rng : object
         A ``tensor.shared_randomstreams.RandomStreams`` instance.
 
     """
-    def __init__(self, rng=None, theano_rng=None, **kwargs):
-        super(DefaultRNG, self).__init__(**kwargs)
+    def __init__(self, theano_rng=None, **kwargs):
+        super(Random, self).__init__(**kwargs)
         update_instance(self, locals())
 
     @property
-    def rng(self):
-        """
-        If a RNG has been set, return it. Otherwise, return a RNG with a
-        default seed which can be set at a module level using
+    def theano_rng(self):
+        """Returns Brick's Theano RNG, or a default one.
+
+        The default seed which can be set at a module level using
         ``blocks.bricks.DEFAULT_SEED = seed``.
         """
+        if getattr(self, '_theano_rng', None) is not None:
+            return self._theano_rng
+        else:
+            return tensor.shared_randomstreams.RandomStreams(DEFAULT_SEED)
+
+    @theano_rng.setter
+    def theano_rng(self, theano_rng):
+        self._theano_rng = theano_rng
+
+
+class Initializable(Brick):
+    """Base class for bricks which push parameter initialization.
+
+    Many bricks will initialize children which perform a linear
+    transformation, often with biases. This brick allows the weights
+    and biases initialization to be configured in the parent brick and
+    pushed down the hierarchy.
+
+    Parameters
+    ----------
+    weights_init : object
+        A `NdarrayInitialization` instance which will be used by to
+        initialize the weight matrix. Required by :meth:`initialize`.
+    biases_init : object, optional
+        A `NdarrayInitialization` instance that will be used to initialize
+        the biases. Required by :meth:`initialize` when `use_bias` is
+        `True`. Only supported by bricks for which :attr:`has_biases` is
+        ``True``.
+    use_bias : bool, optional
+        Whether to use a bias. Defaults to `True`. Required by
+        :meth:`initialize`. Only supported by bricks for which
+        :attr:`has_biases` is ``True``.
+    rng : object
+        A ``numpy.RandomState`` instance.
+
+    Attributes
+    ----------
+    has_biases : bool
+        ``False`` if the brick does not support biases, and only has
+        :attr:`weights_init`.  For an example of this, see
+        :class:`Bidirectional`. If this is ``False``, the brick does not
+        support the arguments ``biases_init`` or ``use_bias``.
+
+    """
+    has_biases = True
+
+    @lazy
+    def __init__(self, weights_init, biases_init=None, use_bias=True, rng=None,
+                 **kwargs):
+        super(Initializable, self).__init__(**kwargs)
+        self.weights_init = weights_init
+        if self.has_biases:
+            self.biases_init = biases_init
+        else:
+            if biases_init is not None or not use_bias:
+                raise ValueError("This brick does not support biases config")
+        self.use_bias = use_bias
+        self.rng = rng
+
+    @property
+    def rng(self):
         if getattr(self, '_rng', None) is not None:
             return self._rng
         else:
@@ -774,23 +834,21 @@ class DefaultRNG(Brick):
     def rng(self, rng):
         self._rng = rng
 
-    @property
-    def theano_rng(self):
-        """
-        If a RandomStreams was given in the constructor, return it.
-        Otherwise, return one seeded with ``blocks.bricks.DEFAULT_SEED``.
-        """
-        if getattr(self, '_rng', None) is not None:
-            return self._rng
-        else:
-            return tensor.shared_randomstreams.RandomStreams(DEFAULT_SEED)
-
-    @theano_rng.setter
-    def theano_rng(self, theano_rng):
-        self._theano_rng = theano_rng
+    def _push_initialization_config(self):
+        for child in self.children:
+            if isinstance(child, Initializable):
+                child.rng = self.rng
+                if self.weights_init:
+                    child.weights_init = self.weights_init
+        if hasattr(self, 'biases_init') and self.biases_init:
+            for child in self.children:
+                if (isinstance(child, Initializable) and
+                        hasattr(child, 'biases_init')):
+                    child.biases_init = self.biases_init
+        super(Initializable, self)._push_initialization_config()
 
 
-class Linear(DefaultRNG):
+class Linear(Initializable):
     """A linear transformation with optional bias.
 
     Linear brick which applies a linear (affine) transformation by
@@ -802,19 +860,10 @@ class Linear(DefaultRNG):
         The dimension of the input. Required by :meth:`allocate`.
     output_dim : int
         The dimension of the output. Required by :meth:`allocate`.
-    weights_init : object
-        A `NdarrayInitialization` instance which will be used by to
-        initialize the weight matrix. Required by :meth:`initialize`.
-    biases_init : object, optional
-        A `NdarrayInitialization` instance that will be used to initialize
-        the biases. Required by :meth:`initialize` when `use_bias` is
-        `True`.
-    use_bias : bool, optional
-        Whether to use a bias. Defaults to `True`. Required by
-        :meth:`initialize`.
 
     Notes
     -----
+    See :class:`Initializable` for initialization parameters.
 
     A linear transformation with bias is a matrix multiplication followed
     by a vector summation.
@@ -823,8 +872,7 @@ class Linear(DefaultRNG):
 
     """
     @lazy
-    def __init__(self, input_dim, output_dim, weights_init,
-                 biases_init=None, use_bias=True, **kwargs):
+    def __init__(self, input_dim, output_dim, **kwargs):
         super(Linear, self).__init__(**kwargs)
         update_instance(self, locals())
 
@@ -920,7 +968,7 @@ class Maxout(Brick):
         return output
 
 
-class LinearMaxout(DefaultRNG):
+class LinearMaxout(Initializable):
     """Maxout pooling following a linear transformation.
 
     This code combines the :class:`Linear` brick with a :class:`Maxout`
@@ -934,24 +982,22 @@ class LinearMaxout(DefaultRNG):
         The dimension of the output. Required by :meth:`allocate`.
     num_pieces : int
         The number of linear functions. Required by :meth:`allocate`.
-    weights_init : object
-        A `NdarrayInitialization` instance which will be used by to
-        initialize the weight matrix. Required by :meth:`initialize`.
-    biases_init : object
-        A `NdarrayInitialization` instance that will be used to initialize
-        the biases. Required by :meth:`initialize`.
+
+    Notes
+    -----
+    See :class:`Initializable` for initialization parameters.
 
     """
     @lazy
-    def __init__(self, input_dim, output_dim, num_pieces, weights_init,
-                 biases_init, **kwargs):
+    def __init__(self, input_dim, output_dim, num_pieces, **kwargs):
         super(LinearMaxout, self).__init__(**kwargs)
         update_instance(self, locals())
         self.linear_transformation = Linear(name='linear_to_maxout',
                                             input_dim=input_dim,
                                             output_dim=output_dim * num_pieces,
-                                            weights_init=weights_init,
-                                            biases_init=biases_init)
+                                            weights_init=self.weights_init,
+                                            biases_init=self.biases_init,
+                                            use_bias=self.use_bias)
         self.maxout_transformation = Maxout(name='maxout',
                                             num_pieces=num_pieces)
         self.children = [self.linear_transformation,
@@ -1010,7 +1056,39 @@ Sigmoid = _activation_factory('Sigmoid', tensor.nnet.sigmoid)
 Softmax = _activation_factory('Softmax', tensor.nnet.softmax)
 
 
-class MLP(DefaultRNG):
+class Sequence(Brick):
+    """A sequence of bricks.
+
+    This brick simply applies a sequence of bricks, assuming that their in-
+    and outputs are compatible.
+
+    Parameters
+    ----------
+    bricks : list of :class:`Brick` instances
+        The bricks in the order that they need to be applied.
+    application_methods : list of application method names, optional
+        If not given, it uses ``'apply'`` for each brick.
+
+    """
+    def __init__(self, bricks, application_methods=None, **kwargs):
+        super(Sequence, self).__init__(**kwargs)
+        if application_methods is None:
+            application_methods = ['apply' for brick in bricks]
+        assert len(application_methods) == len(bricks)
+        self.children = bricks
+        self.application_methods = application_methods
+
+    @application(inputs=['input_'], outputs=['output'])
+    def apply(self, input_):
+        child_input = input_
+        for child, application_method in zip(self.children,
+                                             self.application_methods):
+            output = getattr(child, application_method)(*pack(child_input))
+            child_input = output
+        return output
+
+
+class MLP(Sequence, Initializable):
     """A simple multi-layer perceptron
 
     Parameters
@@ -1022,15 +1100,11 @@ class MLP(DefaultRNG):
     dims : list of ints
         A list of input dimensions, as well as the output dimension of the
         last layer. Required for :meth:`allocate`.
-    weights_init : :class:`utils.NdarrayInitialization`
-        The initialization scheme to initialize all the weights with.
-    biases_init : :class:`utils.NdarrayInitialization`
-        The initialization scheme to initialize all the biases with.
-    use_bias : bool
-        Whether or not to use biases.
 
     Notes
     -----
+    See :class:`Initializable` for initialization parameters.
+
     Note that the ``weights_init``, ``biases_init`` and ``use_bias``
     configurations will overwrite those of the layers each time the
     :class:`MLP` is re-initialized. For more fine-grained control, push the
@@ -1047,17 +1121,17 @@ class MLP(DefaultRNG):
     """
 
     @lazy
-    def __init__(self, activations, dims, weights_init, biases_init=None,
-                 use_bias=True, **kwargs):
-        super(MLP, self).__init__(**kwargs)
+    def __init__(self, activations, dims, **kwargs):
+        update_instance(self, locals())
         self.linear_transformations = [Linear(name='linear_{}'.format(i))
                                        for i in range(len(activations))]
-        self.children = (self.linear_transformations +
-                         [activation for activation in activations
-                          if activation is not None])
+        # Interleave the transformations and activations
+        children = [child for child in list(chain(*zip(
+            self.linear_transformations, activations))) if child is not None]
         if not dims:
             dims = [None] * (len(activations) + 1)
-        update_instance(self, locals())
+        self.dims = dims
+        super(MLP, self).__init__(children, **kwargs)
 
     def _push_allocation_config(self):
         assert len(self.dims) - 1 == len(self.linear_transformations)
@@ -1066,53 +1140,3 @@ class MLP(DefaultRNG):
             layer.input_dim = input_dim
             layer.output_dim = output_dim
             layer.use_bias = self.use_bias
-
-    def _push_initialization_config(self):
-        for layer in self.linear_transformations:
-            for attr in ['weights_init', 'biases_init']:
-                setattr(layer, attr, getattr(self, attr))
-
-    @application(inputs=['input_'], outputs=['output'])
-    def apply(self, input_):
-        """Perform the forward propagation.
-
-        Parameters
-        ----------
-        input_ : Theano variable
-            Perform the forward propogation of the MLP.
-
-        Returns
-        -------
-        output : Theano variable
-            The output of the last layer.
-
-        """
-        output = input_
-        for activation, linear in zip(self.activations,
-                                      self.linear_transformations):
-            if activation is None:
-                output = linear.apply(output)
-            else:
-                output = activation.apply(linear.apply(output))
-        return output
-
-
-class Initializeable(Brick):
-    """Base class for bricks which push parameter initialization.
-
-    Set :meth:`_no_bias_initialization = True`
-    if the brick should only push :meth:`weights_init`.
-    For an example, see :class:`Bidirectional`.
-
-    """
-    def _push_initialization_config(self):
-        for child in self.children:
-            if self.weights_init:
-                child.weights_init = self.weights_init
-        if not getattr(self, '_no_bias_initialization', False):
-            for child in self.children:
-                if getattr(child, '_no_bias_initialization', False):
-                    continue
-                if self.biases_init:
-                    child.biases_init = self.biases_init
-            super(Initializeable, self)._push_initialization_config()
