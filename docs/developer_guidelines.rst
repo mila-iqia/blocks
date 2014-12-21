@@ -104,5 +104,5 @@ Charmers`_.  For non-trivial cases, we use the six_ compatibility library.
 Documentation should be written to be Python 3 compliant.
 
 .. _2to3: https://docs.python.org/2/library/2to3.html
-.. _the cheatseet from Python Charmers: http://python-future.org/compatible_idioms.html
+.. _the cheatsheet from Python Charmers: http://python-future.org/compatible_idioms.html
 .. _six: https://pythonhosted.org/six/
