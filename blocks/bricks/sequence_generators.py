@@ -84,6 +84,10 @@ class BaseSequenceGenerator(Initializable):
     fork : :class:`Brick`
         The brick to compute the transition's inputs from the feedback.
 
+    Notes
+    -----
+    See :class:`Initializable` for initialization parameters.
+
     """
     @lazy
     def __init__(self, readout, transition, fork=None, **kwargs):
@@ -363,6 +367,10 @@ class LinearReadout(Readout, Initializable):
     source_names : list of strs
         The names of information sources.
 
+    Notes
+    -----
+    See :class:`Initializable` for initialization parameters.
+
     """
     @lazy
     def __init__(self, readout_dim, source_names, **kwargs):
@@ -478,8 +486,8 @@ class LookupFeedback(AbstractFeedback, Initializable):
 
     Notes
     -----
-        Currently works only with lazy initialization
-        (can not be initialized with a single constructor call).
+    Currently works only with lazy initialization (can not be initialized
+    with a single constructor call).
 
     """
     def __init__(self, num_outputs=None, feedback_dim=None, **kwargs):
@@ -508,11 +516,11 @@ class LookupFeedback(AbstractFeedback, Initializable):
 class AttentionTransition(AbstractAttentionTransition, Initializable):
     """Combines an attention mechanism and a recurrent transition.
 
-    This brick is assembled from three components: an attention mechanism, a
-    recurrent transition and a mixer brick to make the first two work together.
-    It is expected that among the contexts of the transition's `apply` methods
-    there is one, intended to be attended by the attention mechanism, and
-    another one serving as a mask for the first one.
+    This brick is assembled from three components: an attention mechanism,
+    a recurrent transition and a mixer brick to make the first two work
+    together.  It is expected that among the contexts of the transition's
+    `apply` methods there is one, intended to be attended by the attention
+    mechanism, and another one serving as a mask for the first one.
 
     Parameters
     ----------
@@ -529,8 +537,9 @@ class AttentionTransition(AbstractAttentionTransition, Initializable):
 
     Notes
     -----
+    See :class:`Initializable` for initialization parameters.
 
-        Currently lazy-only.
+    Currently lazy-only.
 
     """
     def __init__(self, transition, attention, mixer,
@@ -714,8 +723,8 @@ class FakeAttentionTransition(AbstractAttentionTransition, Initializable):
 
     Notes
     -----
-        Currently works only with lazy initialization
-        (can not be initialized with a single constructor call).
+    Currently works only with lazy initialization (can not be initialized
+    with a single constructor call).
 
     """
     def __init__(self, transition, **kwargs):

@@ -27,6 +27,10 @@ class Parallel(Initializable):
         A transformation prototype. A copy will be created for every channel.
         If ``None``, a linear transformation is used.
 
+    Notes
+    -----
+    See :class:`Initializable` for initialization parameters.
+
     """
     @lazy
     def __init__(self, channel_names, input_dims, output_dims,

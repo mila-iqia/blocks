@@ -784,15 +784,28 @@ class Initializable(Brick):
 
     Parameters
     ----------
+    weights_init : object
+        A `NdarrayInitialization` instance which will be used by to
+        initialize the weight matrix. Required by :meth:`initialize`.
+    biases_init : object, optional
+        A `NdarrayInitialization` instance that will be used to initialize
+        the biases. Required by :meth:`initialize` when `use_bias` is
+        `True`. Only supported by bricks for which :attr:`has_biases` is
+        ``True``.
+    use_bias : bool, optional
+        Whether to use a bias. Defaults to `True`. Required by
+        :meth:`initialize`. Only supported by bricks for which
+        :attr:`has_biases` is ``True``.
     rng : object
         A ``numpy.RandomState`` instance.
 
     Attributes
     ----------
-    bias_initialization : bool
-        Set to ``False`` if the brick should only push
-        :attr:`weights_init`. For an example of this behaviour, see
-        :class:`Bidirectional`.
+    has_biases : bool
+        ``False`` if the brick does not support biases, and only has
+        :attr:`weights_init`.  For an example of this, see
+        :class:`Bidirectional`. If this is ``False``, the brick does not
+        support the arguments ``biases_init`` or ``use_bias``.
 
     """
     has_biases = True
@@ -847,19 +860,10 @@ class Linear(Initializable):
         The dimension of the input. Required by :meth:`allocate`.
     output_dim : int
         The dimension of the output. Required by :meth:`allocate`.
-    weights_init : object
-        A `NdarrayInitialization` instance which will be used by to
-        initialize the weight matrix. Required by :meth:`initialize`.
-    biases_init : object, optional
-        A `NdarrayInitialization` instance that will be used to initialize
-        the biases. Required by :meth:`initialize` when `use_bias` is
-        `True`.
-    use_bias : bool, optional
-        Whether to use a bias. Defaults to `True`. Required by
-        :meth:`initialize`.
 
     Notes
     -----
+    See :class:`Initializable` for initialization parameters.
 
     A linear transformation with bias is a matrix multiplication followed
     by a vector summation.
@@ -978,12 +982,10 @@ class LinearMaxout(Initializable):
         The dimension of the output. Required by :meth:`allocate`.
     num_pieces : int
         The number of linear functions. Required by :meth:`allocate`.
-    weights_init : object
-        A `NdarrayInitialization` instance which will be used by to
-        initialize the weight matrix. Required by :meth:`initialize`.
-    biases_init : object
-        A `NdarrayInitialization` instance that will be used to initialize
-        the biases. Required by :meth:`initialize`.
+
+    Notes
+    -----
+    See :class:`Initializable` for initialization parameters.
 
     """
     @lazy
@@ -1098,15 +1100,11 @@ class MLP(Sequence, Initializable):
     dims : list of ints
         A list of input dimensions, as well as the output dimension of the
         last layer. Required for :meth:`allocate`.
-    weights_init : :class:`utils.NdarrayInitialization`
-        The initialization scheme to initialize all the weights with.
-    biases_init : :class:`utils.NdarrayInitialization`
-        The initialization scheme to initialize all the biases with.
-    use_bias : bool
-        Whether or not to use biases.
 
     Notes
     -----
+    See :class:`Initializable` for initialization parameters.
+
     Note that the ``weights_init``, ``biases_init`` and ``use_bias``
     configurations will overwrite those of the layers each time the
     :class:`MLP` is re-initialized. For more fine-grained control, push the

@@ -15,6 +15,10 @@ class LookupTable(Initializable):
     dim : int
         The dimensionality of representations.
 
+    Notes
+    -----
+    See :class:`Initializable` for initialization parameters.
+
     """
     has_bias = False
 

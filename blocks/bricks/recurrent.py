@@ -206,9 +206,6 @@ class Recurrent(BaseRecurrent, Initializable):
     ----------
     dim : int
         The dimension of the hidden state
-    weights_init : object
-        The :class:`utils.NdarrayInitialization` object to initialize the
-        weight matrix with.
     activation : Brick
         The brick to apply as activation.
 
@@ -221,6 +218,10 @@ class Recurrent(BaseRecurrent, Initializable):
 
        * Carrying over hidden state between batches
        * Return k last hidden states
+
+    Notes
+    -----
+    See :class:`Initializable` for initialization parameters.
 
     """
     @lazy
@@ -299,19 +300,20 @@ class GatedRecurrent(BaseRecurrent, Initializable):
         brick is used.
     dim : int
         The dimension of the hidden state.
-    weights_init : object
-        The :class:`utils.NdarrayInitialization` object to initialize the
-        weight matrix with.
     use_upgate_gate : bool
         If True the update gates are used.
     use_reset_gate : bool
         If True the reset gates are used.
 
+    Notes
+    -----
+    See :class:`Initializable` for initialization parameters.
 
     .. [CvMG14] Kyunghyun Cho, Bart van Merriënboer, Çağlar Gülçehre,
         Dzmitry Bahdanau, Fethi Bougares, Holger Schwenk, and Yoshua Bengio,
         *Learning Phrase Representations using RNN Encoder-Decoder
         for Statistical Machine Translation*, EMNLP (2014), pp. 1724-1734.
+
     """
     @lazy
     def __init__(self, activation, gate_activation, dim,
@@ -442,6 +444,10 @@ class Bidirectional(Initializable):
     prototype : instance of :class:`BaseRecurrent`
         A prototype brick from which the forward and backward bricks are
         cloned.
+
+    Notes
+    -----
+    See :class:`Initializable` for initialization parameters.
 
     """
     has_bias = False
