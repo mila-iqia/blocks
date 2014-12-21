@@ -7,8 +7,7 @@ import theano
 from theano import tensor
 
 from blocks.bricks import (Application, application, application_wrapper,
-                           Brick, Initializable, Identity, Sigmoid, lazy,
-                           Initializable)
+                           Brick, Initializable, Identity, Sigmoid, lazy)
 from blocks.initialization import NdarrayInitialization
 from blocks.utils import pack, shared_floatx_zeros, update_instance
 
