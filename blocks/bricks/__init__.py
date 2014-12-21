@@ -1015,7 +1015,7 @@ Sigmoid = _activation_factory('Sigmoid', tensor.nnet.sigmoid)
 Softmax = _activation_factory('Softmax', tensor.nnet.softmax)
 
 
-class MLP(DefaultRNG):
+class MLP(Initializable):
     """A simple multi-layer perceptron
 
     Parameters
@@ -1122,9 +1122,10 @@ class Initializable(Brick):
 
     def _push_initialization_config(self):
         for child in self.children:
-            if self.weights_init:
+            if self.weights_init and isinstance(child, Initializable):
                 child.weights_init = self.weights_init
         if self.push_biases_init and self.biases_init:
             for child in self.children:
-                child.biases_init = self.biases_init
+                if isinstance(child, Initializable):
+                    child.biases_init = self.biases_init
         super(Initializable, self)._push_initialization_config()
