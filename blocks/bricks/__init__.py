@@ -795,9 +795,20 @@ class Initializable(Brick):
         :class:`Bidirectional`.
 
     """
-    def __init__(self, rng=None, **kwargs):
+    has_biases = True
+
+    @lazy
+    def __init__(self, weights_init, biases_init=None, use_bias=True, rng=None,
+                 **kwargs):
         super(Initializable, self).__init__(**kwargs)
-        update_instance(self, locals())
+        self.weights_init = weights_init
+        if self.has_biases:
+            self.biases_init = biases_init
+        else:
+            if biases_init is not None or not use_bias:
+                raise ValueError("This brick does not support biases config")
+        self.use_bias = use_bias
+        self.rng = rng
 
     @property
     def rng(self):
@@ -818,7 +829,8 @@ class Initializable(Brick):
                     child.weights_init = self.weights_init
         if hasattr(self, 'biases_init') and self.biases_init:
             for child in self.children:
-                if isinstance(child, Initializable):
+                if (isinstance(child, Initializable) and
+                        hasattr(child, 'biases_init')):
                     child.biases_init = self.biases_init
         super(Initializable, self)._push_initialization_config()
 
@@ -856,8 +868,7 @@ class Linear(Initializable):
 
     """
     @lazy
-    def __init__(self, input_dim, output_dim, weights_init,
-                 biases_init=None, use_bias=True, **kwargs):
+    def __init__(self, input_dim, output_dim, **kwargs):
         super(Linear, self).__init__(**kwargs)
         update_instance(self, locals())
 
@@ -976,15 +987,15 @@ class LinearMaxout(Initializable):
 
     """
     @lazy
-    def __init__(self, input_dim, output_dim, num_pieces, weights_init,
-                 biases_init, **kwargs):
+    def __init__(self, input_dim, output_dim, num_pieces, **kwargs):
         super(LinearMaxout, self).__init__(**kwargs)
         update_instance(self, locals())
         self.linear_transformation = Linear(name='linear_to_maxout',
                                             input_dim=input_dim,
                                             output_dim=output_dim * num_pieces,
-                                            weights_init=weights_init,
-                                            biases_init=biases_init)
+                                            weights_init=self.weights_init,
+                                            biases_init=self.biases_init,
+                                            use_bias=self.use_bias)
         self.maxout_transformation = Maxout(name='maxout',
                                             num_pieces=num_pieces)
         self.children = [self.linear_transformation,
@@ -1112,8 +1123,7 @@ class MLP(Sequence, Initializable):
     """
 
     @lazy
-    def __init__(self, activations, dims, weights_init, biases_init=None,
-                 use_bias=True, **kwargs):
+    def __init__(self, activations, dims, **kwargs):
         update_instance(self, locals())
         self.linear_transformations = [Linear(name='linear_{}'.format(i))
                                        for i in range(len(activations))]

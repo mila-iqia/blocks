@@ -16,8 +16,10 @@ class LookupTable(Initializable):
         The dimensionality of representations.
 
     """
+    has_bias = False
+
     @lazy
-    def __init__(self, length, dim, weights_init, **kwargs):
+    def __init__(self, length, dim, **kwargs):
         super(LookupTable, self).__init__(**kwargs)
         update_instance(self, locals())
 

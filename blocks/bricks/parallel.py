@@ -30,8 +30,7 @@ class Parallel(Initializable):
     """
     @lazy
     def __init__(self, channel_names, input_dims, output_dims,
-                 prototype=None, weights_init=None, biases_init=None,
-                 **kwargs):
+                 prototype=None, **kwargs):
         super(Parallel, self).__init__(**kwargs)
         update_instance(self, locals())
 

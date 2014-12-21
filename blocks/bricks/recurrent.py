@@ -14,6 +14,7 @@ from blocks.utils import pack, shared_floatx_zeros, update_instance
 
 class BaseRecurrent(Brick):
     """Base class for brick with recurrent application method."""
+    has_bias = False
 
     @application
     def initial_state(self, state_name, batch_size, *args, **kwargs):
@@ -223,7 +224,7 @@ class Recurrent(BaseRecurrent, Initializable):
 
     """
     @lazy
-    def __init__(self, dim, weights_init, activation=None, **kwargs):
+    def __init__(self, dim, activation=None, **kwargs):
         super(Recurrent, self).__init__(**kwargs)
         if activation is None:
             activation = Identity()
@@ -313,7 +314,7 @@ class GatedRecurrent(BaseRecurrent, Initializable):
         for Statistical Machine Translation*, EMNLP (2014), pp. 1724-1734.
     """
     @lazy
-    def __init__(self, activation, gate_activation, dim, weights_init,
+    def __init__(self, activation, gate_activation, dim,
                  use_update_gate=True, use_reset_gate=True, **kwargs):
         super(GatedRecurrent, self).__init__(**kwargs)
 
@@ -443,8 +444,10 @@ class Bidirectional(Initializable):
         cloned.
 
     """
+    has_bias = False
+
     @lazy
-    def __init__(self, prototype, weights_init, **kwargs):
+    def __init__(self, prototype, **kwargs):
         super(Bidirectional, self).__init__(**kwargs)
         update_instance(self, locals())
         self.children = [copy.deepcopy(prototype) for i in range(2)]

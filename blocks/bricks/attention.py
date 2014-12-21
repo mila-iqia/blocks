@@ -65,7 +65,7 @@ class SequenceContentAttention(Initializable):
     @lazy
     def __init__(self, state_names, state_dims, sequence_dim, match_dim,
                  state_transformer=None, sequence_transformer=None,
-                 energy_computer=None, weights_init=None, biases_init=None,
+                 energy_computer=None,
                  **kwargs):
         super(SequenceContentAttention, self).__init__(**kwargs)
         update_instance(self, locals())

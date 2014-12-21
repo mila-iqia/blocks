@@ -86,8 +86,7 @@ class BaseSequenceGenerator(Initializable):
 
     """
     @lazy
-    def __init__(self, readout, transition, fork=None, weights_init=None,
-                 biases_init=None, **kwargs):
+    def __init__(self, readout, transition, fork=None, **kwargs):
         super(BaseSequenceGenerator, self).__init__(**kwargs)
         update_instance(self, locals())
 
@@ -366,8 +365,7 @@ class LinearReadout(Readout, Initializable):
 
     """
     @lazy
-    def __init__(self, readout_dim, source_names,
-                 weights_init, biases_init, **kwargs):
+    def __init__(self, readout_dim, source_names, **kwargs):
         super(LinearReadout, self).__init__(readout_dim, **kwargs)
         update_instance(self, locals())
 
@@ -489,7 +487,7 @@ class LookupFeedback(AbstractFeedback, Initializable):
         update_instance(self, locals())
 
         self.lookup = LookupTable(num_outputs, feedback_dim,
-                                  kwargs.get("weights_init"))
+                                  weights_init=self.weights_init)
         self.children = [self.lookup]
 
     def _push_allocation_config(self):
@@ -781,8 +779,7 @@ class SequenceGenerator(BaseSequenceGenerator):
 
     """
     def __init__(self, readout, transition, attention=None,
-                 fork_inputs=None, weights_init=None, biases_init=None,
-                 **kwargs):
+                 fork_inputs=None, **kwargs):
         if not fork_inputs:
             fork_inputs = [name for name in transition.apply.sequences
                            if name != 'mask']
@@ -797,4 +794,4 @@ class SequenceGenerator(BaseSequenceGenerator):
             transition = FakeAttentionTransition(transition,
                                                  name="with_fake_attention")
         super(SequenceGenerator, self).__init__(
-            readout, transition, fork, weights_init, biases_init, **kwargs)
+            readout, transition, fork, **kwargs)
