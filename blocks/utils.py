@@ -249,7 +249,7 @@ def dict_subset(dikt, keys, pop=False, must_have=True):
         return dikt.get(k, not_found)
 
     result = [(key, extract(key)) for key in keys]
-    return OrderedDict([(k, v) for k, v in result if v != not_found])
+    return OrderedDict([(k, v) for k, v in result if v is not not_found])
 
 
 def dict_union(*dicts, **kwargs):
