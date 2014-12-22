@@ -3,11 +3,9 @@ import logging
 
 import theano
 from theano import Variable
-from theano.scalar import ScalarConstant
-from theano.tensor import TensorConstant
-from theano.tensor.sharedvar import SharedVariable
 from theano.tensor.shared_randomstreams import RandomStreams
 
+from utils import is_graph_input
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +48,7 @@ class ComputationGraph(object):
                     self.application_calls.add(application_call)
                     for av in application_call.auxiliary_variables:
                         av.tag.application_call = current.tag.application_call
-                    self.variables.update(application_call.auxiliary_variables)
+                        recursion(av)
                     self.updates.extend(application_call.updates)
             if current.owner:
                 owner = current.owner
@@ -64,16 +62,10 @@ class ComputationGraph(object):
                     if input_ not in self.variables:
                         recursion(input_)
 
-        def is_input(variable):
-            return (not variable.owner
-                    and not isinstance(variable, SharedVariable)
-                    and not isinstance(variable, TensorConstant)
-                    and not isinstance(variable, ScalarConstant))
-
         for output in self.outputs:
             if output not in self.variables:
                 recursion(output)
-        self.inputs = [v for v in self.variables if is_input(v)]
+        self.inputs = [v for v in self.variables if is_graph_input(v)]
 
     def dict_of_inputs(self):
         """Return a mapping from an input name to the input."""

@@ -6,6 +6,10 @@ import six
 import theano
 from theano import tensor
 from theano import printing
+import theano.gof.graph
+from theano.scalar import ScalarConstant
+from theano.tensor import TensorConstant
+from theano.tensor.sharedvar import SharedVariable
 
 
 def pack(arg):
@@ -196,6 +200,18 @@ def check_theano_variable(variable, n_dim, dtype_prefix):
         raise ValueError("Wrong dtype prefix:"
                          "\n\texpected starting with {}, got {}".format(
                              dtype_prefix, variable.dtype))
+
+
+def is_graph_input(variable):
+    return (not variable.owner
+            and not isinstance(variable, SharedVariable)
+            and not isinstance(variable, TensorConstant)
+            and not isinstance(variable, ScalarConstant))
+
+
+def graph_inputs(variables, blockers=None):
+    inps = theano.gof.graph.inputs(variables, blockers=blockers)
+    return [i for i in inps if is_graph_input(i)]
 
 
 def dict_subset(dikt, keys, pop=False, must_have=True):
