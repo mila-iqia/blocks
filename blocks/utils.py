@@ -101,6 +101,29 @@ def shared_floatx(value, name=None, borrow=False, dtype=None):
                          borrow=borrow)
 
 
+def shared_for_expression(expression, name=None):
+    """Construct a shared variable able to hold the results of a theano
+    expression.
+
+    Parameters
+    ----------
+    expression: theano variable
+        The expression whose dtype and ndim will be used to construct
+        the new shared variable.
+
+    name: string or None
+        The name of the shared variable. If None, the name is determined
+        based on expression's name.
+
+    """
+    expression = tensor.as_tensor_variable(expression)
+    if name is None:
+        name = "shared_{}".format(expression.name)
+    return theano.shared(numpy.zeros((2,) * expression.ndim,
+                                     dtype=expression.dtype),
+                         name=name)
+
+
 def reraise_as(new_exc):
     """Reraise an exception as a different type or with a message.
 
