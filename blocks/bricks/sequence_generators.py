@@ -579,7 +579,7 @@ class AttentionTransition(AbstractAttentionTransition, Initializable):
 
     @application
     def take_look(self, **kwargs):
-        """Compute glimpses with the attention mechanism.
+        r"""Compute glimpses with the attention mechanism.
 
         Parameters
         ----------
@@ -604,7 +604,7 @@ class AttentionTransition(AbstractAttentionTransition, Initializable):
 
     @application
     def compute_states(self, **kwargs):
-        """Compute current states when glimpses have already been computed.
+        r"""Compute current states when glimpses have already been computed.
 
         Parameters
         ----------
@@ -637,7 +637,7 @@ class AttentionTransition(AbstractAttentionTransition, Initializable):
 
     @recurrent
     def do_apply(self, **kwargs):
-        """Process a sequence attending the attended context at every step.
+        r"""Process a sequence attending the attended context at every step.
 
         Parameters
         ----------

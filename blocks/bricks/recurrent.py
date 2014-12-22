@@ -18,7 +18,7 @@ class BaseRecurrent(Brick):
 
     @application
     def initial_state(self, state_name, batch_size, *args, **kwargs):
-        """Return an initial state for an application call.
+        r"""Return an initial state for an application call.
 
         Parameters
         ----------

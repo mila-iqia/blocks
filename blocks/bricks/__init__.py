@@ -709,7 +709,7 @@ def application_wrapper(**kwargs):
 
 
 def application(*args, **kwargs):
-    """Decorator for methods that apply a brick to inputs.
+    r"""Decorator for methods that apply a brick to inputs.
 
     This decorator performs two functions: It creates an application method
     (tagging the inputs and outputs as such in the Theano graph) and

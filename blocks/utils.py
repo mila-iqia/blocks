@@ -237,7 +237,7 @@ def dict_subset(dikt, keys, pop=False, must_have=True):
 
 
 def dict_union(*dicts, **kwargs):
-    """Return union of a sequence of disjoint dictionaries.
+    r"""Return union of a sequence of disjoint dictionaries.
 
     Parameters
     ----------
@@ -270,7 +270,7 @@ def dict_union(*dicts, **kwargs):
 
 
 def repr_attrs(instance, *attrs):
-    """Prints a representation of an object with certain attributes.
+    r"""Prints a representation of an object with certain attributes.
 
     Parameters
     ----------

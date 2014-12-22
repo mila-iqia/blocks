@@ -95,7 +95,7 @@ class SequenceContentAttention(Initializable):
     @application(outputs=['glimpses', 'weights'])
     def take_look(self, sequence, preprocessed_sequence=None, mask=None,
                   **states):
-        """Compute attention weights and produce glimpses.
+        r"""Compute attention weights and produce glimpses.
 
         Parameters
         ----------
