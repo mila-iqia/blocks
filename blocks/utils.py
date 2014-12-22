@@ -245,7 +245,7 @@ def dict_union(*dicts, **kwargs):
         A set of dictionaries with no keys in common. If the first
         dictionary in the sequence is an instance of `OrderedDict`, the
         result will be OrderedDict.
-    **kwargs
+    \*\*kwargs
         Keywords and values to add to the resulting dictionary.
 
     Raises
@@ -276,7 +276,7 @@ def repr_attrs(instance, *attrs):
     ----------
     instance : object
         The object of which to print the string representation
-    *attrs
+    \*attrs
         Names of attributes that should be printed.
 
     Examples

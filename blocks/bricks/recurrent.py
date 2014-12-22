@@ -26,9 +26,9 @@ class BaseRecurrent(Brick):
             The name of the state.
         batch_size : int
             The batch size.
-        *args
+        \*args
             The positional arguments of the application call.
-        **kwargs
+        \*\*kwargs
             The keyword arguments of the application call.
 
         """

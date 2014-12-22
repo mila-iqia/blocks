@@ -583,7 +583,7 @@ class AttentionTransition(AbstractAttentionTransition, Initializable):
 
         Parameters
         ----------
-        **kwargs
+        \*\*kwargs
             Should contain contexts, previous step states and glimpses.
 
         Returns
@@ -608,7 +608,7 @@ class AttentionTransition(AbstractAttentionTransition, Initializable):
 
         Parameters
         ----------
-        **kwargs
+        \*\*kwargs
             Should contain everything what `self.transition` needs
             and in addition current glimpses.
 
@@ -641,9 +641,10 @@ class AttentionTransition(AbstractAttentionTransition, Initializable):
 
         Parameters
         ----------
-        **kwargs
+        \*\*kwargs
             Should contain current inputs, previous step states, contexts, the
             preprocessed attended context, previous step glimpses.
+
         Returns
         -------
         outputs : list of Theano variables

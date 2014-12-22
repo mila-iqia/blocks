@@ -718,9 +718,9 @@ def application(*args, **kwargs):
 
     Parameters
     ----------
-    *args, optional
+    \*args, optional
         The application method to wrap.
-    **kwargs, optional
+    \*\*kwargs, optional
         See :meth:`signature`
 
     Notes
