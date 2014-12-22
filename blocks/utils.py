@@ -90,7 +90,6 @@ def shared_floatx(value, name=None, borrow=False, dtype=None):
         A Theano shared variable with the requested value and `dtype`.
 
     """
-
     if dtype is None:
         dtype = theano.config.floatX
     return theano.shared(theano._asarray(value, dtype=dtype),
@@ -99,7 +98,11 @@ def shared_floatx(value, name=None, borrow=False, dtype=None):
 
 
 def reraise_as(new_exc):
-    """
+    """Reraise an exception as a different type or with a message.
+
+    This function ensures that the original traceback is kept, making for
+    easier debugging.
+
     Parameters
     ----------
     new_exc : Exception isinstance
@@ -164,19 +167,20 @@ def reraise_as(new_exc):
 def check_theano_variable(variable, n_dim, dtype_prefix):
     """Check number of dimensions and dtype of a Theano variable.
 
-    If the input is not a Theano variable, it is converted to one. `None` input
-    is handled as a special case: no checks are done.
+    If the input is not a Theano variable, it is converted to one. `None`
+    input is handled as a special case: no checks are done.
 
     Parameters
     ----------
     variable : Theano variable or convertable to one
         A variable to check.
     n_dim : int
-        Expected number of dimensions or None. If None, no check is performed.
+        Expected number of dimensions or None. If None, no check is
+        performed.
     dtype : str
         Expected dtype prefix or None. If None, no check is performed.
-    """
 
+    """
     if variable is None:
         return
 
@@ -241,7 +245,7 @@ def dict_union(*dicts, **kwargs):
         A set of dictionaries with no keys in common. If the first
         dictionary in the sequence is an instance of `OrderedDict`, the
         result will be OrderedDict.
-    **kwargs
+    \*\*kwargs
         Keywords and values to add to the resulting dictionary.
 
     Raises
@@ -272,7 +276,7 @@ def repr_attrs(instance, *attrs):
     ----------
     instance : object
         The object of which to print the string representation
-    *attrs
+    \*attrs
         Names of attributes that should be printed.
 
     Examples

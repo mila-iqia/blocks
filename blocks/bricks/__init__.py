@@ -1,7 +1,4 @@
-"""Bricks module
-
-This defines the basic interface of bricks.
-"""
+"""The interface of bricks and some simple implementations."""
 import inspect
 import functools
 import logging
@@ -721,9 +718,9 @@ def application(*args, **kwargs):
 
     Parameters
     ----------
-    *args, optional
+    \*args, optional
         The application method to wrap.
-    **kwargs, optional
+    \*\*kwargs, optional
         See :meth:`signature`
 
     Notes
@@ -849,7 +846,7 @@ class Initializable(Brick):
 
 
 class Linear(Initializable):
-    """A linear transformation with optional bias.
+    r"""A linear transformation with optional bias.
 
     Linear brick which applies a linear (affine) transformation by
     multiplying the input with a weight matrix. Optionally a bias is added.
@@ -1089,7 +1086,7 @@ class Sequence(Brick):
 
 
 class MLP(Sequence, Initializable):
-    """A simple multi-layer perceptron
+    """A simple multi-layer perceptron.
 
     Parameters
     ----------
