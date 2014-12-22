@@ -107,7 +107,7 @@ class SequenceContentAttention(Initializable):
         mask : Theano variable
             A 0/1 mask specifying available data. 0 means that the
             corresponding sequence element is fake.
-        \*\*states
+        states
             The states of the agent.
 
         Returns

@@ -1,4 +1,4 @@
-"""Sequence generation framework"""
+"""Sequence generation framework."""
 from abc import ABCMeta, abstractmethod
 
 from theano import tensor
