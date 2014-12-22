@@ -30,7 +30,7 @@ class Mock(MagicMock):
 
 MOCK_MODULES = ['numpy', 'six', 'scipy', 'theano', 'theano.scalar',
                 'theano.tensor', 'theano.tensor.sharedvar',
-                'theano.tensor.shared_randomstreams']
+                'theano.tensor.shared_randomstreams', 'nose', 'nose2']
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 # -- General configuration ------------------------------------------------
