@@ -208,17 +208,17 @@ def dict_subset(dikt, keys, pop=False, must_have=True):
     keys : iterable
         The keys of interest.
     pop : bool
-        If ``True``, the pairs corresponding to the keys of interest are popped
-        from the dictionary.
+        If ``True``, the pairs corresponding to the keys of interest are
+        popped from the dictionary.
     must_have : bool
-        If ``True``, a ValueError will be raised when trying to retrieve a key
-        not present in the dictionary.
+        If ``True``, a ValueError will be raised when trying to retrieve a
+        key not present in the dictionary.
 
     Returns
     -------
-    result : :class:`OrderedDict`
+    result : ``OrderedDict``
         An ordered dictionary of retrieved pairs. The order is the same as
-        in the `keys` argument.
+        in the ``keys`` argument.
 
     """
     not_found = object()
