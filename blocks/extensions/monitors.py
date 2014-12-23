@@ -1,9 +1,9 @@
-'''Support for monitoring of values computed by bricks.
+"""Support for monitoring of values computed by bricks.
 
 Each monitored Theano expression can be tagged with an aggregation scheme
 which denotes how the value should be aggregated over multiple mini-batch
 evaluations.
-'''
+"""
 
 from abc import ABCMeta, abstractmethod
 

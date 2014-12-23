@@ -6,7 +6,6 @@ import six
 import theano
 from theano import tensor
 from theano import printing
-import theano.gof.graph
 from theano.scalar import ScalarConstant
 from theano.tensor import TensorConstant
 from theano.tensor.sharedvar import SharedVariable
@@ -102,16 +101,15 @@ def shared_floatx(value, name=None, borrow=False, dtype=None):
 
 
 def shared_for_expression(expression, name=None):
-    """Construct a shared variable able to hold the results of a theano
-    expression.
+    """Construct a shared variable to hold the results of a theano expression.
 
     Parameters
     ----------
-    expression: theano variable
+    expression : theano variable
         The expression whose dtype and ndim will be used to construct
         the new shared variable.
 
-    name: string or None
+    name : string or None
         The name of the shared variable. If None, the name is determined
         based on expression's name.
 
@@ -226,6 +224,20 @@ def check_theano_variable(variable, n_dim, dtype_prefix):
 
 
 def is_graph_input(variable):
+    """Check if variable is a user-provided graph input.
+
+    To be considered an input the variable must have no owner, and not
+    be a constant or shared variable.
+
+    Parameters
+    ----------
+        variable: theano expression
+
+    Returns
+    -------
+        bool
+
+    """
     return (not variable.owner
             and not isinstance(variable, SharedVariable)
             and not isinstance(variable, TensorConstant)
@@ -233,6 +245,23 @@ def is_graph_input(variable):
 
 
 def graph_inputs(variables, blockers=None):
+    """Compute inputs needed to compute values in variables.
+
+    This function is similar to :meth:`theano.gof.graph.inputs`. However,
+    it doesn't tread shared and constant values as inputs.
+
+    Parameters
+    ----------
+    variables : list of theano variables
+        The outputs whose inputs are sought for.
+
+    blockers : list of theano variables
+        See :meth:`theano.gof.graph.inputs` for documentation.
+
+    Returns:
+        list of theano variables which are non-constant and non-shared
+        inputs to the computational graph.
+    """
     inps = theano.gof.graph.inputs(variables, blockers=blockers)
     return [i for i in inps if is_graph_input(i)]
 
