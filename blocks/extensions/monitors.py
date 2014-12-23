@@ -1,49 +1,60 @@
 """Support for monitoring of values computed by bricks.
 
-Each monitored Theano expression can be tagged with an aggregation scheme
-which denotes how the value should be aggregated over multiple mini-batch
-evaluations.
+Monitoring may refer to two broad concepts:
+
+1. Tracking several variables during training, typically once per minibatch.
+2. Periodically (e.g. once per epoch) computing statistics about the model
+   on auxiliary datasets, such as validation and testing data.
+
+This module provides non-intrusive support for both concepts.
+
+For tracking variables batch-to-batch the :class:`TrainingMonitor` class
+can be used. It allocates storage for the monitored variables, and provides
+a list of updates that can be provided to the training function to compute
+the monitored values. Later, the values can be read into a dict by its
+:meth:`TrainingMonitor.read_monitors` method.
+
+Periodic computation of monitoerd values on auxiliary data is facilitated
+by the :class:`ValidationMonitor`. It provides the :meth:`compute_monitors`
+which, for a given dataset, properly computes required variables even if
+the data has to be processed in batches. The way in which intermediate
+per-batch results are aggregated is controlled by the `aggregation_scheme`
+tag, which has to point to an instance of :class:`VariableAggregationScheme`.
+
 """
 
-from abc import ABCMeta, abstractmethod
-
-from collections import OrderedDict
-
 import logging
+from abc import ABCMeta, abstractmethod
+from collections import OrderedDict
 
 import theano
 
 from blocks.utils import shared_for_expression, dict_subset, graph_inputs
-from blocks.bricks import VariableRole
 
 logger = logging.getLogger(__name__)
 
 
-DEFAULT_MONITORED_ROLES = [VariableRole.MONITOR, VariableRole.COST,
-                           VariableRole.ADDITIONAL_COST]
+class VariableAggregationScheme(object):
+    """Specify how to incrementally evaluate a theano variable on a dataset.
 
+    An VariableAggregationScheme allocates :class:`VariableAggregator`s
+    that can incrementally compute the value of a theano variable on a
+    full datset by aggregating partial results computed on multiple batches.
 
-class AggregationScheme(object):
-    """Specify how to incrementally compute a statistic on a dataset.
-
-    An AggregationScheme allocates Aggregators that can incrementally
-    compute a statistic on a full datset by aggregating partial results
-    computed on multiple batches.
-
-    The AggragationScheme should be attached via the tag `aggregation_scheme`
-    to a theano expression which computes the desired statistic for one
-    mini-batch.
+    The VariableAggregationScheme should be attached via the tag
+    `aggregation_scheme` to a theano variable which computes the desired
+    value on a single batch.
 
     Parameters
     ----------
-        extpession: theano variable
-            expression that computes the desired statstic for a full batch.
+    expression: theano variable
+        expression that computes the desired value on a single batch.
 
     """
     __metaclass__ = ABCMeta
 
     def __init__(self, expression, **kwargs):
-        super(AggregationScheme, self).__init__(**kwargs)
+        super(VariableAggregationScheme, self).__init__(**kwargs)
         self.expression = expression
 
     @abstractmethod
@@ -55,44 +66,37 @@ class AggregationScheme(object):
 
 
 class Aggregator(object):
-    """An Aggregator incrementally computes a statistic on a dataset.
+    """An Aggregator incrementally evaluates a theano variable on a dataset.
 
-    The Aggregators are typically created by the
-    :meth:`AggragationScheme.get_aggregator` method of an AgragationScheme.
+    The Aggregators should be created by the
+    :meth:`VariableAggregationScheme.get_aggregator` method.
 
     Example usages are:
     - compute the mean of some value over examples, sequence lengths etc.
     - track a parameter of a model
     - monitor a penalty
 
-    The Aggregator maintains a set of accumulators (Theano shared
-    variables) and lists Theano updates to (re-)initialize the
-    accumulators and to accummulate statistics over a batch. Finally it
+    The Aggregator maintains a set of theano sharer values called
+    accumulators and specifies how they shoud be initialized, and
+    updated with incremental calculations. Finally, it
     provides a Theano expression that reads the accumulators
-    and computes the statistic.
+    and computes the final value.
 
     Parameters:
     -----------
-        aggregation_scheme : :class:`AggregationScheme`
-            The aggregation scheme that constructed this Aggregator
-
-        initialization_updates : list of theano updates
-            Updates that specify how to initialize shared variables of
-            this Aggregator.
-
-            Can only refer to shared variables and constants.
-
-        accumulation_updates : list of theano updates
-            Updates that specify how a new batch of data gets processed
-            by this Aggregator.
-
-            Can refer to model inputs.
-
-        readout_expression : theano variables
-            Theano variable that computes the final value based on accumulated
-            partial results.
-
-            Can only refer to shared variables and constants.
+    aggregation_scheme : :class:`VariableAggregationScheme`
+        The aggregation scheme that constructed this Aggregator
+    initialization_updates : list of theano updates
+        Updates that specify how to initialize shared variables of
+        this Aggregator. **Can only refer to shared variables and
+        constants.**
+    accumulation_updates : list of theano updates
+        Updates that specify how a new batch of data gets processed
+        by this Aggregator. **Can refer to model inputs.**
+    readout_expression : theano variables
+        Theano variable that computes the final value based on accumulated
+        partial results. **Can only refer to shared variables and
+        constants.**
 
     """
     def __init__(self, aggregation_scheme,
@@ -113,18 +117,17 @@ class Aggregator(object):
         return self.scheme.expression.name
 
 
-class Frac(AggregationScheme):
-    """Aggregation scheme which computes a fraction numerator/denominator.
+class AggregatedDiv(VariableAggregationScheme):
+    """Aggregation scheme which computes the division numerator/denominator.
 
     Parameters
     ----------
-        numerator : theano expression for the numerator
-
-        denominator : theano expression for the denominator
+    numerator : theano expression for the numerator
+    denominator : theano expression for the denominator
 
     """
     def __init__(self, numerator, denominator, **kwargs):
-        super(Frac, self).__init__(**kwargs)
+        super(AggregatedDiv, self).__init__(**kwargs)
         self.numerator = numerator
         self.denominator = denominator
 
@@ -146,20 +149,20 @@ class Frac(AggregationScheme):
         return aggregator
 
 
-def frac(numerator, denominator, name=None):
-    """Compute numerator/denominator and tag it with an aggregation scheme
+def aggregated_div(numerator, denominator, name=None):
+    """Divide numerator by denominator and tag with an aggregation scheme.
 
     """
     expression = numerator / denominator
-    expression.tag.aggregation_scheme = Frac(numerator, denominator,
+    expression.tag.aggregation_scheme = AggregatedDiv(numerator, denominator,
                                              expression=expression)
     if name is not None:
         expression.name = name
     return expression
 
 
-class ModelProperty(AggregationScheme):
-    """Dummy AggregationScheme for values that don't depend on data.
+class ModelProperty(VariableAggregationScheme):
+    """Dummy VariableAggregationScheme for values that don't depend on data.
 
     """
     def __init__(self, **kwargs):
@@ -174,7 +177,8 @@ class ModelProperty(AggregationScheme):
 
 
 def model_property(expression, name):
-    """Copy the given expression and tag with ModelProperty AggregationScheme.
+    """Copy the given expression and tag with ModelProperty aggregation scheme.
+
     """
     expression = expression.copy()
     expression.name = name
@@ -182,17 +186,79 @@ def model_property(expression, name):
     return expression
 
 
-class Validator(object):
-    """A Validator automates computing several theano variables on a dataset.
+class TrainingMonitor(object):
+    """Helper to keep track of several theano variables during training.
+
+    The TrainingMonitor allocates storage for each of the variables given
+    to its constructor. It then provides:
+
+    - a list of updates which should be called by the training function
+      on every minibatch. These updates store computed values in the
+      shared variables.
+
+    - a function which reads the shared variables and returns a dict from
+        names (or channel keys) their values.
+
+    Moreover, a mechanism is provided to detect a situation in which the
+    updates get called, but their value is not read out.
 
     Parameters
     ----------
     monitored_variables : list or dict
-        A list of monitored variables. Or a dict from monitoring channels
+        A list of monitored variables. Or a dict from monitoring channel
         keys to variables. If a list is given, keys will be set to the
         ``name``s attribute of the variables.
 
-        Each variable can be tagged with an :class:`~AggregationScheme`
+    """
+    def __init__(self, monitored_variables):
+        if isinstance(monitored_variables, dict):
+            monitored_variables = monitored_variables
+        else:
+            keyed_vars = ((v.name, v) for v in monitored_variables)
+            monitored_variables = OrderedDict(keyed_vars)
+
+        self._updates = []
+        self._storage = OrderedDict()
+        for k, v in monitored_variables.iteritems():
+            shared_v = shared_for_expression(v)
+            self._storage[k] = shared_v
+            self._updates.append((shared_v, v))
+
+    @property
+    def updates(self):
+        """Updates that have to be called during training.
+
+        """
+        return self._updates
+
+    def read_monitors(self):
+        """Read values of the monitors computed during training.
+
+        """
+        values = OrderedDict()
+        for k, sv in self._storage.iteritems():
+            values[k] = sv.get_value(borrow=True)
+        return values
+
+
+class ValidationMonitor(object):
+    """A ValidationMonitor computes several theano variables on a dataset.
+
+    The ValidationMonitor provides a single method, ``compute``, which
+    computes values of ``monitored_variables`` on a dataset. The values
+    are aggregated using the VariableAggregationSchemes provided in
+    `aggregation_scheme` tags. If no tag is given, the value is **averaged
+    over minibatches**. However, care is taken to ensure that variables
+    which do not depend on data are not unnecessarily recomputed.
+
+    Parameters
+    ----------
+    monitored_variables : list or dict
+        A list of monitored variables. Or a dict from monitoring channel
+        keys to variables. If a list is given, keys will be set to the
+        ``name``s attribute of the variables.
+
+        Each variable can be tagged with an :class:`VariableAggregationScheme`
         that specifies how the value can be computed for a data set by
         aggregating minibatches.
 
@@ -223,7 +289,7 @@ class Validator(object):
                 else:
                     logger.debug('Using the default (average over minibatches)'
                                  ' aggregation scheme for %s', k)
-                    v.tag.aggregation_scheme = Frac(v, 1.0, expression=v)
+                    v.tag.aggregation_scheme = AggregatedDiv(v, 1.0, expression=v)
 
             aggregator = v.tag.aggregation_scheme.get_aggregator()
             initialize_updates.extend(aggregator.initialization_updates)
@@ -250,19 +316,19 @@ class Validator(object):
             return dict(zip(readout.keys(), ret_vals))
         self._readout_fun = readout_fun
 
-    def validate(self, data_set_view):
+    def compute_monitors(self, data_set_view):
         """Compute the monitored statistics over an iterable data set
 
         Parameters
         ----------
-        data_set_view: an interable over batches
+        data_set_view: an iterable over batches
             each batch must be a dict from input names to ndarrays
 
         Returns
         -------
-        a dict from variable names (or from the keys of the
-        monitored_variables argument to __init__) to the calues computed
-        on the provided dataset.
+        dict from variable names (or from the keys of the
+            monitored_variables argument to __init__) to the values
+            computed on the provided dataset.
 
         """
         if self._initialize_fun is not None:

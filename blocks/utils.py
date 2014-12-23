@@ -108,7 +108,6 @@ def shared_for_expression(expression, name=None):
     expression : theano variable
         The expression whose dtype and ndim will be used to construct
         the new shared variable.
-
     name : string or None
         The name of the shared variable. If None, the name is determined
         based on expression's name.
@@ -117,7 +116,7 @@ def shared_for_expression(expression, name=None):
     expression = tensor.as_tensor_variable(expression)
     if name is None:
         name = "shared_{}".format(expression.name)
-    return theano.shared(numpy.zeros((2,) * expression.ndim,
+    return theano.shared(numpy.zeros((0,) * expression.ndim,
                                      dtype=expression.dtype),
                          name=name)
 
@@ -231,11 +230,11 @@ def is_graph_input(variable):
 
     Parameters
     ----------
-        variable: theano expression
+    variable : theano expression
 
     Returns
     -------
-        bool
+    bool
 
     """
     return (not variable.owner
@@ -254,12 +253,11 @@ def graph_inputs(variables, blockers=None):
     ----------
     variables : list of theano variables
         The outputs whose inputs are sought for.
-
     blockers : list of theano variables
         See :meth:`theano.gof.graph.inputs` for documentation.
 
     Returns:
-        list of theano variables which are non-constant and non-shared
+    list of theano variables which are non-constant and non-shared
         inputs to the computational graph.
     """
     inps = theano.gof.graph.inputs(variables, blockers=blockers)
