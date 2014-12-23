@@ -1,25 +1,4 @@
-"""Support for monitoring of values computed by bricks.
-
-Monitoring may refer to two broad concepts:
-
-1. Tracking several variables during training, typically once per minibatch.
-2. Periodically (e.g. once per epoch) computing statistics about the model
-   on auxiliary datasets, such as validation and testing data.
-
-This module provides non-intrusive support for both concepts.
-
-For tracking variables batch-to-batch the :class:`TrainingMonitor` class
-can be used. It allocates storage for the monitored variables, and provides
-a list of updates that can be provided to the training function to compute
-the monitored values. Later, the values can be read into a dict by its
-:meth:`TrainingMonitor.read_monitors` method.
-
-Periodic computation of monitoerd values on auxiliary data is facilitated
-by the :class:`ValidationMonitor`. It provides the :meth:`compute_monitors`
-which, for a given dataset, properly computes required variables even if
-the data has to be processed in batches. The way in which intermediate
-per-batch results are aggregated is controlled by the `aggregation_scheme`
-tag, which has to point to an instance of :class:`VariableAggregationScheme`.
+"""Support for computing monitoring channels from bricks.
 
 """
 
@@ -186,66 +165,18 @@ def model_property(expression, name):
     return expression
 
 
-class TrainingMonitor(object):
-    """Helper to keep track of several theano variables during training.
+class DatasetChannelEvaluator(object):
+    """A DatasetChannelEvaluator evaluates many theano variables on a dataset.
 
-    The TrainingMonitor allocates storage for each of the variables given
-    to its constructor. It then provides:
+    The DatasetChannelEvaluator provides a do-it-all method,
+    :meth:`compute_channels`, which computes values of ``channel_variables``
+    on a dataset.
 
-    - a list of updates which should be called by the training function
-      on every minibatch. These updates store computed values in the
-      shared variables.
+    Alternatively, methods :meth:`initialize_computation`,
+    :meth:`process_batch`, :meth:`readout_channels` can be used with a custom
+    loop over data.
 
-    - a function which reads the shared variables and returns a dict from
-        names (or channel keys) their values.
-
-    Moreover, a mechanism is provided to detect a situation in which the
-    updates get called, but their value is not read out.
-
-    Parameters
-    ----------
-    monitored_variables : list or dict
-        A list of monitored variables. Or a dict from monitoring channel
-        keys to variables. If a list is given, keys will be set to the
-        ``name``s attribute of the variables.
-
-    """
-    def __init__(self, monitored_variables):
-        if isinstance(monitored_variables, dict):
-            monitored_variables = monitored_variables
-        else:
-            keyed_vars = ((v.name, v) for v in monitored_variables)
-            monitored_variables = OrderedDict(keyed_vars)
-
-        self._updates = []
-        self._storage = OrderedDict()
-        for k, v in monitored_variables.iteritems():
-            shared_v = shared_for_expression(v)
-            self._storage[k] = shared_v
-            self._updates.append((shared_v, v))
-
-    @property
-    def updates(self):
-        """Updates that have to be called during training.
-
-        """
-        return self._updates
-
-    def read_monitors(self):
-        """Read values of the monitors computed during training.
-
-        """
-        values = OrderedDict()
-        for k, sv in self._storage.iteritems():
-            values[k] = sv.get_value(borrow=True)
-        return values
-
-
-class ValidationMonitor(object):
-    """A ValidationMonitor computes several theano variables on a dataset.
-
-    The ValidationMonitor provides a single method, ``compute``, which
-    computes values of ``monitored_variables`` on a dataset. The values
+    The values computed on subsets of the given dataset
     are aggregated using the VariableAggregationSchemes provided in
     `aggregation_scheme` tags. If no tag is given, the value is **averaged
     over minibatches**. However, care is taken to ensure that variables
@@ -253,7 +184,7 @@ class ValidationMonitor(object):
 
     Parameters
     ----------
-    monitored_variables : list or dict
+    channel_variables : list or dict
         A list of monitored variables. Or a dict from monitoring channel
         keys to variables. If a list is given, keys will be set to the
         ``name``s attribute of the variables.
@@ -264,13 +195,13 @@ class ValidationMonitor(object):
 
     """
 
-    def __init__(self, monitored_variables):
-        if isinstance(monitored_variables, dict):
-            self.monitored_variables = monitored_variables
+    def __init__(self, channel_variables):
+        if isinstance(channel_variables, dict):
+            self.channel_variables = channel_variables
         else:
-            keyed_vars = ((v.name, v) for v in monitored_variables)
-            self.monitored_variables = OrderedDict(keyed_vars)
-        self.inputs = graph_inputs(self.monitored_variables.values())
+            keyed_vars = ((v.name, v) for v in channel_variables)
+            self.channel_variables = OrderedDict(keyed_vars)
+        self.inputs = graph_inputs(self.channel_variables.values())
         self._compile()
 
     def _compile(self):
@@ -278,7 +209,7 @@ class ValidationMonitor(object):
         accumulate_updates = []
         readout = OrderedDict()
 
-        for k, v in self.monitored_variables.iteritems():
+        for k, v in self.channel_variables.iteritems():
             logger.debug('Monitoring: %s', v.name)
             if not hasattr(v.tag, 'aggregation_scheme'):
                 if graph_inputs([v]) == []:
@@ -289,7 +220,8 @@ class ValidationMonitor(object):
                 else:
                     logger.debug('Using the default (average over minibatches)'
                                  ' aggregation scheme for %s', k)
-                    v.tag.aggregation_scheme = AggregatedDiv(v, 1.0, expression=v)
+                    v.tag.aggregation_scheme = AggregatedDiv(v, 1.0,
+                                                             expression=v)
 
             aggregator = v.tag.aggregation_scheme.get_aggregator()
             initialize_updates.extend(aggregator.initialization_updates)
@@ -301,6 +233,9 @@ class ValidationMonitor(object):
                                                    updates=initialize_updates)
         else:
             self._initialize_fun = None
+
+        self._initialized = False
+        self._input_names = [v.name for v in self.inputs]
 
         if accumulate_updates:
             self._accumulate_fun = theano.function(self.inputs,
@@ -316,7 +251,29 @@ class ValidationMonitor(object):
             return dict(zip(readout.keys(), ret_vals))
         self._readout_fun = readout_fun
 
-    def compute_monitors(self, data_set_view):
+    def initialize_computation(self):
+        """Initialize the aggragators to process a dataset.
+
+        """
+        self._initialized = True
+        if self._initialize_fun is not None:
+            self._initialize_fun()
+
+    def process_batch(self, batch):
+        if not self._initialized:
+            self.initialize_computation()
+        batch = dict_subset(batch, self._input_names)
+        if self._accumulate_fun is not None:
+            self._accumulate_fun(**batch)
+
+    def readout_channels(self):
+        if not self._initialized:
+            raise Exception("To readout you must first initialize, then"
+                            "process batches!")
+        self._initialized = False
+        return self._readout_fun()
+
+    def compute_channels(self, data_set_view):
         """Compute the monitored statistics over an iterable data set
 
         Parameters
@@ -331,16 +288,13 @@ class ValidationMonitor(object):
             computed on the provided dataset.
 
         """
-        if self._initialize_fun is not None:
-            self._initialize_fun()
+        self.initialize_computation()
 
         if self._accumulate_fun is not None:
-            input_names = [v.name for v in self.inputs]
             for batch in data_set_view:
-                batch = dict_subset(batch, input_names)
-                self._accumulate_fun(**batch)
+                self.process_batch(batch)
         else:
             logger.debug('Only constant monitors are used, will not'
                          'iterate the over data!')
 
-        return self._readout_fun()
+        return self.readout_channels()
