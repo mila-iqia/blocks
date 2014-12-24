@@ -1,14 +1,13 @@
 """Attention mechanisms.
 
-We consider a hypothetical agent that wants to concentrate on particular parts
-of a structured input. To do that the agent needs an *attention mechanism*
-that given the *state* of the agent and the input signal outputs *glimpses*.
-For technical reasons we permit an agent to have a composite state consisting
-of several components, to which we will refer as *states of the agent* or
-simply *states*.
+We consider a hypothetical agent that wants to concentrate on particular
+parts of a structured input. To do that the agent needs an *attention
+mechanism* that given the *state* of the agent and the input signal outputs
+*glimpses*.  For technical reasons we permit an agent to have a composite
+state consisting of several components, to which we will refer as *states
+of the agent* or simply *states*.
 
 """
-
 from theano import tensor
 
 from blocks.bricks import MLP, Identity, lazy, application, Initializable

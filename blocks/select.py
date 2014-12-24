@@ -17,18 +17,17 @@ class Path(object):
     and names of parameters. The latter can only be put in the end of the
     path. It is planned to support regular expressions in some way later.
 
-    Attributes
-    ----------
-    nodes : tuple
-        The tuple containing path nodes.
-
     Parameters
     ----------
     nodes : list or tuple of path nodes
         The nodes of the path.
 
-    """
+    Attributes
+    ----------
+    nodes : tuple
+        The tuple containing path nodes.
 
+    """
     separator = "/"
     param_separator = "."
     separator_re = re.compile("([{}{}])".format(separator, param_separator))
@@ -100,7 +99,6 @@ class Selector(object):
         The bricks of the selection.
 
     """
-
     def __init__(self, bricks):
         if isinstance(bricks, Brick):
             bricks = [bricks]
@@ -123,7 +121,6 @@ class Selector(object):
 
         Returns
         -------
-
         Depending on the path given, one of the following:
 
         * A :class:`Selector` with desired bricks.
@@ -155,14 +152,15 @@ class Selector(object):
         Parameters
         ----------
         param_name : :class:`Path.ParamName`
-            If given, only parameters with the name `param_name` are returned.
+            If given, only parameters with the name `param_name` are
+            returned.
 
         Returns
         -------
         params : OrderedDict
-            A dictionary of (`path`, `param`) pairs, where `path` is the string
-            representation of the part to the parameter, `param` is the
-            parameter.
+            A dictionary of (`path`, `param`) pairs, where `path` is the
+            string representation of the part to the parameter, `param` is
+            the parameter.
 
         """
         def recursion(brick):

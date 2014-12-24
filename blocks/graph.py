@@ -1,5 +1,4 @@
 """Annonated computation graph management."""
-
 import logging
 
 import theano
@@ -16,17 +15,17 @@ logger = logging.getLogger(__name__)
 class ComputationGraph(object):
     """Encapsulates a managed Theano computation graph.
 
+    Parameters
+    ----------
+    outputs : list of Theano variables
+        The outputs of the computation graph.
+
     Attributes
     ----------
     inputs : list of Theano variables
         The inputs of the computation graph.
     outputs : list of Theano variables
         The outputs of the computations graph.
-
-    Parameters
-    ----------
-    outputs : list of Theano variables
-        The outputs of the computation graph.
 
     """
     def __init__(self, outputs):

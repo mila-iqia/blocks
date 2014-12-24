@@ -24,8 +24,8 @@ class Parallel(Initializable):
         Dictonary of output dimensions, keys are channel names, values are
         dimensions.
     prototype : :class:`Brick`
-        A transformation prototype. A copy will be created for every channel.
-        If ``None``, a linear transformation is used.
+        A transformation prototype. A copy will be created for every
+        channel.  If ``None``, a linear transformation is used.
 
     Notes
     -----

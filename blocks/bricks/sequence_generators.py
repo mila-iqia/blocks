@@ -17,45 +17,47 @@ class BaseSequenceGenerator(Initializable):
 
     This class combines two components, a readout network and an
     attention-equipped recurrent transition, into a context-dependent
-    sequence generator. Optionally a third component can be used which forks
-    feedback from the readout network to obtain inputs for the transition.
+    sequence generator. Optionally a third component can be used which
+    forks feedback from the readout network to obtain inputs for the
+    transition.
 
     **Definitions:**
 
-    * *States* of the generator are the states of the transition as specified
-      in `transition.state_names`.
+    * *States* of the generator are the states of the transition as
+      specified in `transition.state_names`.
 
     * *Contexts* of the generator are the contexts of the transition as
       specified in `transition.context_names`.
 
-    * *Glimpses* are intermediate entities computed at every generation step
-      from states, contexts and the previous step glimpses. They are computed
-      in the transition's `apply` method when not given or by explicitly
-      calling the transition's `take_look` method. The set of glimpses
-      considered is specified in `transition.glimpse_names`.
+    * *Glimpses* are intermediate entities computed at every generation
+      step from states, contexts and the previous step glimpses. They are
+      computed in the transition's `apply` method when not given or by
+      explicitly calling the transition's `take_look` method. The set of
+      glimpses considered is specified in `transition.glimpse_names`.
 
     The generation algorithm description follows.
 
     **Algorithm:**
 
-    0. The initial states are computed from the contexts. This includes fake
-       initial outputs given by the `initial_outputs` method of the readout,
-       initial states and glimpses given by the `initial_state` method of the
-       transition.
+    0. The initial states are computed from the contexts. This includes
+       fake initial outputs given by the `initial_outputs` method of the
+       readout, initial states and glimpses given by the `initial_state`
+       method of the transition.
 
-    1. Given the contexts, the current state and the glimpses from the previous
-       step the attention mechanism hidden in the transition produces current
-       step glimpses. This happens in the `take_look` method of the transition.
+    1. Given the contexts, the current state and the glimpses from the
+       previous step the attention mechanism hidden in the transition
+       produces current step glimpses. This happens in the `take_look`
+       method of the transition.
 
     2. Using the contexts, the fed back output from the previous step, the
-       current states and glimpses, the readout brick is used to generate the
-       new output by calling its `readout` and `emit` methods.
+       current states and glimpses, the readout brick is used to generate
+       the new output by calling its `readout` and `emit` methods.
 
     3. The new output is fed back in the `feedback` method of the readout
-       brick. This feedback, together with the contexts, the glimpses and the
-       previous states is used to get the new states in the transition's
-       `apply` method. Optionally the `fork` brick is used in between to
-       compute the transition's inputs from the feedback.
+       brick. This feedback, together with the contexts, the glimpses and
+       the previous states is used to get the new states in the
+       transition's `apply` method. Optionally the `fork` brick is used in
+       between to compute the transition's inputs from the feedback.
 
     4. Back to step 1 if desired sequence length is not yet reached.
 
@@ -463,7 +465,6 @@ class SoftmaxEmitter(AbstractEmitter, Initializable, Random):
 
 class TrivialFeedback(AbstractFeedback):
     """A feedback brick for the case when readout are outputs."""
-
     @lazy
     def __init__(self, output_dim, **kwargs):
         super(TrivialFeedback, self).__init__(**kwargs)
@@ -532,8 +533,8 @@ class AttentionTransition(AbstractAttentionTransition, Initializable):
         The name of the attended context. If ``None``, the first context is
         used.
     attended_mask_name : str
-        The name of the mask for the attended context. If ``None``, the second
-        context is used.
+        The name of the mask for the attended context. If ``None``, the
+        second context is used.
 
     Notes
     -----
@@ -637,13 +638,13 @@ class AttentionTransition(AbstractAttentionTransition, Initializable):
 
     @recurrent
     def do_apply(self, **kwargs):
-        r"""Process a sequence attending the attended context at every step.
+        r"""Process a sequence attending the attended context every step.
 
         Parameters
         ----------
         \*\*kwargs
-            Should contain current inputs, previous step states, contexts, the
-            preprocessed attended context, previous step glimpses.
+            Should contain current inputs, previous step states, contexts,
+            the preprocessed attended context, previous step glimpses.
 
         Returns
         -------
@@ -778,14 +779,13 @@ class SequenceGenerator(BaseSequenceGenerator):
         The recurrent transition to be used in the sequence generator.
         Will be combined with `attention`, if that one is given.
     attention : :class:`Brick`
-        The attention mechanism to be added to `transition`. Can be ``None``,
-        in which case no attention mechanism is used.
+        The attention mechanism to be added to `transition`. Can be
+        ``None``, in which case no attention mechanism is used.
 
     Notes
     -----
-
-        Currently works only with lazy initialization
-        (uses blocks that can not be constructed with a single call).
+    Currently works only with lazy initialization (uses blocks that can not
+    be constructed with a single call).
 
     """
     def __init__(self, readout, transition, attention=None,

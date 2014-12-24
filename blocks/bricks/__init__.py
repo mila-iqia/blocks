@@ -248,6 +248,7 @@ class Brick(object):
         -----
         If the brick has not allocated its parameters yet, this method will
         call the :meth:`allocate` method in order to do so.
+
         """
         if not self.allocated:
             self.allocate()
@@ -505,8 +506,8 @@ class Application(object):
 
         This wrapper will provide some necessary pre- and post-processing
         of the Theano variables, such as tagging them with the brick that
-        created them and naming them. These changes will apply to
-        Theano variables given as positional arguments and keywords arguments.
+        created them and naming them. These changes will apply to Theano
+        variables given as positional arguments and keywords arguments.
 
         .. warning::
 
@@ -760,6 +761,7 @@ class Random(Brick):
 
         The default seed which can be set at a module level using
         ``blocks.bricks.DEFAULT_SEED = seed``.
+
         """
         if getattr(self, '_theano_rng', None) is not None:
             return self._theano_rng
@@ -917,12 +919,12 @@ class Linear(Initializable):
 class Maxout(Brick):
     """Maxout pooling transformation.
 
-    A brick that does max pooling over groups of input units. If you use this
-    code in a research project, please cite [GWFM1313]_.
+    A brick that does max pooling over groups of input units. If you use
+    this code in a research project, please cite [GWFM1313]_.
 
-    .. [GWFM1313] Ian J. Goodfellow, David Warde-Farley,
-       Mehdi Mirza, Aaron Courville, and Yoshua Bengio, *Maxout networks*,
-       ICML (2013), pp. 1319-1327.
+    .. [GWFM1313] Ian J. Goodfellow, David Warde-Farley, Mehdi Mirza, Aaron
+       Courville, and Yoshua Bengio, *Maxout networks*, ICML (2013), pp.
+       1319-1327.
 
     Parameters
     ----------
@@ -931,11 +933,10 @@ class Maxout(Brick):
 
     Notes
     -----
-    Maxout applies a set of linear transformations to a vector and selects for
-    each output dimension the result with the highest value.
+    Maxout applies a set of linear transformations to a vector and selects
+    for each output dimension the result with the highest value.
 
     """
-
     @lazy
     def __init__(self, num_pieces, **kwargs):
         super(Maxout, self).__init__(**kwargs)
@@ -1110,13 +1111,13 @@ class MLP(Sequence, Initializable):
     >>> from blocks.initialization import IsotropicGaussian, Constant
     >>> Brick.lazy = True
     >>> mlp = MLP(activations=[Tanh(), None], dims=[30, 20, 10],
-    ...           weights_init=IsotropicGaussian(), biases_init=Constant(1))
+    ...           weights_init=IsotropicGaussian(),
+    ...           biases_init=Constant(1))
     >>> mlp.push_initialization_config()  # Configure children
     >>> mlp.children[0].weights_init = IsotropicGaussian(0.1)
     >>> mlp.initialize()
 
     """
-
     @lazy
     def __init__(self, activations, dims, **kwargs):
         update_instance(self, locals())
