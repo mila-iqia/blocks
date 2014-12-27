@@ -25,6 +25,7 @@ class NdarrayInitialization(object):
             An ndarray with values drawn from the distribution specified by
             this object, of shape `shape`, with dtype
             `theano.config.floatX`.
+
         """
 
     def initialize(self, var, rng, shape=None):
@@ -59,6 +60,7 @@ class Constant(NdarrayInitialization):
         The initialization value to use. Must be a scalar or an ndarray (or
         compatible object, such as a nested list) that has a shape that is
         broadcastable with any shape requested by `initialize`.
+
     """
     def __init__(self, constant):
         self._constant = numpy.asarray(constant)
@@ -78,6 +80,7 @@ class IsotropicGaussian(NdarrayInitialization):
         The mean of the Gaussian distribution. Defaults to 0
     std : float, optional
         The standard deviation of the Gaussian distribution. Defaults to 1.
+
     """
     def __init__(self, mean=0, std=1):
         self._mean = mean

@@ -11,6 +11,7 @@ class CostMatrix(Cost):
     """Base class for costs which can be calculated element-wise.
 
     Assumes that the data has format (batch, features).
+
     """
     @application
     def apply(self, y, y_hat):

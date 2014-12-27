@@ -101,7 +101,6 @@ class AddParameters(Brick):
 
 class SeriesIterator(GroundhogIterator):
     """Training data generator."""
-
     def __init__(self, rng, func, seq_len, batch_size):
         update_instance(self, locals())
         self.num_params = len(inspect.getargspec(self.func).args) - 1

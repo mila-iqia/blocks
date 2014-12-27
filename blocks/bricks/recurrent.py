@@ -310,8 +310,8 @@ class GatedRecurrent(BaseRecurrent, Initializable):
     See :class:`Initializable` for initialization parameters.
 
     .. [CvMG14] Kyunghyun Cho, Bart van Merriënboer, Çağlar Gülçehre,
-        Dzmitry Bahdanau, Fethi Bougares, Holger Schwenk, and Yoshua Bengio,
-        *Learning Phrase Representations using RNN Encoder-Decoder
+        Dzmitry Bahdanau, Fethi Bougares, Holger Schwenk, and Yoshua
+        Bengio, *Learning Phrase Representations using RNN Encoder-Decoder
         for Statistical Machine Translation*, EMNLP (2014), pp. 1724-1734.
 
     """

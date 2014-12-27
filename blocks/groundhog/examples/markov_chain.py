@@ -29,7 +29,6 @@ logger = logging.getLogger()
 
 class ChainIterator(GroundhogIterator):
     """Training data generator."""
-
     num_states = 3
     trans_prob = numpy.array([[0.1, 0.5, 0.4],
                               [0.1, 0.9, 0.0],
