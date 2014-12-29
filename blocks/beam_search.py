@@ -7,7 +7,6 @@ from theano import function
 from blocks.sequence_generators import BaseSequenceGenerator
 
 
-
 class Search(object):
     """
     Base class for any search in recurrent network

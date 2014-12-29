@@ -493,12 +493,12 @@ class SoftmaxEmitter(AbstractEmitter, DefaultRNG):
 
     @application
     def emit(self, readouts):
-        probs = self._probs(readouts)
+        probs = self.emit_probs(readouts)
         return self.theano_rng.multinomial(pvals=probs).argmax(axis=-1)
 
     @application
     def cost(self, readouts, outputs):
-        probs = self._probs(readouts)
+        probs = self.emit_probs(readouts)
         max_output = probs.shape[-1]
         flat_outputs = outputs.flatten()
         num_outputs = flat_outputs.shape[0]
