@@ -149,12 +149,12 @@ def mean(numerator, denominator, name=None):
     return expression
 
 
-class ModelProperty(VariableAggregationScheme):
+class _DataIndependent(VariableAggregationScheme):
     """Dummy VariableAggregationScheme for values that don't depend on data.
 
     """
     def __init__(self, **kwargs):
-        super(ModelProperty, self).__init__(**kwargs)
+        super(_DataIndependent, self).__init__(**kwargs)
 
     def get_aggregator(self):
         return Aggregator(aggregation_scheme=self,
@@ -162,16 +162,6 @@ class ModelProperty(VariableAggregationScheme):
                           accumulation_updates=[],
                           readout_expression=self.expression
                           )
-
-
-def model_property(expression, name):
-    """Copy the given expression and tag with ModelProperty aggregation scheme.
-
-    """
-    expression = expression.copy()
-    expression.name = name
-    expression.tag.aggregation_scheme = ModelProperty(expression)
-    return expression
 
 
 class DatasetEvaluator(object):
@@ -221,10 +211,10 @@ class DatasetEvaluator(object):
             logger.debug('Monitoring: %s', v.name)
             if not hasattr(v.tag, 'aggregation_scheme'):
                 if graph_inputs([v]) == []:
-                    logger.debug('Using ModelProperty aggregation scheme'
+                    logger.debug('Using _DataIndependent aggregation scheme'
                                  ' for %s since it does not depend on'
                                  ' the data', k)
-                    v.tag.aggregation_scheme = ModelProperty(expression=v)
+                    v.tag.aggregation_scheme = _DataIndependent(expression=v)
                 else:
                     logger.debug('Using the default (average over minibatches)'
                                  ' aggregation scheme for %s', k)
