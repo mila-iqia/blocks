@@ -1,9 +1,7 @@
 import itertools
 
-import six
 
-
-class IterationScheme(six.Iterator):
+class IterationScheme(object):
     """An iteration scheme
 
     Iteration schemes provide a dataset-agnostic iteration scheme, such as
@@ -20,8 +18,7 @@ class IterationScheme(six.Iterator):
     reproduce.
 
     """
-    def __iter__(self):
-        return self
+    pass
 
 
 class BatchSizeScheme(IterationScheme):
