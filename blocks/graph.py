@@ -1,4 +1,4 @@
-"""Annonated computation graph management."""
+"""Annotated computation graph management."""
 import logging
 
 import theano
@@ -76,7 +76,7 @@ class ComputationGraph(object):
 
         Parameters
         ----------
-        replacement : dict
+        replacements : dict
             The mapping from variables to be replaced to the corresponding
             substitutes.
 
@@ -84,7 +84,7 @@ class ComputationGraph(object):
         return ComputationGraph(theano.clone(self.outputs,
                                              replace=replacements))
 
-    def function(self):
+    def get_theano_function(self):
         """Create Theano function from the graph contained."""
         return theano.function(self.inputs, self.outputs,
                                updates=self.updates)
@@ -101,8 +101,9 @@ def apply_noise(graph, variables, level, rng=None):
         Variables to add noise to.
     level : float
         Noise level.
-    rng : Theano random stream
-        The random stream to use.
+    rng : Theano random stream, optional
+        The random stream to use. By default an RNG with seed equal to 1 is
+        used.
 
     """
     if not rng:

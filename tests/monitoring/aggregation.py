@@ -1,13 +1,11 @@
 import numpy
-
 import theano.tensor
 
 from blocks import bricks
 from blocks.bricks import application, VariableRole
-from blocks.monitoring.aggregators import (mean,
-                                           DatasetEvaluator,
-                                           MinibatchEvaluator)
 from blocks.graph import ComputationGraph
+from blocks.monitoring.aggregation import (DatasetEvaluator, mean,
+                                           MinibatchEvaluator)
 
 
 class TestBrick(bricks.Brick):
@@ -24,9 +22,8 @@ class TestBrick(bricks.Brick):
         application_call.add_monitor((V ** 2).sum(),
                                      name='V_mon')
 
-        mean_input = mean(input_.sum(), input_.shape.prod(),
-                          'mean_input')
-        application_call.add_monitor(mean_input)
+        mean_input = mean(input_.sum(), input_.shape.prod())
+        application_call.add_monitor(mean_input, name='mean_input')
 
         application_call.add_monitor(input_.mean(),
                                      name='per_batch_mean_input')

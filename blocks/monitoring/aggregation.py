@@ -1,6 +1,5 @@
 """Evaluate Theano expressions on auxiliary data and during training."""
 import logging
-
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 
@@ -13,28 +12,24 @@ logger = logging.getLogger(__name__)
 
 
 class VariableAggregationScheme(object):
-    """Specify how incrementally evaluate a theano variable on a dataset.
+    """Specify how incrementally evaluate a Theano variable on a dataset.
 
     An VariableAggregationScheme allocates :class:`VariableAggregator`s
-    that can incrementally compute the value of a theano variable on a
+    that can incrementally compute the value of a Theano variable on a
     full datset by aggregating partial results computed on multiple
     batches.
 
     The VariableAggregationScheme should be attached via the tag
-    `aggregation_scheme` to a theano variable which computes the desired
+    `aggregation_scheme` to a Theano variable which computes the desired
     value on a single batch.
 
     Parameters
     ----------
-    expression: theano variable
+    expression: Theano variable
         expression that computes the desired value on a single batch.
 
     """
     __metaclass__ = ABCMeta
-
-    def __init__(self, expression, **kwargs):
-        super(VariableAggregationScheme, self).__init__(**kwargs)
-        self.expression = expression
 
     @abstractmethod
     def get_aggregator(self):
@@ -45,7 +40,7 @@ class VariableAggregationScheme(object):
 
 
 class Aggregator(object):
-    """An Aggregator incrementally evaluates a theano variable on a dataset.
+    """An Aggregator incrementally evaluates a Theano variable on a dataset.
 
     .. warning::
         The Aggregators should never be created directly. Instead use the
@@ -57,7 +52,7 @@ class Aggregator(object):
     * track a parameter of a model
     * monitor a penalty
 
-    The Aggregator maintains a set of theano sharer values called
+    The Aggregator maintains a set of Theano sharer values called
     accumulators and specifies how they shoud be initialized, and
     updated with incremental calculations. Finally, it
     provides a Theano expression that reads the accumulators
@@ -67,11 +62,11 @@ class Aggregator(object):
     ----------
     aggregation_scheme : :class:`VariableAggregationScheme`
         The aggregation scheme that constructed this Aggregator
-    initialization_updates : list of theano updates
+    initialization_updates : list of Theano updates
         Updates that specify how to initialize shared variables of
         this Aggregator. *Can only refer to shared variables and
         constants.*
-    accumulation_updates : list of theano updates
+    accumulation_updates : list of Theano updates
         Updates that specify how a new batch of data gets processed
         by this Aggregator. *Can refer to model inputs.*
     readout_expression : Theano variable
@@ -85,32 +80,26 @@ class Aggregator(object):
 
     """
     def __init__(self, aggregation_scheme, initialization_updates=None,
-                 accumulation_updates=None, readout_expression=None, **kwargs):
-        super(Aggregator, self).__init__(**kwargs)
+                 accumulation_updates=None, readout_expression=None):
         if initialization_updates is None:
             initialization_updates = []
         if accumulation_updates is None:
             accumulation_updates = []
         update_instance(self, locals())
 
-    @property
-    def name(self):
-        """Get the name of tha associated expression.
-        """
-        return self.scheme.expression.name
-
 
 class Mean(VariableAggregationScheme):
-    """Aggregation scheme which computes the division numerator/denominator.
+    """Aggregation scheme which computes the mean.
 
     Parameters
     ----------
-    numerator : theano expression for the numerator
-    denominator : theano expression for the denominator
+    numerator : Theano variable
+        Theano expression for the numerator e.g. the likelihood
+    denominator : Theano variable
+        Theano expression for the denominator e.g. the batch size
 
     """
-    def __init__(self, numerator, denominator, **kwargs):
-        super(Mean, self).__init__(**kwargs)
+    def __init__(self, numerator, denominator):
         self.numerator = numerator
         self.denominator = denominator
 
@@ -128,43 +117,30 @@ class Mean(VariableAggregationScheme):
                                 accumulation_updates=accumulation_updates,
                                 readout_expression=(numerator_acc /
                                                     denominator_acc))
-        aggregator._numerator_acc = numerator_acc
-        aggregator._denominator_acc = denominator_acc
         return aggregator
 
 
-def mean(numerator, denominator, name=None):
-    """Mean of quantity (numerator) over a number (denominator) values.
-
-    """
+def mean(numerator, denominator):
+    """Mean of quantity (numerator) over a number (denominator) values."""
     expression = numerator / denominator
-    expression.tag.aggregation_scheme = Mean(numerator, denominator,
-                                             expression=expression)
-    if name is not None:
-        expression.name = name
-    else:
-        expression.name = 'mean{{}, {}}'.format(numerator.name,
-                                                + denominator.name)
+    expression.tag.aggregation_scheme = Mean(numerator, denominator)
     return expression
 
 
 class _DataIndependent(VariableAggregationScheme):
-    """Dummy VariableAggregationScheme for values that don't depend on data.
-
-    """
-    def __init__(self, **kwargs):
-        super(_DataIndependent, self).__init__(**kwargs)
+    """Dummy aggregation scheme for values that don't depend on data."""
+    def __init__(self, variable):
+        update_instance(self, locals())
 
     def get_aggregator(self):
         return Aggregator(aggregation_scheme=self,
                           initialization_updates=[],
                           accumulation_updates=[],
-                          readout_expression=self.expression
-                          )
+                          readout_expression=self.variable)
 
 
 class DatasetEvaluator(object):
-    """A DatasetEvaluator evaluates many theano expressions on a dataset.
+    """A DatasetEvaluator evaluates many Theano expressions on a dataset.
 
     The DatasetEvaluator provides a do-it-all method,
     :meth:`evaluate`, which computes values of ``expressions``
@@ -186,7 +162,7 @@ class DatasetEvaluator(object):
         A list of monitored variables. Or a dict from keys to variables.
         If a list is given, keys will be set to the variables themselves.
 
-        Each variable can be tagged with an
+        Each variable can be tagged with a
         :class:`VariableAggregationScheme` that specifies how the value can
         be computed for a data set by aggregating minibatches.
 
@@ -212,11 +188,11 @@ class DatasetEvaluator(object):
                     logger.debug('Using _DataIndependent aggregation scheme'
                                  ' for %s since it does not depend on'
                                  ' the data', k)
-                    v.tag.aggregation_scheme = _DataIndependent(expression=v)
+                    v.tag.aggregation_scheme = _DataIndependent(variable=v)
                 else:
                     logger.debug('Using the default (average over minibatches)'
                                  ' aggregation scheme for %s', k)
-                    v.tag.aggregation_scheme = Mean(v, 1.0, expression=v)
+                    v.tag.aggregation_scheme = Mean(v, 1.0)
 
             aggregator = v.tag.aggregation_scheme.get_aggregator()
             initialize_updates.extend(aggregator.initialization_updates)
@@ -296,7 +272,7 @@ class DatasetEvaluator(object):
 
 
 class MinibatchEvaluator(object):
-    """Helper evaluating several theano variables using updates.
+    """Helper evaluating several Theano variables using updates.
 
     The MinibatchEvaluator allocates storage for each of the variables
     given to its constructor. It then provides:

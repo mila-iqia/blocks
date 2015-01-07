@@ -235,12 +235,13 @@ def is_graph_input(variable):
     Returns
     -------
     bool
+        ``True`` If the variable is a user-provided input to the graph.
 
     """
-    return (not variable.owner
-            and not isinstance(variable, SharedVariable)
-            and not isinstance(variable, TensorConstant)
-            and not isinstance(variable, ScalarConstant))
+    return (not variable.owner and
+            not isinstance(variable, SharedVariable) and
+            not isinstance(variable, TensorConstant) and
+            not isinstance(variable, ScalarConstant))
 
 
 def graph_inputs(variables, blockers=None):
