@@ -53,7 +53,7 @@ docs/_build/
 # PyBuilder
 target/
 
-# Eclipse 
+# Eclipse
 .project
 .pydevproject
 .settings/
