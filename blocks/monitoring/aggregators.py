@@ -1,8 +1,6 @@
-"""Evaluate Theano expressions on auxiliary data and during training.
-
-"""
-
+"""Evaluate Theano expressions on auxiliary data and during training."""
 import logging
+
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 
@@ -15,11 +13,12 @@ logger = logging.getLogger(__name__)
 
 
 class VariableAggregationScheme(object):
-    """Specify how to incrementally evaluate a theano variable on a dataset.
+    """Specify how incrementally evaluate a theano variable on a dataset.
 
     An VariableAggregationScheme allocates :class:`VariableAggregator`s
     that can incrementally compute the value of a theano variable on a
-    full datset by aggregating partial results computed on multiple batches.
+    full datset by aggregating partial results computed on multiple
+    batches.
 
     The VariableAggregationScheme should be attached via the tag
     `aggregation_scheme` to a theano variable which computes the desired
@@ -64,8 +63,8 @@ class Aggregator(object):
     provides a Theano expression that reads the accumulators
     and computes the final value.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     aggregation_scheme : :class:`VariableAggregationScheme`
         The aggregation scheme that constructed this Aggregator
     initialization_updates : list of theano updates
@@ -187,12 +186,11 @@ class DatasetEvaluator(object):
         A list of monitored variables. Or a dict from keys to variables.
         If a list is given, keys will be set to the variables themselves.
 
-        Each variable can be tagged with an :class:`VariableAggregationScheme`
-        that specifies how the value can be computed for a data set by
-        aggregating minibatches.
+        Each variable can be tagged with an
+        :class:`VariableAggregationScheme` that specifies how the value can
+        be computed for a data set by aggregating minibatches.
 
     """
-
     def __init__(self, channel_variables):
         if isinstance(channel_variables, dict):
             self.channel_variables = channel_variables
@@ -298,10 +296,10 @@ class DatasetEvaluator(object):
 
 
 class MinibatchEvaluator(object):
-    """Helper to evaluate several theano variables on batches during training.
+    """Helper evaluating several theano variables using updates.
 
-    The MinibatchEvaluator allocates storage for each of the variables given
-    to its constructor. It then provides:
+    The MinibatchEvaluator allocates storage for each of the variables
+    given to its constructor. It then provides:
 
     - a list of updates which should be called by the training function
       on every minibatch. These updates store computed values in the
@@ -343,6 +341,10 @@ class MinibatchEvaluator(object):
 
         Returns
         -------
+        dict from variables (or from the keys of the
+            monitored_variables argument to __init__) to the values
+            computed on the provided dataset.
+
         """
         values = OrderedDict()
         for k, sv in self._storage.iteritems():

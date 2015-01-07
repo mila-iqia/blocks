@@ -259,6 +259,7 @@ def graph_inputs(variables, blockers=None):
     Returns:
     list of theano variables which are non-constant and non-shared
         inputs to the computational graph.
+
     """
     inps = theano.gof.graph.inputs(variables, blockers=blockers)
     return [i for i in inps if is_graph_input(i)]
