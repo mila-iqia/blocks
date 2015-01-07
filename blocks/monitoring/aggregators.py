@@ -1,4 +1,4 @@
-"""Support for computing monitoring channels from bricks.
+"""Evaluate Theano expressions on auxiliary data and during training.
 
 """
 
@@ -8,7 +8,8 @@ from collections import OrderedDict
 
 import theano
 
-from blocks.utils import shared_for_expression, dict_subset, graph_inputs
+from blocks.utils import (shared_like, dict_subset,
+                          graph_inputs, update_instance)
 
 logger = logging.getLogger(__name__)
 
@@ -47,13 +48,15 @@ class VariableAggregationScheme(object):
 class Aggregator(object):
     """An Aggregator incrementally evaluates a theano variable on a dataset.
 
-    The Aggregators should be created by the
-    :meth:`VariableAggregationScheme.get_aggregator` method.
+    .. warning::
+        The Aggregators should never be created directly. Instead use the
+        :meth:`VariableAggregationScheme.get_aggregator` method.
 
     Example usages are:
-    - compute the mean of some value over examples, sequence lengths etc.
-    - track a parameter of a model
-    - monitor a penalty
+
+    * compute the mean of some value over examples, sequence lengths etc.
+    * track a parameter of a model
+    * monitor a penalty
 
     The Aggregator maintains a set of theano sharer values called
     accumulators and specifies how they shoud be initialized, and
@@ -67,27 +70,29 @@ class Aggregator(object):
         The aggregation scheme that constructed this Aggregator
     initialization_updates : list of theano updates
         Updates that specify how to initialize shared variables of
-        this Aggregator. **Can only refer to shared variables and
-        constants.**
+        this Aggregator. *Can only refer to shared variables and
+        constants.*
     accumulation_updates : list of theano updates
         Updates that specify how a new batch of data gets processed
-        by this Aggregator. **Can refer to model inputs.**
-    readout_expression : theano variables
+        by this Aggregator. *Can refer to model inputs.*
+    readout_expression : Theano variable
         Theano variable that computes the final value based on accumulated
-        partial results. **Can only refer to shared variables and
-        constants.**
+        partial results. *readout_expression must only consist of shared
+        variables and constants.*
+
+    Attributes
+    ----------
+    All constructor parameters are accessible as attributes.
 
     """
-    def __init__(self, aggregation_scheme,
-                 initialization_updates=[],
-                 accumulation_updates=[],
-                 readout_expression=None,
-                 **kwargs):
+    def __init__(self, aggregation_scheme, initialization_updates=None,
+                 accumulation_updates=None, readout_expression=None, **kwargs):
         super(Aggregator, self).__init__(**kwargs)
-        self.aggregation_scheme = aggregation_scheme
-        self.initialization_updates = initialization_updates
-        self.accumulation_updates = accumulation_updates
-        self.readout_expression = readout_expression
+        if initialization_updates is None:
+            initialization_updates = []
+        if accumulation_updates is None:
+            accumulation_updates = []
+        update_instance(self, locals())
 
     @property
     def name(self):
@@ -96,7 +101,7 @@ class Aggregator(object):
         return self.scheme.expression.name
 
 
-class AggregatedDiv(VariableAggregationScheme):
+class Mean(VariableAggregationScheme):
     """Aggregation scheme which computes the division numerator/denominator.
 
     Parameters
@@ -106,13 +111,13 @@ class AggregatedDiv(VariableAggregationScheme):
 
     """
     def __init__(self, numerator, denominator, **kwargs):
-        super(AggregatedDiv, self).__init__(**kwargs)
+        super(Mean, self).__init__(**kwargs)
         self.numerator = numerator
         self.denominator = denominator
 
     def get_aggregator(self):
-        numerator_acc = shared_for_expression(self.numerator)
-        denominator_acc = shared_for_expression(self.denominator)
+        numerator_acc = shared_like(self.numerator)
+        denominator_acc = shared_like(self.denominator)
         initialization_updates = [(numerator_acc, 0.0),
                                   (denominator_acc, 0.0)]
         accumulation_updates = [(numerator_acc,
@@ -120,23 +125,27 @@ class AggregatedDiv(VariableAggregationScheme):
                                 (denominator_acc,
                                  denominator_acc + self.denominator)]
         aggregator = Aggregator(aggregation_scheme=self,
-                         initialization_updates=initialization_updates,
-                         accumulation_updates=accumulation_updates,
-                         readout_expression=numerator_acc / denominator_acc)
+                                initialization_updates=initialization_updates,
+                                accumulation_updates=accumulation_updates,
+                                readout_expression=(numerator_acc /
+                                                    denominator_acc))
         aggregator._numerator_acc = numerator_acc
         aggregator._denominator_acc = denominator_acc
         return aggregator
 
 
-def aggregated_div(numerator, denominator, name=None):
-    """Divide numerator by denominator and tag with an aggregation scheme.
+def mean(numerator, denominator, name=None):
+    """Mean of quantity (numerator) over a number (denominator) values.
 
     """
     expression = numerator / denominator
-    expression.tag.aggregation_scheme = AggregatedDiv(numerator, denominator,
+    expression.tag.aggregation_scheme = Mean(numerator, denominator,
                                              expression=expression)
     if name is not None:
         expression.name = name
+    else:
+        expression.name = 'mean{{}, {}}'.format(numerator.name,
+                                                + denominator.name)
     return expression
 
 
@@ -165,16 +174,16 @@ def model_property(expression, name):
     return expression
 
 
-class DatasetChannelEvaluator(object):
-    """A DatasetChannelEvaluator evaluates many theano variables on a dataset.
+class DatasetEvaluator(object):
+    """A DatasetEvaluator evaluates many theano expressions on a dataset.
 
-    The DatasetChannelEvaluator provides a do-it-all method,
-    :meth:`compute_channels`, which computes values of ``channel_variables``
+    The DatasetEvaluator provides a do-it-all method,
+    :meth:`evaluate`, which computes values of ``expressions``
     on a dataset.
 
-    Alternatively, methods :meth:`initialize_computation`,
-    :meth:`process_batch`, :meth:`readout_channels` can be used with a custom
-    loop over data.
+    Alternatively, methods :meth:`_initialize_computation`,
+    :meth:`_process_batch`, :meth:`_readout_expressions` can be used
+    with a custom loop over data.
 
     The values computed on subsets of the given dataset
     are aggregated using the VariableAggregationSchemes provided in
@@ -184,10 +193,9 @@ class DatasetChannelEvaluator(object):
 
     Parameters
     ----------
-    channel_variables : list or dict
-        A list of monitored variables. Or a dict from monitoring channel
-        keys to variables. If a list is given, keys will be set to the
-        ``name``s attribute of the variables.
+    expressions : list or dict
+        A list of monitored variables. Or a dict from keys to variables.
+        If a list is given, keys will be set to the variables themselves.
 
         Each variable can be tagged with an :class:`VariableAggregationScheme`
         that specifies how the value can be computed for a data set by
@@ -199,7 +207,7 @@ class DatasetChannelEvaluator(object):
         if isinstance(channel_variables, dict):
             self.channel_variables = channel_variables
         else:
-            keyed_vars = ((v.name, v) for v in channel_variables)
+            keyed_vars = ((v, v) for v in channel_variables)
             self.channel_variables = OrderedDict(keyed_vars)
         self.inputs = graph_inputs(self.channel_variables.values())
         self._compile()
@@ -220,8 +228,7 @@ class DatasetChannelEvaluator(object):
                 else:
                     logger.debug('Using the default (average over minibatches)'
                                  ' aggregation scheme for %s', k)
-                    v.tag.aggregation_scheme = AggregatedDiv(v, 1.0,
-                                                             expression=v)
+                    v.tag.aggregation_scheme = Mean(v, 1.0, expression=v)
 
             aggregator = v.tag.aggregation_scheme.get_aggregator()
             initialize_updates.extend(aggregator.initialization_updates)
@@ -251,7 +258,7 @@ class DatasetChannelEvaluator(object):
             return dict(zip(readout.keys(), ret_vals))
         self._readout_fun = readout_fun
 
-    def initialize_computation(self):
+    def _initialize_computation(self):
         """Initialize the aggragators to process a dataset.
 
         """
@@ -259,22 +266,22 @@ class DatasetChannelEvaluator(object):
         if self._initialize_fun is not None:
             self._initialize_fun()
 
-    def process_batch(self, batch):
+    def _process_batch(self, batch):
         if not self._initialized:
-            self.initialize_computation()
+            self._initialize_computation()
         batch = dict_subset(batch, self._input_names)
         if self._accumulate_fun is not None:
             self._accumulate_fun(**batch)
 
-    def readout_channels(self):
+    def _readout_expressions(self):
         if not self._initialized:
             raise Exception("To readout you must first initialize, then"
                             "process batches!")
         self._initialized = False
         return self._readout_fun()
 
-    def compute_channels(self, data_set_view):
-        """Compute the monitored statistics over an iterable data set
+    def evaluate(self, data_set_view):
+        """Compute the expressions over an iterable data set
 
         Parameters
         ----------
@@ -283,18 +290,71 @@ class DatasetChannelEvaluator(object):
 
         Returns
         -------
-        dict from variable names (or from the keys of the
+        dict from variables (or from the keys of the
             monitored_variables argument to __init__) to the values
             computed on the provided dataset.
 
         """
-        self.initialize_computation()
+        self._initialize_computation()
 
         if self._accumulate_fun is not None:
             for batch in data_set_view:
-                self.process_batch(batch)
+                self._process_batch(batch)
         else:
             logger.debug('Only constant monitors are used, will not'
                          'iterate the over data!')
 
-        return self.readout_channels()
+        return self._readout_expressions()
+
+
+class MinibatchEvaluator(object):
+    """Helper to evaluate several theano variables on batches during training.
+
+    The MinibatchEvaluator allocates storage for each of the variables given
+    to its constructor. It then provides:
+
+    - a list of updates which should be called by the training function
+      on every minibatch. These updates store computed values in the
+      shared variables.
+
+    - a function which reads the shared variables and returns a dict from
+        names (or channel keys) their values.
+
+    Parameters
+    ----------
+    expressions : list or dict
+        A list of monitored variables. Or a dict from keys to variables.
+        If a list is given, keys will be set to the variables themselves.
+
+    """
+    def __init__(self, monitored_variables):
+        if isinstance(monitored_variables, dict):
+            monitored_variables = monitored_variables
+        else:
+            keyed_vars = ((v, v) for v in monitored_variables)
+            monitored_variables = OrderedDict(keyed_vars)
+
+        self._updates = []
+        self._storage = OrderedDict()
+        for k, v in monitored_variables.iteritems():
+            shared_v = shared_like(v)
+            self._storage[k] = shared_v
+            self._updates.append((shared_v, v))
+
+    @property
+    def updates(self):
+        """Updates that have to be called for each minibatch.
+
+        """
+        return self._updates
+
+    def read_expressions(self):
+        """Read values of the expressions computed on the last minibatch.
+
+        Returns
+        -------
+        """
+        values = OrderedDict()
+        for k, sv in self._storage.iteritems():
+            values[k] = sv.get_value(borrow=False)
+        return values

@@ -100,7 +100,7 @@ def shared_floatx(value, name=None, borrow=False, dtype=None):
                          borrow=borrow)
 
 
-def shared_for_expression(expression, name=None):
+def shared_like(expression, name=None):
     """Construct a shared variable to hold the results of a theano expression.
 
     Parameters
