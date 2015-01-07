@@ -1,4 +1,5 @@
 import itertools
+from abc import ABCMeta, abstractmethod
 
 
 class IterationScheme(object):
@@ -18,7 +19,11 @@ class IterationScheme(object):
     reproduce.
 
     """
-    pass
+    __metaclass__ = ABCMeta
+
+    @abstractmethod
+    def __iter__(self):
+        raise NotImplementedError
 
 
 class BatchSizeScheme(IterationScheme):
