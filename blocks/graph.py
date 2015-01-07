@@ -5,7 +5,7 @@ import theano
 from theano import Variable
 from theano.tensor.shared_randomstreams import RandomStreams
 
-from utils import is_graph_input
+from blocks.utils import is_graph_input
 
 logger = logging.getLogger(__name__)
 
