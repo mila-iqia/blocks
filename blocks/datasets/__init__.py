@@ -14,7 +14,8 @@ class Dataset(object):
     Attributes
     ----------
     sources : tuple of strings
-        The sources this dataset can provide.
+        The sources this dataset can provide. By default, these are
+        ``features`` and ``targets``.
 
     Notes
     -----
@@ -25,7 +26,7 @@ class Dataset(object):
 
     """
     __metaclass__ = ABCMeta
-    sources = ('features', 'targets')  # Default sources
+    sources = ('features', 'targets')
 
     def __iter__(self):
         """Use the default iteration scheme to construct a data stream.
@@ -43,44 +44,36 @@ class Dataset(object):
             self.default_stream = DataStream(self, self.default_scheme)
         return iter(self.default_stream)
 
-    def open(self):
+    def open(self, state=None):
         """Return the state if the dataset requires one.
 
         Datasets which e.g. read files from disks require open file
         handlers, and this sort of stateful information should be handled
         by the data stream.
 
+        Parameters
+        ----------
+        state : object
+            The state of the dataset after the previous epoch.
+
         Returns
         -------
         state : object
             An object representing the state of a dataset.
+
+
+        Notes
+        -----
+        The first time the dataset is opened this function always receives
+        `None`. Subsequent calls might pass the state at the end of the
+        previous operation. This allows for quicker opening e.g. by seeking
+        to the beginning of the file instead of re-opening it.
 
         """
         pass
 
-    def reset(self, state):
-        """Reset the state in order to start a new epoch.
-
-        This could involve re-opening files, seeking to the beginning, etc.
-
-        Parameters
-        ----------
-        state : object
-            An object representing the state of a dataset
-
-        Returns
-        -------
-        state : object
-            An object representing the state of a dataset.
-
-        Notes
-        -----
-        This is implemented because simply repeatedly calling :meth:`open`
-        could result in file handlers not being closed, and to increase
-        performance by performing a seek-operation instead of re-opening
-        the file.
-
-        """
+    def close(self, state):
+        """Cleanly close the dataset e.g. close file handles."""
         pass
 
     @abstractmethod
@@ -132,20 +125,30 @@ class DataStream(object):
     Parameters
     ----------
     data : :class:`Dataset` or :class:`DataStream`
-        An object that implements the :meth:`open`, :meth:`reset` and
-        :meth:`get_data` methods. Usually this is a :class:`Dataset`
-        instance, but when chaining iterators to e.g. perform caching this
-        can also be a :class:`DataStream` object.
+        An object that implements the :meth:`open` and :meth:`get_data`
+        methods. Usually this is a :class:`Dataset` instance, but when
+        chaining iterators to e.g. perform caching this can also be a
+        :class:`DataStream` object.
+    iteration_scheme : :class:`IterationScheme`, optional
+        The iteration scheme to use when retrieving data. Note that not all
+        datasets support the same iteration schemes, some data sets require
+        one, and others don't support any.
+    sources : tuple of strings, optional
+        The sources of data to return. By default, all sources of the
+        dataset are requested.
 
     """
     def __init__(self, data, iteration_scheme=None, sources=None):
-        data_state = data.open()
         update_instance(self, locals())
+        self.data_state = None
 
     def __iter__(self):
-        self.data_state = self.data.reset(self.data_state)
-        return DataIterator(self,
-                            iter(self.iteration_scheme)
+        self.data_state = self.data.open(self.data_state)
+        # TODO Allow for multiple child datasets/data streams, so that they
+        # can be combined
+        if isinstance(self.data, DataStream):
+            self.child_iterator = iter(self.data)
+        return DataIterator(self, iter(self.iteration_scheme)
                             if self.iteration_scheme else None, self.sources)
 
     @property
@@ -157,11 +160,11 @@ class DataStream(object):
     def sources(self, sources):
         self._sources = sources
 
-    def open(self):
-        return self.data.open()
+    def open(self, state=None):
+        return self.data.open(state)
 
-    def reset(self, state):
-        return self.data.reset(self.data_state)
+    def close(self, satte):
+        self.data.close(self.data_state)
 
     def get_data(self, state=None, request=None, sources=None):
         """Get data from the dataset.
@@ -169,26 +172,33 @@ class DataStream(object):
         Notes
         -----
         This is the default implementation which redirects the request for
-        data directly to the dataset. For more complex data streams, one
-        could perform e.g. caching here.
+        data directly to the dataset (or wrapped data stream). For more
+        complex data streams, one could perform e.g. caching here.
 
         """
         return self.data.get_data(state, request, sources)
 
 
 class CachedDataStream(DataStream):
-    """Cache examples when sequentially reading a dataset."""
+    """Cache examples when sequentially reading a dataset.
+
+    Given a data stream which reads large chunks of data, this data
+    stream caches these chunks and returns smaller batches from it until
+    exhausted.
+
+    Parameters
+    ----------
+    iteration_scheme : :class:`IterationScheme`
+        Note that this iteration scheme must return either batch sizes
+        (integers) or sequential batches (slices), which must necessarily
+        be smaller than the child data stream i.e. the batches returned
+        must be smaller than the cache size.
+
+    """
     def __init__(self, iteration_scheme, *args, **kwargs):
         super(CachedDataStream, self).__init__(
             iteration_scheme=iteration_scheme, *args, **kwargs)
         self.cache = [[] for source in self.sources]
-
-    def __iter__(self):
-        self.data_state = self.data.reset(self.data_state)
-        self.child_iterator = iter(self.data)
-        return DataIterator(self,
-                            iter(self.iteration_scheme)
-                            if self.iteration_scheme else None, self.sources)
 
     def get_data(self, state=None, request=None, sources=None):
         if isinstance(request, six.integer_types):
