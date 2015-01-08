@@ -195,9 +195,9 @@ class CachedDataStream(DataStream):
         must be smaller than the cache size.
 
     """
-    def __init__(self, iteration_scheme, *args, **kwargs):
-        super(CachedDataStream, self).__init__(
-            iteration_scheme=iteration_scheme, *args, **kwargs)
+    def __init__(self, data, iteration_scheme, *args, **kwargs):
+        super(CachedDataStream, self).__init__(data, iteration_scheme, *args,
+                                               **kwargs)
         self.cache = [[] for source in self.sources]
 
     def get_data(self, state=None, request=None, sources=None):
