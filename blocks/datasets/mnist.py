@@ -60,8 +60,10 @@ class MNIST(Dataset):
         self.num_examples = len(X)
         self.default_scheme = SequentialScheme(self.num_examples, 1)
 
-    def get_data(self, state=None, request=None):
-        return (self.X[request], self.y[request])
+    def get_data(self, state=None, request=None, sources=None):
+        data = dict(zip(self.sources, (self.X, self.y)))
+        sources = self.sources if sources is None else sources
+        return tuple(data[source][request] for source in sources)
 
 
 def read_mnist_images(filename, dtype=None):

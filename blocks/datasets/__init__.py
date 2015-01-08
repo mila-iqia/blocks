@@ -1,5 +1,6 @@
 from abc import ABCMeta, abstractmethod
 
+import numpy
 import six
 
 from blocks.utils import update_instance
@@ -9,6 +10,11 @@ class Dataset(object):
     """A dataset.
 
     Dataset classes implement the interface to a particular dataset.
+
+    Attributes
+    ----------
+    sources : tuple of strings
+        The sources this dataset can provide.
 
     Notes
     -----
@@ -22,7 +28,15 @@ class Dataset(object):
     sources = ('features', 'targets')  # Default sources
 
     def __iter__(self):
-        """Datasets can return a data stream here for default iteration."""
+        """Use the default iteration scheme to construct a data stream.
+
+        .. warning::
+
+           A dataset only produces a single data stream using the default
+           iteration scheme, so multiple iterations in parallel are not
+           supported.
+
+        """
         if not hasattr(self, 'default_scheme'):
             raise NotImplementedError("Does not provide a default iterator")
         elif not hasattr(self, 'default_stream'):
@@ -30,11 +44,11 @@ class Dataset(object):
         return iter(self.default_stream)
 
     def open(self):
-        """Return the state of datasets which require one.
+        """Return the state if the dataset requires one.
 
         Datasets which e.g. read files from disks require open file
         handlers, and this sort of stateful information should be handled
-        by the data stream when iterating over data.
+        by the data stream.
 
         Returns
         -------
@@ -44,8 +58,33 @@ class Dataset(object):
         """
         pass
 
+    def reset(self, state):
+        """Reset the state in order to start a new epoch.
+
+        This could involve re-opening files, seeking to the beginning, etc.
+
+        Parameters
+        ----------
+        state : object
+            An object representing the state of a dataset
+
+        Returns
+        -------
+        state : object
+            An object representing the state of a dataset.
+
+        Notes
+        -----
+        This is implemented because simply repeatedly calling :meth:`open`
+        could result in file handlers not being closed, and to increase
+        performance by performing a seek-operation instead of re-opening
+        the file.
+
+        """
+        pass
+
     @abstractmethod
-    def get_data(state=None, request=None):
+    def get_data(self, state=None, request=None, sources=None):
         """Request data from the dataset.
 
         Parameters
@@ -57,12 +96,20 @@ class Dataset(object):
             If supported, the request for a particular part of the data
             e.g. the number of examples to return, or the indices of a
             particular minimbatch of examples.
+        sources : tuple of strings, optional
+            The data sources to return. By default all data sources are
+            returned.
+
+        .. todo::
+
+           A way for the dataset to communicate which kind of requests it
+           accepts, and a way to communicate what kind of request is being
+           sent when supporting multiple.
 
         Returns
         -------
         tuple
-            A tuple of data in the same order as the data sources defined
-            in :attr:`sources`.
+            A tuple of data.
 
         """
         raise NotImplementedError
@@ -78,26 +125,99 @@ class DataStream(object):
     The data stream also opens a given dataset and maintains the state
     (e.g. file handles) if necessary.
 
+    A data stream can provide an iterator over a dataset, but it can also
+    wrap another datastream e.g. to provide caching or some sort of
+    pre-processing.
+
+    Parameters
+    ----------
+    data : :class:`Dataset` or :class:`DataStream`
+        An object that implements the :meth:`open`, :meth:`reset` and
+        :meth:`get_data` methods. Usually this is a :class:`Dataset`
+        instance, but when chaining iterators to e.g. perform caching this
+        can also be a :class:`DataStream` object.
+
     """
-    def __init__(self, dataset, iteration_scheme=None):
-        dataset_state = dataset.open()
+    def __init__(self, data, iteration_scheme=None, sources=None):
+        data_state = data.open()
         update_instance(self, locals())
 
     def __iter__(self):
-        return DataIterator(self.dataset, self.dataset_state,
+        self.data_state = self.data.reset(self.data_state)
+        return DataIterator(self,
                             iter(self.iteration_scheme)
-                            if self.iteration_scheme else None)
+                            if self.iteration_scheme else None, self.sources)
+
+    @property
+    def sources(self):
+        if getattr(self, '_sources', None) is None:
+            return self.data.sources
+
+    @sources.setter
+    def sources(self, sources):
+        self._sources = sources
+
+    def open(self):
+        return self.data.open()
+
+    def reset(self, state):
+        return self.data.reset(self.data_state)
+
+    def get_data(self, state=None, request=None, sources=None):
+        """Get data from the dataset.
+
+        Notes
+        -----
+        This is the default implementation which redirects the request for
+        data directly to the dataset. For more complex data streams, one
+        could perform e.g. caching here.
+
+        """
+        return self.data.get_data(state, request, sources)
+
+
+class CachedDataStream(DataStream):
+    """Cache examples when sequentially reading a dataset."""
+    def __init__(self, iteration_scheme, *args, **kwargs):
+        super(CachedDataStream, self).__init__(
+            iteration_scheme=iteration_scheme, *args, **kwargs)
+        self.cache = [[] for source in self.sources]
+
+    def __iter__(self):
+        self.data_state = self.data.reset(self.data_state)
+        self.child_iterator = iter(self.data)
+        return DataIterator(self,
+                            iter(self.iteration_scheme)
+                            if self.iteration_scheme else None, self.sources)
+
+    def get_data(self, state=None, request=None, sources=None):
+        if isinstance(request, six.integer_types):
+            batch_size = request
+        elif isinstance(request, slice):
+            batch_size = request.stop - request.start
+        if batch_size >= len(self.cache[0]):
+            self._cache(state, sources)
+        data = []
+        for i, cache in enumerate(self.cache):
+            data.append(numpy.asarray(cache[:batch_size]))
+            self.cache[i] = cache[batch_size:]
+        return tuple(data)
+
+    def _cache(self, state, sources):
+        for cache, data in zip(self.cache, next(self.child_iterator)):
+            cache.extend(data)
 
 
 class DataIterator(six.Iterator):
     """An iterator over data, representing a single epoch."""
-    def __init__(self, dataset, dataset_state=None, iteration_scheme=None):
+    def __init__(self, data_stream, iterator=None, sources=None):
         update_instance(self, locals())
 
     def __iter__(self):
         return self
 
     def __next__(self):
-        return self.dataset.get_data(self.dataset_state,
-                                     next(self.iteration_scheme)
-                                     if self.iteration_scheme else None)
+        return self.data_stream.get_data(self.data_stream.data_state,
+                                         next(self.iterator)
+                                         if self.iterator else None,
+                                         self.sources)
