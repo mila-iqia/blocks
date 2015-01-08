@@ -11,15 +11,15 @@ from blocks.utils import (shared_like, dict_subset,
 logger = logging.getLogger(__name__)
 
 
-class VariableAggregationScheme(object):
+class AggregationScheme(object):
     """Specify how incrementally evaluate a Theano variable on a dataset.
 
-    An VariableAggregationScheme allocates :class:`VariableAggregator`s
+    An AggregationScheme allocates :class:`VariableAggregator`s
     that can incrementally compute the value of a Theano variable on a
     full datset by aggregating partial results computed on multiple
     batches.
 
-    The VariableAggregationScheme should be attached via the tag
+    The AggregationScheme should be attached via the tag
     `aggregation_scheme` to a Theano variable which computes the desired
     value on a single batch.
 
@@ -44,7 +44,7 @@ class Aggregator(object):
 
     .. warning::
         The Aggregators should never be created directly. Instead use the
-        :meth:`VariableAggregationScheme.get_aggregator` method.
+        :meth:`AggregationScheme.get_aggregator` method.
 
     Example usages are:
 
@@ -60,7 +60,7 @@ class Aggregator(object):
 
     Parameters
     ----------
-    aggregation_scheme : :class:`VariableAggregationScheme`
+    aggregation_scheme : :class:`AggregationScheme`
         The aggregation scheme that constructed this Aggregator
     initialization_updates : list of Theano updates
         Updates that specify how to initialize shared variables of
@@ -88,7 +88,7 @@ class Aggregator(object):
         update_instance(self, locals())
 
 
-class Mean(VariableAggregationScheme):
+class Mean(AggregationScheme):
     """Aggregation scheme which computes the mean.
 
     Parameters
@@ -127,7 +127,7 @@ def mean(numerator, denominator):
     return expression
 
 
-class _DataIndependent(VariableAggregationScheme):
+class _DataIndependent(AggregationScheme):
     """Dummy aggregation scheme for values that don't depend on data."""
     def __init__(self, variable):
         update_instance(self, locals())
@@ -151,7 +151,7 @@ class DatasetEvaluator(object):
     with a custom loop over data.
 
     The values computed on subsets of the given dataset
-    are aggregated using the VariableAggregationSchemes provided in
+    are aggregated using the AggregationSchemes provided in
     `aggregation_scheme` tags. If no tag is given, the value is **averaged
     over minibatches**. However, care is taken to ensure that variables
     which do not depend on data are not unnecessarily recomputed.
@@ -163,7 +163,7 @@ class DatasetEvaluator(object):
         If a list is given, keys will be set to the variables themselves.
 
         Each variable can be tagged with a
-        :class:`VariableAggregationScheme` that specifies how the value can
+        :class:`AggregationScheme` that specifies how the value can
         be computed for a data set by aggregating minibatches.
 
     """

@@ -5,7 +5,7 @@ import six
 from blocks.utils import update_instance
 
 
-class Dataset(six.Iterator):
+class Dataset(object):
     """A dataset.
 
     Dataset classes implement the interface to a particular dataset.
@@ -19,8 +19,7 @@ class Dataset(six.Iterator):
 
     """
     __metaclass__ = ABCMeta
-    sources = ('features', 'targets')
-    supported_iteration_schemes = tuple()
+    sources = ('features', 'targets')  # Default sources
 
     def __iter__(self):
         """Datasets can return a data stream here for default iteration."""
