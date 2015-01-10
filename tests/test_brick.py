@@ -4,9 +4,11 @@ import theano
 from numpy.testing import assert_allclose, assert_raises
 from theano import tensor
 
-from blocks.bricks import (Application, application, Brick, DEFAULT_SEED,
-                           Identity, lazy, Linear, LinearMaxout, MLP, Tanh)
+from blocks.bricks import (Application, application, Brick,
+                           DEFAULT_SEED, Identity, lazy, Linear,
+                           Maxout, LinearMaxout, MLP, Tanh)
 from blocks.initialization import Constant
+from blocks.utils import shared_floatx
 
 
 class TestBrick(Brick):
@@ -36,6 +38,12 @@ class TestBrick(Brick):
     @delegated_apply.delegate
     def delegate(self):
         return self.second_apply
+
+    @application
+    def access_application_call(self, x, application_call):
+        application_call.add_monitor(shared_floatx(numpy.ones((1,)), 
+                                                   name='test_val'))
+        return x
 
 
 class ParentBrick(Brick):
@@ -162,8 +170,8 @@ def test_tagging():
     z = tensor.vector('z')
 
     def check_output_variable(o):
-        assert o.tag.owner is brick
-        assert o.owner.inputs[0].tag.owner is brick
+        assert o.tag.application_call.brick is brick
+        assert o.owner.inputs[0].tag.application_call.brick is brick
 
     # Case 1: both positional arguments are provided.
     u, v = brick.apply(x, y)
@@ -267,6 +275,18 @@ def test_linear_maxout():
             numpy.ones((4, 24))).reshape(4, 8, 3).max(2))
 
 
+def test_maxout():
+    x = tensor.tensor3()
+    maxout = Maxout(num_pieces=3)
+    y = maxout.apply(x)
+    x_val = numpy.asarray(numpy.random.normal(0, 1, (4, 5, 24)),
+                          dtype=theano.config.floatX)
+    assert_allclose(
+        y.eval({x: x_val}),
+        x_val.reshape(4, 5, 8, 3).max(3))
+    assert y.eval({x: x_val}).shape == (4, 5, 8)
+
+
 def test_activations():
     x = tensor.vector()
     x_val = numpy.random.rand(8).astype(theano.config.floatX)
@@ -294,3 +314,11 @@ def test_mlp():
     mlp.initialize()
     assert_allclose(x_val.dot(numpy.ones((16, 8))),
                     y.eval({x: x_val}), rtol=1e-06)
+
+
+def test_application_call():
+    X = tensor.matrix('X')
+    Brick.lazy = True
+    brick = TestBrick()
+    Y = brick.access_application_call(X)
+    assert Y.tag.application_call.auxiliary_variables[0].name == 'test_val'
