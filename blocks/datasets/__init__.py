@@ -137,7 +137,6 @@ class ContainerDataset(Dataset):
 
     """
     default_scheme = None
-    sources = ("data")
 
     def __init__(self, container):
         if isinstance(container, dict):
@@ -189,6 +188,9 @@ class DataStream(object):
 
     def __init__(self, iteration_scheme=None):
         self.iteration_scheme = iteration_scheme
+        self._reset_request_iterator()
+
+    def _reset_request_iterator(self):
         self.request_iterator = (iter(self.iteration_scheme)
                                  if self.iteration_scheme
                                  else None)
@@ -233,8 +235,8 @@ class DataStream(object):
     def epochs(self):
         """Allow iteration through all epochs."""
         while True:
-            self.next_epoch()
             yield self
+            self.next_epoch()
 
 
 class InitialDataStream(DataStream):
@@ -274,6 +276,10 @@ class InitialDataStream(DataStream):
 
     def next_epoch(self):
         self.data_state = self.dataset.next_epoch(self.data_state)
+        # TODO: switching to the next epoch should not just reset
+        # request iterator. It should switch to the request
+        # stream of the next epoch.
+        self._reset_request_iterator()
 
     def get_data(self, request):
         """Get data from the dataset."""
@@ -298,6 +304,10 @@ class WrapperDataStream(DataStream):
 
     def next_epoch(self):
         self.data_stream.next_epoch()
+        # TODO: switching to the next epoch should not just reset
+        # request iterator. It should switch to the request
+        # stream of the next epoch.
+        self._reset_request_iterator()
 
     def get_data(self, request):
         """Get data from the wrapped data stream.
