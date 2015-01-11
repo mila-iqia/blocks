@@ -3,7 +3,7 @@ from abc import ABCMeta, abstractmethod
 import numpy
 import six
 
-from blocks.utils import update_instance
+from blocks.utils import update_instance, dict_subset
 
 
 class Dataset(object):
@@ -125,25 +125,37 @@ class ContainerDataset(Dataset):
     container : iterable
         The container to provide interface to. The container's
         `__iter__` method should return a new iterator over the
-        container.
+        container. If the container given is an instance of `dict`
+        or `OrderedDict`, its values are interpreted as data channels and
+        its keys are used as source names. Note, that only if
+        the container is an OrderedDict is the order of elements
+        in the returned tuples determined.
 
     .. todo::
 
-        Multiple container, custom source names.
+        Multiple containers, custom source names.
 
     """
     default_scheme = None
     sources = ("data")
 
     def __init__(self, container):
-        self.container = container
+        if isinstance(container, dict):
+            self.sources = tuple(container.keys())
+            self.data_channels = container.values()
+        else:
+            self.sources = ("data",)
+            self.data_channels = [container]
 
     def open(self):
-        return iter(self.container)
+        iterators = [iter(channel) for channel in self.data_channels]
+        while True:
+            yield tuple([next(iterator) for iterator in iterators])
 
     def get_data(self, state, request, sources):
-        assert request is None
-        return next(state)
+        next_as_dict = dict(zip(self.sources, next(state)))
+        subset = dict_subset(next_as_dict, sources)
+        return tuple(subset.values())
 
 
 class DataStream(object):
@@ -156,65 +168,49 @@ class DataStream(object):
 
     Parameters
     ----------
-    data : object
-        An instance of :class:`Dataset` or of :class:`DataStream`. A
-        data stream is typically build from a dataset or by wrapping
-        a data stream, and a reference to this object is necessary
-        to get the default source names.
     iteration_scheme : :class:`IterationScheme`, optional
         The iteration scheme to use when retrieving data. Note that not all
         datasets support the same iteration schemes, some datasets require
         one, and others don't support any. In case when the data stream
         wraps another data stream, the choice of supported iteration
         schemes is typically even more limited.
-    sources : tuple of strings, optional
-        The sources of data to return. By default, all sources of the
-        `data` object are returned.
 
     Attributes
     ----------
     iteration_scheme : object
         The iteration scheme used to retrieve data.
     request_iterator : iterable
-        The iterator over data requested produced by the iteration scheme.
-
+        The iterator over data requests produced by the iteration scheme.
+    sources : tuple of strs
+        The names of the data sources returned by this data stream.
 
     """
     __metaclass__ = ABCMeta
 
-    def __init__(self, data, iteration_scheme=None, sources=None):
-        update_instance(self, locals())
+    def __init__(self, iteration_scheme=None):
+        self.iteration_scheme = iteration_scheme
         self.request_iterator = (iter(self.iteration_scheme)
                                  if self.iteration_scheme
                                  else None)
-
-    @property
-    def sources(self):
-        if getattr(self, '_sources', None) is None:
-            return self.data.sources
-
-    @sources.setter
-    def sources(self, sources):
-        self._sources = sources
 
     def __iter__(self):
         return self
 
     def __next__(self):
         return self.get_data(next(self.request_iterator)
-                             if self.request_iterator else None,
-                             self.sources)
+                             if self.request_iterator else None)
+
+    def next_as_dict(self):
+        return dict(zip(self.sources, next(self)))
 
     @abstractmethod
-    def get_data(self, request, sources):
+    def get_data(self, request):
         """Request data from the dataset or the wrapped stream.
 
         Parameters
         ----------
         request : object
             A request fetched from the `request_iterator`.
-        sources : object
-            The data sources requested.
 
         """
         pass
@@ -242,12 +238,33 @@ class DataStream(object):
 
 
 class InitialDataStream(DataStream):
-    """A stream of data from a dataset."""
+    """A stream of data from a dataset.
+
+    The sources attribute of an `InitialDataStream` is mutable. By
+    changing it one can select the data sources to be returned.
+
+    Parameters
+    ----------
+    dataset : instance of :class:`Dataset`
+        The dataset from which the data is fetched.
+    sources : tuple of strs
+        The data sources to be retrieved from the dataset.
+
+    """
     def __init__(self, dataset, iteration_scheme=None, sources=None):
-        super(InitialDataStream, self).__init__(dataset, iteration_scheme,
-                                                sources)
+        super(InitialDataStream, self).__init__(iteration_scheme)
         update_instance(self, locals())
         self.data_state = self.dataset.open()
+
+    @property
+    def sources(self):
+        if getattr(self, '_sources', None) is None:
+            return self.dataset.sources
+        return self._sources
+
+    @sources.setter
+    def sources(self, sources):
+        self._sources = sources
 
     def close(self):
         self.data_state = self.dataset.close(self.data_state)
@@ -258,19 +275,20 @@ class InitialDataStream(DataStream):
     def next_epoch(self):
         self.data_state = self.dataset.next_epoch(self.data_state)
 
-    def get_data(self, request, sources):
-        """Get data from the dataset.
-
-        """
-        return self.data.get_data(self.data_state, request, sources)
+    def get_data(self, request):
+        """Get data from the dataset."""
+        return self.dataset.get_data(self.data_state, request, self.sources)
 
 
 class WrapperDataStream(DataStream):
     """A data stream that wraps another data stream."""
-    def __init__(self, data_stream, iteration_scheme, sources):
-        super(WrapperDataStream, self).__init__(data_stream, iteration_scheme,
-                                                sources)
+    def __init__(self, data_stream, iteration_scheme):
+        super(WrapperDataStream, self).__init__(iteration_scheme)
         update_instance(self, locals())
+
+    @property
+    def sources(self):
+        return self.data_stream.sources
 
     def close(self):
         self.data_stream.close()
@@ -281,15 +299,10 @@ class WrapperDataStream(DataStream):
     def next_epoch(self):
         self.data_stream.next_epoch()
 
-    def get_data(self, request, sources):
+    def get_data(self, request):
         """Get data from the wrapped data stream.
 
         Should be overriden by descendants for less trivial behaviour.
-
-        .. todo::
-
-            Do we actually need having sources specification for
-            upper level data streams?
 
         """
         assert request is None
@@ -299,10 +312,11 @@ class WrapperDataStream(DataStream):
 class MappingDataStream(WrapperDataStream):
     """Applies a mapping to the data of the wrapped data stream."""
     def __init__(self, data_stream, mapping):
-        super(MappingDataStream, self).__init__(data_stream, None, None)
+        super(MappingDataStream, self).__init__(data_stream, None)
         self.mapping = mapping
 
-    def get_data(self, request, sources):
+    def get_data(self, request):
+        assert request is None
         return self.mapping(next(self.data_stream))
 
 
