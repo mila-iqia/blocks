@@ -3,7 +3,6 @@ from blocks.utils import dict_union
 __author__ = "Dmitry Serdyuk <serdyuk.dmitriy@gmail.com>"
 
 from abc import ABCMeta, abstractmethod
-from itertools import count
 
 import numpy as np
 
@@ -92,34 +91,28 @@ class BeamSearch(Search):
         next_glimpses = self.generator.transition.take_look(
             return_dict=True, **input_dict)
 
-
         self.next_glimpse_computer = function(input_dict.values(),
-                                              next_glimpses)
+                                              next_glimpses.values())
 
-
-        self.outputs = tt.TensorType(config.floatX, (False,) *
+        self.outputs = tt.TensorType('int64', (False,) *
                                      self.generator.get_dim("outputs"))()
         next_readouts = self.generator.readout.readout(
             feedback=self.readout.feedback(self.outputs),
             **input_dict)
 
-        self.next_readouts_computer = function(input_dict.values() +
-                                               [self.outputs],
-                                               [next_readouts])
+        self.next_readouts_computer = next_readouts.eval()
 
         next_outputs, next_states, next_costs = \
             self.generator.compute_next_states(next_readouts,
                                                next_glimpses,
                                                **kwargs)
 
-        self.next_states_computer = function(input_dict.values() +
-                                             [next_readouts, next_glimpses],
-                                             [next_outputs, next_states,
-                                              next_costs])
+        self.next_states_computers = [var.eval() for var in next_states]
+        self.next_outputs_computer = next_outputs.eval()
+        self.next_costs_computer = next_costs.eval()
 
         next_probs = self.generator.readout.emit_probs(next_readouts)
-        self.next_probs_computer = function([next_readouts],
-                                            next_probs)
+        self.next_probs_computer = next_probs.eval()
 
         super(BeamSearch, self).compile(*args, **kwargs)
 
@@ -142,12 +135,12 @@ class BeamSearch(Search):
 
         :param probs: a 3d array of probabilities (time, batch, readout_dim)
         :param beam_size: beam size, number of top probs to return
-        :return:
+        :return: tuple of (indexes, top probabilities)
         """
         args = np.argpartition(-probs.flatten(), beam_size)
         # convert args back
-        # TODO
-
+        indexes = np.unravel_index(args, probs.shape)
+        return indexes, probs[indexes]
 
     def search(self, eol_symbol=-1, max_length=512, **kwargs):
         """Performs greedy search
@@ -176,13 +169,25 @@ class BeamSearch(Search):
             next_glimpses = self.next_glimpse_computer(inputs.values())
             next_readouts = self.next_readouts_computer(inputs.values())
 
-            next_outputs, next_states, next_costs = \
-                self.next_states_computer(inputs.values() + [next_readouts,
-                                                             next_glimpses])
+            next_outputs = self.next_outputs_computer(inputs.values() +
+                                                      next_readouts.values() +
+                                                      [next_glimpses])
+            next_states = [computer(inputs.values() +
+                                    next_readouts.values() +
+                                    [next_glimpses])
+                           for computer in self.next_states_computers]
+            next_costs = self.next_costs_computer(inputs.values() +
+                                                  next_readouts.values() +
+                                                  [next_glimpses])
             next_probs = self.next_probs_computer(next_readouts)
 
             # Choose top beam_size
-            batches = self._chunks(next_probs, self.batch_size)
+            prob_batches = self._chunks(next_probs, self.batch_size)
+            # Top probs
+            indexes, top_probs = zip(*[self._top_probs(batch, self.beam_size)
+                                       for batch in prob_batches])
+            outputs = [ind[-1] for ind in indexes]
+            #current_outputs.
             # Next state
             # Next output
 
