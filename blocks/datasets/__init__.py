@@ -3,7 +3,7 @@ from abc import ABCMeta, abstractmethod
 import numpy
 import six
 
-from blocks.utils import update_instance, dict_subset
+from blocks.utils import update_instance
 
 
 class Dataset(object):
@@ -13,10 +13,20 @@ class Dataset(object):
     interface consists of a number of routines to manipulate so called
     "state" objects, e.g. open, reset and close them.
 
+    Parameters
+    ----------
+    sources : tuple of strings, optional
+        The data sources to load and return by :meth:`get_data`. By default
+        all data sources are returned.
+
     Attributes
     ----------
     sources : tuple of strings
         The sources this dataset can provide.
+    default_iteration_scheme : :class:`IterationScheme`, optional
+        The default iteration scheme that will be used by
+        :meth:`get_default_stream` to create a data stream without needing
+        to specify what iteration scheme to use.
 
     Notes
     -----
@@ -27,6 +37,12 @@ class Dataset(object):
 
     """
     __metaclass__ = ABCMeta
+
+    def __init__(self, sources=None):
+        if sources is not None:
+            if not all(source in self.sources for source in sources):
+                raise ValueError("Unable to provide requested sources")
+            self.sources = sources
 
     @abstractmethod
     def open(self):
@@ -47,38 +63,28 @@ class Dataset(object):
     def reset(self, state):
         """Resets the state.
 
-        The default implementation closes the state and opens a new one.
-        A more efficient implementation can override the default one
-        in descendant classes.
-
         Returns
         -------
         state : object
-            A reseted state.
+            A reset state.
+
+        Notes
+        -----
+        The default implementation closes the state and opens a new one. A
+        more efficient implementation (e.g. using ``file.seek(0) instead of
+        closing and re-opening the file) can override the default one in
+        derived classes.
 
         """
         self.close(state)
         return self.open()
-
-    def next_epoch(self, state):
-        """Switches the state to the next epoch.
-
-        The default implementation simply resets the state.
-
-        Returns
-        -------
-        state : object
-            The state corresponding to the start of next epoch.
-
-        """
-        return self.reset(state)
 
     def close(self, state):
         """Cleanly close the dataset e.g. close file handles."""
         pass
 
     @abstractmethod
-    def get_data(self, state=None, request=None, sources=None):
+    def get_data(self, state=None, request=None):
         """Request data from the dataset.
 
         Parameters
@@ -90,9 +96,6 @@ class Dataset(object):
             If supported, the request for a particular part of the data
             e.g. the number of examples to return, or the indices of a
             particular minimbatch of examples.
-        sources : tuple of strings, optional
-            The data sources to return. By default all data sources are
-            returned.
 
         .. todo::
 
@@ -103,18 +106,16 @@ class Dataset(object):
         Returns
         -------
         tuple
-            A tuple of data.
+            A tuple of data matching the order of :attr:`sources`.
 
         """
         raise NotImplementedError
 
-    def open_stream(self):
-        """Use the default iteration scheme to construct a data stream.
-
-        """
+    def get_default_stream(self):
+        """Use the default iteration scheme to construct a data stream."""
         if not hasattr(self, 'default_scheme'):
-            raise NotImplementedError("Does not provide a default iterator")
-        return InitialDataStream(self, self.default_scheme)
+            raise ValueError("Dataset does not provide a default iterator")
+        return DataStream(self, iteration_scheme=self.default_scheme)
 
 
 class ContainerDataset(Dataset):
@@ -133,17 +134,19 @@ class ContainerDataset(Dataset):
 
     .. todo::
 
-        Multiple containers, custom source names.
+        Multiple containers, returning batches.
 
     """
     default_scheme = None
 
-    def __init__(self, container):
+    def __init__(self, container, sources=None):
         if isinstance(container, dict):
-            self.sources = tuple(container.keys())
-            self.data_channels = container.values()
+            self.sources = (sources if sources is not None
+                            else tuple(container.keys()))
+            self.data_channels = [container[source] for source in self.sources]
         else:
-            self.sources = ("data",)
+            self.sources = ('data',)
+            assert sources == self.sources or sources is None
             self.data_channels = [container]
 
     def open(self):
@@ -151,19 +154,19 @@ class ContainerDataset(Dataset):
         while True:
             yield tuple([next(iterator) for iterator in iterators])
 
-    def get_data(self, state, request, sources):
-        next_as_dict = dict(zip(self.sources, next(state)))
-        subset = dict_subset(next_as_dict, sources)
-        return tuple(subset.values())
+    def get_data(self, state, request=None):
+        if request is not None:
+            raise ValueError("Does not accept requests; only next")
+        return next(state)
 
 
-class DataStream(object):
+class _DataStream(object):
     """A stream of data separated into epochs.
 
-    A data stream is an iterable stream of minibatches. In fact it acts
-    like a standard Python file, with an additional capability of switching
-    to the next epoch. Its `reset` method replaces `file_.seek(0)` idiom
-    returning a stream back to the same state it had right after creation.
+    A data stream is an iterable stream of examples/minibatches. It shares
+    similarities with Python file handles return by the ``open`` method.
+    Data streams can be closed using the :meth:`close` method and reset
+    using :meth:`reset` (similar to ``f.seek(0)``).
 
     Parameters
     ----------
@@ -172,41 +175,26 @@ class DataStream(object):
         datasets support the same iteration schemes, some datasets require
         one, and others don't support any. In case when the data stream
         wraps another data stream, the choice of supported iteration
-        schemes is typically even more limited.
+        schemes is typically even more limited. Be sure to read the
+        documentation of the dataset or data stream in question.
 
     Attributes
     ----------
-    iteration_scheme : object
-        The iteration scheme used to retrieve data.
-    request_iterator : iterable
-        The iterator over data requests produced by the iteration scheme.
-    sources : tuple of strs
-        The names of the data sources returned by this data stream.
+    iteration_scheme : :class:`IterationScheme`
+        The iteration scheme used to retrieve data. Can be ``None`` when
+        not used.
+    sources : tuple of strings
+        The names of the data sources returned by this data stream, as
+        given by the dataset.
 
     """
     __metaclass__ = ABCMeta
 
     def __init__(self, iteration_scheme=None):
         self.iteration_scheme = iteration_scheme
-        self._reset_request_iterator()
-
-    def _reset_request_iterator(self):
-        self.request_iterator = (iter(self.iteration_scheme)
-                                 if self.iteration_scheme
-                                 else None)
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        return self.get_data(next(self.request_iterator)
-                             if self.request_iterator else None)
-
-    def next_as_dict(self):
-        return dict(zip(self.sources, next(self)))
 
     @abstractmethod
-    def get_data(self, request):
+    def get_data(self, request=None):
         """Request data from the dataset or the wrapped stream.
 
         Parameters
@@ -228,45 +216,49 @@ class DataStream(object):
         pass
 
     @abstractmethod
-    def next_epoch(self):
-        """Switch to the next epoch of data. """
-        pass
+    def get_epoch_iterator(self, as_dict=False):
+        return DataIterator(self, self.iteration_scheme.get_request_iterator()
+                            if self.iteration_scheme else None,
+                            as_dict=as_dict)
 
+    @property
     def epochs(self):
-        """Allow iteration through all epochs."""
+        """Allow iteration through all epochs.
+
+        Notes
+        -----
+        This method uses the :meth:`get_epoch_iterator` method to retrieve
+        the :class:`DataIterator` for each epoch. In most implementations,
+        this method resets the state of the dataset so that the new epoch
+        can read the data from the beginning. However, this behavior only
+        works as long as the ``epochs`` property is iterated over using
+        e.g. ``izip`` or ``for epoch in stream.epochs``. If you create the
+        data iterators in advance (e.g. using ``for i, epoch in
+        zip(range(10), stream.epochs``) you must call the :meth:`reset`
+        method yourself.
+
+        """
         while True:
-            yield self
-            self.next_epoch()
+            yield self.get_epoch_iterator()
 
 
-class InitialDataStream(DataStream):
+class DataStream(_DataStream):
     """A stream of data from a dataset.
-
-    The sources attribute of an `InitialDataStream` is mutable. By
-    changing it one can select the data sources to be returned.
 
     Parameters
     ----------
     dataset : instance of :class:`Dataset`
         The dataset from which the data is fetched.
-    sources : tuple of strs
-        The data sources to be retrieved from the dataset.
 
     """
-    def __init__(self, dataset, iteration_scheme=None, sources=None):
-        super(InitialDataStream, self).__init__(iteration_scheme)
-        update_instance(self, locals())
+    def __init__(self, dataset, **kwargs):
+        super(DataStream, self).__init__(**kwargs)
+        self.dataset = dataset
         self.data_state = self.dataset.open()
 
     @property
     def sources(self):
-        if getattr(self, '_sources', None) is None:
-            return self.dataset.sources
-        return self._sources
-
-    @sources.setter
-    def sources(self, sources):
-        self._sources = sources
+        return self.dataset.sources
 
     def close(self):
         self.data_state = self.dataset.close(self.data_state)
@@ -274,23 +266,29 @@ class InitialDataStream(DataStream):
     def reset(self):
         self.data_state = self.dataset.reset(self.data_state)
 
-    def next_epoch(self):
-        self.data_state = self.dataset.next_epoch(self.data_state)
-        # TODO: switching to the next epoch should not just reset
-        # request iterator. It should switch to the request
-        # stream of the next epoch.
-        self._reset_request_iterator()
-
-    def get_data(self, request):
+    def get_data(self, request=None):
         """Get data from the dataset."""
-        return self.dataset.get_data(self.data_state, request, self.sources)
+        return self.dataset.get_data(self.data_state, request)
+
+    def get_epoch_iterator(self, **kwargs):
+        """Get an epoch iterator for the data stream.
+
+        Notes
+        -----
+        This also calls the data stream's :meth:`reset` method. If you have a
+        data stream where a single epoch doesn't iterate over the entire data
+        set, you should overwrite this method.
+
+        """
+        self.reset()
+        return super(DataStream, self).get_epoch_iterator(**kwargs)
 
 
-class WrapperDataStream(DataStream):
+class DataStreamWrapper(_DataStream):
     """A data stream that wraps another data stream."""
-    def __init__(self, data_stream, iteration_scheme):
-        super(WrapperDataStream, self).__init__(iteration_scheme)
-        update_instance(self, locals())
+    def __init__(self, data_stream, **kwargs):
+        super(DataStreamWrapper, self).__init__(**kwargs)
+        self.data_stream = data_stream
 
     @property
     def sources(self):
@@ -302,35 +300,32 @@ class WrapperDataStream(DataStream):
     def reset(self):
         self.data_stream.reset()
 
-    def next_epoch(self):
-        self.data_stream.next_epoch()
-        # TODO: switching to the next epoch should not just reset
-        # request iterator. It should switch to the request
-        # stream of the next epoch.
-        self._reset_request_iterator()
+    def get_epoch_iterator(self, **kwargs):
+        """Get an epoch iterator for the wrapped data set
 
-    def get_data(self, request):
-        """Get data from the wrapped data stream.
-
-        Should be overriden by descendants for less trivial behaviour.
+        Notes
+        -----
+        This default implementation assumes that the epochs of the wrapped
+        data stream are less or equal in length to the original data
+        stream. Implementations for which this is not true should request
+        new epoch iterators from the child data set when necessary.
 
         """
-        assert request is None
-        return next(self.data_stream)
+        self.child_epoch_iterator = self.data_stream.get_epoch_iterator()
+        return super(DataStreamWrapper, self).get_epoch_iterator(**kwargs)
 
 
-class MappingDataStream(WrapperDataStream):
+class DataStreamMapping(DataStreamWrapper):
     """Applies a mapping to the data of the wrapped data stream."""
     def __init__(self, data_stream, mapping):
-        super(MappingDataStream, self).__init__(data_stream, None)
+        super(DataStreamMapping, self).__init__(data_stream)
         self.mapping = mapping
 
-    def get_data(self, request):
-        assert request is None
-        return self.mapping(next(self.data_stream))
+    def get_data(self):
+        return self.mapping(next(self.child_epoch_iterator))
 
 
-class CachedDataStream(WrapperDataStream):
+class CachedDataStream(DataStreamWrapper):
     """Cache examples when sequentially reading a dataset.
 
     Given a data stream which reads large chunks of data, this data
@@ -340,30 +335,54 @@ class CachedDataStream(WrapperDataStream):
     Parameters
     ----------
     iteration_scheme : :class:`IterationScheme`
-        Note that this iteration scheme must return either batch sizes
-        (integers) or sequential batches (slices), which must necessarily
-        be smaller than the child data stream i.e. the batches returned
-        must be smaller than the cache size.
+        Note that this iteration scheme must return batch sizes (integers),
+        which must necessarily be smaller than the child data stream i.e.
+        the batches returned must be smaller than the cache size.
 
     """
-    def __init__(self, data_stream, iteration_scheme, *args, **kwargs):
-        super(CachedDataStream, self).__init__(data_stream, iteration_scheme,
-                                               *args, **kwargs)
+    def __init__(self, data_stream, iteration_scheme):
+        super(CachedDataStream, self).__init__(
+            data_stream, iteration_sheme=iteration_scheme)
         self.cache = [[] for source in self.sources]
 
-    def get_data(self, request=None, sources=None):
-        if isinstance(request, six.integer_types):
-            batch_size = request
-        elif isinstance(request, slice):
-            batch_size = request.stop - request.start
-        if batch_size >= len(self.cache[0]):
-            self._cache(sources)
+    def get_data(self, request):
+        if request >= len(self.cache[0]):
+            self._cache()
         data = []
         for i, cache in enumerate(self.cache):
-            data.append(numpy.asarray(cache[:batch_size]))
-            self.cache[i] = cache[batch_size:]
+            data.append(numpy.asarray(cache[:request]))
+            self.cache[i] = cache[request:]
         return tuple(data)
 
-    def _cache(self, sources):
-        for cache, data in zip(self.cache, next(self.data_stream)):
+    def _cache(self):
+        for cache, data in zip(self.cache, next(self.child_epoch_iterator)):
             cache.extend(data)
+
+
+class DataIterator(six.Iterator):
+    """An iterator over data, representing a single epoch.
+
+    Parameters
+    ----------
+    data_stream : :class:`DataStream` or :class:`DataStreamWrapper`
+        The data stream over which to iterate.
+    request_iterator : iterator
+        An iterator which returns the request to pass to the data stream
+        for each step.
+
+   """
+    def __init__(self, data_stream, request_iterator=None, as_dict=False):
+        update_instance(self, locals())
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.request_iterator is not None:
+            data = self.data_stream.get_data(next(self.request_iterator))
+        else:
+            data = self.data_stream.get_data()
+        if self.as_dict:
+            return dict(zip(self.data_stream.sources, data))
+        else:
+            return data

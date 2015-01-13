@@ -11,18 +11,22 @@ class IterationScheme(object):
 
     Notes
     -----
-    Iteration schemes implement the ``__iter__`` method, returning
-    generators or iterators.
+    Iteration schemes implement the :meth:`get_request_iterator` method,
+    which returns an iterator type (e.g. a generator or a class which
+    implements the `iterator protocol`_).
 
     Stochastic iteration schemes should generally not be shared between
     different data schemes, because it would make experiments harder to
     reproduce.
 
+    .. _iterator protocol:
+       https://docs.python.org/3.3/library/stdtypes.html#iterator-types
+
     """
     __metaclass__ = ABCMeta
 
     @abstractmethod
-    def __iter__(self):
+    def get_request_iterator(self):
         raise NotImplementedError
 
 
@@ -61,7 +65,7 @@ class ConstantScheme(BatchSizeScheme):
         self.batch_size = batch_size
         self.times = times
 
-    def __iter__(self):
+    def get_request_iterator(self):
         if self.times is None:
             return itertools.repeat(self.batch_size)
         else:
@@ -83,6 +87,6 @@ class SequentialScheme(BatchScheme):
         self.num_examples = num_examples
         self.batch_size = batch_size
 
-    def __iter__(self):
+    def get_request_iterator(self):
         return (slice(x, min(self.num_examples, x + self.batch_size))
                 for x in range(0, self.num_examples, self.batch_size))

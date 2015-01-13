@@ -41,7 +41,9 @@ class MNIST(Dataset):
         The last example to load
 
     """
-    def __init__(self, which_set, start=None, stop=None):
+    sources = ('features', 'targets')
+
+    def __init__(self, which_set, start=None, stop=None, **kwargs):
         data_path = '/Users/bartvanmerrienboer/data/'
         if which_set == 'train':
             data = 'train-images-idx3-ubyte'
@@ -59,6 +61,7 @@ class MNIST(Dataset):
         self.X, self.y = X, y
         self.num_examples = len(X)
         self.default_scheme = SequentialScheme(self.num_examples, 1)
+        super(MNIST, self).__init__(**kwargs)
 
     def get_data(self, state=None, request=None, sources=None):
         data = dict(zip(self.sources, (self.X, self.y)))

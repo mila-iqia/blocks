@@ -32,6 +32,7 @@ Table of contents
    getting_started
    blocks
    initialization
+   datasets
    utils
    serialization
    graph
