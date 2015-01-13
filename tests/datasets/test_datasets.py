@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from itertools import izip
 
 from blocks.datasets import ContainerDataset, DataStream, DataStreamMapping

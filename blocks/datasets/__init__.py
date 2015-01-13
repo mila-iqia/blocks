@@ -275,9 +275,9 @@ class DataStream(_DataStream):
 
         Notes
         -----
-        This also calls the data stream's :meth:`reset` method. If you have a
-        data stream where a single epoch doesn't iterate over the entire data
-        set, you should overwrite this method.
+        This also calls the data stream's :meth:`reset` method. If you have
+        a data stream where a single epoch doesn't iterate over the entire
+        data set, you should overwrite this method.
 
         """
         self.reset()
