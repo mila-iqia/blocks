@@ -71,8 +71,8 @@ class Dataset(object):
         Notes
         -----
         The default implementation closes the state and opens a new one. A
-        more efficient implementation (e.g. using ``file.seek(0) instead of
-        closing and re-opening the file) can override the default one in
+        more efficient implementation (e.g. using ``file.seek(0)`` instead
+        of closing and re-opening the file) can override the default one in
         derived classes.
 
         """
