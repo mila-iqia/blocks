@@ -33,9 +33,7 @@ class AggregationScheme(object):
 
     @abstractmethod
     def get_aggregator(self):
-        """Return a new Aggregator for this variable.
-
-        """
+        """Return a new Aggregator for this variable."""
         pass
 
 
@@ -223,9 +221,7 @@ class DatasetEvaluator(object):
         self._readout_fun = readout_fun
 
     def _initialize_computation(self):
-        """Initialize the aggragators to process a dataset.
-
-        """
+        """Initialize the aggragators to process a dataset."""
         self._initialized = True
         if self._initialize_fun is not None:
             self._initialize_fun()
@@ -245,7 +241,7 @@ class DatasetEvaluator(object):
         return self._readout_fun()
 
     def evaluate(self, data_set_view):
-        """Compute the expressions over an iterable data set
+        """Compute the expressions over an iterable data set.
 
         Parameters
         ----------
@@ -307,9 +303,7 @@ class MinibatchEvaluator(object):
 
     @property
     def updates(self):
-        """Updates that have to be called for each minibatch.
-
-        """
+        """Updates that have to be called for each minibatch."""
         return self._updates
 
     def read_expressions(self):

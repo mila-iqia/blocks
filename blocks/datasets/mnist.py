@@ -4,6 +4,7 @@ import struct
 import numpy
 import theano
 
+from blocks import config
 from blocks.datasets import Dataset
 from blocks.datasets.schemes import SequentialScheme
 
@@ -44,7 +45,6 @@ class MNIST(Dataset):
     sources = ('features', 'targets')
 
     def __init__(self, which_set, start=None, stop=None, **kwargs):
-        data_path = '/Users/bartvanmerrienboer/data/'
         if which_set == 'train':
             data = 'train-images-idx3-ubyte'
             labels = 'train-labels-idx1-ubyte'
@@ -54,10 +54,11 @@ class MNIST(Dataset):
         else:
             raise ValueError("MNIST only has a train and test set")
         X = read_mnist_images(
-            os.path.join(data_path, data), theano.config.floatX)[start:stop]
+            os.path.join(config.data_path, data),
+            theano.config.floatX)[start:stop]
         X = X.reshape((X.shape[0], numpy.prod(X.shape[1:])))
         y = read_mnist_labels(
-            os.path.join(data_path, labels))[start:stop, numpy.newaxis]
+            os.path.join(config.data_path, labels))[start:stop, numpy.newaxis]
         self.X, self.y = X, y
         self.num_examples = len(X)
         self.default_scheme = SequentialScheme(self.num_examples, 1)

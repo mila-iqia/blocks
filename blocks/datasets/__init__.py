@@ -71,13 +71,26 @@ class Dataset(object):
         Notes
         -----
         The default implementation closes the state and opens a new one. A
-        more efficient implementation (e.g. using ``file.seek(0) instead of
-        closing and re-opening the file) can override the default one in
+        more efficient implementation (e.g. using ``file.seek(0)`` instead
+        of closing and re-opening the file) can override the default one in
         derived classes.
 
         """
         self.close(state)
         return self.open()
+
+    def next_epoch(self, state):
+        """Switches the dataset state to the next epoch.
+
+        The default implementation for this method is to reset the state.
+
+        Returns
+        -------
+        state : object
+            The state for the next epoch.
+
+        """
+        return self.reset(state)
 
     def close(self, state):
         """Cleanly close the dataset e.g. close file handles."""
@@ -216,6 +229,11 @@ class AbstractDataStream(object):
         pass
 
     @abstractmethod
+    def next_epoch(self):
+        """Switch the data stream to the next epoch."""
+        pass
+
+    @abstractmethod
     def get_epoch_iterator(self, as_dict=False):
         return DataIterator(self, self.iteration_scheme.get_request_iterator()
                             if self.iteration_scheme else None,
@@ -255,6 +273,7 @@ class DataStream(AbstractDataStream):
         super(DataStream, self).__init__(**kwargs)
         self.dataset = dataset
         self.data_state = self.dataset.open()
+        self._fresh_state = True
 
     @property
     def sources(self):
@@ -265,22 +284,21 @@ class DataStream(AbstractDataStream):
 
     def reset(self):
         self.data_state = self.dataset.reset(self.data_state)
+        self._fresh_state = True
+
+    def next_epoch(self):
+        self.data_state = self.dataset.next_epoch(self.data_state)
 
     def get_data(self, request=None):
         """Get data from the dataset."""
         return self.dataset.get_data(self.data_state, request)
 
     def get_epoch_iterator(self, **kwargs):
-        """Get an epoch iterator for the data stream.
-
-        Notes
-        -----
-        This also calls the data stream's :meth:`reset` method. If you have
-        a data stream where a single epoch doesn't iterate over the entire
-        data set, you should overwrite this method.
-
-        """
-        self.reset()
+        """Get an epoch iterator for the data stream."""
+        if not self._fresh_state:
+            self.next_epoch()
+        else:
+            self._fresh_state = False
         return super(DataStream, self).get_epoch_iterator(**kwargs)
 
 
@@ -300,8 +318,11 @@ class DataStreamWrapper(AbstractDataStream):
     def reset(self):
         self.data_stream.reset()
 
+    def next_epoch(self):
+        self.data_stream.next_epoch()
+
     def get_epoch_iterator(self, **kwargs):
-        """Get an epoch iterator for the wrapped data set
+        """Get an epoch iterator for the wrapped data set.
 
         Notes
         -----
@@ -370,7 +391,7 @@ class DataIterator(six.Iterator):
         An iterator which returns the request to pass to the data stream
         for each step.
 
-   """
+    """
     def __init__(self, data_stream, request_iterator=None, as_dict=False):
         update_instance(self, locals())
 
