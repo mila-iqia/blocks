@@ -160,7 +160,7 @@ class ContainerDataset(Dataset):
         return next(state)
 
 
-class _DataStream(object):
+class AbstractDataStream(object):
     """A stream of data separated into epochs.
 
     A data stream is an iterable stream of examples/minibatches. It shares
@@ -242,7 +242,7 @@ class _DataStream(object):
             yield self.get_epoch_iterator()
 
 
-class DataStream(_DataStream):
+class DataStream(AbstractDataStream):
     """A stream of data from a dataset.
 
     Parameters
@@ -284,7 +284,7 @@ class DataStream(_DataStream):
         return super(DataStream, self).get_epoch_iterator(**kwargs)
 
 
-class DataStreamWrapper(_DataStream):
+class DataStreamWrapper(AbstractDataStream):
     """A data stream that wraps another data stream."""
     def __init__(self, data_stream, **kwargs):
         super(DataStreamWrapper, self).__init__(**kwargs)
