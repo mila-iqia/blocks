@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 from six.moves import zip
 
 from blocks.datasets import ContainerDataset, DataStreamMapping
@@ -32,8 +34,8 @@ def test_dataset():
 def test_sources_selection():
     features = [5, 6, 7, 1]
     targets = [1, 0, 1, 1]
-    stream = ContainerDataset({'features': features,
-                               'targets': targets}).get_default_stream()
+    stream = ContainerDataset(OrderedDict(
+        [('features', features), ('targets', targets)])).get_default_stream()
     assert list(stream.get_epoch_iterator()) == list(zip(features, targets))
 
     stream = ContainerDataset({'features': features, 'targets': targets},
