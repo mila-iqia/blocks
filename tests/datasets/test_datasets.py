@@ -60,8 +60,12 @@ def test_data_driven_epochs():
             return (epoch_iter, data_iter)
 
         def next_epoch(self, state):
-            data_iter = iter(next(state[0]))
-            return (state[0], data_iter)
+            try:
+                data_iter = iter(next(state[0]))
+                return (state[0], data_iter)
+            except StopIteration:
+                return self.open()
+
 
         def get_data(self, state, request):
             data = []
@@ -75,8 +79,10 @@ def test_data_driven_epochs():
     stream = TestDataset().get_default_stream()
     assert list(stream.get_epoch_iterator()) == epochs[0]
     assert list(stream.get_epoch_iterator()) == epochs[1]
+    assert list(stream.get_epoch_iterator()) == epochs[0]
+
     stream.reset()
-    for i, epoch in enumerate(stream.epochs):
+    for i, epoch in zip(range(2), stream.epochs):
         assert list(epoch) == epochs[i]
 
     # test scheme reseting between epochs
@@ -89,5 +95,5 @@ def test_data_driven_epochs():
     epochs.append([([1],), ([2, 3],), ([4],)])
     epochs.append([([5],), ([6, 7],), ([8],)])
     stream = DataStream(TestDataset(), iteration_scheme=TestScheme())
-    for i, epoch in enumerate(stream.epochs):
+    for i, epoch in zip(range(2), stream.epochs):
         assert list(epoch) == epochs[i]
