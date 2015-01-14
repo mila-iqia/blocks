@@ -13,8 +13,10 @@ If a setting is not configured and does not provide a default, a
 
 Configuration values can be accessed as attributes of ``blocks.config``.
 
+    >>> import os
     >>> from blocks import config
-    >>> print config.data_path
+    >>> print(config.data_path) # doctest: +SKIP
+    '~/datasets'
 
 """
 import logging
@@ -68,5 +70,4 @@ class Configuration(object):
                             'type': type}
 
 config = Configuration()
-
 config.add_config('data_path', env_var='BLOCKS_DATA_PATH', type=str)
