@@ -59,7 +59,7 @@ class Configuration(object):
         if value is NOT_SET:
             raise ConfigurationError("Configuration not set and no default "
                                      "provided: {}.".format(key))
-        elif type is None:
+        if type is None:
             return value
         else:
             return config['type'](value)
