@@ -35,7 +35,8 @@ The following configurations are supported:
    environment variable ``BLOCKS_DATA_PATH``.
 
 .. _YAML: http://yaml.org/
-.. _environment variables: https://en.wikipedia.org/wiki/Environment_variable
+.. _environment variables:
+   https://en.wikipedia.org/wiki/Environment_variable
 
 """
 import logging
