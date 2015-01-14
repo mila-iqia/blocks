@@ -2,8 +2,7 @@
 
 Blocks allows module-wide configuration values to be set using a YAML
 configuration file and environment variables. Environment variables
-override the configuration file which in its turn overrides the defaults
-(if they exist).
+override the configuration file which in its turn overrides the defaults.
 
 The configuration file to used can be set using the ``BLOCKS_CONFIG``
 environment variable. Otherwise, the file ``~/.blocksrc`` is used if it
@@ -14,7 +13,8 @@ If a setting is not configured and does not provide a default, a
 
 Configuration values can be accessed as attributes of ``blocks.config``.
 
-    >>> from blocks import config >>> print config.data_path
+    >>> from blocks import config
+    >>> print config.data_path
 
 """
 import logging
@@ -55,11 +55,12 @@ class Configuration(object):
         else:
             value = config['default']
         if value is NOT_SET:
-            raise ConfigurationError("Configuration not set: {}.".format(key))
+            raise ConfigurationError("Configuration not set and no default "
+                                     "provided: {}.".format(key))
         elif type is None:
             return value
         else:
-            return type(value)
+            return config['type'](value)
 
     def add_config(self, key, default=NOT_SET, env_var=None, type=None):
         self.config[key] = {'default': default,
@@ -68,4 +69,4 @@ class Configuration(object):
 
 config = Configuration()
 
-config.add_argument('data_path', env_var='BLOCKS_DATA_PATH', type=str)
+config.add_config('data_path', env_var='BLOCKS_DATA_PATH', type=str)
