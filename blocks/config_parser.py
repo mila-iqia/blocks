@@ -64,7 +64,30 @@ class Configuration(object):
         else:
             return config['type'](value)
 
-    def add_config(self, key, default=NOT_SET, env_var=None, type=None):
+    def add_config(self, key, type, default=NOT_SET, env_var=None):
+        """Add a configuration setting.
+
+        Parameters
+        ----------
+        key : str
+            The name of the configuration setting. This must be a valid
+            Python attribute name i.e. alphanumeric with underscores.
+        type : function
+            A function such as ``float``, ``int`` or ``str`` which takes
+            the configuration value and returns an object of the correct
+            type.  Note that the values retrieved from environment
+            variables are always strings, while those retrieved from the
+            YAML file might already be parsed. Hence, the function provided
+            here must accept both types of input.
+        default : object, optional
+            The default configuration to return if not set. By default none
+            is set and an error is raised instead.
+        env_var : str, optional
+            The environment variable name that holds this configuration
+            value. If not given, this configuration can only be set in the
+            YAML configuration file.
+
+        """
         self.config[key] = {'default': default,
                             'env_var': env_var,
                             'type': type}
