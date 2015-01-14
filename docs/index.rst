@@ -30,6 +30,7 @@ Table of contents
 .. toctree::
 
    getting_started
+   configuration
    blocks
    initialization
    datasets
