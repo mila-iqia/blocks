@@ -69,7 +69,7 @@ class MainLoop(object):
             self.trainer.log = self.log
             self._run_extensions('before_training')
             self.trainer.initialize()
-            for epoch in self.data_stream:
+            for epoch in self.data_stream.epochs:
                 self._run_extensions('before_epoch')
                 for batch in epoch:
                     self._run_extensions('before_batch', batch)
