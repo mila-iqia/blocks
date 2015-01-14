@@ -34,14 +34,14 @@ class ConfigurationError(Exception):
 
 
 class Configuration(object):
-    def __init__(self, yaml_file=None):
+    def __init__(self):
         if 'BLOCKS_CONFIG' in os.environ:
-            yaml_filename = os.environ['BLOCKS_CONFIG']
+            yaml_file = os.environ['BLOCKS_CONFIG']
         else:
-            yaml_filename = os.path.expanduser('~/.blocksrc')
-        if os.path.isfile(yaml_filename):
-            yaml_file = open(yaml_filename)
-            self.yaml_settings = yaml.safe_load(yaml_file)
+            yaml_file = os.path.expanduser('~/.blocksrc')
+        if os.path.isfile(yaml_file):
+            with open(yaml_file) as f:
+                self.yaml_settings = yaml.safe_load(f)
         else:
             self.yaml_settings = {}
         self.config = {}
