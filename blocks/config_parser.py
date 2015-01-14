@@ -1,6 +1,6 @@
 """Module level configuration.
 
-"Blocks allows module-wide configuration values to be set using a YAML
+Blocks allows module-wide configuration values to be set using a YAML
 configuration file and environment variables. Environment variables
 override the configuration file which in its turn overrides the defaults.
 
