@@ -3,7 +3,7 @@ from abc import ABCMeta, abstractmethod
 
 
 class IterationScheme(object):
-    """An iteration scheme
+    """An iteration scheme.
 
     Iteration schemes provide a dataset-agnostic iteration scheme, such as
     sequential batches, shuffled batches, etc. for datasets that choose to

@@ -301,7 +301,7 @@ class DataStreamWrapper(AbstractDataStream):
         self.data_stream.reset()
 
     def get_epoch_iterator(self, **kwargs):
-        """Get an epoch iterator for the wrapped data set
+        """Get an epoch iterator for the wrapped data set.
 
         Notes
         -----
@@ -370,7 +370,7 @@ class DataIterator(six.Iterator):
         An iterator which returns the request to pass to the data stream
         for each step.
 
-   """
+    """
     def __init__(self, data_stream, request_iterator=None, as_dict=False):
         update_instance(self, locals())
 
