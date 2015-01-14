@@ -228,14 +228,14 @@ class AbstractDataStream(object):
         Notes
         -----
         This method uses the :meth:`get_epoch_iterator` method to retrieve
-        the :class:`DataIterator` for each epoch. In most implementations,
-        this method resets the state of the dataset so that the new epoch
-        can read the data from the beginning. However, this behavior only
-        works as long as the ``epochs`` property is iterated over using
-        e.g. ``izip`` or ``for epoch in stream.epochs``. If you create the
-        data iterators in advance (e.g. using ``for i, epoch in
-        zip(range(10), stream.epochs``) you must call the :meth:`reset`
-        method yourself.
+        the :class:`DataIterator` for each epoch. The default
+        implementation of this method resets the state of the data stream
+        so that the new epoch can read the data from the beginning.
+        However, this behavior only works as long as the ``epochs``
+        property is iterated over using e.g. ``for epoch in
+        stream.epochs``. If you create the data iterators in advance (e.g.
+        using ``for i, epoch in zip(range(10), stream.epochs`` in Python 2)
+        you must call the :meth:`reset` method yourself.
 
         """
         while True:
