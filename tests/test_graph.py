@@ -1,7 +1,9 @@
+from numpy.testing import assert_allclose
 from theano import tensor
+from theano.tensor.shared_randomstreams import RandomStreams
 
 from blocks.bricks import Brick
-from blocks.graph import ComputationGraph
+from blocks.graph import apply_noise, ComputationGraph
 from tests.bricks.test_bricks import TestBrick
 
 
@@ -38,3 +40,15 @@ def test_computation_graph():
     cg2 = cg.replace({z: r})
     assert set(cg2.inputs) == {r}
     assert set([v.name for v in cg2.outputs]) == {'a', 'b'}
+
+
+def test_apply_noise():
+    x = tensor.scalar()
+    y = tensor.scalar()
+    z = x + y
+
+    cg = ComputationGraph([z])
+    rng = RandomStreams(1)
+    noised_cg = apply_noise(cg, [y], 1, rng)
+    assert_allclose(noised_cg.outputs[0].eval({x: 1., y: 1.}),
+                    2 + RandomStreams(1).normal().eval())
