@@ -45,8 +45,9 @@ def unpack(arg, singleton=False):
         will be cast to a list before returning. Any other variable
         will be returned as is.
     singleton : bool
-        If ``True``, `arg` is expected to be a singleton and an exception
-        is raised if this is not the case. ``False`` by default.
+        If ``True``, `arg` is expected to be a singleton (a list or tuple
+        with exactly one element) and an exception is raised if this is not
+        the case. ``False`` by default.
 
     Returns
     -------
