@@ -70,7 +70,7 @@ class Configuration(object):
         if key not in self.config:
             raise ConfigurationError("Unknown configuration: {}".format(key))
         config = self.config[key]
-        if config['env_var'] in os.environ:
+        if config['env_var'] is not None and config['env_var'] in os.environ:
             value = os.environ[config['env_var']]
         elif key in self.yaml_settings:
             value = self.yaml_settings[key]
@@ -79,10 +79,7 @@ class Configuration(object):
         if value is NOT_SET:
             raise ConfigurationError("Configuration not set and no default "
                                      "provided: {}.".format(key))
-        if type is None:
-            return value
-        else:
-            return config['type'](value)
+        return config['type'](value)
 
     def add_config(self, key, type, default=NOT_SET, env_var=None):
         """Add a configuration setting.
