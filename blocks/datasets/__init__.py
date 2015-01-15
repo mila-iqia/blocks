@@ -44,7 +44,6 @@ class Dataset(object):
                 raise ValueError("Unable to provide requested sources")
             self.sources = sources
 
-    @abstractmethod
     def open(self):
         """Return the state if the dataset requires one.
 

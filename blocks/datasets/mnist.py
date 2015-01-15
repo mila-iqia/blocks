@@ -40,11 +40,15 @@ class MNIST(Dataset):
         The first example to load
     stop : int, optional
         The last example to load
+    binary : bool, optional
+        If ``True``, returns binary (black/white) images instead of
+        grayscale. ``False`` by default.
 
     """
     sources = ('features', 'targets')
 
-    def __init__(self, which_set, start=None, stop=None, **kwargs):
+    def __init__(self, which_set, start=None, stop=None, binary=False,
+                 **kwargs):
         if which_set == 'train':
             data = 'train-images-idx3-ubyte'
             labels = 'train-labels-idx1-ubyte'
@@ -53,21 +57,21 @@ class MNIST(Dataset):
             labels = 't10k-labels-idx1-ubyte'
         else:
             raise ValueError("MNIST only has a train and test set")
+        data_path = os.path.join(config.data_path, 'mnist')
         X = read_mnist_images(
-            os.path.join(config.data_path, data),
-            theano.config.floatX)[start:stop]
+            os.path.join(data_path, data),
+            'bool' if binary else theano.config.floatX)[start:stop]
         X = X.reshape((X.shape[0], numpy.prod(X.shape[1:])))
         y = read_mnist_labels(
-            os.path.join(config.data_path, labels))[start:stop, numpy.newaxis]
+            os.path.join(data_path, labels))[start:stop, numpy.newaxis]
         self.X, self.y = X, y
         self.num_examples = len(X)
         self.default_scheme = SequentialScheme(self.num_examples, 1)
         super(MNIST, self).__init__(**kwargs)
 
-    def get_data(self, state=None, request=None, sources=None):
-        data = dict(zip(self.sources, (self.X, self.y)))
-        sources = self.sources if sources is None else sources
-        return tuple(data[source][request] for source in sources)
+    def get_data(self, request=None):
+        data = dict(zip(('features', 'targets'), (self.X, self.y)))
+        return tuple(data[source][request] for source in self.sources)
 
 
 def read_mnist_images(filename, dtype=None):
