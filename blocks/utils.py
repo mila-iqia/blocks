@@ -266,12 +266,12 @@ def graph_inputs(variables, blockers=None):
     return [i for i in inps if is_graph_input(i)]
 
 
-def dict_subset(dikt, keys, pop=False, must_have=True):
+def dict_subset(dict_, keys, pop=False, must_have=True):
     """Return a subset of a dictionary corresponding to a set of keys.
 
     Parameters
     ----------
-    dikt : dict
+    dict_ : dict
         The dictionary.
     keys : iterable
         The keys of interest.
@@ -294,11 +294,11 @@ def dict_subset(dikt, keys, pop=False, must_have=True):
     def extract(k):
         if pop:
             if must_have:
-                return dikt.pop(k)
-            return dikt.pop(k, not_found)
+                return dict_.pop(k)
+            return dict_.pop(k, not_found)
         if must_have:
-            return dikt[k]
-        return dikt.get(k, not_found)
+            return dict_[k]
+        return dict_.get(k, not_found)
 
     result = [(key, extract(key)) for key in keys]
     return OrderedDict([(k, v) for k, v in result if v is not not_found])
