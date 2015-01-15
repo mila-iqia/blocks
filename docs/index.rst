@@ -1,4 +1,4 @@
-.. image:: https://coveralls.io/repos/bartvm/blocks/badge.png?branch=master
+.. image:: https://coveralls.io/repos/bartvm/blocks/badge.svg?branch=master
    :target: https://coveralls.io/r/bartvm/blocks?branch=master
 
 .. image:: https://travis-ci.org/bartvm/blocks.svg?branch=master
