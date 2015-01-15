@@ -79,10 +79,7 @@ class Configuration(object):
         if value is NOT_SET:
             raise ConfigurationError("Configuration not set and no default "
                                      "provided: {}.".format(key))
-        if type is None:
-            return value
-        else:
-            return config['type'](value)
+        return config['type'](value)
 
     def add_config(self, key, type, default=NOT_SET, env_var=None):
         """Add a configuration setting.
