@@ -12,21 +12,33 @@ env:
 before_install:
   - |
       if [ $TESTS ]; then
+        # Setup Python environment with BLAS libraries
         sudo apt-get install -qq libatlas3gf-base libatlas-dev liblapack-dev gfortran
         wget -q http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
         chmod +x miniconda.sh
         ./miniconda.sh -b
         export PATH=/home/travis/miniconda/bin:$PATH
         conda update -q --yes conda
+        # Download MNIST for tests
+        (mkdir mnist
+        cd mnist
+        curl -O http://yann.lecun.com/exdb/mnist/train-images-idx3-ubyte.gz \
+             -O http://yann.lecun.com/exdb/mnist/train-labels-idx1-ubyte.gz \
+             -O http://yann.lecun.com/exdb/mnist/t10k-images-idx3-ubyte.gz \
+             -O http://yann.lecun.com/exdb/mnist/t10k-labels-idx1-ubyte.gz
+        gunzip *-ubyte.gz)
+        export BLOCKS_DATA_PATH=$PWD
       fi
 install:
+  # Install all Python dependencies
   - |
       if [ $TESTS ]; then
         conda install -q --yes python=$TRAVIS_PYTHON_VERSION nose numpy pip coverage six scipy
         pip install -q --no-deps git+git://github.com/Theano/Theano.git
         pip install -q nose2[coverage-plugin] coveralls
         git clone -q git://github.com/lisa-lab/pylearn2.git
-        (cd pylearn2; python setup.py -q develop)
+        (cd pylearn2
+        python setup.py -q develop)
       fi
   - |
       if [ $FORMAT ]; then
@@ -34,7 +46,17 @@ install:
         pip install -q git+git://github.com/bartvm/pep257.git@numpy
       fi
 script:
-  - if [ $TESTS ]; then THEANO_FLAGS=floatX=$TESTS,blas.ldflags='-lblas -lgfortran' coverage run --source=blocks -m nose2.__main__ tests; fi
-  - if [ $FORMAT ]; then flake8 blocks tests; pep257 blocks --numpy --ignore=D100,D101,D102,D103; fi
+  - |
+      if [ $TESTS ]; then
+        THEANO_FLAGS=floatX=$TESTS,blas.ldflags='-lblas -lgfortran' \
+        # Running nose2 within coverage makes imports count towards coverage
+        coverage run --source=blocks -m nose2.__main__ tests
+      fi
+  - |
+      if [ $FORMAT ]; then
+        flake8 blocks tests
+        # Ignore D100-103 errors (non-existing docstrings)
+        pep257 blocks --numpy --ignore=D100,D101,D102,D103
+      fi
 after_script:
   - if [ $TESTS ]; then coveralls; fi
