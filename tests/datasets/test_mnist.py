@@ -1,3 +1,5 @@
+from numpy.testing import assert_raises
+
 from blocks.datasets.mnist import MNIST
 
 
@@ -15,3 +17,8 @@ def test_mnist():
 
     first_target, = mnist_test.get_data(request=[0, 1])
     assert first_target.shape == (2, 1)
+
+    binary_mnist = MNIST('test', binary=True, sources=('features',))
+    first_feature, = binary_mnist.get_data(request=[0])
+    assert first_feature.dtype.kind == 'b'
+    assert_raises(ValueError, MNIST, 'valid')
