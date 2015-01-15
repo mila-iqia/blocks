@@ -70,7 +70,7 @@ class Configuration(object):
         if key not in self.config:
             raise ConfigurationError("Unknown configuration: {}".format(key))
         config = self.config[key]
-        if config['env_var'] in os.environ:
+        if config['env_var'] is not None and config['env_var'] in os.environ:
             value = os.environ[config['env_var']]
         elif key in self.yaml_settings:
             value = self.yaml_settings[key]
