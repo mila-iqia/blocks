@@ -1,92 +1,54 @@
 import numpy
-import theano.tensor
+import theano
+from numpy.testing import assert_allclose
+from theano import tensor
 
 from blocks import bricks
 from blocks.bricks import application, VariableRole
 from blocks.graph import ComputationGraph
-from blocks.monitoring.aggregation import (DatasetEvaluator, mean,
-                                           MinibatchEvaluator)
+from blocks.monitoring.aggregation import mean
+from blocks.utils import shared_floatx
 
 
 class TestBrick(bricks.Brick):
-    def __init__(self, **kwargs):
-        super(TestBrick, self).__init__(**kwargs)
-
     def _allocate(self):
-        self.params = [theano.shared(0, 'V')]
+        self.params = [shared_floatx(2, name='V')]
 
     @application(inputs=['input_'], outputs=['output'])
     def apply(self, input_, application_call):
         V = self.params[0]
-
-        application_call.add_monitor((V ** 2).sum(),
-                                     name='V_mon')
-
-        mean_input = mean(input_.sum(), input_.shape.prod())
-        application_call.add_monitor(mean_input, name='mean_input')
-
+        application_call.add_monitor((V ** 2).sum(), name='V_monitor')
+        mean_input = mean(input_.mean(axis=1).sum(), input_.shape[0])
+        application_call.add_monitor(mean_input, name='mean_mean_input')
         application_call.add_monitor(input_.mean(),
                                      name='per_batch_mean_input')
-
         return input_ + V
 
 
 def test_param_monitor():
-    X = theano.tensor.vector('X')
+    X = tensor.matrix('X')
     brick = TestBrick(name='test_brick')
-    Y = brick.apply(X)
-    graph = ComputationGraph([Y])
+    y = brick.apply(X)
+    graph = ComputationGraph([y])
 
-    V_monitors = [v for v in graph.variables
-                  if v.name == 'V_mon']
-    validator = DatasetEvaluator({v.name: v for v in V_monitors})
+    # Test the monitors without aggregation schemes
+    monitors = [v for v in graph.variables
+                if getattr(v.tag, 'role', None) == VariableRole.MONITOR and
+                not hasattr(v.tag, 'aggregation_scheme')]
+    monitors.sort(key=lambda variable: variable.name)
 
-    V_vals = validator.evaluate(None)
-    assert V_vals['V_mon'] == 0
+    f = theano.function([X], monitors)
+    monitor_vals = f(numpy.arange(4, dtype=theano.config.floatX).reshape(2, 2))
+    assert_allclose(monitor_vals, [4., 1.5])
 
-
-def test_dataset_evaluators():
-    X = theano.tensor.vector('X')
-    brick = TestBrick(name='test_brick')
-    Y = brick.apply(X)
-    graph = ComputationGraph([Y])
-    V_monitors = [v for v in graph.variables
-                  if getattr(v.tag, 'role', None) == VariableRole.MONITOR]
-    validator = DatasetEvaluator({v.name: v for v in V_monitors})
-
-    full_set = numpy.arange(100.0, dtype='float32')
-    batches = numpy.split(full_set, numpy.cumsum(numpy.arange(6) + 1))
-    batches = [{'X': b} for b in batches]
-
-    V_vals = validator.evaluate(batches)
-    assert V_vals['V_mon'] == 0
-    numpy.testing.assert_allclose(V_vals['mean_input'], full_set.mean())
-    per_batch_mean = numpy.mean([b['X'].mean() for b in batches])
-    numpy.testing.assert_allclose(V_vals['per_batch_mean_input'],
-                                  per_batch_mean)
-
-
-def test_minibatch_evaluators():
-    X = theano.tensor.vector('X')
-    brick = TestBrick(name='test_brick')
-    Y = brick.apply(X)
-    graph = ComputationGraph([Y])
-    V_monitors = [v for v in graph.variables
-                  if getattr(v.tag, 'role', None) == VariableRole.MONITOR]
-
-    train_monitor = MinibatchEvaluator({v.name: v for v in V_monitors})
-
-    full_set = numpy.arange(100.0, dtype='float32')
-    batches = numpy.split(full_set, numpy.cumsum(numpy.arange(6) + 1))
-    batches = [{'X': b} for b in batches]
-
-    train_fun = theano.function([X], [Y],
-                                updates=train_monitor.updates)
-
-    for b in batches:
-        train_fun(**b)
-        M_vals = train_monitor.read_expressions()
-        assert M_vals['V_mon'] == 0
-        numpy.testing.assert_allclose(M_vals['mean_input'], b['X'].mean())
-        numpy.testing.assert_allclose(M_vals['per_batch_mean_input'],
-                                      b['X'].mean())
+    # Test the aggregation scheme
+    monitor, = [v for v in graph.variables
+                if getattr(v.tag, 'role', None) == VariableRole.MONITOR and
+                hasattr(v.tag, 'aggregation_scheme')]
+    aggregator = monitor.tag.aggregation_scheme.get_aggregator()
+    initialize = theano.function([], updates=aggregator.initialization_updates)
+    initialize()
+    accumulate = theano.function([X], updates=aggregator.accumulation_updates)
+    accumulate(numpy.arange(4, dtype=theano.config.floatX).reshape(2, 2))
+    accumulate(numpy.arange(4, 8, dtype=theano.config.floatX).reshape(2, 2))
+    assert_allclose(aggregator.readout_expression.eval(), 3.5)
