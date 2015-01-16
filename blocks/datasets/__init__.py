@@ -238,8 +238,7 @@ class AbstractDataStream(object):
                             if self.iteration_scheme else None,
                             as_dict=as_dict)
 
-    @property
-    def epochs(self):
+    def iterate_epochs(self, as_dict=False):
         """Allow iteration through all epochs.
 
         Notes
@@ -256,7 +255,7 @@ class AbstractDataStream(object):
 
         """
         while True:
-            yield self.get_epoch_iterator()
+            yield self.get_epoch_iterator(as_dict=as_dict)
 
 
 class DataStream(AbstractDataStream):
