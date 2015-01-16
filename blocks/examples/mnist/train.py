@@ -13,7 +13,7 @@ from blocks.extensions import FinishAfter
 
 
 def main():
-    mlp = MLP([Tanh(), Identity()], [784, 500, 10])
+    mlp = MLP([Tanh(), Identity()], [784, 100, 10])
     x = tensor.matrix('features')
     y = tensor.lmatrix('targets')
     cost = BinaryCrossEntropy().apply_for_indices(y - 1, mlp.apply(x))
