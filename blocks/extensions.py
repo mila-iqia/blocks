@@ -1,3 +1,6 @@
+from __future__ import print_function
+from abc import ABCMeta, abstractmethod
+
 class TrainingExtension(object):
     """The base class for training extensions.
 
@@ -12,6 +15,8 @@ class TrainingExtension(object):
         The main loop to which the extensions belongs.
 
     """
+    __metaclass__ = ABCMeta
+
     def before_training(self):
         """The callback invoked before training is started."""
         pass
@@ -82,52 +87,64 @@ def replace_callbacks(class_):
 class SimpleExtension(TrainingExtension):
     """A base class for simple extensions.
 
-    Often an extension has one or a few methods that should when certain
-    conditions are met, e.g. after each tenth epoch or when a certain
-    record record is found in the log. This class provides a platform
-    to build such extensions.
-
-    When all logic of the extension is concentrated in one method, this
-    method is called the main method.
-
-    Attributes
-    ----------
-    main_method : str
-        The name of the main method of the extension.
+    All logic of simple extensions is concentrated in the method
+    :meth:`do`.  This method is called when certain conditions are
+    fulfilled. The user can manage the conditions by calling the
+    `add_condition` method and by passing arguments to the constructor.  In
+    addition to specifying when :meth:`do` is called, it is possible to
+    specify additional arguments passed to :meth:`do` under different
+    conditions.
 
     """
     def __init__(self):
         self._conditions = []
 
-    def add_condition(self, callback_name, method_name=None, predicate=None):
-        """Adds a condition under which a certain method is called.
+    def add_condition(self, callback_name, predicate=None, arguments=None):
+        """Adds a condition under which a :meth:`do` is called.
 
         Parameters
         ----------
         callback_name : str
             The name of the callback in which the method.
-        method_name : str
-            The name of the method to be called. If ``None``, the main
-            method is called.
         predicate : function
             A predicate function the main loop's log as the
             single parameter and returning ``True`` when the method
             should be called and ``False`` when should not. If ``None``,
             an always ``True`` predicate is used.
+        arguments : iterable
+            Additional arguments to be passed to :meth:`do`. They will
+            be concatenated with the ones passed from the main loop
+            (e.g. the batch in case of `after_epoch` callback).
 
         """
-        if not method_name:
-            method_name = self.main_method
+        if not arguments:
+            arguments = []
         if not predicate:
             predicate = lambda log: True
-        self._conditions.append((method_name, callback_name, predicate))
+        self._conditions.append((callback_name, predicate, arguments))
 
-    def execute(self, callback_invoked, *args):
+    @abstractmethod
+    def do(self, which_callback, *args):
+        """Does the job of the training extension.
+
+        Parameters
+        ----------
+        which_callback : str
+            The name of the callback in the context of which :meth:`do` is
+            run.
+        *args : tuple
+            The arguments from the main loop concatenated with additional
+            arguments from user.
+
+        """
+        pass
+
+    def execute(self, callback_invoked, *from_main_loop):
         """Execute methods corresponding to the invoked callback."""
-        for method_name, callback_name, predicate in self._conditions:
+        for callback_name, predicate, arguments in self._conditions:
             if (callback_name == callback_invoked
                     and predicate(self.main_loop.log)):
-                getattr(self, method_name)(callback_invoked, *args)
+                self.do(callback_invoked, *(from_main_loop + tuple(arguments)))
 
 
 class FinishAfter(SimpleExtension):
@@ -140,7 +157,6 @@ class FinishAfter(SimpleExtension):
         are done.
 
     """
-    main_method = 'finish_training'
 
     def __init__(self, num_epochs=None):
         super(FinishAfter, self).__init__()
@@ -149,13 +165,12 @@ class FinishAfter(SimpleExtension):
                 "after_epoch",
                 predicate=lambda log: log.status.epochs_done == num_epochs)
 
-    def finish_training(self, which_callback):
+    def do(self, which_callback):
         self.main_loop.log.current_row.training_finish_requested = True
 
 
 class Printing(SimpleExtension):
     """Prints log messages to the screen."""
-    main_method = 'print_'
 
     def __init__(self, before_first_epoch=True, every_epoch=True,
                  every_iteration=False, after_training=True):
@@ -171,19 +186,20 @@ class Printing(SimpleExtension):
         if after_training:
             self.add_condition("after_training")
 
-    def print_(self, which_callback):
+    def do(self, which_callback):
         log = self.main_loop.log
-        print "".join(79 * "-")
+        print("".join(79 * "-"))
         if which_callback == "before_epoch" and log.status.epochs_done == 0:
-            print "BEFORE FIRST EPOCH"
+            print("BEFORE FIRST EPOCH")
         elif which_callback == "after_training":
-            print "TRAINING HAS BEEN FINISHED:"
+            print("TRAINING HAS BEEN FINISHED:")
         elif which_callback == "after_epoch":
-            print "AFTER ANOTHER BATCH"
-        print "".join(79 * "-")
-        print "Training status:"
+            print("AFTER ANOTHER EPOCH")
+        print("".join(79 * "-"))
+        print("Training status:")
         for attr, value in iter(log.status):
-            print "\t", "{}:".format(attr), value
-        print "Log records from iteration {}:".format(log.status.iterations_done)
+            print("\t", "{}:".format(attr), value)
+        print("Log records from the iteration {}:".format(
+            log.status.iterations_done))
         for attr, value in iter(log.current_row):
-            print "\t", "{}:".format(attr), value
+            print("\t", "{}:".format(attr), value)
