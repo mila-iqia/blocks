@@ -6,11 +6,14 @@ def test_main_loop():
 
     class TestDataStream(object):
 
-        @property
-        def epochs(self):
-            yield iter([1, 2, 3])
-            yield iter([4, 5])
-            yield iter([6, 7, 8, 9])
+        def epochs(self, as_dict):
+            assert as_dict == True
+            def wrap_in_dicts(iterable):
+                for x in iterable:
+                    yield dict(data=x)
+            yield iter(wrap_in_dicts([1, 2, 3]))
+            yield iter(wrap_in_dicts([4, 5]))
+            yield iter(wrap_in_dicts([6, 7, 8, 9]))
 
     class TestAlgorithm(object):
 
@@ -30,4 +33,4 @@ def test_main_loop():
     assert main_loop.log.status.iterations_done == 5
     assert len(list(main_loop.log)) == 7
     for i in range(5):
-        assert main_loop.log[i].batch == i + 1
+        assert main_loop.log[i].batch == dict(data=i + 1)
