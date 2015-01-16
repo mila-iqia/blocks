@@ -68,7 +68,7 @@ def replace_callbacks(class_):
                     self.execute(key, batch)
                 # TODO: use proper reflection here
                 return (simple_callback_overrider
-                        if key.find('batch') == -1
+                        if not 'batch' in key
                         else batch_callback_overrider)
             callback_overrider = create_callback_overrider(key)
             callback_overrider.__name__ = key

@@ -55,7 +55,7 @@ class MainLoop(object):
 
     def _check_finish_training(self):
         if self.log.current_row.training_finish_requested:
-            raise StopIteration()
+            raise TrainingFinish
 
     def run(self):
         """Starts the main loop.
@@ -85,7 +85,12 @@ class MainLoop(object):
                     self.log.status.iterations_done)
         except KeyboardInterrupt:
             self._run_extensions('on_interrupt')
-        except StopIteration:
+        except TrainingFinish:
             self.log.current_row.training_finished = True
         finally:
             self._run_extensions('after_training')
+
+
+class TrainingFinish(Exception):
+    """An exception raised when a finish request is found in the log."""
+    pass
