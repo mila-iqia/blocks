@@ -5,7 +5,7 @@ import numpy
 import theano
 
 from blocks import config
-from blocks.datasets import Dataset, lazy_properties
+from blocks.datasets import InMemoryDataset, lazy_properties
 from blocks.datasets.schemes import SequentialScheme
 from blocks.utils import update_instance
 
@@ -15,7 +15,7 @@ MNIST_LABEL_MAGIC = 2049
 
 
 @lazy_properties('data')
-class MNIST(Dataset):
+class MNIST(InMemoryDataset):
     """The MNIST dataset of handwritten digits.
 
     .. todo::

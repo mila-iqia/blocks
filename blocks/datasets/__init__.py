@@ -96,18 +96,6 @@ class Dataset(object):
         """Cleanly close the dataset e.g. close file handles."""
         pass
 
-    def load(self):
-        """Load data from e.g. the file system.
-
-        Any interaction with the outside world e.g. the file system,
-        database connections, servers, etc. should be done in this method.
-        This allows datasets to be pickled and unpickled, even in
-        environments where the original data is unavailable or has changed
-        position.
-
-        """
-        pass
-
     @abstractmethod
     def get_data(self, state=None, request=None):
         """Request data from the dataset.
@@ -143,8 +131,85 @@ class Dataset(object):
         return DataStream(self, iteration_scheme=self.default_scheme)
 
 
+class InMemoryDataset(Dataset):
+    """Datasets who hold all of their data in memory.
+
+    For small datasets like e.g. MNIST it is easiest to simply load the
+    entire dataset into memory. All data streams will then access the same
+    data in memory.
+
+    Notes
+    -----
+    Datasets which hold data in memory must be treated differently when
+    serializing (saving) the training progress, because it would be very
+    inefficient to save the data along with the training process. Hence,
+    in-memory datasets support the :meth:`lazy_properties` decorator. This
+    decorator creates a series of properties whose values won't be
+    serialized; instead, their values will be reloaded (e.g. from disk) by
+    the :meth:`load` function after deserializing the object.
+
+    If the files from which the data were loaded are no longer available,
+    the de-serialization could fail. Hence the reloading of these
+    properties happens lazily i.e. only when the properties are requested.
+    This allows the user to intervene and change the location from which
+    files are loaded after de-serialization, before the :meth:`load` method
+    is ever called.
+
+    >>> import cPickle
+    >>> from blocks.datasets.mnist import MNIST
+    >>> mnist = MNIST('train')
+    >>> print("{} MB".format(mnist.data['features'].nbytes / 1024 / 1024))
+    179 MB
+    >>> with open('mnist.pkl', 'wb') as f:
+    ...     cPickle.dump(mnist, f, protocol=cPickle.HIGHEST_PROTOCOL)
+
+    You will notice that the dumping of the dataset was relatively quick,
+    because it didn't attempt to write MNIST to disk. We can now reload it,
+    and if the data file has not been moved, it will be as if nothing
+    happened.
+
+    >>> with open('mnist.pkl') as f:
+    ...     mnist = cPickle.load(f)
+    >>> print("{} MB".format(mnist.data['features'].nbytes / 1024 / 1024))
+    179 MB
+
+    However, if the data files can't be found on disk, accessing the data
+    will fail.
+
+    >>> from blocks import config
+    >>> correct_path = config.data_path
+    >>> config.data_path = '/non/existing/path'
+    >>> with open('mnist.pkl') as f:
+    ...     mnist = cPickle.load(f)
+    >>> print("{} MB".format(mnist.data['features'].nbytes / 1024 / 1024))
+    Traceback (most recent call last):
+      ...
+    IOError: [Errno 2] No such file or directory: ...
+
+    Because the loading happens lazily, we can still deserialize our
+    dataset, correct the situation, and then continue.
+
+    >>> config.data_path = correct_path
+    >>> print("{} MB".format(mnist.data['features'].nbytes / 1024 / 1024))
+    179 MB
+
+    """
+    def load(self):
+        """Load data from e.g. the file system.
+
+        Any interaction with the outside world e.g. the file system,
+        database connections, servers, etc. should be done in this method.
+        This allows datasets to be pickled and unpickled, even in
+        environments where the original data is unavailable or has changed
+        position.
+
+        """
+        pass
+
+
 def lazy_properties(*lazy_properties):
     def lazy_property_factory(lazy_property):
+        """Create properties that perform lazy loading of attributes."""
         def lazy_property_getter(self):
             if not hasattr(self, '_' + lazy_property):
                 self.load()
@@ -158,18 +223,27 @@ def lazy_properties(*lazy_properties):
         return lazy_property_getter, lazy_property_setter
 
     def wrap_dataset(dataset):
+        if not issubclass(dataset, InMemoryDataset):
+            raise ValueError("Only InMemoryDataset supports lazy loading")
+
+        # Attach the lazy loading properties to the class
         for lazy_property in lazy_properties:
             setattr(dataset, lazy_property,
                     property(*lazy_property_factory(lazy_property)))
+
+        # Delete the values of lazy properties when serializing
         if not hasattr(dataset, '__getstate__'):
             def __getstate__(self):
+                serializable_state = self.__dict__.copy()
                 for lazy_property in lazy_properties:
-                    attr = getattr(self, '_' + lazy_property)
+                    attr = serializable_state.get('_' + lazy_property)
+                    # Iterators would lose their state
                     if isinstance(attr, collections.Iterator):
                         raise ValueError("Iterators can't be lazy loaded")
-                    delattr(self, '_' + lazy_property)
-                return self.__dict__
+                    serializable_state.pop('_' + lazy_property, None)
+                return serializable_state
             setattr(dataset, '__getstate__', __getstate__)
+
         return dataset
     return wrap_dataset
 

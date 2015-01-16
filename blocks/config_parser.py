@@ -55,33 +55,45 @@ class ConfigurationError(Exception):
 
 class Configuration(object):
     def __init__(self):
+        self.config = {}
+
+    def load_yaml(self):
         if 'BLOCKS_CONFIG' in os.environ:
             yaml_file = os.environ['BLOCKS_CONFIG']
         else:
             yaml_file = os.path.expanduser('~/.blocksrc')
         if os.path.isfile(yaml_file):
             with open(yaml_file) as f:
-                self.yaml_settings = yaml.safe_load(f)
-        else:
-            self.yaml_settings = {}
-        self.config = {}
+                for key, value in yaml.safe_load(f).items():
+                    if key not in self.config:
+                        raise ValueError("Unrecognized config in YAML: {}"
+                                         .format(key))
+                    self.config[key]['yaml'] = value
 
     def __getattr__(self, key):
-        if key not in self.config:
-            raise ConfigurationError("Unknown configuration: {}".format(key))
+        if not hasattr(self, 'config') or key not in self.config:
+            raise AttributeError
         config = self.config[key]
-        if config['env_var'] is not None and config['env_var'] in os.environ:
+        if 'value' in config:
+            value = config['value']
+        elif 'env_var' in config and config['env_var'] in os.environ:
             value = os.environ[config['env_var']]
-        elif key in self.yaml_settings:
-            value = self.yaml_settings[key]
-        else:
+        elif 'yaml' in config:
+            value = config['yaml']
+        elif 'default' in config:
             value = config['default']
-        if value is NOT_SET:
+        else:
             raise ConfigurationError("Configuration not set and no default "
                                      "provided: {}.".format(key))
         return config['type'](value)
 
-    def add_config(self, key, type, default=NOT_SET, env_var=None):
+    def __setattr__(self, key, value):
+        if not hasattr(self, 'config') or key not in self.config:
+            super(Configuration, self).__setattr__(key, value)
+        else:
+            self.config[key]['value'] = value
+
+    def add_config(self, key, type_, default=NOT_SET, env_var=None):
         """Add a configuration setting.
 
         Parameters
@@ -105,9 +117,15 @@ class Configuration(object):
             YAML configuration file.
 
         """
-        self.config[key] = {'default': default,
-                            'env_var': env_var,
-                            'type': type}
+        self.config[key] = {'type': type_}
+        if env_var is not None:
+            self.config[key]['env_var'] = env_var
+        if default is not NOT_SET:
+            self.config[key]['default'] = default
 
 config = Configuration()
-config.add_config('data_path', env_var='BLOCKS_DATA_PATH', type=str)
+
+# Define configuration options
+config.add_config('data_path', env_var='BLOCKS_DATA_PATH', type_=str)
+
+config.load_yaml()
