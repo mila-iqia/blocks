@@ -95,9 +95,31 @@ class SimpleExtension(TrainingExtension):
     specify additional arguments passed to :meth:`do` under different
     conditions.
 
+    Parameters
+    ----------
+    before_first_epoch : bool
+        If ``True``, :meth:`do` is invoked before the first epoch.
+    after_every_epoch : bool
+        If ``True``, :meth:`do` is invoked after every epoch.
+    after_every_iteration : bool
+        If ``True``, :meth:`do` is invoked after every iteration.
+    after_training : bool
+        If ``True``, :meth:`do` is invoked after training.
+
     """
-    def __init__(self):
+    def __init__(self, before_first_epoch=False, after_every_epoch=False,
+                 after_every_iteration=False, after_training=False):
         self._conditions = []
+        if before_first_epoch:
+            self.add_condition(
+                "before_epoch",
+                predicate=lambda log: log.status.epochs_done == 0)
+        if after_every_epoch:
+            self.add_condition("after_epoch")
+        if after_every_iteration:
+            self.add_condition("after_iteration")
+        if after_training:
+            self.add_condition("after_training")
 
     def add_condition(self, callback_name, predicate=None, arguments=None):
         """Adds a condition under which a :meth:`do` is called.
@@ -172,19 +194,14 @@ class FinishAfter(SimpleExtension):
 class Printing(SimpleExtension):
     """Prints log messages to the screen."""
 
-    def __init__(self, before_first_epoch=True, every_epoch=True,
-                 every_iteration=False, after_training=True):
-        super(Printing, self).__init__()
-        if before_first_epoch:
-            self.add_condition(
-                "before_epoch",
-                predicate=lambda log: log.status.epochs_done == 0)
-        if every_epoch:
-            self.add_condition("after_epoch")
-        if every_iteration:
-            self.add_condition("after_iteration")
-        if after_training:
-            self.add_condition("after_training")
+    def __init__(self, **kwargs):
+        def set_if_absent(name):
+            if not name in kwargs:
+                kwargs[name] = True
+        set_if_absent("before_first_epoch")
+        set_if_absent("after_training")
+        set_if_absent("after_every_epoch")
+        super(Printing, self).__init__(**kwargs)
 
     def do(self, which_callback):
         log = self.main_loop.log
