@@ -165,8 +165,7 @@ def lazy_properties(*lazy_properties):
             def __getstate__(self):
                 for lazy_property in lazy_properties:
                     attr = getattr(self, '_' + lazy_property)
-                    if isinstance(attr, collections.Iterator) and \
-                            not hasattr(attr, 'read'):
+                    if isinstance(attr, collections.Iterator):
                         raise ValueError("Iterators can't be lazy loaded")
                     delattr(self, '_' + lazy_property)
                 return self.__dict__
