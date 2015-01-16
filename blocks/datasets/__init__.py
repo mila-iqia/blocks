@@ -169,7 +169,7 @@ class InMemoryDataset(Dataset):
     and if the data file has not been moved, it will be as if nothing
     happened.
 
-    >>> with open('mnist.pkl') as f:
+    >>> with open('mnist.pkl', 'rb') as f:
     ...     mnist = pickle.load(f)
     >>> print(mnist.data['features'].shape)
     (60000, 784)
@@ -180,7 +180,7 @@ class InMemoryDataset(Dataset):
     >>> from blocks import config
     >>> correct_path = config.data_path
     >>> config.data_path = '/non/existing/path'
-    >>> with open('mnist.pkl') as f:
+    >>> with open('mnist.pkl', 'rb') as f:
     ...     mnist = pickle.load(f)
     >>> print("{} KB".format(mnist.data['features'].nbytes // 1024))
     Traceback (most recent call last):
