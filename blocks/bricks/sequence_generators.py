@@ -780,7 +780,7 @@ class SequenceGenerator(BaseSequenceGenerator):
         Will be combined with `attention`, if that one is given.
     attention : :class:`Brick`
         The attention mechanism to be added to `transition`. Can be
-        None``, in which case no attention mechanism is used.
+        ``None``, in which case no attention mechanism is used.
 
     Notes
     -----
