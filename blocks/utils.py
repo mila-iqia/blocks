@@ -45,8 +45,9 @@ def unpack(arg, singleton=False):
         will be cast to a list before returning. Any other variable
         will be returned as is.
     singleton : bool
-        If ``True``, `arg` is expected to be a singleton and an exception
-        is raised if this is not the case. ``False`` by default.
+        If ``True``, `arg` is expected to be a singleton (a list or tuple
+        with exactly one element) and an exception is raised if this is not
+        the case. ``False`` by default.
 
     Returns
     -------
@@ -248,7 +249,7 @@ def graph_inputs(variables, blockers=None):
     """Compute inputs needed to compute values in variables.
 
     This function is similar to :meth:`theano.gof.graph.inputs`. However,
-    it doesn't tread shared and constant values as inputs.
+    it doesn't treat shared and constant values as inputs.
 
     Parameters
     ----------
@@ -257,21 +258,23 @@ def graph_inputs(variables, blockers=None):
     blockers : list of theano variables
         See :meth:`theano.gof.graph.inputs` for documentation.
 
-    Returns:
-    list of theano variables which are non-constant and non-shared
-        inputs to the computational graph.
+    Returns
+    -------
+    list
+        Theano variables which are non-constant and non-shared inputs to
+        the computational graph.
 
     """
     inps = theano.gof.graph.inputs(variables, blockers=blockers)
     return [i for i in inps if is_graph_input(i)]
 
 
-def dict_subset(dikt, keys, pop=False, must_have=True):
+def dict_subset(dict_, keys, pop=False, must_have=True):
     """Return a subset of a dictionary corresponding to a set of keys.
 
     Parameters
     ----------
-    dikt : dict
+    dict_ : dict
         The dictionary.
     keys : iterable
         The keys of interest.
@@ -294,11 +297,11 @@ def dict_subset(dikt, keys, pop=False, must_have=True):
     def extract(k):
         if pop:
             if must_have:
-                return dikt.pop(k)
-            return dikt.pop(k, not_found)
+                return dict_.pop(k)
+            return dict_.pop(k, not_found)
         if must_have:
-            return dikt[k]
-        return dikt.get(k, not_found)
+            return dict_[k]
+        return dict_.get(k, not_found)
 
     result = [(key, extract(key)) for key in keys]
     return OrderedDict([(k, v) for k, v in result if v is not not_found])
