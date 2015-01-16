@@ -182,10 +182,10 @@ class InMemoryDataset(Dataset):
     >>> config.data_path = '/non/existing/path'
     >>> with open('mnist.pkl', 'rb') as f:
     ...     mnist = pickle.load(f)
-    >>> print("{} KB".format(mnist.data['features'].nbytes // 1024))
+    >>> print(mnist.data['features'].shape) # doctest: +SKIP
     Traceback (most recent call last):
       ...
-    IOError: [Errno 2] No such file or directory: ...
+    FileNotFoundError: [Errno 2] No such file or directory: ...
 
     Because the loading happens lazily, we can still deserialize our
     dataset, correct the situation, and then continue.
