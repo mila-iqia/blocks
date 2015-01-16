@@ -22,7 +22,7 @@ def main():
 
     main_loop = MainLoop(
         mlp,
-        DataStream(MNIST("train"),
+        DataStream(mnist,
                    iteration_scheme=SequentialScheme(mnist.num_examples, 20)),
         GradientDescent(cost=cost,
                         step_rule=DefaultStepRule(learning_rate=0.1)),
