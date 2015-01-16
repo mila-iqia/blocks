@@ -1,3 +1,4 @@
+import collections
 from abc import ABCMeta, abstractmethod
 
 import numpy
@@ -95,6 +96,18 @@ class Dataset(object):
         """Cleanly close the dataset e.g. close file handles."""
         pass
 
+    def load(self):
+        """Load data from e.g. the file system.
+
+        Any interaction with the outside world e.g. the file system,
+        database connections, servers, etc. should be done in this method.
+        This allows datasets to be pickled and unpickled, even in
+        environments where the original data is unavailable or has changed
+        position.
+
+        """
+        pass
+
     @abstractmethod
     def get_data(self, state=None, request=None):
         """Request data from the dataset.
@@ -128,6 +141,38 @@ class Dataset(object):
         if not hasattr(self, 'default_scheme'):
             raise ValueError("Dataset does not provide a default iterator")
         return DataStream(self, iteration_scheme=self.default_scheme)
+
+
+def lazy_properties(*lazy_properties):
+    def lazy_property_factory(lazy_property):
+        def lazy_property_getter(self):
+            if not hasattr(self, '_' + lazy_property):
+                self.load()
+            if not hasattr(self, '_' + lazy_property):
+                raise ValueError("{} wasn't loaded".format(lazy_property))
+            return getattr(self, '_' + lazy_property)
+
+        def lazy_property_setter(self, value):
+            setattr(self, '_' + lazy_property, value)
+
+        return lazy_property_getter, lazy_property_setter
+
+    def wrap_dataset(dataset):
+        for lazy_property in lazy_properties:
+            setattr(dataset, lazy_property,
+                    property(*lazy_property_factory(lazy_property)))
+        if not hasattr(dataset, '__getstate__'):
+            def __getstate__(self):
+                for lazy_property in lazy_properties:
+                    attr = getattr(self, '_' + lazy_property)
+                    if isinstance(attr, collections.Iterator) and \
+                            not hasattr(attr, 'read'):
+                        raise ValueError("Iterators can't be lazy loaded")
+                    delattr(self, '_' + lazy_property)
+                return self.__dict__
+            setattr(dataset, '__getstate__', __getstate__)
+        return dataset
+    return wrap_dataset
 
 
 class ContainerDataset(Dataset):
