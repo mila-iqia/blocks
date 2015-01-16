@@ -71,7 +71,7 @@ class Configuration(object):
                     self.config[key]['yaml'] = value
 
     def __getattr__(self, key):
-        if not hasattr(self, 'config') or key not in self.config:
+        if key == 'config' or key not in self.config:
             raise AttributeError
         config = self.config[key]
         if 'value' in config:
@@ -88,10 +88,10 @@ class Configuration(object):
         return config['type'](value)
 
     def __setattr__(self, key, value):
-        if not hasattr(self, 'config') or key not in self.config:
-            super(Configuration, self).__setattr__(key, value)
-        else:
+        if key != 'config' and key in self.config:
             self.config[key]['value'] = value
+        else:
+            super(Configuration, self).__setattr__(key, value)
 
     def add_config(self, key, type_, default=NOT_SET, env_var=None):
         """Add a configuration setting.

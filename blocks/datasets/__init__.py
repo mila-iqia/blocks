@@ -155,13 +155,14 @@ class InMemoryDataset(Dataset):
     files are loaded after de-serialization, before the :meth:`load` method
     is ever called.
 
-    >>> import cPickle
+    >>> import pickle
     >>> from blocks.datasets.mnist import MNIST
     >>> mnist = MNIST('train')
-    >>> print("{} MB".format(mnist.data['features'].nbytes / 1024 / 1024))
+    >>> print("{} MB".format(
+    ...     mnist.data['features'].nbytes // 1024 // 1024)) # doctest: +SKIP
     179 MB
     >>> with open('mnist.pkl', 'wb') as f:
-    ...     cPickle.dump(mnist, f, protocol=cPickle.HIGHEST_PROTOCOL)
+    ...     pickle.dump(mnist, f, protocol=pickle.HIGHEST_PROTOCOL)
 
     You will notice that the dumping of the dataset was relatively quick,
     because it didn't attempt to write MNIST to disk. We can now reload it,
@@ -169,7 +170,7 @@ class InMemoryDataset(Dataset):
     happened.
 
     >>> with open('mnist.pkl') as f:
-    ...     mnist = cPickle.load(f)
+    ...     mnist = pickle.load(f)
     >>> print(mnist.data['features'].shape)
     (60000, 784)
 
@@ -180,8 +181,8 @@ class InMemoryDataset(Dataset):
     >>> correct_path = config.data_path
     >>> config.data_path = '/non/existing/path'
     >>> with open('mnist.pkl') as f:
-    ...     mnist = cPickle.load(f)
-    >>> print("{} MB".format(mnist.data['features'].nbytes / 1024 / 1024))
+    ...     mnist = pickle.load(f)
+    >>> print("{} KB".format(mnist.data['features'].nbytes // 1024))
     Traceback (most recent call last):
       ...
     IOError: [Errno 2] No such file or directory: ...
@@ -192,6 +193,13 @@ class InMemoryDataset(Dataset):
     >>> config.data_path = correct_path
     >>> print(mnist.data['features'].shape)
     (60000, 784)
+
+    .. doctest::
+       :hide:
+
+       >>> import os
+       >>> os.remove('mnist.pkl')
+
 
     """
     def load(self):
