@@ -170,8 +170,8 @@ class InMemoryDataset(Dataset):
 
     >>> with open('mnist.pkl') as f:
     ...     mnist = cPickle.load(f)
-    >>> print("{} MB".format(mnist.data['features'].nbytes / 1024 / 1024))
-    179 MB
+    >>> print(mnist.data['features'].shape)
+    (60000, 784)
 
     However, if the data files can't be found on disk, accessing the data
     will fail.
@@ -190,8 +190,8 @@ class InMemoryDataset(Dataset):
     dataset, correct the situation, and then continue.
 
     >>> config.data_path = correct_path
-    >>> print("{} MB".format(mnist.data['features'].nbytes / 1024 / 1024))
-    179 MB
+    >>> print(mnist.data['features'].shape)
+    (60000, 784)
 
     """
     def load(self):
