@@ -1,6 +1,7 @@
 from __future__ import print_function
 from abc import ABCMeta, abstractmethod
 
+
 class TrainingExtension(object):
     """The base class for training extensions.
 
@@ -73,7 +74,7 @@ def replace_callbacks(class_):
                     self.execute(key, batch)
                 # TODO: use proper reflection here
                 return (simple_callback_overrider
-                        if not 'batch' in key
+                        if 'batch' not in key
                         else batch_callback_overrider)
             callback_overrider = create_callback_overrider(key)
             callback_overrider.__name__ = key
@@ -179,7 +180,6 @@ class FinishAfter(SimpleExtension):
         are done.
 
     """
-
     def __init__(self, num_epochs=None):
         super(FinishAfter, self).__init__()
         if num_epochs:
@@ -193,10 +193,9 @@ class FinishAfter(SimpleExtension):
 
 class Printing(SimpleExtension):
     """Prints log messages to the screen."""
-
     def __init__(self, **kwargs):
         def set_if_absent(name):
-            if not name in kwargs:
+            if name not in kwargs:
                 kwargs[name] = True
         set_if_absent("before_first_epoch")
         set_if_absent("after_training")

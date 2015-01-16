@@ -39,6 +39,7 @@ class AbstractTrainingStatus(object):
         """Return iterator through the status attributes.
 
         The iterator should yield (attribute name, attribute value) pairs.
+
         """
         pass
 
