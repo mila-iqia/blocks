@@ -38,8 +38,14 @@ class TrainingAlgorithm(object):
         pass
 
 
-class TheanoTrainingAlgorithm(TrainingAlgorithm):
-    """A training algorithm based on Theano functions.
+class DifferentiableCostMinimizer(TrainingAlgorithm):
+    """Minimizes a differentiable cost given as a Theano expression.
+
+    Very often the goal of training is to minimize the expected value of a
+    Theano expression. Batch processing in this cases typically consists of
+    running a (or a few) Theano functions.
+    :class:`DifferentiableCostMinimizer` is the base class for such
+    algorithms.
 
     Parameters
     ----------
@@ -121,7 +127,7 @@ class TheanoTrainingAlgorithm(TrainingAlgorithm):
         self.updates.extend(updates)
 
 
-class GradientDescent(TheanoTrainingAlgorithm):
+class GradientDescent(DifferentiableCostMinimizer):
     """A base class for all gradient descent algorithms.
 
     By "gradient descent" we mean a training algorithm of the following
