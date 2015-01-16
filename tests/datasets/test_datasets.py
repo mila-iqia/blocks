@@ -16,9 +16,9 @@ def test_dataset():
     assert list(epoch) == list(zip(data))
 
     # Check if iterating over multiple epochs works
-    for i, epoch in zip(range(2), stream.epochs()):
+    for i, epoch in zip(range(2), stream.iterate_epochs()):
         assert list(epoch) == list(zip(data))
-    for i, epoch in enumerate(stream.epochs()):
+    for i, epoch in enumerate(stream.iterate_epochs()):
         assert list(epoch) == list(zip(data))
         if i == 1:
             break
@@ -82,7 +82,7 @@ def test_data_driven_epochs():
     assert list(stream.get_epoch_iterator()) == epochs[0]
 
     stream.reset()
-    for i, epoch in zip(range(2), stream.epochs()):
+    for i, epoch in zip(range(2), stream.iterate_epochs()):
         assert list(epoch) == epochs[i]
 
     # test scheme reseting between epochs
@@ -95,5 +95,5 @@ def test_data_driven_epochs():
     epochs.append([([1],), ([2, 3],), ([4],)])
     epochs.append([([5],), ([6, 7],), ([8],)])
     stream = DataStream(TestDataset(), iteration_scheme=TestScheme())
-    for i, epoch in zip(range(2), stream.epochs()):
+    for i, epoch in zip(range(2), stream.iterate_epochs()):
         assert list(epoch) == epochs[i]
