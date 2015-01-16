@@ -12,7 +12,7 @@ def test_gradient_descent():
     W_start_value = W.get_value()
     cost = tensor.sum(W ** 2)
 
-    algorithm = GradientDescent(cost, [W])
+    algorithm = GradientDescent(cost=cost, params=[W])
     algorithm.step_rule.learning_rate = 0.75
     algorithm.initialize()
     algorithm.process_batch(dict())
