@@ -69,7 +69,8 @@ class MNIST(Dataset):
         self.default_scheme = SequentialScheme(self.num_examples, 1)
         super(MNIST, self).__init__(**kwargs)
 
-    def get_data(self, request=None):
+    def get_data(self, state=None, request=None):
+        assert state == None
         data = dict(zip(('features', 'targets'), (self.X, self.y)))
         return tuple(data[source][request] for source in self.sources)
 
