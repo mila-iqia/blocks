@@ -246,7 +246,7 @@ def is_graph_input(variable):
 
 
 def is_shared_variable(variable):
-    """Check if a variable is a Theano shared variable"""
+    """Check if a variable is a Theano shared variable."""
     return isinstance(variable, SharedVariable)
 
 
