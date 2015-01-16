@@ -9,7 +9,7 @@ from blocks.algorithms import GradientDescent, DefaultStepRule
 from blocks.bricks import MLP, Tanh, Identity
 from blocks.bricks.cost import BinaryCrossEntropy
 from blocks.main_loop import MainLoop
-from blocks.extensions import FinishAfter
+from blocks.extensions import FinishAfter, Printing
 
 
 def main():
@@ -26,7 +26,8 @@ def main():
                    iteration_scheme=SequentialScheme(mnist.num_examples, 20)),
         GradientDescent(cost=cost,
                         step_rule=DefaultStepRule(learning_rate=0.1)),
-        extensions=[FinishAfter(num_epochs=2)])
+        extensions=[FinishAfter(num_epochs=2),
+                    Printing()])
     main_loop.run()
 
 if __name__ == "__main__":

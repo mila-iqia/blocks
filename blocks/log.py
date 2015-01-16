@@ -28,6 +28,14 @@ class AbstractTrainingStatus(object):
         self.epochs_done = 0
         self.last_epoch_end = -1
 
+    @abstractmethod
+    def __iter__(self):
+        """Return iterator through the status attributes.
+
+        The iterator should yield (attribute name, attribute value) pairs.
+        """
+        pass
+
 
 class TrainingLogRow(object):
     """A convenience interface for a row of the training log.
@@ -52,6 +60,9 @@ class TrainingLogRow(object):
             return super(TrainingLogRow, self).__setattr__(key, value)
         self.log.add_record(self.time, key, value)
 
+    def __iter__(self):
+        return self.log.get_row_iterator(self.time)
+
 
 class AbstractTrainingLog(object):
     """Base class for training logs.
@@ -64,7 +75,10 @@ class AbstractTrainingLog(object):
 
     In addition to the set of records displaying training dynamics, a
     training log has a status object whose attributes form the state of
-    the training procedure.
+
+    Another related concept is a row of the log, which is a set of record
+    sharing the same time component. The log interface has a few routines
+    to allow convenient access to the rows.
 
     """
     __metaclass__ = ABCMeta
@@ -167,6 +181,11 @@ class AbstractTrainingLog(object):
         """Returns an iterator over time-key-value triples of the log."""
         pass
 
+    @abstractmethod
+    def get_row_iterator(self, time):
+        """Returns an iterator over key-value pairs of a row of the log."""
+        pass
+
     def _check_time(self, time):
         if not isinstance(time, int) or time < 0:
             raise ValueError("time must be a positive integer")
@@ -174,7 +193,10 @@ class AbstractTrainingLog(object):
 
 class RAMStatus(AbstractTrainingStatus):
     """A simple training status."""
-    pass
+    def __iter__(self):
+        for attr, value in self.__dict__.items():
+            if not attr.startswith("_"):
+                yield attr, value
 
 
 class RAMTrainingLog(AbstractTrainingLog):
@@ -198,6 +220,10 @@ class RAMTrainingLog(AbstractTrainingLog):
         if not slice_:
             return None
         return slice_.get(key)
+
+    def get_row_iterator(self, time):
+        for key, value in self._storage[time].items():
+            yield key, value
 
     def __iter__(self):
         for time, records in self._storage.items():

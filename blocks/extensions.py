@@ -127,7 +127,7 @@ class SimpleExtension(TrainingExtension):
         for method_name, callback_name, predicate in self._conditions:
             if (callback_name == callback_invoked
                     and predicate(self.main_loop.log)):
-                getattr(self, method_name)(*args)
+                getattr(self, method_name)(callback_invoked, *args)
 
 
 class FinishAfter(SimpleExtension):
@@ -149,5 +149,41 @@ class FinishAfter(SimpleExtension):
                 "after_epoch",
                 predicate=lambda log: log.status.epochs_done == num_epochs)
 
-    def finish_training(self):
+    def finish_training(self, which_callback):
         self.main_loop.log.current_row.training_finish_requested = True
+
+
+class Printing(SimpleExtension):
+    """Prints log messages to the screen."""
+    main_method = 'print_'
+
+    def __init__(self, before_first_epoch=True, every_epoch=True,
+                 every_iteration=False, after_training=True):
+        super(Printing, self).__init__()
+        if before_first_epoch:
+            self.add_condition(
+                "before_epoch",
+                predicate=lambda log: log.status.epochs_done == 0)
+        if every_epoch:
+            self.add_condition("after_epoch")
+        if every_iteration:
+            self.add_condition("after_iteration")
+        if after_training:
+            self.add_condition("after_training")
+
+    def print_(self, which_callback):
+        log = self.main_loop.log
+        print "".join(79 * "-")
+        if which_callback == "before_epoch" and log.status.epochs_done == 0:
+            print "BEFORE FIRST EPOCH"
+        elif which_callback == "after_training":
+            print "TRAINING HAS BEEN FINISHED:"
+        elif which_callback == "after_epoch":
+            print "AFTER ANOTHER BATCH"
+        print "".join(79 * "-")
+        print "Training status:"
+        for attr, value in iter(log.status):
+            print "\t", "{}:".format(attr), value
+        print "Log records from iteration {}:".format(log.status.iterations_done)
+        for attr, value in iter(log.current_row):
+            print "\t", "{}:".format(attr), value
