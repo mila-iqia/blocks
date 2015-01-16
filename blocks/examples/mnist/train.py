@@ -8,7 +8,6 @@ from blocks.datasets.schemes import SequentialScheme
 from blocks.algorithms import GradientDescent, DefaultStepRule
 from blocks.bricks import MLP, Tanh, Identity
 from blocks.bricks.cost import BinaryCrossEntropy
-from blocks.select import Selector
 from blocks.main_loop import MainLoop
 from blocks.extensions import FinishAfter
 
@@ -25,8 +24,8 @@ def main():
         mlp,
         DataStream(MNIST("train"),
                    iteration_scheme=SequentialScheme(mnist.num_examples, 20)),
-        GradientDescent(cost, Selector(mlp).get_params().values(),
-                        DefaultStepRule(learning_rate=0.1)),
+        GradientDescent(cost=cost,
+                        step_rule=DefaultStepRule(learning_rate=0.1)),
         extensions=[FinishAfter(num_epochs=2)])
     main_loop.run()
 

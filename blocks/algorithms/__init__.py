@@ -5,7 +5,6 @@ from collections import OrderedDict
 import theano
 from theano import tensor
 
-from blocks.utils import update_instance
 from blocks.graph import ComputationGraph
 
 
@@ -47,7 +46,8 @@ class TheanoTrainingAlgorithm(TrainingAlgorithm):
     cost : Theano variable
         The objective to be minimized.
     params : list of Theano shared variables
-        The parameters to be tuned.
+        The parameters to be tuned. If ``None``, all shared variables of
+        `cost` computation graph will be considered parameters.
 
     Attributes
     ----------
@@ -66,16 +66,22 @@ class TheanoTrainingAlgorithm(TrainingAlgorithm):
 
     .. todo::
 
-       Ideally the parameters should be extracted from the `cost`
-       computation graph. But in order for this to work our graph
-       traversal routine should recurse into ScanOp's, which is currently
-       not the case.
+        Some shared variables are not parameters (e.g. those created by
+        random streams)
+
+    .. todo::
+
+        Due to a rather premature status of the :class:`ComputationGraph`
+        class the parameter used only inside scans are not fetched
+        currently.
 
     """
     __metaclass__ = ABCMeta
 
-    def __init__(self, cost, params):
-        update_instance(self, locals())
+    def __init__(self, cost, params=None):
+        self.cost = cost
+        self.params = (params if params
+                       else ComputationGraph(cost).get_shared_variables())
         self._cost_computation_graph = ComputationGraph(self.cost)
         self._updates = []
 
@@ -150,8 +156,8 @@ class GradientDescent(TheanoTrainingAlgorithm):
         The step rule.
 
     """
-    def __init__(self, cost, params, step_rule=None, gradients=None):
-        super(GradientDescent, self).__init__(cost, params)
+    def __init__(self, step_rule=None, gradients=None, **kwargs):
+        super(GradientDescent, self).__init__(**kwargs)
         self.gradients = (
             gradients if gradients
             else dict(

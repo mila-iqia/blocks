@@ -245,6 +245,11 @@ def is_graph_input(variable):
             not isinstance(variable, ScalarConstant))
 
 
+def is_shared_variable(variable):
+    """Check if a variable is a Theano shared variable"""
+    return isinstance(variable, SharedVariable)
+
+
 def graph_inputs(variables, blockers=None):
     """Compute inputs needed to compute values in variables.
 
