@@ -158,9 +158,9 @@ class InMemoryDataset(Dataset):
     >>> import pickle
     >>> from blocks.datasets.mnist import MNIST
     >>> mnist = MNIST('train')
-    >>> print("{} MB".format(
-    ...     mnist.data['features'].nbytes // 1024 // 1024)) # doctest: +SKIP
-    179 MB
+    >>> print("{:,d} KB".format(
+    ...     mnist.data['features'].nbytes / 1024)) # doctest: +SKIP
+    183,750 KB
     >>> with open('mnist.pkl', 'wb') as f:
     ...     pickle.dump(mnist, f, protocol=pickle.HIGHEST_PROTOCOL)
 
