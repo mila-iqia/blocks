@@ -203,6 +203,11 @@ class Printing(SimpleExtension):
         set_if_absent("after_every_epoch")
         super(Printing, self).__init__(**kwargs)
 
+    def _print_attributes(self, attribute_tuples):
+        for attr, value in attribute_tuples:
+            if not attr.startswith("_"):
+                print("\t", "{}:".format(attr), value)
+
     def do(self, which_callback):
         log = self.main_loop.log
         print("".join(79 * "-"))
@@ -214,9 +219,7 @@ class Printing(SimpleExtension):
             print("AFTER ANOTHER EPOCH")
         print("".join(79 * "-"))
         print("Training status:")
-        for attr, value in iter(log.status):
-            print("\t", "{}:".format(attr), value)
+        self._print_attributes(log.status)
         print("Log records from the iteration {}:".format(
             log.status.iterations_done))
-        for attr, value in iter(log.current_row):
-            print("\t", "{}:".format(attr), value)
+        self._print_attributes(log.current_row)

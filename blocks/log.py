@@ -16,9 +16,15 @@ class AbstractTrainingStatus(object):
         The number of iterations done.
     epochs_done : int
         The number of epochs done.
-    last_epoch_end : int
-        The number of the last iteration of the last epoch. -1 if
-        no epoch has ended so far.
+    _epoch_ends : list
+        The numbers of the epochs last iterations.
+
+    .. todo::
+
+        We need some notion of an attributes property. Examples of possible
+        properties include a docstring, a priority level to be used by a
+        printing extension to decide whether a certain attribute should be
+        printed or not.
 
     """
     __metaclass__ = ABCMeta
@@ -26,7 +32,7 @@ class AbstractTrainingStatus(object):
     def __init__(self):
         self.iterations_done = 0
         self.epochs_done = 0
-        self.last_epoch_end = -1
+        self._epoch_ends = []
 
     @abstractmethod
     def __iter__(self):
@@ -174,7 +180,7 @@ class AbstractTrainingLog(object):
 
     @property
     def last_epoch_row(self):
-        return self[self.status.last_epoch_end]
+        return self[self.status._epoch_ends[-1]]
 
     @abstractmethod
     def __iter__(self):
@@ -195,7 +201,7 @@ class RAMStatus(AbstractTrainingStatus):
     """A simple training status."""
     def __iter__(self):
         for attr, value in self.__dict__.items():
-            if not attr.startswith("_"):
+            if not attr.startswith("__"):
                 yield attr, value
 
 
