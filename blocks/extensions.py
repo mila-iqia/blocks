@@ -131,11 +131,23 @@ class SimpleExtension(TrainingExtension):
 
 
 class FinishAfter(SimpleExtension):
-    """Finishes the training process when triggered."""
+    """Finishes the training process when triggered.
+
+    Parameters
+    ----------
+    num_epochs : int
+        If not ``None``, training finish is requested after `num_epochs`
+        are done.
+
+    """
     main_method = 'finish_training'
 
-    def __init__(self):
+    def __init__(self, num_epochs=None):
         super(FinishAfter, self).__init__()
+        if num_epochs:
+            self.add_condition(
+                "after_epoch",
+                predicate=lambda log: log.status.epochs_done == num_epochs)
 
     def finish_training(self):
         self.main_loop.log.current_row.training_finish_requested = True
