@@ -30,9 +30,9 @@ class BinaryCrossEntropy(CostMatrix):
         flat_ones_indices = y_ones_indices.flatten()
         return -(tensor.log(
             y_hat.flatten()
-                [y_hat.shape[-1]
-                 * tensor.arange(flat_ones_indices.shape[0])
-                 + flat_ones_indices])).mean()
+            [y_hat.shape[-1]
+                * tensor.arange(flat_ones_indices.shape[0])
+                + flat_ones_indices])).mean()
 
 
 class AbsoluteError(CostMatrix):

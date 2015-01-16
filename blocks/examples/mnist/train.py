@@ -7,11 +7,11 @@ from blocks.datasets.mnist import MNIST
 from blocks.datasets.schemes import SequentialScheme
 from blocks.algorithms import GradientDescent, DefaultStepRule
 from blocks.bricks import MLP, Tanh, Identity
-from blocks.bricks.convertors import OneHotEncoder
 from blocks.bricks.cost import BinaryCrossEntropy
 from blocks.select import Selector
 from blocks.main_loop import MainLoop
 from blocks.extensions import FinishAfter
+
 
 def main():
     mlp = MLP([Tanh(), Identity()], [784, 500, 10])

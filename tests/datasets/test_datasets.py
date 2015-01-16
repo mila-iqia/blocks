@@ -66,7 +66,6 @@ def test_data_driven_epochs():
             except StopIteration:
                 return self.open()
 
-
         def get_data(self, state, request):
             data = []
             for i in range(request):

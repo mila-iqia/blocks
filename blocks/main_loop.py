@@ -13,14 +13,15 @@ class MainLoop(object):
     in a log object.
 
     The `MainLoop` itself does very little: only fetching the data from the
-    data stream and feeding it to the algorithm. It expects the extensions to
-    do most of the job. A respective callback of every extension is called
-    at every stage of training. The extensions should communicate between
-    themselves and with the main loop object by means of making records in
-    the log. For instance in order to stop the training procedure an
-    extension can make a record `training_finish_requested=True` in the
-    log. The main loop checks for such a record after every batch and every
-    epoch and terminates when finds it.
+    data stream and feeding it to the algorithm. It expects the extensions
+    to do most of the job. A respective callback of every extension is
+    called at every stage of training. The extensions should communicate
+    between themselves and with the main loop object by means of making
+    records in the log. For instance in order to stop the training
+    procedure an extension can make a record
+    `training_finish_requested=True` in the log. The main loop checks for
+    such a record after every batch and every epoch and terminates when
+    finds it.
 
     Parameters
     ----------
