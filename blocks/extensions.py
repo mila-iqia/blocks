@@ -177,9 +177,7 @@ class SimpleExtension(TrainingExtension):
 
 
 class FinishAfter(SimpleExtension):
-    """Finishes the training process when triggered.
-
-    """
+    """Finishes the training process when triggered."""
     def __init__(self, **kwargs):
         super(FinishAfter, self).__init__(**kwargs)
 
