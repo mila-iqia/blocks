@@ -2,7 +2,10 @@
 from abc import ABCMeta, abstractmethod
 from collections import defaultdict
 
+from six import add_metaclass
 
+
+@add_metaclass(ABCMeta)
 class AbstractTrainingStatus(object):
     """The base class for objects that carry the training status.
 
@@ -27,8 +30,6 @@ class AbstractTrainingStatus(object):
         printed or not.
 
     """
-    __metaclass__ = ABCMeta
-
     def __init__(self):
         self.iterations_done = 0
         self.epochs_done = 0
@@ -44,6 +45,7 @@ class AbstractTrainingStatus(object):
         pass
 
 
+@add_metaclass(ABCMeta)
 class TrainingLogRow(object):
     """A convenience interface for a row of the training log.
 
@@ -88,8 +90,6 @@ class AbstractTrainingLog(object):
     to allow convenient access to the rows.
 
     """
-    __metaclass__ = ABCMeta
-
     @abstractmethod
     def get_status(self):
         """Returns the training status.

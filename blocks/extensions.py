@@ -1,7 +1,10 @@
 from __future__ import print_function
 from abc import ABCMeta, abstractmethod
 
+from six import add_metaclass
 
+
+@add_metaclass(ABCMeta)
 class TrainingExtension(object):
     """The base class for training extensions.
 
@@ -16,8 +19,6 @@ class TrainingExtension(object):
         The main loop to which the extension belongs.
 
     """
-    __metaclass__ = ABCMeta
-
     def dispatch(self, callback_name, *args):
         """Runs callback with the given name.
 

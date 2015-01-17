@@ -3,11 +3,13 @@ from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 
 import theano
+from six import add_metaclass
 from theano import tensor
 
 from blocks.graph import ComputationGraph
 
 
+@add_metaclass(ABCMeta)
 class TrainingAlgorithm(object):
     """Base class for training algorithms.
 
@@ -18,8 +20,6 @@ class TrainingAlgorithm(object):
     called with a batch of training data as a parameter.
 
     """
-    __metaclass__ = ABCMeta
-
     @abstractmethod
     def initialize(self):
         """Initialize the training algorithm."""
@@ -38,6 +38,7 @@ class TrainingAlgorithm(object):
         pass
 
 
+@add_metaclass(ABCMeta)
 class DifferentiableCostMinimizer(TrainingAlgorithm):
     """Minimizes a differentiable cost given as a Theano expression.
 
@@ -82,8 +83,6 @@ class DifferentiableCostMinimizer(TrainingAlgorithm):
         currently.
 
     """
-    __metaclass__ = ABCMeta
-
     def __init__(self, cost, params=None):
         self.cost = cost
         self.params = (params if params

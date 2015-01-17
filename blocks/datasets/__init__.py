@@ -2,10 +2,12 @@ from abc import ABCMeta, abstractmethod
 
 import numpy
 import six
+from six import add_metaclass
 
 from blocks.utils import update_instance
 
 
+@add_metaclass(ABCMeta)
 class Dataset(object):
     """A dataset.
 
@@ -36,8 +38,6 @@ class Dataset(object):
     simultaneously.
 
     """
-    __metaclass__ = ABCMeta
-
     def __init__(self, sources=None):
         if sources is not None:
             if not all(source in self.sources for source in sources):
@@ -130,6 +130,7 @@ class Dataset(object):
         return DataStream(self, iteration_scheme=self.default_scheme)
 
 
+@add_metaclass(ABCMeta)
 class ContainerDataset(Dataset):
     """Equips a Python container with the dataset interface.
 
@@ -200,8 +201,6 @@ class AbstractDataStream(object):
         given by the dataset.
 
     """
-    __metaclass__ = ABCMeta
-
     def __init__(self, iteration_scheme=None):
         self.iteration_scheme = iteration_scheme
 

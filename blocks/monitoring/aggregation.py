@@ -2,11 +2,14 @@
 import logging
 from abc import ABCMeta, abstractmethod
 
+from six import add_metaclass
+
 from blocks.utils import shared_like, update_instance
 
 logger = logging.getLogger(__name__)
 
 
+@add_metaclass(ABCMeta)
 class AggregationScheme(object):
     """Specify how incrementally evaluate a Theano variable on a dataset.
 
@@ -25,8 +28,6 @@ class AggregationScheme(object):
         expression that computes the desired value on a single batch.
 
     """
-    __metaclass__ = ABCMeta
-
     @abstractmethod
     def get_aggregator(self):
         """Return a new Aggregator for this variable."""
