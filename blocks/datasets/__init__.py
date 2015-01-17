@@ -216,6 +216,36 @@ class InMemoryDataset(Dataset):
 
 
 def lazy_properties(*lazy_properties):
+    r"""Decorator to assign lazy properties.
+
+    Used to assign "lazy properties" on :class:`InMemoryDataset` classes.
+    Please see the documentation there for a discussion on what lazy
+    properties are and why they are needed.
+
+    Parameters
+    ----------
+    \*lazy_properties : strings
+        The names of the attributes that are lazy.
+
+    Notes
+    -----
+    The pickling behaviour of the dataset is only overridden if the dataset
+    does not have a ``__getstate__`` method implemented.
+
+    Examples
+    --------
+    In order to make sure that attributes are not serialized with the
+    dataset, and are lazily reloaded by the :meth:`~InMemoryDataset.load`
+    method after deserialization, use the decorator with the names of the
+    attributes as an argument.
+
+    >>> @lazy_properties('features', 'targets')
+    ... class TestDataset(InMemoryDataset):
+    ...     def load(self):
+    ...         self.features = range(10 ** 6)
+    ...         self.targets = range(10 ** 6)[::-1]
+
+    """
     def lazy_property_factory(lazy_property):
         """Create properties that perform lazy loading of attributes."""
         def lazy_property_getter(self):
