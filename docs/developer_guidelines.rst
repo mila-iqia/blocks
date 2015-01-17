@@ -99,10 +99,18 @@ Python 2 and 3
 Blocks aims to be both Python 2 and Python 3 compliant using a single code-base,
 without using 2to3_. There are many online resources which discuss the writing
 compatible code. For a quick overview see `the cheatsheet from Python
-Charmers`_.  For non-trivial cases, we use the six_ compatibility library.
+Charmers`_. For non-trivial cases, we use the six_ compatibility library. Some
+quirks that this brings:
+
+* Our documentation generation framework, Sphinx_ (using autodoc_), will try to
+  initialize abstract classes if they inherit the ``ABCMeta`` class from a
+  parent. To make sure that the documentation builds successfully make sure to
+  use the ``@add_metaclass`` decorator on all abstract classes.
 
 Documentation should be written to be Python 3 compliant.
 
 .. _2to3: https://docs.python.org/2/library/2to3.html
 .. _the cheatsheet from Python Charmers: http://python-future.org/compatible_idioms.html
 .. _six: https://pythonhosted.org/six/
+.. _Sphinx: http://sphinx-doc.org/
+.. _autodoc: http://sphinx-doc.org/ext/autodoc.html

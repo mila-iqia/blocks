@@ -31,6 +31,7 @@ class IterationScheme(object):
         raise NotImplementedError
 
 
+@add_metaclass(ABCMeta)
 class BatchSizeScheme(IterationScheme):
     """Iteration scheme that returns batch sizes.
 
@@ -43,6 +44,7 @@ class BatchSizeScheme(IterationScheme):
     pass
 
 
+@add_metaclass(ABCMeta)
 class BatchScheme(IterationScheme):
     """Iteration schemes that return slices or indices for batches.
 
