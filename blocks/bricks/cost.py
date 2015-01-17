@@ -25,22 +25,6 @@ class BinaryCrossEntropy(CostMatrix):
         cost = tensor.nnet.binary_crossentropy(y_hat, y)
         return cost
 
-    @application
-    def apply_for_indices(self, y_ones_indices, y_hat):
-        flat_ones_indices = y_ones_indices.flatten()
-        return -(tensor.log(
-            y_hat.flatten()
-            [y_hat.shape[-1]
-                * tensor.arange(flat_ones_indices.shape[0])
-                + flat_ones_indices])).mean()
-
-
-class CategoricalCrossEntropy(CostMatrix):
-    @application
-    def cost_matrix(self, y, y_hat):
-        cost = tensor.nnet.categorical_crossentropy(y_hat, y)
-        return cost
-
 
 class AbsoluteError(CostMatrix):
     @application
@@ -53,4 +37,11 @@ class SquaredError(CostMatrix):
     @application
     def cost_matrix(self, y, y_hat):
         cost = tensor.sqr(y - y_hat)
+        return cost
+
+
+class CategoricalCrossEntropy(Cost):
+    @application
+    def apply(self, y, y_hat):
+        cost = tensor.nnet.categorical_crossentropy(y_hat, y).mean()
         return cost

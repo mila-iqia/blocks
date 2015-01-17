@@ -1,7 +1,7 @@
 """The event-based main loop of Blocks."""
 from abc import ABCMeta
 
-from blocks.log import RAMTrainingLog
+from blocks.log import TrainingLog
 from blocks.utils import update_instance
 
 
@@ -44,7 +44,7 @@ class MainLoop(object):
     def __init__(self, model, data_stream, algorithm,
                  log=None, extensions=None):
         if not log:
-            log = RAMTrainingLog()
+            log = TrainingLog()
         if not extensions:
             extensions = []
         update_instance(self, locals())

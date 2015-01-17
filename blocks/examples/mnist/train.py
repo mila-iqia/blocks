@@ -7,7 +7,7 @@ from blocks.datasets.mnist import MNIST
 from blocks.datasets.schemes import SequentialScheme
 from blocks.algorithms import GradientDescent, SteepestDescent
 from blocks.bricks import MLP, Tanh, Identity
-from blocks.bricks.cost import BinaryCrossEntropy
+from blocks.bricks.cost import CategoricalCrossEntropy
 from blocks.main_loop import MainLoop
 from blocks.extensions import FinishAfter, Printing
 
@@ -16,7 +16,7 @@ def main():
     mlp = MLP([Tanh(), Identity()], [784, 100, 10])
     x = tensor.matrix('features')
     y = tensor.lmatrix('targets')
-    cost = BinaryCrossEntropy().apply_for_indices(y - 1, mlp.apply(x))
+    cost = CategoricalCrossEntropy().apply(y.flatten() - 1, mlp.apply(x))
 
     mnist = MNIST("train")
 
