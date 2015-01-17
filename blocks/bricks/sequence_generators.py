@@ -1,6 +1,7 @@
 """Sequence generation framework."""
 from abc import ABCMeta, abstractmethod
 
+from six import add_metaclass
 from theano import tensor
 
 from blocks.bricks import (application, Brick, Initializable, Identity, lazy,
@@ -12,6 +13,7 @@ from blocks.bricks.recurrent import recurrent
 from blocks.utils import dict_subset, dict_union, update_instance
 
 
+@add_metaclass(ABCMeta)
 class BaseSequenceGenerator(Initializable):
     """A generic sequence generator.
 
@@ -243,8 +245,6 @@ class BaseSequenceGenerator(Initializable):
 
 class AbstractEmitter(Brick):
     """The interface for the emitter component of a readout."""
-    __metaclass__ = ABCMeta
-
     @abstractmethod
     def emit(self, readouts):
         pass
@@ -258,15 +258,15 @@ class AbstractEmitter(Brick):
         pass
 
 
+@add_metaclass(ABCMeta)
 class AbstractFeedback(Brick):
     """The interface for the feedback component of a readout."""
-    __metaclass__ = ABCMeta
-
     @abstractmethod
     def feedback(self, outputs):
         pass
 
 
+@add_metaclass(ABCMeta)
 class AbstractReadout(AbstractEmitter, AbstractFeedback):
     """The interface for the readout component of a sequence generator.
 
@@ -275,21 +275,18 @@ class AbstractReadout(AbstractEmitter, AbstractFeedback):
        Explain what the methods should do.
 
     """
-    __metaclass__ = ABCMeta
-
     @abstractmethod
     def readout(self, **kwargs):
         pass
 
 
+@add_metaclass(ABCMeta)
 class AbstractAttentionTransition(BaseRecurrent):
     """A base class for a transition component of a sequence generator.
 
     A recurrent transition combined with an attention mechanism.
 
     """
-    __metaclass__ = ABCMeta
-
     @abstractmethod
     def apply(self, **kwargs):
         pass

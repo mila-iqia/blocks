@@ -7,6 +7,7 @@ from collections import OrderedDict
 from itertools import chain
 
 import numpy
+from six import add_metaclass
 from theano import tensor
 
 from blocks.utils import (pack, repr_attrs, reraise_as, shared_floatx_zeros,
@@ -17,6 +18,7 @@ DEFAULT_SEED = [2014, 10, 5]
 logger = logging.getLogger(__name__)
 
 
+@add_metaclass(ABCMeta)
 class Brick(object):
     """A brick encapsulates Theano operations with parameters.
 
@@ -164,7 +166,6 @@ class Brick(object):
     linear_apply_output
 
     """
-    __metaclass__ = ABCMeta
     #: See :attr:`Brick.lazy`
     lazy = True
     #: See :attr:`Brick.print_shapes`

@@ -3,6 +3,7 @@ import numpy
 from abc import ABCMeta, abstractmethod
 
 import theano
+from six import add_metaclass
 from theano import tensor
 from theano import Variable
 
@@ -13,14 +14,13 @@ from blocks.serialization import save_params, load_params
 logger = logging.getLogger(__name__)
 
 
+@add_metaclass(ABCMeta)
 class GroundhogIterator(object):
     """A base class for Groundhog compatible iterator.
 
     Has mock implementations of all required methods except `next`.
 
     """
-    __metaclass__ = ABCMeta
-
     def start(self, offset):
         pass
 

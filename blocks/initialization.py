@@ -4,14 +4,14 @@ from abc import ABCMeta, abstractmethod
 import numpy
 import six
 import theano
+from six import add_metaclass
 
 from blocks.utils import update_instance
 
 
+@add_metaclass(ABCMeta)
 class NdarrayInitialization(object):
     """Base class specifying the interface for ndarray initialization."""
-    __metaclass__ = ABCMeta
-
     @abstractmethod
     def generate(self, rng, shape):
         """Generate an initial set of parameters from a given distribution.

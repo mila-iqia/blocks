@@ -1,7 +1,10 @@
 import itertools
 from abc import ABCMeta, abstractmethod
 
+from six import add_metaclass
 
+
+@add_metaclass(ABCMeta)
 class IterationScheme(object):
     """An iteration scheme.
 
@@ -23,8 +26,6 @@ class IterationScheme(object):
        https://docs.python.org/3.3/library/stdtypes.html#iterator-types
 
     """
-    __metaclass__ = ABCMeta
-
     @abstractmethod
     def get_request_iterator(self):
         raise NotImplementedError
