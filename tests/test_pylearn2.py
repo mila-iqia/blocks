@@ -1,5 +1,4 @@
 import logging
-import os
 
 import numpy
 import pylearn2
@@ -11,7 +10,6 @@ from blocks.bricks import Sigmoid, MLP
 from blocks.bricks.cost import SquaredError
 from blocks.initialization import IsotropicGaussian, Constant
 from blocks.pylearn2 import Pylearn2Model, Pylearn2Cost, Pylearn2Train
-from blocks.pylearn2.examples.markov_chain import main
 
 
 def test_pylearn2_training():
@@ -39,13 +37,3 @@ def test_pylearn2_training():
               monitoring_dataset=valid_dataset)
     train = Pylearn2Train(train_dataset, block_model, algorithm=sgd)
     train.main_loop(time_budget=3)
-
-
-def test_markov_chain():
-    # Silence Pylearn2's logger
-    logger = logging.getLogger(pylearn2.__name__)
-    logger.setLevel(logging.ERROR)
-
-    filename = 'unittest_markov_chain'
-    main('train', filename, 0, 3, False)
-    os.remove(filename)

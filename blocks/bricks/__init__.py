@@ -387,7 +387,6 @@ def lazy(func):
 
     Examples
     --------
-    >>> from __future__ import print_function
     >>> class SomeBrick(Brick):
     ...     @lazy
     ...     def __init__(self, a, b, c='c', d=None):

@@ -1,5 +1,0 @@
-[report]
-omit =
-    */tests/*
-    */blocks/groundhog/*
-    */blocks/pylearn2/*
