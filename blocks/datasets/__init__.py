@@ -299,6 +299,7 @@ class DataStream(AbstractDataStream):
         return super(DataStream, self).get_epoch_iterator(**kwargs)
 
 
+@add_metaclass(ABCMeta)
 class DataStreamWrapper(AbstractDataStream):
     """A data stream that wraps another data stream."""
     def __init__(self, data_stream, **kwargs):
