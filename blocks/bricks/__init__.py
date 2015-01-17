@@ -6,6 +6,7 @@ from collections import OrderedDict
 from itertools import chain
 
 import numpy
+from six import add_metaclass
 from theano import tensor
 
 from blocks.utils import (pack, repr_attrs, reraise_as, shared_floatx_zeros,
@@ -1024,6 +1025,12 @@ class LinearMaxout(Initializable):
 
 def _activation_factory(name, activation):
     """Class factory for Bricks which perform simple Theano calls."""
+    class ActivationDocumentation(type):
+        def __new__(cls, name, bases, classdict):
+            classdict['__doc__'] = classdict['__doc__'].format(name.lower())
+            return type.__new__(cls, name, bases, classdict)
+
+    @add_metaclass(ActivationDocumentation)
     class Activation(Brick):
         """Element-wise application of {0} function."""
         @application(inputs=['input_'], outputs=['output'])
@@ -1044,7 +1051,6 @@ def _activation_factory(name, activation):
             output = activation(input_)
             return output
     Activation.__name__ = name
-    Activation.__doc__ = Activation.__doc__.format(name.lower())
     Activation.apply.__doc__ = \
         Activation.apply.__doc__.format(name.lower())
     return Activation
