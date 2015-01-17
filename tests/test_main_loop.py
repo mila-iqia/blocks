@@ -6,7 +6,7 @@ def test_main_loop():
 
     class TestDataStream(object):
 
-        def epochs(self, as_dict):
+        def iterate_epochs(self, as_dict):
             assert as_dict is True
 
             def wrap_in_dicts(iterable):

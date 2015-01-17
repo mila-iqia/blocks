@@ -13,10 +13,22 @@ class TrainingExtension(object):
     Attributes
     ----------
     main_loop : :class:`MainLoop`
-        The main loop to which the extensions belongs.
+        The main loop to which the extension belongs.
 
     """
     __metaclass__ = ABCMeta
+
+    def dispatch(self, callback_name, *args):
+        """Runs callback with the given name.
+
+        The reason for having this method is to allow
+        the descendants of the :class:`TrainingExtension` to intercept
+        callback invocations and do something with them, e.g. block
+        when certain condition does not hold. The default implementation
+        simply invokes the callback by its name.
+
+        """
+        getattr(self, callback_name)(*args)
 
     def before_training(self):
         """The callback invoked before training is started."""
@@ -61,30 +73,6 @@ class TrainingExtension(object):
         pass
 
 
-# To avoid copy-pasting we override callbacks in SimpleExtension
-# programatically.
-def replace_callbacks(class_):
-    for key in TrainingExtension.__dict__:
-        if not key.startswith('_'):
-            def create_callback_overrider(key):
-                def simple_callback_overrider(self):
-                    self.execute(key)
-
-                def batch_callback_overrider(self, batch):
-                    self.execute(key, batch)
-                # TODO: use proper reflection here
-                return (simple_callback_overrider
-                        if 'batch' not in key
-                        else batch_callback_overrider)
-            callback_overrider = create_callback_overrider(key)
-            callback_overrider.__name__ = key
-            callback_overrider.__doc__ = (
-                """Execute methods corresponding to this callback.""")
-            setattr(class_, key, callback_overrider)
-    return class_
-
-
-@replace_callbacks
 class SimpleExtension(TrainingExtension):
     """A base class for simple extensions.
 
@@ -162,8 +150,17 @@ class SimpleExtension(TrainingExtension):
         """
         pass
 
-    def execute(self, callback_invoked, *from_main_loop):
-        """Execute methods corresponding to the invoked callback."""
+    def dispatch(self, callback_invoked, *from_main_loop):
+        """Check conditions and call the :meth:`do` method.
+
+        Also adds additional arguments if specified for a condition.
+
+        .. todo::
+
+            Add a check for a situation when several conditions are met
+            at the same time and do something.
+
+        """
         for callback_name, predicate, arguments in self._conditions:
             if (callback_name == callback_invoked
                     and predicate(self.main_loop.log)):

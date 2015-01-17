@@ -51,7 +51,7 @@ class MainLoop(object):
 
     def _run_extensions(self, method_name, *args):
         for extension in self.extensions:
-            getattr(extension, method_name)(*args)
+            extension.dispatch(method_name, *args)
 
     def _check_finish_training(self):
         if self.log.current_row.training_finish_requested:
@@ -70,7 +70,7 @@ class MainLoop(object):
             self.algorithm.log = self.log
             self._run_extensions('before_training')
             self.algorithm.initialize()
-            for epoch in self.data_stream.epochs(as_dict=True):
+            for epoch in self.data_stream.iterate_epochs(as_dict=True):
                 self._run_extensions('before_epoch')
                 for batch in epoch:
                     self._run_extensions('before_batch', batch)
