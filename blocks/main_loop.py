@@ -1,13 +1,8 @@
 """The event-based main loop of Blocks."""
-from abc import ABCMeta
-
-from six import add_metaclass
-
 from blocks.log import TrainingLog
 from blocks.utils import update_instance
 
 
-@add_metaclass(ABCMeta)
 class MainLoop(object):
     """The standard main loop of Blocks.
 

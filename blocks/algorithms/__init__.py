@@ -38,7 +38,6 @@ class TrainingAlgorithm(object):
         pass
 
 
-@add_metaclass(ABCMeta)
 class DifferentiableCostMinimizer(TrainingAlgorithm):
     """Minimizes a differentiable cost given as a Theano expression.
 
@@ -184,6 +183,7 @@ class GradientDescent(DifferentiableCostMinimizer):
         self._function(*ordered_batch)
 
 
+@add_metaclass(ABCMeta)
 class StepRule(object):
     """A rule to compute a step for a gradient descent algorithm."""
     @abstractmethod

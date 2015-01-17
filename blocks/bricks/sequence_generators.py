@@ -13,7 +13,6 @@ from blocks.bricks.recurrent import recurrent
 from blocks.utils import dict_subset, dict_union, update_instance
 
 
-@add_metaclass(ABCMeta)
 class BaseSequenceGenerator(Initializable):
     """A generic sequence generator.
 
@@ -243,6 +242,7 @@ class BaseSequenceGenerator(Initializable):
             assert False
 
 
+@add_metaclass(ABCMeta)
 class AbstractEmitter(Brick):
     """The interface for the emitter component of a readout."""
     @abstractmethod

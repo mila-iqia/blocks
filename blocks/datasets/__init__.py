@@ -130,7 +130,6 @@ class Dataset(object):
         return DataStream(self, iteration_scheme=self.default_scheme)
 
 
-@add_metaclass(ABCMeta)
 class ContainerDataset(Dataset):
     """Equips a Python container with the dataset interface.
 
@@ -173,6 +172,7 @@ class ContainerDataset(Dataset):
         return next(state)
 
 
+@add_metaclass(ABCMeta)
 class AbstractDataStream(object):
     """A stream of data separated into epochs.
 
