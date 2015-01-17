@@ -1028,6 +1028,8 @@ def _activation_factory(name, activation):
     class ActivationDocumentation(type):
         def __new__(cls, name, bases, classdict):
             classdict['__doc__'] = classdict['__doc__'].format(name.lower())
+            classdict['apply'].__doc__ = \
+                classdict['apply'].__doc__.format(name.lower())
             return type.__new__(cls, name, bases, classdict)
 
     @add_metaclass(ActivationDocumentation)
@@ -1051,8 +1053,6 @@ def _activation_factory(name, activation):
             output = activation(input_)
             return output
     Activation.__name__ = name
-    Activation.apply.__doc__ = \
-        Activation.apply.__doc__.format(name.lower())
     return Activation
 
 Identity = _activation_factory('Identity', lambda x: x)
