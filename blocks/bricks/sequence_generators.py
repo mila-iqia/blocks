@@ -266,7 +266,6 @@ class AbstractFeedback(Brick):
         pass
 
 
-@add_metaclass(ABCMeta)
 class AbstractReadout(AbstractEmitter, AbstractFeedback):
     """The interface for the readout component of a sequence generator.
 

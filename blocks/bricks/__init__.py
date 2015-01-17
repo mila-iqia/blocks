@@ -2,12 +2,10 @@
 import inspect
 import functools
 import logging
-from abc import ABCMeta
 from collections import OrderedDict
 from itertools import chain
 
 import numpy
-from six import add_metaclass
 from theano import tensor
 
 from blocks.utils import (pack, repr_attrs, reraise_as, shared_floatx_zeros,
@@ -18,7 +16,6 @@ DEFAULT_SEED = [2014, 10, 5]
 logger = logging.getLogger(__name__)
 
 
-@add_metaclass(ABCMeta)
 class Brick(object):
     """A brick encapsulates Theano operations with parameters.
 

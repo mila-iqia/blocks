@@ -45,7 +45,6 @@ class AbstractTrainingStatus(object):
         pass
 
 
-@add_metaclass(ABCMeta)
 class TrainingLogRow(object):
     """A convenience interface for a row of the training log.
 
@@ -73,6 +72,7 @@ class TrainingLogRow(object):
         return self.log.get_row_iterator(self.time)
 
 
+@add_metaclass(ABCMeta)
 class AbstractTrainingLog(object):
     """Base class for training logs.
 

@@ -3,7 +3,6 @@ from abc import ABCMeta, abstractmethod
 from six import add_metaclass
 
 
-@add_metaclass(ABCMeta)
 class TrainingExtension(object):
     """The base class for training extensions.
 
@@ -73,6 +72,7 @@ class TrainingExtension(object):
         pass
 
 
+@add_metaclass(ABCMeta)
 class SimpleExtension(TrainingExtension):
     """A base class for simple extensions.
 
