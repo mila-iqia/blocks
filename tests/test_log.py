@@ -1,8 +1,8 @@
-from blocks.log import RAMTrainingLog
+from blocks.log import TrainingLog
 
 
 def test_ram_training_log():
-    log = RAMTrainingLog()
+    log = TrainingLog()
 
     # test basic writing capabilities
     log[0].field = 45

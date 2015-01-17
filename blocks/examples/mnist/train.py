@@ -5,7 +5,7 @@ from theano import tensor
 from blocks.datasets import DataStream
 from blocks.datasets.mnist import MNIST
 from blocks.datasets.schemes import SequentialScheme
-from blocks.algorithms import GradientDescent, DefaultStepRule
+from blocks.algorithms import GradientDescent, SteepestDescent
 from blocks.bricks import MLP, Tanh, Identity
 from blocks.bricks.cost import BinaryCrossEntropy
 from blocks.main_loop import MainLoop
@@ -25,8 +25,8 @@ def main():
         DataStream(mnist,
                    iteration_scheme=SequentialScheme(mnist.num_examples, 20)),
         GradientDescent(cost=cost,
-                        step_rule=DefaultStepRule(learning_rate=0.1)),
-        extensions=[FinishAfter(num_epochs=2),
+                        step_rule=SteepestDescent(learning_rate=0.1)),
+        extensions=[FinishAfter(after_n_epochs=2),
                     Printing()])
     main_loop.run()
 

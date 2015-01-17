@@ -51,7 +51,7 @@ class DifferentiableCostMinimizer(TrainingAlgorithm):
     ----------
     cost : Theano variable
         The objective to be minimized.
-    params : list of Theano shared variables
+    params : list of Theano shared variables, optional
         The parameters to be tuned. If ``None``, all shared variables of
         `cost` computation graph will be considered parameters.
 
@@ -73,7 +73,7 @@ class DifferentiableCostMinimizer(TrainingAlgorithm):
     .. todo::
 
         Some shared variables are not parameters (e.g. those created by
-        random streams)
+        random streams).
 
     .. todo::
 
@@ -141,15 +141,15 @@ class GradientDescent(DifferentiableCostMinimizer):
 
     Parameters
     ----------
-    step_rule : instance of :class:`StepRule`
+    step_rule : instance of :class:`StepRule`, optional
         An object incapsulating most of the algorithm's logic. Its
         `compute_step` method is called to get a Theano expression
         for the actual step to take for each parameter. Note, that
         the step rule might have a state, e.g. to remember a weighed
         sum of gradients from previous steps like it is done in
         gradient descent with momentum. If ``None``, an instance of
-        :class:`DefaultStepRule` is created.
-    gradients : dict
+        :class:`SteepestDescent` is created.
+    gradients : dict, optional
         A dictionary mapping a parameter to an expression for
         the cost's gradient with respect to the parameter. If ``None``,
         the gradient are taken automatically using `theano.tensor.grad`.
@@ -168,7 +168,7 @@ class GradientDescent(DifferentiableCostMinimizer):
             gradients if gradients
             else dict(
                 zip(self.params, tensor.grad(self.cost, self.params))))
-        self.step_rule = step_rule if step_rule else DefaultStepRule()
+        self.step_rule = step_rule if step_rule else SteepestDescent()
 
     def initialize(self):
         all_updates = self.updates
@@ -217,8 +217,8 @@ class StepRule(object):
         return []
 
 
-class DefaultStepRule(StepRule):
-    """A simple step rule with a learning rate.
+class SteepestDescent(StepRule):
+    """A step in the direction opposite to the gradient.
 
     Parameters
     ----------

@@ -94,10 +94,14 @@ class SimpleExtension(TrainingExtension):
         If ``True``, :meth:`do` is invoked after every iteration.
     after_training : bool
         If ``True``, :meth:`do` is invoked after training.
+    after_n_epochs : int, optional
+        If not ``None``, :meth:`do` is invoked when `after_n_epochs` are
+        done.
 
     """
     def __init__(self, before_first_epoch=False, after_every_epoch=False,
-                 after_every_iteration=False, after_training=False):
+                 after_every_iteration=False, after_training=False,
+                 after_n_epochs=None):
         self._conditions = []
         if before_first_epoch:
             self.add_condition(
@@ -109,6 +113,11 @@ class SimpleExtension(TrainingExtension):
             self.add_condition("after_iteration")
         if after_training:
             self.add_condition("after_training")
+        if after_n_epochs:
+            self.add_condition(
+                "after_epoch",
+                predicate=lambda log:
+                    log.status.epochs_done == after_n_epochs)
 
     def add_condition(self, callback_name, predicate=None, arguments=None):
         """Adds a condition under which a :meth:`do` is called.
@@ -170,19 +179,9 @@ class SimpleExtension(TrainingExtension):
 class FinishAfter(SimpleExtension):
     """Finishes the training process when triggered.
 
-    Parameters
-    ----------
-    num_epochs : int
-        If not ``None``, training finish is requested after `num_epochs`
-        are done.
-
     """
-    def __init__(self, num_epochs=None):
-        super(FinishAfter, self).__init__()
-        if num_epochs:
-            self.add_condition(
-                "after_epoch",
-                predicate=lambda log: log.status.epochs_done == num_epochs)
+    def __init__(self, **kwargs):
+        super(FinishAfter, self).__init__(**kwargs)
 
     def do(self, which_callback):
         self.main_loop.log.current_row.training_finish_requested = True

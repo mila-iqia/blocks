@@ -198,7 +198,7 @@ class AbstractTrainingLog(object):
             raise ValueError("time must be a positive integer")
 
 
-class RAMStatus(AbstractTrainingStatus):
+class TrainingStatus(AbstractTrainingStatus):
     """A simple training status."""
     def __iter__(self):
         for attr, value in self.__dict__.items():
@@ -206,12 +206,12 @@ class RAMStatus(AbstractTrainingStatus):
                 yield attr, value
 
 
-class RAMTrainingLog(AbstractTrainingLog):
+class TrainingLog(AbstractTrainingLog):
     """A simple training log storing information in main memory."""
     def __init__(self):
         self._storage = defaultdict(dict)
         self._default_values = {}
-        self._status = RAMStatus()
+        self._status = TrainingStatus()
 
     def get_default_value(self, key):
         return self._default_values.get(key)
