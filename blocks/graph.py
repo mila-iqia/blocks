@@ -5,7 +5,7 @@ import theano
 from theano import Variable
 from theano.tensor.shared_randomstreams import RandomStreams
 
-from blocks.utils import is_graph_input
+from blocks.utils import is_graph_input, is_shared_variable
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +66,10 @@ class ComputationGraph(object):
             if output not in self.variables:
                 recursion(output)
         self.inputs = [v for v in self.variables if is_graph_input(v)]
+
+    def get_shared_variables(self):
+        """Returns all shared variables found in the computation graph."""
+        return [var for var in self.variables if is_shared_variable(var)]
 
     def dict_of_inputs(self):
         """Return a mapping from an input name to the input."""

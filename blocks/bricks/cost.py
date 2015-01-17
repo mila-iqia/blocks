@@ -38,3 +38,10 @@ class SquaredError(CostMatrix):
     def cost_matrix(self, y, y_hat):
         cost = tensor.sqr(y - y_hat)
         return cost
+
+
+class CategoricalCrossEntropy(Cost):
+    @application
+    def apply(self, y, y_hat):
+        cost = tensor.nnet.categorical_crossentropy(y_hat, y).mean()
+        return cost
