@@ -300,6 +300,7 @@ class AbstractAttentionTransition(BaseRecurrent):
         pass
 
 
+@add_metaclass(ABCMeta)
 class Readout(AbstractReadout):
     """Readout brick with separated emitting and feedback parts.
 
