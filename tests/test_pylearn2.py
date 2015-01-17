@@ -11,7 +11,7 @@ from blocks.bricks import Sigmoid, MLP
 from blocks.bricks.cost import SquaredError
 from blocks.initialization import IsotropicGaussian, Constant
 from blocks.pylearn2 import Pylearn2Model, Pylearn2Cost, Pylearn2Train
-from blocks.pylearn2.examples.markov_chain import main
+from examples.markov_chain import main
 
 
 def test_pylearn2_training():
