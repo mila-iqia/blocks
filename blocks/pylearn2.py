@@ -4,6 +4,8 @@ This module contains a set of wrappers that allows to outsource
 training and monitoring to Pylearn2.
 
 """
+from __future__ import absolute_import
+
 import logging
 from collections import OrderedDict
 
