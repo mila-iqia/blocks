@@ -1,6 +1,7 @@
 import itertools
 from abc import ABCMeta, abstractmethod
 
+import six
 from six import add_metaclass
 
 
@@ -91,5 +92,22 @@ class SequentialScheme(BatchScheme):
         self.batch_size = batch_size
 
     def get_request_iterator(self):
-        return (slice(x, min(self.num_examples, x + self.batch_size))
-                for x in range(0, self.num_examples, self.batch_size))
+        return SequentialIterator(self.num_examples, self.batch_size)
+
+
+class SequentialIterator(six.Iterator):
+    def __init__(self, num_examples, batch_size):
+        self.num_examples = num_examples
+        self.batch_size = batch_size
+        self.current = 0
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.current >= self.num_examples:
+            raise StopIteration
+        slice_ = slice(self.current, min(self.num_examples,
+                                         self.current + self.batch_size))
+        self.current += self.batch_size
+        return slice_
