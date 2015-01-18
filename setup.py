@@ -33,7 +33,7 @@ setup(
     ],
     keywords='theano machine learning neural networks deep learning',
     packages=find_packages(exclude=['docs', 'tests']),
-    install_requires=['numpy', 'theano', 'six'],
+    install_requires=['dill', 'numpy', 'theano', 'six'],
     extras_require={
         'test': ['nose', 'nose2'],
     },
