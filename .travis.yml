@@ -48,7 +48,7 @@ install:
 script:
   - |
       if [ $TESTS ]; then
-        THEANO_FLAGS=floatX=$TESTS,blas.ldflags='-lblas -lgfortran' \
+        export THEANO_FLAGS=floatX=$TESTS,blas.ldflags='-lblas -lgfortran'
         # Running nose2 within coverage makes imports count towards coverage
         coverage run --source=blocks -m nose2.__main__ tests
       fi
