@@ -24,14 +24,15 @@ def test_in_memory():
     assert not os.path.exists(filename)
     with open(filename, 'wb') as f:
         dill.dump(epoch, f, protocol=dill.HIGHEST_PROTOCOL)
-    assert os.path.getsize(filename) < 1024 * 1024  # Less than 1MB
+    try:
+        assert os.path.getsize(filename) < 1024 * 1024  # Less than 1MB
 
-    # Reload the epoch and make sure that the state was maintained
-    del epoch
-    with open(filename, 'rb') as f:
-        epoch = dill.load(f)
-    features, targets = next(epoch)
-    assert numpy.all(features == mnist.data['features'][512:768])
-
-    # Clean up
-    os.remove(filename)
+        # Reload the epoch and make sure that the state was maintained
+        del epoch
+        with open(filename, 'rb') as f:
+            epoch = dill.load(f)
+        features, targets = next(epoch)
+        assert numpy.all(features == mnist.data['features'][512:768])
+    finally:
+        # Clean up
+        os.remove(filename)
