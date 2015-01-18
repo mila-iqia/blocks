@@ -27,11 +27,11 @@ Getting started
 .. toctree::
    setup
    quickstart
-   getting_started
 
 In-depth
 --------
 .. toctree::
+   bricks_overview
    configuration
    developer_guidelines
 

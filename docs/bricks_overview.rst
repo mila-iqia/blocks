@@ -1,5 +1,5 @@
-Getting started
-===============
+Bricks
+======
 
 Blocks is a framework that is supposed to make it easier to build complicated
 neural network models on top of Theano_. In order to do so, we introduce the
@@ -104,7 +104,7 @@ explicitly. Consider the following example:
     >>> linear3.params
     [W, b]
 
-Nested blocks
+Nested bricks
 -------------
 
 Many neural network models, especially more complex ones, can be considered
@@ -174,11 +174,3 @@ bricks' configuration.
 
 .. _machine translation models: http://arxiv.org/abs/1409.0473
 .. _here: :class:`blocks.bricks.Brick`
-
-Examples
---------
-
-You can find examples using the Groundhog main loop in the folder
-``blocks/groundhog/examples``.  Case studies of language modeling, Markov
-chains and sinewave generation are available. They are planned to be replaced
-by PyLearn2 based examples in the near future.
