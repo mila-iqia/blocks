@@ -31,16 +31,17 @@ and our softmax output function is defined
 
 .. math:: \mathrm{softmax}(\mathbf{x})_i = \frac{e^{\mathbf{x}_i}}{\sum_{j=1}^n \mathbf{x}_j}
 
-Hence, our final model is
+Hence, our complete model is
 
 .. math:: f(\mathbf{x}) = \mathrm{softmax}(\mathbf{W}_y\mathrm{ReLU}(\mathbf{W}_h\mathbf{x} + \mathbf{b}_h) + \mathbf{b}_y)
 
 Since the output of a softmax represents a categorical probability distribution
-we can consider :math:`f(\mathbf{x}) = \hat p(\mathbf{y} \mid \mathbf{x})`.
-We can then train the parameters of our model by minimizing the negative
-log-likelihood i.e. the categorical cross-entropy between our model's output and
-the target distribution (which is the labels of our targets represented as
-one-hot vectors). That is, we minimize the sum of
+we can consider :math:`f(\mathbf{x}) = \hat p(\mathbf{y} \mid \mathbf{x})`,
+where :math:`\mathbf{x}` is the 784-dimensional (28 × 28) input, and
+:math:`\mathbf{y}` the probability distribution of it belonging to classes
+:math:`i = 0,\dots,9`. We can train the parameters of our model by minimizing
+the negative log-likelihood i.e.  the categorical cross-entropy between our
+model's output and the target distribution. That is, we minimize the sum of
 
 .. math:: - \log \sum_{i=0}^{10} p(\mathbf{y} = i) \hat p(\mathbf{y} = i \mid \mathbf{x})
 
@@ -51,6 +52,12 @@ Building the model
 ------------------
 Constructing the model with Blocks is very simple. We start by defining the
 input variable using Theano.
+
+.. tip::
+   Want to follow along with the Python code? If you are using IPython, enable
+   the `doctest mode`_ using the special ``%doctest_mode`` command so that you
+   can copy-paste the examples below (including the ``>>>`` prompts) straight
+   into the IPython interpreter.
 
 >>> from theano import tensor
 >>> x = tensor.matrix('features')
@@ -154,3 +161,4 @@ Log records from the iteration 235:
 .. _rectifier: https://en.wikipedia.org/wiki/Rectifier_%28neural_networks%29
 .. _softmax: https://en.wikipedia.org/wiki/Softmax
 .. _stochastic gradient descent: https://en.wikipedia.org/wiki/Stochastic_gradient_descent
+.. _doctest mode: http://ipython.org/ipython-doc/dev/interactive/tips.html#run-doctests
