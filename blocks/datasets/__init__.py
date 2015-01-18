@@ -322,9 +322,9 @@ class ContainerDataset(Dataset):
         while True:
             yield tuple([next(iterator) for iterator in iterators])
 
-    def get_data(self, state, request=None):
-        if request is not None:
-            raise ValueError("Does not accept requests; only next")
+    def get_data(self, state=None, request=None):
+        if request is not None or state is None:
+            raise ValueError
         return next(state)
 
 
