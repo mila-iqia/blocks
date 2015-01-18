@@ -48,7 +48,7 @@ install:
 script:
   - |
       if [ $TESTS ]; then
-        python setup.py install -q # Tests setup.py (also installs dill)
+        python setup.py -q install # Tests setup.py (also installs dill)
         # Must export environment variable so that the subprocess is aware of it
         export THEANO_FLAGS=floatX=$TESTS,blas.ldflags='-lblas -lgfortran'
         # Running nose2 within coverage makes imports count towards coverage
