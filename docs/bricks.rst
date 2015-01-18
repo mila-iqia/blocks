@@ -1,5 +1,3 @@
-.. _bricks:
-
 Bricks
 ======
 

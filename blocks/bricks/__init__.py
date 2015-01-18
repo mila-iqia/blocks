@@ -1059,6 +1059,8 @@ Identity = _activation_factory('Identity', lambda x: x)
 Tanh = _activation_factory('Tanh', tensor.tanh)
 Sigmoid = _activation_factory('Sigmoid', tensor.nnet.sigmoid)
 Softmax = _activation_factory('Softmax', tensor.nnet.softmax)
+Rectifier = _activation_factory('Rectifier',
+                                lambda x: tensor.switch(x > 0, x, 0))
 
 
 class Sequence(Brick):
