@@ -28,6 +28,17 @@ In the future we also hope to support:
   as well as on test sets)
 * Dimension, type and axes-checking
 
+.. warning::
+   Blocks is a new project which is still under development. As such, certain
+   (all) parts of the framework are subject to change.
+
+.. note::
+   That said, if you are interested in using Blocks and run into any problems,
+   don't hesitate to file bug reports, feature requests, or simply ask for help,
+   by `making a GitHub issue`_.
+
+.. _making a GitHub issue: https://github.com/bartvm/blocks/issues/new
+
 Getting started
 ---------------
 .. toctree::
