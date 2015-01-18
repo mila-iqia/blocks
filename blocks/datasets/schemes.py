@@ -1,3 +1,4 @@
+import itertools
 from abc import ABCMeta, abstractmethod
 
 import six
@@ -69,26 +70,10 @@ class ConstantScheme(BatchSizeScheme):
         self.times = times
 
     def get_request_iterator(self):
-        return ConstantIterator(self.batch_size, self.times)
-
-
-class ConstantIterator(six.Iterator):
-    def __init__(self, batch_size, times=None):
-        self.batch_size = batch_size
-        self.times = times
-        if times is not None:
-            self.current = 0
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        if self.times is not None:
-            if self.current == self.times:
-                raise StopIteration
-            else:
-                self.current += 1
-        return self.batch_size
+        if self.times is None:
+            return itertools.repeat(self.batch_size)
+        else:
+            return itertools.repeat(self.batch_size, self.times)
 
 
 class SequentialScheme(BatchScheme):
