@@ -5,15 +5,17 @@ import numpy
 import theano
 
 from blocks import config
-from blocks.datasets import Dataset
+from blocks.datasets import InMemoryDataset, lazy_properties
 from blocks.datasets.schemes import SequentialScheme
+from blocks.utils import update_instance
 
 
 MNIST_IMAGE_MAGIC = 2051
 MNIST_LABEL_MAGIC = 2049
 
 
-class MNIST(Dataset):
+@lazy_properties('data')
+class MNIST(InMemoryDataset):
     """The MNIST dataset of handwritten digits.
 
     .. todo::
@@ -49,30 +51,35 @@ class MNIST(Dataset):
 
     def __init__(self, which_set, start=None, stop=None, binary=False,
                  **kwargs):
-        if which_set == 'train':
+        if which_set not in ('train', 'test'):
+            raise ValueError("MNIST only has a train and test set")
+        num_examples = (stop if stop else 60000) - (start if start else 0)
+        default_scheme = SequentialScheme(num_examples, 1)
+        update_instance(self, locals())
+        super(MNIST, self).__init__(**kwargs)
+
+    def load(self):
+        if self.which_set == 'train':
             data = 'train-images-idx3-ubyte'
             labels = 'train-labels-idx1-ubyte'
-        elif which_set == 'test':
+        elif self.which_set == 'test':
             data = 't10k-images-idx3-ubyte'
             labels = 't10k-labels-idx1-ubyte'
-        else:
-            raise ValueError("MNIST only has a train and test set")
         data_path = os.path.join(config.data_path, 'mnist')
         X = read_mnist_images(
             os.path.join(data_path, data),
-            'bool' if binary else theano.config.floatX)[start:stop]
+            'bool' if self.binary
+            else theano.config.floatX)[self.start:self.stop]
         X = X.reshape((X.shape[0], numpy.prod(X.shape[1:])))
         y = read_mnist_labels(
-            os.path.join(data_path, labels))[start:stop, numpy.newaxis]
-        self.X, self.y = X, y
-        self.num_examples = len(X)
-        self.default_scheme = SequentialScheme(self.num_examples, 1)
-        super(MNIST, self).__init__(**kwargs)
+            os.path.join(data_path, labels))[self.start:self.stop,
+                                             numpy.newaxis]
+        self.data = {'features': X, 'targets': y}
 
     def get_data(self, state=None, request=None):
-        assert state is None
-        data = dict(zip(('features', 'targets'), (self.X, self.y)))
-        return tuple(data[source][request] for source in self.sources)
+        if state is not None:
+            raise ValueError("MNIST does not have a state")
+        return tuple(self.data[source][request] for source in self.sources)
 
 
 def read_mnist_images(filename, dtype=None):

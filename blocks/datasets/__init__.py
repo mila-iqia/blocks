@@ -1,3 +1,4 @@
+import collections
 from abc import ABCMeta, abstractmethod
 
 import numpy
@@ -128,6 +129,161 @@ class Dataset(object):
         if not hasattr(self, 'default_scheme'):
             raise ValueError("Dataset does not provide a default iterator")
         return DataStream(self, iteration_scheme=self.default_scheme)
+
+
+class InMemoryDataset(Dataset):
+    """Datasets who hold all of their data in memory.
+
+    For small datasets like e.g. MNIST it is easiest to simply load the
+    entire dataset into memory. All data streams will then access the same
+    data in memory.
+
+    Notes
+    -----
+    Datasets which hold data in memory must be treated differently when
+    serializing (saving) the training progress, because it would be very
+    inefficient to save the data along with the training process. Hence,
+    in-memory datasets support the :meth:`lazy_properties` decorator. This
+    decorator creates a series of properties whose values won't be
+    serialized; instead, their values will be reloaded (e.g. from disk) by
+    the :meth:`load` function after deserializing the object.
+
+    If the files from which the data were loaded are no longer available,
+    the de-serialization could fail. Hence the reloading of these
+    properties happens lazily i.e. only when the properties are requested.
+    This allows the user to intervene and change the location from which
+    files are loaded after de-serialization, before the :meth:`load` method
+    is ever called.
+
+    >>> import pickle
+    >>> from blocks.datasets.mnist import MNIST
+    >>> mnist = MNIST('train')
+    >>> print("{:,d} KB".format(
+    ...     mnist.data['features'].nbytes / 1024)) # doctest: +SKIP
+    183,750 KB
+    >>> with open('mnist.pkl', 'wb') as f:
+    ...     pickle.dump(mnist, f, protocol=pickle.HIGHEST_PROTOCOL)
+
+    You will notice that the dumping of the dataset was relatively quick,
+    because it didn't attempt to write MNIST to disk. We can now reload it,
+    and if the data file has not been moved, it will be as if nothing
+    happened.
+
+    >>> with open('mnist.pkl', 'rb') as f:
+    ...     mnist = pickle.load(f)
+    >>> print(mnist.data['features'].shape)
+    (60000, 784)
+
+    However, if the data files can't be found on disk, accessing the data
+    will fail.
+
+    >>> from blocks import config
+    >>> correct_path = config.data_path
+    >>> config.data_path = '/non/existing/path'
+    >>> with open('mnist.pkl', 'rb') as f:
+    ...     mnist = pickle.load(f)
+    >>> print(mnist.data['features'].shape) # doctest: +SKIP
+    Traceback (most recent call last):
+      ...
+    FileNotFoundError: [Errno 2] No such file or directory: ...
+
+    Because the loading happens lazily, we can still deserialize our
+    dataset, correct the situation, and then continue.
+
+    >>> config.data_path = correct_path
+    >>> print(mnist.data['features'].shape)
+    (60000, 784)
+
+    .. doctest::
+       :hide:
+
+       >>> import os
+       >>> os.remove('mnist.pkl')
+
+
+    """
+    def load(self):
+        """Load data from e.g. the file system.
+
+        Any interaction with the outside world e.g. the file system,
+        database connections, servers, etc. should be done in this method.
+        This allows datasets to be pickled and unpickled, even in
+        environments where the original data is unavailable or has changed
+        position.
+
+        """
+        pass
+
+
+def lazy_properties(*lazy_properties):
+    r"""Decorator to assign lazy properties.
+
+    Used to assign "lazy properties" on :class:`InMemoryDataset` classes.
+    Please see the documentation there for a discussion on what lazy
+    properties are and why they are needed.
+
+    Parameters
+    ----------
+    \*lazy_properties : strings
+        The names of the attributes that are lazy.
+
+    Notes
+    -----
+    The pickling behaviour of the dataset is only overridden if the dataset
+    does not have a ``__getstate__`` method implemented.
+
+    Examples
+    --------
+    In order to make sure that attributes are not serialized with the
+    dataset, and are lazily reloaded by the :meth:`~InMemoryDataset.load`
+    method after deserialization, use the decorator with the names of the
+    attributes as an argument.
+
+    >>> @lazy_properties('features', 'targets')
+    ... class TestDataset(InMemoryDataset):
+    ...     def load(self):
+    ...         self.features = range(10 ** 6)
+    ...         self.targets = range(10 ** 6)[::-1]
+
+    """
+    def lazy_property_factory(lazy_property):
+        """Create properties that perform lazy loading of attributes."""
+        def lazy_property_getter(self):
+            if not hasattr(self, '_' + lazy_property):
+                self.load()
+            if not hasattr(self, '_' + lazy_property):
+                raise ValueError("{} wasn't loaded".format(lazy_property))
+            return getattr(self, '_' + lazy_property)
+
+        def lazy_property_setter(self, value):
+            setattr(self, '_' + lazy_property, value)
+
+        return lazy_property_getter, lazy_property_setter
+
+    def wrap_dataset(dataset):
+        if not issubclass(dataset, InMemoryDataset):
+            raise ValueError("Only InMemoryDataset supports lazy loading")
+
+        # Attach the lazy loading properties to the class
+        for lazy_property in lazy_properties:
+            setattr(dataset, lazy_property,
+                    property(*lazy_property_factory(lazy_property)))
+
+        # Delete the values of lazy properties when serializing
+        if not hasattr(dataset, '__getstate__'):
+            def __getstate__(self):
+                serializable_state = self.__dict__.copy()
+                for lazy_property in lazy_properties:
+                    attr = serializable_state.get('_' + lazy_property)
+                    # Iterators would lose their state
+                    if isinstance(attr, collections.Iterator):
+                        raise ValueError("Iterators can't be lazy loaded")
+                    serializable_state.pop('_' + lazy_property, None)
+                return serializable_state
+            setattr(dataset, '__getstate__', __getstate__)
+
+        return dataset
+    return wrap_dataset
 
 
 class ContainerDataset(Dataset):
