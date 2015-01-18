@@ -21,7 +21,7 @@ Theano. Currently it supports and provides:
 * Automatic creation of monitoring channels (*limited support*)
 * Application of graph transformations, such as dropout (*limited support*)
 
-In the feature we also hope to support:
+In the future we also hope to support:
 
 * Saving and resuming of training
 * Monitoring and analyzing values during training progress (on the training set

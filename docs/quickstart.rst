@@ -130,7 +130,7 @@ print the progress to see how it works.
 >>> from blocks.extensions import FinishAfter, Printing
 >>> main_loop = MainLoop(model=mlp, data_stream=data_stream, algorithm=algorithm,
 ...                      extensions=[FinishAfter(after_n_epochs=1), Printing()])
->>> main_loop.run() # doctest: +NORMALIZE_WHITESPACE
+>>> main_loop.run() # doctest: +SKIP
 -------------------------------------------------------------------------------
 BEFORE FIRST EPOCH
 -------------------------------------------------------------------------------
