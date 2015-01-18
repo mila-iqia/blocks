@@ -20,6 +20,6 @@ Requirements
 ------------
 Blocks' only requirements are Theano and six. We develop using the bleeding-edge
 version of Theano, so be sure to follow the `relevant installation
-instructions`_ to make sure that your Theano versino is up to date.
+instructions`_ to make sure that your Theano version is up to date.
 
 .. _relevant installation instructions: http://deeplearning.net/software/theano/install.html#bleeding-edge-install-instructions
