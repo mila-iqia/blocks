@@ -430,7 +430,13 @@ class DataStream(AbstractDataStream):
 
     @property
     def sources(self):
+        if hasattr(self, '_sources'):
+            return self._sources
         return self.dataset.sources
+
+    @sources.setter
+    def sources(self, value):
+        self._sources = value
 
     def close(self):
         self.data_state = self.dataset.close(self.data_state)
@@ -464,7 +470,13 @@ class DataStreamWrapper(AbstractDataStream):
 
     @property
     def sources(self):
+        if hasattr(self, '_sources'):
+            return self._sources
         return self.data_stream.sources
+
+    @sources.setter
+    def sources(self, value):
+        self._sources = value
 
     def close(self):
         self.data_stream.close()
@@ -517,10 +529,10 @@ class CachedDataStream(DataStreamWrapper):
     """
     def __init__(self, data_stream, iteration_scheme):
         super(CachedDataStream, self).__init__(
-            data_stream, iteration_sheme=iteration_scheme)
+            data_stream, iteration_scheme=iteration_scheme)
         self.cache = [[] for source in self.sources]
 
-    def get_data(self, request):
+    def get_data(self, request=None):
         if request >= len(self.cache[0]):
             self._cache()
         data = []
@@ -532,6 +544,57 @@ class CachedDataStream(DataStreamWrapper):
     def _cache(self):
         for cache, data in zip(self.cache, next(self.child_epoch_iterator)):
             cache.extend(data)
+
+
+class NGramStream(CachedDataStream):
+    """Return n-grams from a stream.
+
+    This data stream wrapper takes as an input a data stream outputting
+    batches of sentences. From these sentences n-grams of a fixed order
+    (e.g. bigrams, trigrams, etc.) are extracted and returned.
+
+    Parameters
+    ----------
+    ngram_order : int
+        The order of the n-grams to output e.g. 3 for trigrams.
+
+    Notes
+    -----
+    This class inherits from :class:`CachedDataStream` because it makes use
+    of a cache to store the sentences from the wrapped data stream in.
+
+    """
+    def __init__(self, ngram_order, data_stream, target_source='targets',
+                 iteration_scheme=None):
+        if len(data_stream.sources) > 1:
+            raise ValueError
+        super(NGramStream, self).__init__(data_stream, iteration_scheme)
+        self.sources = self.sources + (target_source,)
+        self.ngram_order = ngram_order
+
+    def get_data(self, request=None):
+        if not self.cache[0]:
+            self._cache()
+        features, targets = [], []
+        for i, sentence in enumerate(self.cache[0]):
+            for j in range(request):
+                features.append(sentence[j:j + self.ngram_order])
+                targets.append([sentence[j + self.ngram_order]])
+                if j + self.ngram_order == len(sentence) - 1:
+                    sentence_ended = True
+                    break
+                elif len(features) == request:
+                    sentence_ended = False
+                    break
+            if sentence_ended:
+                self.cache[0].pop(0)
+                if not self.cache[0]:
+                    self._cache()
+            else:
+                self.cache[0][0] = self.cache[0][0][j + 1:]
+            if len(features) == request:
+                break
+        return tuple(numpy.asarray(data) for data in (features, targets))
 
 
 class DataIterator(six.Iterator):
