@@ -1029,8 +1029,11 @@ class LinearMaxout(Initializable):
 class _PicklableActivation(object):
     """A base class for dynamically generated classes that can be pickled."""
     def __reduce__(self):
+        activation = self.__class__._activation
+        if hasattr(activation, '__func__'):
+            activation = activation.__func__
         return (_Initializor(),
-                (self.__class__.__name__, self.__class__.activation),
+                (self.__class__.__name__, activation),
                 self.__dict__)
 
 
@@ -1054,6 +1057,8 @@ def _activation_factory(name, activation):
     @add_metaclass(ActivationDocumentation)
     class Activation(Brick, _PicklableActivation):
         """Element-wise application of {0} function."""
+        _activation = activation
+
         @application(inputs=['input_'], outputs=['output'])
         def apply(self, input_):
             """Apply the {0} function element-wise.
@@ -1072,7 +1077,6 @@ def _activation_factory(name, activation):
             output = activation(input_)
             return output
     Activation.__name__ = name
-    Activation.activation = activation
     return Activation
 
 Identity = _activation_factory('Identity', lambda x: x)
