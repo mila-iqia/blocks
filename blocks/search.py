@@ -54,9 +54,7 @@ class GreedySearch(Search):
 
 
 class BeamSearch(Search):
-    """A class that provides an interface for search in any sequence
-    generator.
-
+    """Beam search
 
     Parameters
     ----------
