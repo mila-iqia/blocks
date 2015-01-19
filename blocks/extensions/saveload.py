@@ -3,11 +3,10 @@ import dill
 
 from blocks.extensions import SimpleExtension
 
-class Checkpointing(SimpleExtension):
-    """Creates a checkpoint of the training process.
+class DumpMainLoop(SimpleExtension):
+    """Saves a pickled version of the main loop to the disk.
 
-    This extension saves a pickled version of the main loop to the disk.
-    This pickle can be later reloaded and training can be resumed.
+    The pickled main loop can be later reloaded and training can be resumed.
 
     Parameters
     ----------
@@ -29,7 +28,7 @@ class Checkpointing(SimpleExtension):
     """
     def __init__(self, path, **kwargs):
         kwargs.setdefault("after_training", True)
-        super(Checkpointing, self).__init__(self, **kwargs)
+        super(DumpMainLoop, self).__init__(self, **kwargs)
         self.path = path
 
     def do(self, callback_name, *args):
