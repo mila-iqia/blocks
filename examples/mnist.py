@@ -9,7 +9,7 @@ from blocks.datasets import DataStream
 from blocks.datasets.mnist import MNIST
 from blocks.datasets.schemes import SequentialScheme
 from blocks.extensions import FinishAfter, Printing
-from blocks.extensions.saveload import DumpMainLoop
+from blocks.extensions.saveload import SerializeMainLoop
 from blocks.main_loop import MainLoop
 
 
@@ -28,7 +28,7 @@ def main(save_to="mnist.pkl", num_epochs=2):
         GradientDescent(cost=cost,
                         step_rule=SteepestDescent(learning_rate=0.1)),
         extensions=[FinishAfter(after_n_epochs=num_epochs),
-                    DumpMainLoop(save_to),
+                    SerializeMainLoop(save_to),
                     Printing()])
     main_loop.run()
 

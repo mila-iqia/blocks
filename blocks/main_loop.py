@@ -80,7 +80,7 @@ class MainLoop(object):
     def find_extension(self, name):
         """Find an extension with a given name.
 
-        Parameters:
+        Parameters
         ----------
         name : str
             The name of the extension looked for.

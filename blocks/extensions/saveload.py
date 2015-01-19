@@ -24,7 +24,7 @@ class SaveLoadBase(SimpleExtension):
         self.main_loop.log.current_row.saving_done_to = destination
 
 
-class DumpMainLoop(SaveLoadBase):
+class SerializeMainLoop(SaveLoadBase):
     """Saves a pickled version of the main loop to the disk.
 
     The pickled main loop can be later reloaded and training can be
@@ -51,7 +51,7 @@ class DumpMainLoop(SaveLoadBase):
     """
     def __init__(self, path, **kwargs):
         kwargs.setdefault("after_training", True)
-        super(DumpMainLoop, self).__init__(**kwargs)
+        super(SerializeMainLoop, self).__init__(**kwargs)
         self.path = path
 
     def do(self, callback_name, *args):

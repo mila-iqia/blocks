@@ -446,6 +446,9 @@ class LambdaIterator(six.Iterator):
     def __init__(self, next_function):
         self.next_function = next_function
 
+    def __iter__(self):
+        return self
+
     def __next__(self):
         return self.next_function()
 
@@ -456,7 +459,7 @@ class SequenceIterator(six.Iterator):
     The reason for having this is that list iterators are not serializable
     in Python (even when using third-party libraries).
 
-    Parameters:
+    Parameters
     ----------
     sequence : list or tuple
         The sequence to iterate over.
@@ -466,6 +469,9 @@ class SequenceIterator(six.Iterator):
         assert isinstance(sequence, Sequence)
         self.sequence = sequence
         self._offset = 0
+
+    def __iter__(self):
+        return self
 
     def __next__(self):
         if self._offset == len(self.sequence):
