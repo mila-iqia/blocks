@@ -85,7 +85,7 @@ class MainLoop(object):
         name : str
             The name of the extension looked for.
 
-        Notes:
+        Notes
         -----
 
         Will crash if there no or several extension found.
