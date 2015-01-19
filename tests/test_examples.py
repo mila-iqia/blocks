@@ -2,6 +2,7 @@ import logging
 import os
 
 import pylearn2
+import dill
 
 import blocks
 from examples.mnist import main as mnist_test
@@ -20,6 +21,11 @@ def setup():
 
 def test_mnist():
     mnist_test()
+    with open("mnist.pkl", "rb") as source:
+        main_loop = dill.load(source)
+    main_loop.find_extension("FinishAfter").invoke_after_n_epochs(4)
+    main_loop.run()
+
 
 test_mnist.setup = setup
 

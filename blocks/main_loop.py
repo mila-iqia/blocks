@@ -1,6 +1,8 @@
 """The event-based main loop of Blocks."""
+import six
+
 from blocks.log import TrainingLog
-from blocks.utils import update_instance
+from blocks.utils import update_instance, unpack
 
 
 class MainLoop(object):
@@ -48,6 +50,47 @@ class MainLoop(object):
         self._training_started = False
         self._epoch_started = False
 
+    def run(self):
+        """Starts the main loop.
+
+        The main loop ends when a training extension makes
+        a `training_finish_requested` record in the log.
+
+        """
+        try:
+            if not self._training_started:
+                for extension in self.extensions:
+                    extension.main_loop = self
+                self.algorithm.log = self.log
+                self._run_extensions('before_training')
+                self.algorithm.initialize()
+                self._training_started = True
+            while self._run_epoch():
+                pass
+        except KeyboardInterrupt:
+            self._run_extensions('on_interrupt')
+        except TrainingFinish:
+            self.log.current_row.training_finished = True
+        finally:
+            self._run_extensions('after_training')
+
+    def find_extension(self, extension_class):
+        """Find an extension of a given class in the list of extensions.
+
+        Parameters:
+        ----------
+        extension_class : type or str
+            The type of extension searched. If a string is given, it is
+            matched with class names of the extensions.
+
+        """
+        def predicate(extension):
+            if isinstance(extension_class, six.string_types):
+                return extension.__class__.__name__ == extension_class
+            return isinstance(extension, extension_class)
+        return unpack([extension for extension in self.extensions
+                       if predicate(extension)], singleton=True)
+
     def _run_extensions(self, method_name, *args):
         for extension in self.extensions:
             extension.dispatch(method_name, *args)
@@ -85,30 +128,6 @@ class MainLoop(object):
         self._run_extensions('after_epoch')
         self._check_finish_training()
         return True
-
-    def run(self):
-        """Starts the main loop.
-
-        The main loop ends when a training extension makes
-        a `training_finish_requested` record in the log.
-
-        """
-        try:
-            if not self._training_started:
-                for extension in self.extensions:
-                    extension.main_loop = self
-                self.algorithm.log = self.log
-                self._run_extensions('before_training')
-                self.algorithm.initialize()
-                self._training_started = True
-            while self._run_epoch():
-                pass
-        except KeyboardInterrupt:
-            self._run_extensions('on_interrupt')
-        except TrainingFinish:
-            self.log.current_row.training_finished = True
-        finally:
-            self._run_extensions('after_training')
 
 
 class TrainingFinish(Exception):
