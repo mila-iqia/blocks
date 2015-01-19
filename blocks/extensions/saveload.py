@@ -37,7 +37,9 @@ class DumpMainLoop(SaveLoadBase):
 
     Notes
     -----
-    Using pickle for saving the whole main loop object comes with
+    Instead of the standard pickling library, the dill package is used.
+
+    Using pickling for saving the whole main loop object comes with
     certain limitations:
 
     * Theano computation graphs build in the GPU-mode
@@ -45,7 +47,6 @@ class DumpMainLoop(SaveLoadBase):
       (and vice-versa). Therefore using this extension binds you to using
       only one kind of device.
 
-    * Instead of the standard pickling library, the dill package is used.
 
     """
     def __init__(self, path, **kwargs):
