@@ -1,5 +1,5 @@
 import sys
-from collections import OrderedDict
+from collections import OrderedDict, Sequence
 
 import numpy
 import six
@@ -434,6 +434,9 @@ def ipdb_breakpoint(x):
 class LambdaIterator(six.Iterator):
     """An iterator that calls a function to fetch the next element.
 
+    The reason for having this is that generators are not serializable
+    in Python (even when using third-party libraries).
+
     Parameters
     ----------
     next_function : callable
@@ -445,3 +448,28 @@ class LambdaIterator(six.Iterator):
 
     def __next__(self):
         return self.next_function()
+
+
+class SequenceIterator(six.Iterator):
+    """A serializable iterator for list and tuple.
+
+    The reason for having this is that list iterators are not serializable
+    in Python (even when using third-party libraries).
+
+    Parameters:
+    ----------
+    sequence : list or tuple
+        The sequence to iterate over.
+
+    """
+    def __init__(self, sequence):
+        assert isinstance(sequence, Sequence)
+        self.sequence = sequence
+        self._offset = 0
+
+    def __next__(self):
+        if self._offset == len(self.sequence):
+            raise StopIteration()
+        result = self.sequence[self._offset]
+        self._offset += 1
+        return result

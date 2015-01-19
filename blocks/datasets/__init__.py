@@ -5,7 +5,7 @@ import numpy
 import six
 from six import add_metaclass
 
-from blocks.utils import update_instance, LambdaIterator
+from blocks.utils import update_instance, LambdaIterator, SequenceIterator
 
 
 @add_metaclass(ABCMeta)
@@ -318,7 +318,7 @@ class ContainerDataset(Dataset):
             self.data_channels = [container]
 
     def open(self):
-        iterators = [iter(channel) for channel in self.data_channels]
+        iterators = [SequenceIterator(channel) for channel in self.data_channels]
         return LambdaIterator(
             lambda: tuple([next(iterator) for iterator in iterators]))
 
