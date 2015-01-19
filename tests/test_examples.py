@@ -4,7 +4,6 @@ import os
 import pylearn2
 
 import blocks
-from examples.mnist import main as mnist_test
 from examples.pylearn2.markov_chain import main as pylearn2_test
 
 
@@ -16,12 +15,6 @@ def setup():
     # Silence Block's logger
     logger = logging.getLogger(blocks.__name__)
     logger.setLevel(logging.ERROR)
-
-
-def test_mnist():
-    mnist_test()
-
-test_mnist.setup = setup
 
 
 def test_pylearn2():

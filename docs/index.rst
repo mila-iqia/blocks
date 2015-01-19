@@ -6,41 +6,63 @@
 
 .. image:: https://readthedocs.org/projects/blocks/badge/?version=latest
    :target: https://blocks.readthedocs.org/
-   :alt: Documentation Status
 
 |
 
 Welcome to Blocks's documentation!
 ==================================
-
 Blocks is a framework that helps you build neural network models on top of
-Theano. It also helps you manage your model by doing error-checking, creating
-monitoring channels, and allowing for easy configuration of your model. Features
-include:
+Theano. Currently it supports and provides:
 
+* Constructing parametrized Theano operations, called "bricks"
+* Pattern matching to select variables and bricks in large models
+* A pipeline for loading and iterating over training data
+* Algorithms to optimize your model
+* Automatic creation of monitoring channels (*limited support*)
+* Application of graph transformations, such as dropout (*limited support*)
+
+In the future we also hope to support:
+
+* Saving and resuming of training
+* Monitoring and analyzing values during training progress (on the training set
+  as well as on test sets)
 * Dimension, type and axes-checking
-* Automatic creation of monitoring channels
-* Easy pattern matching to select the bricks you want in large graphs
-* Lazy initialization of bricks
-* Application of graph transformations, such as dropout
 
-Table of contents
------------------
+.. warning::
+   Blocks is a new project which is still under development. As such, certain
+   (all) parts of the framework are subject to change.
 
+.. note::
+   That said, if you are interested in using Blocks and run into any problems,
+   don't hesitate to file bug reports, feature requests, or simply ask for help,
+   by `making a GitHub issue`_.
+
+.. _making a GitHub issue: https://github.com/bartvm/blocks/issues/new
+
+Getting started
+---------------
 .. toctree::
+   setup
+   quickstart
 
-   getting_started
+In-depth
+--------
+.. toctree::
+   bricks_overview
    configuration
-   blocks
+   developer_guidelines
+
+API Reference
+-------------
+.. toctree::
+   bricks
    initialization
    datasets
    utils
    serialization
    graph
-   developer_guidelines
 
 Indices and tables
 ==================
-
 * :ref:`genindex`
 * :ref:`modindex`

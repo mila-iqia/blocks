@@ -34,10 +34,10 @@ install:
   - |
       if [ $TESTS ]; then
         conda install -q --yes python=$TRAVIS_PYTHON_VERSION nose numpy pip coverage six scipy
-        pip install -q --no-deps git+git://github.com/Theano/Theano.git
+        pip install -q --no-deps git+git://github.com/Theano/Theano.git # Development version
         pip install -q nose2[coverage-plugin] coveralls
-        git clone -q git://github.com/lisa-lab/pylearn2.git
-        (cd pylearn2
+        (git clone -q git://github.com/lisa-lab/pylearn2.git # Pylearn2 doesn't support pip
+        cd pylearn2
         python setup.py -q develop)
       fi
   - |
@@ -48,6 +48,8 @@ install:
 script:
   - |
       if [ $TESTS ]; then
+        python setup.py -q install # Tests setup.py (also installs dill)
+        # Must export environment variable so that the subprocess is aware of it
         export THEANO_FLAGS=floatX=$TESTS,blas.ldflags='-lblas -lgfortran'
         # Running nose2 within coverage makes imports count towards coverage
         coverage run --source=blocks -m nose2.__main__ tests

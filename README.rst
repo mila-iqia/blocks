@@ -6,19 +6,25 @@
 
 .. image:: https://readthedocs.org/projects/blocks/badge/?version=latest
    :target: https://blocks.readthedocs.org/
-   :alt: Documentation Status
 
 Blocks
 ======
+Blocks is a framework that helps you build neural network models on top of
+Theano. Currently it supports and provides:
 
-Bricks and blocks are Theano functions with parameters. Furthermore, the
-plan is to support:
+* Constructing parametrized Theano operations, called "bricks"
+* Pattern matching to select variables and bricks in large models
+* A pipeline for loading and iterating over training data
+* Algorithms to optimize your model
+* Automatic creation of monitoring channels (*limited support*)
+* Application of graph transformations, such as dropout (*limited support*)
 
-* Lazy initialization
+In the feature we also hope to support:
+
+* Saving and resuming of training
+* Monitoring and analyzing values during training progress (on the training set
+  as well as on test sets)
 * Dimension, type and axes-checking
-* Automatic creation of monitoring channels
-* Easy pattern matching to select the bricks you want in large graphs
-* Application of graph transformations, such as dropout
 
 Please see the documentation_ for more information.
 

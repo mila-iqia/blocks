@@ -64,7 +64,7 @@ class BaseSequenceGenerator(Initializable):
 
     | A scheme of the algorithm described above follows.
 
-    .. image:: sequence_generator_scheme.png
+    .. image:: _static/sequence_generator_scheme.png
             :height: 500px
             :width: 500px
 
