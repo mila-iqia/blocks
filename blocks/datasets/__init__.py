@@ -292,13 +292,13 @@ class ContainerDataset(Dataset):
     Parameters
     ----------
     container : iterable
-        The container to provide interface to. The container's
-        `__iter__` method should return a new iterator over the
-        container. If the container given is an instance of `dict`
-        or `OrderedDict`, its values are interpreted as data channels and
-        its keys are used as source names. Note, that only if
-        the container is an OrderedDict is the order of elements
-        in the returned tuples determined.
+        The container to provide interface to. The container's `__iter__`
+        method should return a new iterator over the container. If the
+        container given is an instance of `dict` or `OrderedDict`, its
+        values are interpreted as data channels and its keys are used as
+        source names. Note, that only if the container is an OrderedDict
+        the order of elements in the returned tuples is determined. If the
+        iterable is not a dictionary, the source ``'data'`` will be used.
 
     .. todo::
 
@@ -533,13 +533,17 @@ class CachedDataStream(DataStreamWrapper):
         self.cache = [[] for source in self.sources]
 
     def get_data(self, request=None):
-        if request >= len(self.cache[0]):
+        if request > len(self.cache[0]):
             self._cache()
         data = []
         for i, cache in enumerate(self.cache):
             data.append(numpy.asarray(cache[:request]))
             self.cache[i] = cache[request:]
         return tuple(data)
+
+    def get_epoch_iterator(self, **kwargs):
+        self.cache = [[] for source in self.sources]
+        return super(CachedDataStream, self).get_epoch_iterator(**kwargs)
 
     def _cache(self):
         for cache, data in zip(self.cache, next(self.child_epoch_iterator)):
