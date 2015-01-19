@@ -1026,6 +1026,22 @@ class LinearMaxout(Initializable):
         return output
 
 
+class _PicklableActivation(object):
+    """A base class for dynamically generated classes that can be pickled."""
+    def __reduce__(self):
+        return (_Initializor(),
+                (self.__class__.__name__, self.__class__.activation),
+                self.__dict__)
+
+
+class _Initializor(object):
+    """A callable object which returns a parametrized class."""
+    def __call__(self, name, activation):
+        object_ = _Initializor()
+        object_.__class__ = _activation_factory(name, activation)
+        return object_
+
+
 def _activation_factory(name, activation):
     """Class factory for Bricks which perform simple Theano calls."""
     class ActivationDocumentation(type):
@@ -1036,7 +1052,7 @@ def _activation_factory(name, activation):
             return type.__new__(cls, name, bases, classdict)
 
     @add_metaclass(ActivationDocumentation)
-    class Activation(Brick):
+    class Activation(Brick, _PicklableActivation):
         """Element-wise application of {0} function."""
         @application(inputs=['input_'], outputs=['output'])
         def apply(self, input_):
@@ -1056,6 +1072,7 @@ def _activation_factory(name, activation):
             output = activation(input_)
             return output
     Activation.__name__ = name
+    Activation.activation = activation
     return Activation
 
 Identity = _activation_factory('Identity', lambda x: x)
