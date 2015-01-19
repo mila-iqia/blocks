@@ -5,7 +5,7 @@ import numpy
 import six
 from six import add_metaclass
 
-from blocks.utils import update_instance
+from blocks.utils import update_instance, LambdaIterator
 
 
 @add_metaclass(ABCMeta)
@@ -319,8 +319,8 @@ class ContainerDataset(Dataset):
 
     def open(self):
         iterators = [iter(channel) for channel in self.data_channels]
-        while True:
-            yield tuple([next(iterator) for iterator in iterators])
+        return LambdaIterator(
+            lambda: tuple([next(iterator) for iterator in iterators]))
 
     def get_data(self, state, request=None):
         if request is not None:

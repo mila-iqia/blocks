@@ -429,3 +429,19 @@ def ipdb_breakpoint(x):
     """
     import ipdb
     ipdb.set_trace()
+
+
+class LambdaIterator(six.Iterator):
+    """An iterator that calls a function to fetch the next element.
+
+    Parameters
+    ----------
+    next_function : callable
+        A function to call every time the next element is requested.
+
+    """
+    def __init__(self, next_function):
+        self.next_function = next_function
+
+    def __next__(self):
+        return self.next_function()
