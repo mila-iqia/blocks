@@ -18,8 +18,12 @@ version from GitHub.
 
 Requirements
 ------------
-Blocks' only requirements are Theano and six. We develop using the bleeding-edge
-version of Theano, so be sure to follow the `relevant installation
-instructions`_ to make sure that your Theano version is up to date.
+Blocks' requirements are dill_, Theano_ and six_. We develop using the
+bleeding-edge version of Theano, so be sure to follow the `relevant
+installation instructions`_ to make sure that your Theano version is up to
+date.
 
+.. _dill: https://github.com/uqfoundation/dill
+.. _Theano: http://deeplearning.net/software/theano/
+.. _six: http://pythonhosted.org/six/
 .. _relevant installation instructions: http://deeplearning.net/software/theano/install.html#bleeding-edge-install-instructions
