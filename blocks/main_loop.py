@@ -45,6 +45,9 @@ class MainLoop(object):
             extensions = []
         update_instance(self, locals())
 
+        self._training_started = False
+        self._epoch_started = False
+
     def _run_extensions(self, method_name, *args):
         for extension in self.extensions:
             extension.dispatch(method_name, *args)
@@ -52,6 +55,36 @@ class MainLoop(object):
     def _check_finish_training(self):
         if self.log.current_row.training_finish_requested:
             raise TrainingFinish
+
+    def _run_iteration(self):
+        try:
+            batch = next(self.epoch_iterator)
+        except StopIteration:
+            return False
+        self._run_extensions('before_batch', batch)
+        self.algorithm.process_batch(batch)
+        self.log.status.iterations_done += 1
+        self._run_extensions('after_batch', batch)
+        self._check_finish_training()
+        return True
+
+    def _run_epoch(self):
+        if not self._epoch_started:
+            try:
+                self.epoch_iterator = self.data_stream.get_epoch_iterator(as_dict=True)
+            except StopIteration:
+                return False
+            self._epoch_started = True
+            self._run_extensions('before_epoch')
+        while self._run_iteration():
+            pass
+        self._epoch_started = False
+        self.log.status.epochs_done += 1
+        self.log.status._epoch_ends.append(
+            self.log.status.iterations_done)
+        self._run_extensions('after_epoch')
+        self._check_finish_training()
+        return True
 
     def run(self):
         """Starts the main loop.
@@ -61,24 +94,15 @@ class MainLoop(object):
 
         """
         try:
-            for extension in self.extensions:
-                extension.main_loop = self
-            self.algorithm.log = self.log
-            self._run_extensions('before_training')
-            self.algorithm.initialize()
-            for epoch in self.data_stream.iterate_epochs(as_dict=True):
-                self._run_extensions('before_epoch')
-                for batch in epoch:
-                    self._run_extensions('before_batch', batch)
-                    self.algorithm.process_batch(batch)
-                    self.log.status.iterations_done += 1
-                    self._run_extensions('after_batch', batch)
-                    self._check_finish_training()
-                self.log.status.epochs_done += 1
-                self.log.status._epoch_ends.append(
-                    self.log.status.iterations_done)
-                self._run_extensions('after_epoch')
-                self._check_finish_training()
+            if not self._training_started:
+                for extension in self.extensions:
+                    extension.main_loop = self
+                self.algorithm.log = self.log
+                self._run_extensions('before_training')
+                self.algorithm.initialize()
+                self._training_started = True
+            while self._run_epoch():
+                pass
         except KeyboardInterrupt:
             self._run_extensions('on_interrupt')
         except TrainingFinish:
