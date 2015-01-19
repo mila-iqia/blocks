@@ -28,8 +28,8 @@ def main(save_to="mnist.pkl", num_epochs=2):
         GradientDescent(cost=cost,
                         step_rule=SteepestDescent(learning_rate=0.1)),
         extensions=[FinishAfter(after_n_epochs=num_epochs),
-                    Printing(),
-                    DumpMainLoop(save_to)])
+                    DumpMainLoop(save_to),
+                    Printing()])
     main_loop.run()
 
 if __name__ == "__main__":

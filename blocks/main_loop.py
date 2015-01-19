@@ -47,8 +47,13 @@ class MainLoop(object):
             extensions = []
         update_instance(self, locals())
 
-        self._training_started = False
-        self._epoch_started = False
+        self.status._training_started = False
+        self.status._epoch_started = False
+
+    @property
+    def status(self):
+        """A shortcut for `self.log.status`."""
+        return self.log.status
 
     def run(self):
         """Starts the main loop.
@@ -58,13 +63,13 @@ class MainLoop(object):
 
         """
         try:
-            if not self._training_started:
+            if not self.status._training_started:
                 for extension in self.extensions:
                     extension.main_loop = self
                 self.algorithm.log = self.log
                 self._run_extensions('before_training')
                 self.algorithm.initialize()
-                self._training_started = True
+                self.status._training_started = True
             while self._run_epoch():
                 pass
         except KeyboardInterrupt:
@@ -106,25 +111,25 @@ class MainLoop(object):
             return False
         self._run_extensions('before_batch', batch)
         self.algorithm.process_batch(batch)
-        self.log.status.iterations_done += 1
+        self.status.iterations_done += 1
         self._run_extensions('after_batch', batch)
         self._check_finish_training()
         return True
 
     def _run_epoch(self):
-        if not self._epoch_started:
+        if not self.status._epoch_started:
             try:
                 self.epoch_iterator = self.data_stream.get_epoch_iterator(as_dict=True)
             except StopIteration:
                 return False
-            self._epoch_started = True
+            self.status._epoch_started = True
             self._run_extensions('before_epoch')
         while self._run_iteration():
             pass
-        self._epoch_started = False
-        self.log.status.epochs_done += 1
-        self.log.status._epoch_ends.append(
-            self.log.status.iterations_done)
+        self.status._epoch_started = False
+        self.status.epochs_done += 1
+        self.status._epoch_ends.append(
+            self.status.iterations_done)
         self._run_extensions('after_epoch')
         self._check_finish_training()
         return True
