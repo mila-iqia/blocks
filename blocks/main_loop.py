@@ -1,6 +1,4 @@
 """The event-based main loop of Blocks."""
-import six
-
 from blocks.log import TrainingLog
 from blocks.utils import update_instance, unpack
 
@@ -79,22 +77,22 @@ class MainLoop(object):
         finally:
             self._run_extensions('after_training')
 
-    def find_extension(self, extension_class):
-        """Find an extension of a given class in the list of extensions.
+    def find_extension(self, name):
+        """Find an extension with a given name.
 
         Parameters:
         ----------
-        extension_class : type or str
-            The type of extension searched. If a string is given, it is
-            matched with class names of the extensions.
+        name : str
+            The name of the extension looked for.
+
+        Notes:
+        -----
+
+        Will crash if there no or several extension found.
 
         """
-        def predicate(extension):
-            if isinstance(extension_class, six.string_types):
-                return extension.__class__.__name__ == extension_class
-            return isinstance(extension, extension_class)
         return unpack([extension for extension in self.extensions
-                       if predicate(extension)], singleton=True)
+                       if extension.name == name], singleton=True)
 
     def _run_extensions(self, method_name, *args):
         for extension in self.extensions:

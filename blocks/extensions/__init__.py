@@ -13,12 +13,27 @@ class TrainingExtension(object):
     typically add a certain functionality to the training procedure,
     e.g. running validation on auxiliarry datasets or early stopping.
 
+    Parameters
+    ----------
+    name : str, optional
+        The name of the extension. The names are useful in order to
+        distinguish between several extensions of the same type that
+        belongs to the same main loop. By default the name is set to
+        the name of the class.
+
     Attributes
     ----------
     main_loop : :class:`MainLoop`
         The main loop to which the extension belongs.
+    name : str
+        The name of the extension.
 
     """
+    def __init__(self, name=None):
+        if not name:
+            name = self.__class__.__name__
+        self.name = name
+
     def dispatch(self, callback_name, *args):
         """Runs callback with the given name.
 
@@ -106,7 +121,8 @@ class SimpleExtension(TrainingExtension):
     """
     def __init__(self, before_first_epoch=False, after_every_epoch=False,
                  after_every_batch=False, after_training=False,
-                 after_n_epochs=None, after_n_batches=None):
+                 after_n_epochs=None, after_n_batches=None, **kwargs):
+        super(SimpleExtension, self).__init__(**kwargs)
         self._conditions = []
         if before_first_epoch:
             self.add_condition(
