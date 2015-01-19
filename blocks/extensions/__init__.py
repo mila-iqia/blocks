@@ -102,7 +102,6 @@ class SimpleExtension(TrainingExtension):
     after_n_batches : int, optional
         If not ``None``, :meth:`do` is invoked when `after_n_batches`
         batches are processed.
-
     """
     def __init__(self, before_first_epoch=False, after_every_epoch=False,
                  after_every_batch=False, after_training=False,
@@ -119,15 +118,9 @@ class SimpleExtension(TrainingExtension):
         if after_training:
             self.add_condition("after_training")
         if after_n_epochs:
-            self.add_condition(
-                "after_epoch",
-                predicate=lambda log:
-                    log.status.epochs_done == after_n_epochs)
+            self.invoke_after_n_epochs(after_n_epochs)
         if after_n_batches:
-            self.add_condition(
-                "after_batch",
-                predicate=lambda log:
-                    log.status.iterations_done == after_n_batches)
+            self.invoke_after_n_batches(after_n_batches)
 
     def add_condition(self, callback_name, predicate=None, arguments=None):
         """Adds a condition under which a :meth:`do` is called.
@@ -152,6 +145,18 @@ class SimpleExtension(TrainingExtension):
         if not predicate:
             predicate = lambda log: True
         self._conditions.append((callback_name, predicate, arguments))
+
+    def invoke_after_n_epochs(self, n_epochs):
+        self.add_condition(
+            "after_epoch",
+            predicate=lambda log:
+                log.status.epochs_done == n_epochs)
+
+    def invoke_after_n_batches(self, n_batches):
+        self.add_condition(
+            "after_batch",
+            predicate=lambda log:
+                log.status.iterations_done == n_batches)
 
     @abstractmethod
     def do(self, which_callback, *args):
@@ -198,12 +203,9 @@ class FinishAfter(SimpleExtension):
 class Printing(SimpleExtension):
     """Prints log messages to the screen."""
     def __init__(self, **kwargs):
-        def set_if_absent(name):
-            if name not in kwargs:
-                kwargs[name] = True
-        set_if_absent("before_first_epoch")
-        set_if_absent("after_training")
-        set_if_absent("after_every_epoch")
+        kwargs.setdefault("before_first_epoch", True)
+        kwargs.setdefault("after_training", True)
+        kwargs.setdefault("after_every_epoch", True)
         super(Printing, self).__init__(**kwargs)
 
     def _print_attributes(self, attribute_tuples):
