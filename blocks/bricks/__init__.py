@@ -658,10 +658,17 @@ class Application(object):
         return add_property
 
     def __getattr__(self, attr):
+        # Prevents infinite recursion when no attribute "f" is available
+        # (happens during serialization under unknown circumstances)
+        try:
+            self_f = self.__getattribute__("f")
+        except AttributeError:
+            self_f = dict()
+
         if attr == '_brick':
             raise AttributeError
-        elif attr in self.f:
-            return self.f[attr](self.brick)
+        elif attr in self_f:
+            return self_f[attr](self.brick)
         elif hasattr(self, '_brick') and self.delegate_method is not None:
             return getattr(self.delegate_method(self.brick), attr)
         else:
