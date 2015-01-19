@@ -119,7 +119,8 @@ class MainLoop(object):
     def _run_epoch(self):
         if not self.status._epoch_started:
             try:
-                self.epoch_iterator = self.data_stream.get_epoch_iterator(as_dict=True)
+                self.epoch_iterator = (self.data_stream.
+                                       get_epoch_iterator(as_dict=True))
             except StopIteration:
                 return False
             self.status._epoch_started = True

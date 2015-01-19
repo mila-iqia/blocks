@@ -77,12 +77,13 @@ def test_training_resumption():
             [ext for ext in main_loop.extensions
              if isinstance(ext, FinishAfter)], singleton=True)
         finish_after.add_condition(
-            "after_batch", predicate=lambda log: log.status.iterations_done == 27)
+            "after_batch",
+            predicate=lambda log: log.status.iterations_done == 27)
         main_loop.run()
         assert main_loop.log.status.iterations_done == 27
         assert main_loop.log.status.epochs_done == 2
         for i in range(27):
-            assert main_loop.log[i].batch == {"data": i % 10,}
+            assert main_loop.log[i].batch == {"data": i % 10}
 
     do_test(False)
     do_test(True)

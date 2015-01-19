@@ -27,7 +27,8 @@ class SaveLoadBase(SimpleExtension):
 class DumpMainLoop(SaveLoadBase):
     """Saves a pickled version of the main loop to the disk.
 
-    The pickled main loop can be later reloaded and training can be resumed.
+    The pickled main loop can be later reloaded and training can be
+    resumed.
 
     Parameters
     ----------

@@ -102,6 +102,7 @@ class SimpleExtension(TrainingExtension):
     after_n_batches : int, optional
         If not ``None``, :meth:`do` is invoked when `after_n_batches`
         batches are processed.
+
     """
     def __init__(self, before_first_epoch=False, after_every_epoch=False,
                  after_every_batch=False, after_training=False,
