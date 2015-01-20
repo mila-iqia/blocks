@@ -87,7 +87,6 @@ class MainLoop(object):
 
         Notes
         -----
-
         Will crash if there no or several extension found.
 
         """

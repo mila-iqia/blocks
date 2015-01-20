@@ -318,7 +318,8 @@ class ContainerDataset(Dataset):
             self.data_channels = [container]
 
     def open(self):
-        iterators = [SequenceIterator(channel) for channel in self.data_channels]
+        iterators = [SequenceIterator(channel)
+                     for channel in self.data_channels]
         return LambdaIterator(
             lambda: tuple([next(iterator) for iterator in iterators]))
 
