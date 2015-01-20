@@ -10,7 +10,7 @@ from six import add_metaclass
 from theano import tensor
 
 from blocks.utils import (pack, repr_attrs, reraise_as, shared_floatx_zeros,
-                          unpack, update_instance, put_hook)
+                          unpack, put_hook)
 
 DEFAULT_SEED = [2014, 10, 5]
 
@@ -759,7 +759,7 @@ class Random(Brick):
     """
     def __init__(self, theano_rng=None, **kwargs):
         super(Random, self).__init__(**kwargs)
-        update_instance(self, locals())
+        self.theano_rng = theano_rng
 
     @property
     def theano_rng(self):
@@ -879,7 +879,8 @@ class Linear(Initializable):
     @lazy
     def __init__(self, input_dim, output_dim, **kwargs):
         super(Linear, self).__init__(**kwargs)
-        update_instance(self, locals())
+        self.input_dim = input_dim
+        self.output_dim = output_dim
 
     def _allocate(self):
         self.params.append(shared_floatx_zeros((self.input_dim,
@@ -991,11 +992,16 @@ class LinearMaxout(Initializable):
     -----
     See :class:`Initializable` for initialization parameters.
 
+    .. todo:: Name of :attr:`linear_transformation` shouldn't be hardcoded.
+
     """
     @lazy
     def __init__(self, input_dim, output_dim, num_pieces, **kwargs):
         super(LinearMaxout, self).__init__(**kwargs)
-        update_instance(self, locals())
+        self.input_dim = input_dim
+        self.output_dim = output_dim
+        self.num_pieces = num_pieces
+
         self.linear_transformation = Linear(name='linear_to_maxout',
                                             input_dim=input_dim,
                                             output_dim=output_dim * num_pieces,
@@ -1155,7 +1161,8 @@ class MLP(Sequence, Initializable):
     """
     @lazy
     def __init__(self, activations, dims, **kwargs):
-        update_instance(self, locals())
+        self.activations = activations
+
         self.linear_transformations = [Linear(name='linear_{}'.format(i))
                                        for i in range(len(activations))]
         # Interleave the transformations and activations

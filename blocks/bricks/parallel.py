@@ -7,7 +7,6 @@ are lazy-only, i.e. can not be initialized with a single constructor call.
 import copy
 
 from blocks.bricks import lazy, application, MLP, Identity, Initializable
-from blocks.utils import update_instance
 
 
 class Parallel(Initializable):
@@ -36,12 +35,16 @@ class Parallel(Initializable):
     def __init__(self, channel_names, input_dims, output_dims,
                  prototype=None, **kwargs):
         super(Parallel, self).__init__(**kwargs)
-        update_instance(self, locals())
+        self.channel_names = channel_names
+        self.input_dims = input_dims
+        self.output_dims = output_dims
 
-        if not self.prototype:
-            self.prototype = MLP([Identity()], use_bias=False)
+        if not prototype:
+            prototype = MLP([Identity()], use_bias=False)
+        self.prototype = prototype
+
         self.transforms = []
-        for name in self.channel_names:
+        for name in channel_names:
             self.transforms.append(copy.deepcopy(self.prototype))
             self.transforms[-1].name = "transform_{}".format(name)
         self.children = self.transforms

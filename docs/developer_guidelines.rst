@@ -151,6 +151,31 @@ For a more detailed list, refer to `Dill's source code`_.
 .. _possible: https://stackoverflow.com/questions/4647566/pickle-a-dynamically-parameterized-sub-class
 .. _Dill's source code: https://github.com/uqfoundation/dill/blob/master/dill/_objects.py
 
+Mutable types as keyword argument defaults
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+A common source of mysterious bugs is the use of mutable types as defaults for
+keyword arguments.
+
+.. code-block:: python
+
+   class Foo(object):
+       def __init__(self, bar=[]):
+           bar.append('baz')
+           self.bar = bar
+
+Initializing two instances of this class results in two objects sharing the same
+attribute ``bar`` with the value ``['baz', 'baz']``, which is often not what was
+intended. Instead, use:
+
+.. code-block:: python
+
+   class Foo(object):
+       def __init__(self, bar=None):
+           if bar is None:
+               bar = []
+           bar.append('baz')
+           self.bar = bar
+
 Docstrings
 ----------
 Blocks follows the `NumPy docstring standards`_. For a quick introduction, have

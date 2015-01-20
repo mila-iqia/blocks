@@ -5,7 +5,7 @@ import numpy
 import six
 from six import add_metaclass
 
-from blocks.utils import update_instance, LambdaIterator, SequenceIterator
+from blocks.utils import LambdaIterator, SequenceIterator
 
 
 @add_metaclass(ABCMeta)
@@ -551,7 +551,9 @@ class DataIterator(six.Iterator):
 
     """
     def __init__(self, data_stream, request_iterator=None, as_dict=False):
-        update_instance(self, locals())
+        self.data_stream = data_stream
+        self.request_iterator = request_iterator
+        self.as_dict = as_dict
 
     def __iter__(self):
         return self

@@ -4,7 +4,7 @@ from abc import ABCMeta, abstractmethod
 
 from six import add_metaclass
 
-from blocks.utils import shared_like, update_instance
+from blocks.utils import shared_like
 
 logger = logging.getLogger(__name__)
 
@@ -76,11 +76,15 @@ class Aggregator(object):
     """
     def __init__(self, aggregation_scheme, initialization_updates=None,
                  accumulation_updates=None, readout_expression=None):
+        self.aggregation_scheme = aggregation_scheme
+        self.readout_expression = readout_expression
+
         if initialization_updates is None:
             initialization_updates = []
         if accumulation_updates is None:
             accumulation_updates = []
-        update_instance(self, locals())
+        self.initialization_updates = initialization_updates
+        self.accumulation_updates = accumulation_updates
 
 
 class Mean(AggregationScheme):
@@ -125,7 +129,7 @@ def mean(numerator, denominator):
 class _DataIndependent(AggregationScheme):
     """Dummy aggregation scheme for values that don't depend on data."""
     def __init__(self, variable):
-        update_instance(self, locals())
+        self.variable = variable
 
     def get_aggregator(self):
         return Aggregator(aggregation_scheme=self,

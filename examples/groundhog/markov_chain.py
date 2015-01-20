@@ -20,7 +20,6 @@ from blocks.bricks.sequence_generators import (
 from blocks.initialization import Orthogonal, IsotropicGaussian, Constant
 from blocks.groundhog import GroundhogIterator, GroundhogState, GroundhogModel
 from blocks.serialization import load_params
-from blocks.utils import update_instance
 
 floatX = theano.config.floatX
 
@@ -40,7 +39,9 @@ class ChainIterator(GroundhogIterator):
     entropy = equilibrium.dot(trans_entropy).sum()
 
     def __init__(self, rng, seq_len, batch_size):
-        update_instance(self, locals())
+        self.rng = rng
+        self.seq_len = seq_len
+        self.batch_size = batch_size
 
         logger.debug("Markov chain entropy: {}".format(self.entropy))
         logger.debug("Expected min error: {}".format(
