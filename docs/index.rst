@@ -48,6 +48,8 @@ Getting started
 In-depth
 --------
 .. toctree::
+   :maxdepth: 2
+
    bricks_overview
    configuration
    developer_guidelines
