@@ -74,11 +74,11 @@ class GroundhogModel(object):
 
     @property
     def valid_costs(self):
-        return ['cost'] + [name for name, var in self.properties]
+        return ['cost'] + [name for name, _ in self.properties]
 
     def validate(self, data):
         valid_names = self.valid_costs
-        valid_vars = [self.train_cost] + [var for name, var in self.properties]
+        valid_vars = [self.train_cost] + [var for _, var in self.properties]
 
         sums = numpy.zeros((len(valid_vars),))
         num_batches = 0

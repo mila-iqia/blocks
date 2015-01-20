@@ -463,7 +463,7 @@ class Bidirectional(Initializable):
         super(Bidirectional, self).__init__(**kwargs)
         self.prototype = prototype
 
-        self.children = [copy.deepcopy(prototype) for i in range(2)]
+        self.children = [copy.deepcopy(prototype) for _ in range(2)]
         self.children[0].name = 'forward'
         self.children[1].name = 'backward'
 

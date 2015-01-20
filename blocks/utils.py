@@ -377,7 +377,7 @@ def repr_attrs(instance, *attrs):
     orig_repr_template += '>'
     try:
         return repr_template.format(instance, id(instance))
-    except:
+    except Exception:
         return orig_repr_template.format(instance, id(instance))
 
 
