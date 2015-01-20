@@ -325,7 +325,7 @@ class ContainerDataset(Dataset):
             lambda: tuple([next(iterator) for iterator in iterators]))
 
     def get_data(self, state=None, request=None):
-        if request is not None or state is None:
+        if state is None or request is not None:
             raise ValueError
         return next(state)
 
@@ -546,7 +546,7 @@ class CachedDataStream(DataStreamWrapper):
         return tuple(data)
 
     def get_epoch_iterator(self, **kwargs):
-        self.cache = [[] for source in self.sources]
+        self.cache = [[] for _ in self.sources]
         return super(CachedDataStream, self).get_epoch_iterator(**kwargs)
 
     def _cache(self):
