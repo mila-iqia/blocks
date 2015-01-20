@@ -1026,73 +1026,61 @@ class LinearMaxout(Initializable):
         return output
 
 
-class _PicklableActivation(object):
-    """A base class for dynamically generated classes that can be pickled."""
-    def __reduce__(self):
-        activation = self.__class__._activation
-        if hasattr(activation, '__func__'):
-            activation = activation.__func__
-        return (_Initializor(),
-                (self.__class__.__name__, activation),
-                self.__dict__)
-
-
-class _Initializor(object):
-    """A callable object which returns a parametrized class."""
-    def __call__(self, name, activation):
-        object_ = _Initializor()
-        object_.__class__ = _activation_factory(name, activation)
-        return object_
-
-
-def _activation_factory(name, activation):
-    """Class factory for Bricks which perform simple Theano calls."""
-    class ActivationDocumentation(type):
-        def __new__(cls, name, bases, classdict):
-            classdict['__doc__'] = classdict['__doc__'].format(name.lower())
+class ActivationDocumentation(type):
+    def __new__(cls, name, bases, classdict):
+        classdict['__doc__'] = \
+            """Elementwise application of {0} function.""".format(name.lower())
+        if 'apply' in classdict:
             classdict['apply'].__doc__ = \
-                classdict['apply'].__doc__.format(name.lower())
-            return type.__new__(cls, name, bases, classdict)
+                """Apply the {0} function elementwise.
 
-    @add_metaclass(ActivationDocumentation)
-    class Activation(Brick, _PicklableActivation):
-        """Element-wise application of {0} function."""
-        _activation = activation
+                Parameters
+                ----------
+                input_ : Theano variable
+                    Theano variable to apply {0} to, elementwise.
 
-        @application(inputs=['input_'], outputs=['output'])
-        def apply(self, input_):
-            """Apply the {0} function element-wise.
+                Returns
+                -------
+                output : Theano variable
+                    The input with the activation function applied.
 
-            Parameters
-            ----------
-            input_ : Theano variable
-                Theano variable to apply {0} to, element-wise.
-
-            Returns
-            -------
-            output : Theano variable
-                The input with the activation function applied.
-
-            """
-            output = activation(input_)
-            return output
-    Activation.__name__ = name
-    return Activation
+                """.format(name.lower())
+        return type.__new__(cls, name, bases, classdict)
 
 
-# Avoiding the use of lambda so that the Pylearn2 wrappers support pickling
-def _identity(var):
-    return var
+@add_metaclass(ActivationDocumentation)
+class Activation(Brick):
+    pass
 
 
-def _rectifier(var):
-    return tensor.switch(var > 0, var, 0)
+class Identity(Activation):
+    @application(inputs=['input_'], outputs=['output'])
+    def apply(self, input_):
+        return input_
 
-Identity = _activation_factory('Identity', _identity)
-Tanh = _activation_factory('Tanh', tensor.tanh)
-Sigmoid = _activation_factory('Sigmoid', tensor.nnet.sigmoid)
-Softmax = _activation_factory('Softmax', tensor.nnet.softmax)
-Rectifier = _activation_factory('Rectifier', _rectifier)
+
+class Tanh(Activation):
+    @application(inputs=['input_'], outputs=['output'])
+    def apply(self, input_):
+        return tensor.tanh(input_)
+
+
+class Sigmoid(Activation):
+    @application(inputs=['input_'], outputs=['output'])
+    def apply(self, input_):
+        return tensor.nnet.sigmoid(input_)
+
+
+class Rectifier(Activation):
+    @application(inputs=['input_'], outputs=['output'])
+    def apply(self, input_):
+        return tensor.switch(input_ > 0, input_, 0)
+
+
+class Softmax(Activation):
+    @application(inputs=['input_'], outputs=['output'])
+    def apply(self, input_):
+        return tensor.nnet.softmax(input_)
 
 
 class Sequence(Brick):
