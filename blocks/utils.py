@@ -1,5 +1,5 @@
 import sys
-from collections import OrderedDict
+from collections import OrderedDict, Sequence
 
 import numpy
 import six
@@ -381,25 +381,6 @@ def repr_attrs(instance, *attrs):
         return orig_repr_template.format(instance, id(instance))
 
 
-def update_instance(self, kwargs, ignore=True):
-    """Set attributes of an instance from a dictionary.
-
-    Parameters
-    ----------
-    self : object
-        The instance on which to set the attributes and values given.
-    kwargs : dict
-        A dictionary with attributes and their values as keys and values.
-    ignore : bool
-        If ``True`` then ignore the keys ``self``, ``args`` and ``kwargs``.
-        Is ``True`` by default.
-
-    """
-    for key, value in kwargs.items():
-        if ignore and key not in ['self', 'args', 'kwargs', '__class__']:
-            setattr(self, key, value)
-
-
 def put_hook(variable, hook_fn):
     """Put a hook on a Theano variables.
 
@@ -429,3 +410,53 @@ def ipdb_breakpoint(x):
     """
     import ipdb
     ipdb.set_trace()
+
+
+class LambdaIterator(six.Iterator):
+    """An iterator that calls a function to fetch the next element.
+
+    The reason for having this is that generators are not serializable
+    in Python (even when using third-party libraries).
+
+    Parameters
+    ----------
+    next_function : callable
+        A function to call every time the next element is requested.
+
+    """
+    def __init__(self, next_function):
+        self.next_function = next_function
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        return self.next_function()
+
+
+class SequenceIterator(six.Iterator):
+    """A serializable iterator for list and tuple.
+
+    The reason for having this is that list iterators are not serializable
+    in Python (even when using third-party libraries).
+
+    Parameters
+    ----------
+    sequence : list or tuple
+        The sequence to iterate over.
+
+    """
+    def __init__(self, sequence):
+        assert isinstance(sequence, Sequence)
+        self.sequence = sequence
+        self._offset = 0
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self._offset == len(self.sequence):
+            raise StopIteration()
+        result = self.sequence[self._offset]
+        self._offset += 1
+        return result

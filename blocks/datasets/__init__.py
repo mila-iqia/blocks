@@ -5,7 +5,7 @@ import numpy
 import six
 from six import add_metaclass
 
-from blocks.utils import update_instance
+from blocks.utils import LambdaIterator, SequenceIterator
 
 
 @add_metaclass(ABCMeta)
@@ -155,14 +155,14 @@ class InMemoryDataset(Dataset):
     files are loaded after de-serialization, before the :meth:`load` method
     is ever called.
 
-    >>> import pickle
+    >>> import dill
     >>> from blocks.datasets.mnist import MNIST
     >>> mnist = MNIST('train')
     >>> print("{:,d} KB".format(
     ...     mnist.data['features'].nbytes / 1024)) # doctest: +SKIP
     183,750 KB
     >>> with open('mnist.pkl', 'wb') as f:
-    ...     pickle.dump(mnist, f, protocol=pickle.HIGHEST_PROTOCOL)
+    ...     dill.dump(mnist, f)
 
     You will notice that the dumping of the dataset was relatively quick,
     because it didn't attempt to write MNIST to disk. We can now reload it,
@@ -170,7 +170,7 @@ class InMemoryDataset(Dataset):
     happened.
 
     >>> with open('mnist.pkl', 'rb') as f:
-    ...     mnist = pickle.load(f)
+    ...     mnist = dill.load(f)
     >>> print(mnist.data['features'].shape)
     (60000, 784)
 
@@ -181,7 +181,7 @@ class InMemoryDataset(Dataset):
     >>> correct_path = config.data_path
     >>> config.data_path = '/non/existing/path'
     >>> with open('mnist.pkl', 'rb') as f:
-    ...     mnist = pickle.load(f)
+    ...     mnist = dill.load(f)
     >>> print(mnist.data['features'].shape) # doctest: +SKIP
     Traceback (most recent call last):
       ...
@@ -314,13 +314,15 @@ class ContainerDataset(Dataset):
             self.data_channels = [container[source] for source in self.sources]
         else:
             self.sources = ('data',)
-            assert sources == self.sources or sources is None
+            if not (sources == self.sources or sources is None):
+                raise ValueError
             self.data_channels = [container]
 
     def open(self):
-        iterators = [iter(channel) for channel in self.data_channels]
-        while True:
-            yield tuple([next(iterator) for iterator in iterators])
+        iterators = [SequenceIterator(channel)
+                     for channel in self.data_channels]
+        return LambdaIterator(
+            lambda: tuple([next(iterator) for iterator in iterators]))
 
     def get_data(self, state=None, request=None):
         if request is not None or state is None:
@@ -508,7 +510,9 @@ class DataStreamMapping(DataStreamWrapper):
         super(DataStreamMapping, self).__init__(data_stream)
         self.mapping = mapping
 
-    def get_data(self):
+    def get_data(self, request=None):
+        if request is not None:
+            raise ValueError
         return self.mapping(next(self.child_epoch_iterator))
 
 
@@ -530,7 +534,7 @@ class CachedDataStream(DataStreamWrapper):
     def __init__(self, data_stream, iteration_scheme):
         super(CachedDataStream, self).__init__(
             data_stream, iteration_scheme=iteration_scheme)
-        self.cache = [[] for source in self.sources]
+        self.cache = [[] for _ in self.sources]
 
     def get_data(self, request=None):
         if request > len(self.cache[0]):
@@ -614,7 +618,9 @@ class DataIterator(six.Iterator):
 
     """
     def __init__(self, data_stream, request_iterator=None, as_dict=False):
-        update_instance(self, locals())
+        self.data_stream = data_stream
+        self.request_iterator = request_iterator
+        self.as_dict = as_dict
 
     def __iter__(self):
         return self

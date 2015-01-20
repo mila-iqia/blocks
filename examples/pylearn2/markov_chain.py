@@ -24,7 +24,6 @@ from blocks.pylearn2 import (
     Pylearn2Model, Pylearn2Cost, Pylearn2Train, Pylearn2LearningRule,
     SGDLearningRule)
 from blocks.select import Selector
-from blocks.utils import update_instance
 
 floatX = theano.config.floatX
 
@@ -52,7 +51,8 @@ class ChainDataset(Dataset):
                   'x')
 
     def __init__(self, rng, seq_len):
-        update_instance(self, locals())
+        self.rng = rng
+        self.seq_len = seq_len
 
     def iterator(self, batch_size, data_specs,
                  return_tuple, mode, num_batches, rng=None):

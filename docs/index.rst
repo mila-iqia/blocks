@@ -7,6 +7,9 @@
 .. image:: https://readthedocs.org/projects/blocks/badge/?version=latest
    :target: https://blocks.readthedocs.org/
 
+.. image:: https://landscape.io/github/bartvm/blocks/master/landscape.svg
+   :target: https://landscape.io/github/bartvm/blocks/master
+
 |
 
 Welcome to Blocks's documentation!
@@ -48,6 +51,8 @@ Getting started
 In-depth
 --------
 .. toctree::
+   :maxdepth: 2
+
    bricks_overview
    configuration
    developer_guidelines

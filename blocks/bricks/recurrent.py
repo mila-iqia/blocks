@@ -9,7 +9,7 @@ from theano import tensor
 from blocks.bricks import (Application, application, application_wrapper,
                            Brick, Initializable, Identity, Sigmoid, lazy)
 from blocks.initialization import NdarrayInitialization
-from blocks.utils import pack, shared_floatx_zeros, update_instance
+from blocks.utils import pack, shared_floatx_zeros
 
 
 class BaseRecurrent(Brick):
@@ -229,7 +229,9 @@ class Recurrent(BaseRecurrent, Initializable):
         super(Recurrent, self).__init__(**kwargs)
         if activation is None:
             activation = Identity()
-        update_instance(self, locals())
+        self.dim = dim
+        self.activation = activation
+
         self.children = [activation]
 
     @property
@@ -319,13 +321,17 @@ class GatedRecurrent(BaseRecurrent, Initializable):
     def __init__(self, activation, gate_activation, dim,
                  use_update_gate=True, use_reset_gate=True, **kwargs):
         super(GatedRecurrent, self).__init__(**kwargs)
+        self.dim = dim
+        self.use_update_gate = use_update_gate
+        self.use_reset_gate = use_reset_gate
 
         if not activation:
             activation = Identity()
         if not gate_activation:
             gate_activation = Sigmoid()
+        self.activation = activation
+        self.gate_activation = gate_activation
 
-        update_instance(self, locals())
         self.children = [activation, gate_activation]
 
     @property
@@ -455,7 +461,8 @@ class Bidirectional(Initializable):
     @lazy
     def __init__(self, prototype, **kwargs):
         super(Bidirectional, self).__init__(**kwargs)
-        update_instance(self, locals())
+        self.prototype = prototype
+
         self.children = [copy.deepcopy(prototype) for i in range(2)]
         self.children[0].name = 'forward'
         self.children[1].name = 'backward'
