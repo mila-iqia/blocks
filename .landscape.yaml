@@ -1,0 +1,3 @@
+strictness: veryhigh
+requirements: ['scipy']
+ignore-paths: ['docs', 'examples']
