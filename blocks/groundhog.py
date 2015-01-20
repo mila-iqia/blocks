@@ -115,7 +115,7 @@ class GroundhogModel(object):
 
 class GroundhogState(object):
     """Good default values for groundhog state."""
-    def __init__(self, prefix, batch_size, learning_rate, **kwargs):
+    def __init__(self, prefix, batch_size, learning_rate):
         self.prefix = prefix
         self.bs = batch_size
         self.lr = learning_rate
