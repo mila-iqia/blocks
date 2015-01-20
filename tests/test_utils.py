@@ -1,8 +1,7 @@
 from numpy.testing import assert_raises
 from theano import tensor
 
-from blocks.utils import (check_theano_variable, graph_inputs, shared_floatx,
-                          unpack)
+from blocks.utils import check_theano_variable, unpack
 
 
 def test_unpack():
@@ -21,12 +20,3 @@ def test_check_theano_variable():
                   tensor.vector(), 2, 'float')
     assert_raises(ValueError, check_theano_variable,
                   tensor.vector(), 1, 'int')
-
-
-def test_graph_inputs():
-    a = tensor.matrix('a')
-    b = shared_floatx(0, 'b')
-    c = 3
-
-    d = a + b + c
-    assert graph_inputs([d]) == [a]

@@ -3,7 +3,7 @@ import logging
 
 import theano
 
-from blocks.utils import graph_inputs, dict_subset
+from blocks.utils import dict_subset
 from blocks.monitoring.aggregation import _DataIndependent, Mean
 from blocks.graph import ComputationGraph
 
@@ -58,14 +58,14 @@ class DatasetEvaluator(object):
             be out-sourced to `ComputationGraph` to deal with it.
 
         """
-        initialize_updates = []
-        accumulate_updates = []
-        readout = OrderedDict()
+        self._initialize_updates = []
+        self._accumulate_updates = []
+        self._readout = OrderedDict()
 
         for k, v in self.expressions.items():
             logger.debug('Expression to evaluate: %s', v.name)
             if not hasattr(v.tag, 'aggregation_scheme'):
-                if graph_inputs([v]) == []:
+                if ComputationGraph([v]).inputs == []:
                     logger.debug('Using _DataIndependent aggregation scheme'
                                  ' for %s since it does not depend on'
                                  ' the data', k)
@@ -76,27 +76,26 @@ class DatasetEvaluator(object):
                     v.tag.aggregation_scheme = Mean(v, 1.0)
 
             aggregator = v.tag.aggregation_scheme.get_aggregator()
-            initialize_updates.extend(aggregator.initialization_updates)
-            accumulate_updates.extend(aggregator.accumulation_updates)
-            readout[k] = aggregator.readout_expression
+            self._initialize_updates.extend(aggregator.initialization_updates)
+            self._accumulate_updates.extend(aggregator.accumulation_updates)
+            self._readout[k] = aggregator.readout_expression
 
-        if initialize_updates:
-            self._initialize_fun = theano.function([], [],
-                                                   updates=initialize_updates)
+        if self._initialize_updates:
+            self._initialize_fun = theano.function(
+                [], [], updates=self._initialize_updates)
         else:
             self._initialize_fun = None
 
         self._initialized = False
         self._input_names = [v.name for v in self.inputs]
 
-        if accumulate_updates:
-            self._accumulate_fun = theano.function(self.inputs,
-                                                   [],
-                                                   updates=accumulate_updates)
+        if self._accumulate_updates:
+            self._accumulate_fun = theano.function(
+                self.inputs, [], updates=self._accumulate_updates)
         else:
             self._accumulate_fun = None
 
-        self._readout_fun = theano.function([], list(readout.values()))
+        self._readout_fun = theano.function([], list(self._readout.values()))
 
     def _initialize_computation(self):
         """Initialize the aggragators to process a dataset."""
@@ -105,8 +104,6 @@ class DatasetEvaluator(object):
             self._initialize_fun()
 
     def _process_batch(self, batch):
-        if not self._initialized:
-            self._initialize_computation()
         batch = dict_subset(batch, self._input_names)
         if self._accumulate_fun is not None:
             self._accumulate_fun(**batch)
