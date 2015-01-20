@@ -1050,6 +1050,12 @@ class ActivationDocumentation(type):
 
 @add_metaclass(ActivationDocumentation)
 class Activation(Brick):
+    """A base class for simple, elementwise activation functions.
+
+    This base class ensures that activation functions are automatically
+    documented using the :class:`ActivationDocumentation` metaclass.
+
+    """
     pass
 
 
