@@ -13,16 +13,15 @@ logger = logging.getLogger()
 class DatasetEvaluator(object):
     """A DatasetEvaluator evaluates many Theano expressions on a dataset.
 
-    The DatasetEvaluator provides a do-it-all method,
-    :meth:`evaluate`, which computes values of ``expressions``
-    on a dataset.
+    The DatasetEvaluator provides a do-it-all method, :meth:`evaluate`,
+    which computes values of ``expressions`` on a dataset.
 
     Alternatively, methods :meth:`_initialize_computation`,
-    :meth:`_process_batch`, :meth:`_readout_expressions` can be used
-    with a custom loop over data.
+    :meth:`_process_batch`, :meth:`_readout_expressions` can be used with a
+    custom loop over data.
 
-    The values computed on subsets of the given dataset
-    are aggregated using the AggregationSchemes provided in
+    The values computed on subsets of the given dataset are aggregated
+    using the :class:`AggregationScheme`s provided in the
     `aggregation_scheme` tags. If no tag is given, the value is **averaged
     over minibatches**. However, care is taken to ensure that variables
     which do not depend on data are not unnecessarily recomputed.
@@ -30,26 +29,23 @@ class DatasetEvaluator(object):
     Parameters
     ----------
     expressions : dict or list
-        A dictionary of (channel name, Theano variable) pairs.
-        If a list is given, variable names are used as channel names.
+        If a list of Theano variables. The variable names are used as
+        expression names. All the variables names must be different.
 
-        Each variable can be tagged with a
-        :class:`AggregationScheme` that specifies how the value can
-        be computed for a data set by aggregating minibatches.
+        Each variable can be tagged with an :class:`AggregationScheme` that
+        specifies how the value can be computed for a data set by
+        aggregating minibatches.
 
     """
-    def __init__(self, channel_variables):
-        if isinstance(channel_variables, dict):
-            self.channel_variables = channel_variables
-        else:
-            self.channel_variables = OrderedDict(
-                [(var.name, var) for var in channel_variables])
-            if len(self.channel_variables) < len(channel_variables):
-                raise ValueError(
-                    "Channel variables should have different names")
+    def __init__(self, expressions):
+        self.expressions = OrderedDict(
+            [(var.name, var) for var in expressions])
+        if len(self.expressions) < len(expressions):
+            raise ValueError(
+                "Expression variables should have different names")
 
         self.inputs = ComputationGraph(
-            list(self.channel_variables.values())).inputs
+            list(self.expressions.values())).inputs
         self._compile()
 
     def _compile(self):
@@ -66,8 +62,8 @@ class DatasetEvaluator(object):
         accumulate_updates = []
         readout = OrderedDict()
 
-        for k, v in self.channel_variables.items():
-            logger.debug('Channel to evaluate: %s', v.name)
+        for k, v in self.expressions.items():
+            logger.debug('Expression to evaluate: %s', v.name)
             if not hasattr(v.tag, 'aggregation_scheme'):
                 if graph_inputs([v]) == []:
                     logger.debug('Using _DataIndependent aggregation scheme'
@@ -121,7 +117,7 @@ class DatasetEvaluator(object):
                             "process batches!")
         self._initialized = False
         ret_vals = self._readout_fun()
-        return dict(zip(self.channel_variables.keys(), ret_vals))
+        return dict(zip(self.expressions.keys(), ret_vals))
 
     def evaluate(self, data_stream):
         """Compute the expressions over a data stream.
@@ -133,8 +129,8 @@ class DatasetEvaluator(object):
 
         Returns
         -------
-        A mapping from channel names to the values computed on the provided
-        dataset.
+        A mapping from expression names to the values computed on the
+        provided dataset.
 
         """
         self._initialize_computation()
