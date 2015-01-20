@@ -314,7 +314,8 @@ class ContainerDataset(Dataset):
             self.data_channels = [container[source] for source in self.sources]
         else:
             self.sources = ('data',)
-            assert sources == self.sources or sources is None
+            if not (sources == self.sources or sources is None):
+                raise ValueError
             self.data_channels = [container]
 
     def open(self):

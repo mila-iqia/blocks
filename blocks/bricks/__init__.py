@@ -533,7 +533,8 @@ class Application(object):
 
         return_dict = kwargs.pop('return_dict', False)
         return_list = kwargs.pop('return_list', False)
-        assert not return_list or not return_dict
+        if return_list and return_dict:
+            raise ValueError
 
         arg_names, varargs_name, _, _ = inspect.getargspec(
             self.application_method)
@@ -1081,7 +1082,8 @@ class Sequence(Brick):
         super(Sequence, self).__init__(**kwargs)
         if application_methods is None:
             application_methods = ['apply' for _ in bricks]
-        assert len(application_methods) == len(bricks)
+        if not len(application_methods) == len(bricks):
+            raise ValueError
         self.children = bricks
         self.application_methods = application_methods
 
@@ -1141,7 +1143,8 @@ class MLP(Sequence, Initializable):
         super(MLP, self).__init__(children, **kwargs)
 
     def _push_allocation_config(self):
-        assert len(self.dims) - 1 == len(self.linear_transformations)
+        if not len(self.dims) - 1 == len(self.linear_transformations):
+            raise ValueError
         for input_dim, output_dim, layer in zip(self.dims[:-1], self.dims[1:],
                                                 self.linear_transformations):
             layer.input_dim = input_dim

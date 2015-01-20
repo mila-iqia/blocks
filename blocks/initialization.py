@@ -190,10 +190,12 @@ class Sparse(NdarrayInitialization):
     def generate(self, rng, shape):
         weights = self.sparse_init.generate(rng, shape)
         if isinstance(self.num_init, six.integer_types):
-            assert self.num_init > 0
+            if not self.num_init > 0:
+                raise ValueError
             num_init = self.num_init
         else:
-            assert 1 >= self.num_init > 0
+            if not 1 >= self.num_init > 0:
+                raise ValueError
             num_init = int(self.num_init * shape[1])
         values = self.weights_init.generate(rng, (shape[0], num_init))
         for i in range(shape[0]):

@@ -121,7 +121,8 @@ class DifferentiableCostMinimizer(TrainingAlgorithm):
         """
         if isinstance(updates, OrderedDict):
             updates = list(updates.items())
-        assert isinstance(updates, list)
+        if not isinstance(updates, list):
+            raise ValueError
         self.updates.extend(updates)
 
 
@@ -178,7 +179,8 @@ class GradientDescent(DifferentiableCostMinimizer):
         self._function = theano.function(self.inputs, [], updates=all_updates)
 
     def process_batch(self, batch):
-        assert set(batch.keys()) == set([v.name for v in self.inputs])
+        if not set(batch.keys()) == set([v.name for v in self.inputs]):
+            raise ValueError
         ordered_batch = [batch[v.name] for v in self.inputs]
         self._function(*ordered_batch)
 

@@ -158,7 +158,8 @@ class Mixer(Parallel):
     @application
     def apply(self, **kwargs):
         new = kwargs.pop(self.new_name)
-        assert set(kwargs.keys()) == set(self.old_names)
+        if not set(kwargs.keys()) == set(self.old_names):
+            raise ValueError
         result = super(Mixer, self).apply(
             return_list=True, **{name: new for name in self.old_names})
         for i, name in enumerate(self.old_names):
