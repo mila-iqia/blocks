@@ -43,7 +43,8 @@ class Path(object):
             return Path.param_separator + self
 
     def __init__(self, nodes):
-        assert isinstance(nodes, (list, tuple))
+        if not isinstance(nodes, (list, tuple)):
+            raise ValueError
         self.nodes = tuple(nodes)
 
     def __str__(self):
@@ -75,7 +76,8 @@ class Path(object):
         elements = Path.separator_re.split(string)[1:]
         separators = elements[::2]
         parts = elements[1::2]
-        assert len(elements) == 2 * len(separators) == 2 * len(parts)
+        if not len(elements) == 2 * len(separators) == 2 * len(parts):
+            raise ValueError
 
         nodes = []
         for separator, part in zip(separators, parts):

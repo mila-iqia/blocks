@@ -12,7 +12,6 @@ from theano import tensor
 
 from blocks.bricks import MLP, Identity, lazy, application, Initializable
 from blocks.bricks.parallel import Parallel
-from blocks.utils import update_instance
 
 
 class SequenceContentAttention(Initializable):
@@ -70,17 +69,24 @@ class SequenceContentAttention(Initializable):
                  energy_computer=None,
                  **kwargs):
         super(SequenceContentAttention, self).__init__(**kwargs)
-        update_instance(self, locals())
+        self.state_names = state_names
+        self.state_dims = state_dims
+        self.sequence_dim = sequence_dim
+        self.match_dim = match_dim
+        self.state_transformer = state_transformer
 
         self.state_transformers = Parallel(channel_names=state_names,
-                                           prototype=self.state_transformer,
+                                           prototype=state_transformer,
                                            name="state_trans")
-        if not self.sequence_transformer:
-            self.sequence_transformer = MLP([Identity()], name="seq_trans")
-        if not self.energy_computer:
-            self.energy_computer = MLP([Identity()], name="energy_comp")
-        self.children = [self.state_transformers, self.sequence_transformer,
-                         self.energy_computer]
+        if not sequence_transformer:
+            sequence_transformer = MLP([Identity()], name="seq_trans")
+        if not energy_computer:
+            energy_computer = MLP([Identity()], name="energy_comp")
+        self.sequence_transformer = sequence_transformer
+        self.energy_computer = energy_computer
+
+        self.children = [self.state_transformers, sequence_transformer,
+                         energy_computer]
 
     def _push_allocation_config(self):
         self.state_transformers.input_dims = self.state_dims

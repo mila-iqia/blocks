@@ -1,6 +1,6 @@
 """The event-based main loop of Blocks."""
 from blocks.log import TrainingLog
-from blocks.utils import update_instance, unpack
+from blocks.utils import unpack
 
 
 class MainLoop(object):
@@ -39,11 +39,16 @@ class MainLoop(object):
     """
     def __init__(self, model, data_stream, algorithm,
                  log=None, extensions=None):
+        self.model = model
+        self.data_stream = data_stream
+        self.algorithm = algorithm
+
         if not log:
             log = TrainingLog()
         if not extensions:
             extensions = []
-        update_instance(self, locals())
+        self.log = log
+        self.extensions = extensions
 
         self.status._training_started = False
         self.status._epoch_started = False

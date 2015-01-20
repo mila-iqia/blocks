@@ -10,7 +10,7 @@ from six import add_metaclass
 from theano import tensor
 
 from blocks.utils import (pack, repr_attrs, reraise_as, shared_floatx_zeros,
-                          unpack, update_instance, put_hook)
+                          unpack, put_hook)
 
 DEFAULT_SEED = [2014, 10, 5]
 
@@ -293,7 +293,7 @@ class Brick(object):
         for child in self.children:
             try:
                 child.push_allocation_config()
-            except:
+            except Exception:
                 self.allocation_config_pushed = False
                 raise
 
@@ -325,7 +325,7 @@ class Brick(object):
         for child in self.children:
             try:
                 child.push_initialization_config()
-            except:
+            except Exception:
                 self.initialization_config_pushed = False
                 raise
 
@@ -533,7 +533,8 @@ class Application(object):
 
         return_dict = kwargs.pop('return_dict', False)
         return_list = kwargs.pop('return_list', False)
-        assert not return_list or not return_dict
+        if return_list and return_dict:
+            raise ValueError
 
         arg_names, varargs_name, _, _ = inspect.getargspec(
             self.application_method)
@@ -582,7 +583,7 @@ class Application(object):
         for i, output in enumerate(outputs):
             try:
                 name = self.outputs[i]
-            except:
+            except Exception:
                 name = "output_{}".format(i)
             if isinstance(output, tensor.Variable):
                 # TODO Tag with dimensions, axes, etc. for error-checking
@@ -758,7 +759,7 @@ class Random(Brick):
     """
     def __init__(self, theano_rng=None, **kwargs):
         super(Random, self).__init__(**kwargs)
-        update_instance(self, locals())
+        self.theano_rng = theano_rng
 
     @property
     def theano_rng(self):
@@ -878,7 +879,8 @@ class Linear(Initializable):
     @lazy
     def __init__(self, input_dim, output_dim, **kwargs):
         super(Linear, self).__init__(**kwargs)
-        update_instance(self, locals())
+        self.input_dim = input_dim
+        self.output_dim = output_dim
 
     def _allocate(self):
         self.params.append(shared_floatx_zeros((self.input_dim,
@@ -990,11 +992,16 @@ class LinearMaxout(Initializable):
     -----
     See :class:`Initializable` for initialization parameters.
 
+    .. todo:: Name of :attr:`linear_transformation` shouldn't be hardcoded.
+
     """
     @lazy
     def __init__(self, input_dim, output_dim, num_pieces, **kwargs):
         super(LinearMaxout, self).__init__(**kwargs)
-        update_instance(self, locals())
+        self.input_dim = input_dim
+        self.output_dim = output_dim
+        self.num_pieces = num_pieces
+
         self.linear_transformation = Linear(name='linear_to_maxout',
                                             input_dim=input_dim,
                                             output_dim=output_dim * num_pieces,
@@ -1106,8 +1113,9 @@ class Sequence(Brick):
     def __init__(self, bricks, application_methods=None, **kwargs):
         super(Sequence, self).__init__(**kwargs)
         if application_methods is None:
-            application_methods = ['apply' for brick in bricks]
-        assert len(application_methods) == len(bricks)
+            application_methods = ['apply' for _ in bricks]
+        if not len(application_methods) == len(bricks):
+            raise ValueError
         self.children = bricks
         self.application_methods = application_methods
 
@@ -1155,7 +1163,8 @@ class MLP(Sequence, Initializable):
     """
     @lazy
     def __init__(self, activations, dims, **kwargs):
-        update_instance(self, locals())
+        self.activations = activations
+
         self.linear_transformations = [Linear(name='linear_{}'.format(i))
                                        for i in range(len(activations))]
         # Interleave the transformations and activations
@@ -1167,7 +1176,8 @@ class MLP(Sequence, Initializable):
         super(MLP, self).__init__(children, **kwargs)
 
     def _push_allocation_config(self):
-        assert len(self.dims) - 1 == len(self.linear_transformations)
+        if not len(self.dims) - 1 == len(self.linear_transformations):
+            raise ValueError
         for input_dim, output_dim, layer in zip(self.dims[:-1], self.dims[1:],
                                                 self.linear_transformations):
             layer.input_dim = input_dim

@@ -7,6 +7,9 @@
 .. image:: https://readthedocs.org/projects/blocks/badge/?version=latest
    :target: https://blocks.readthedocs.org/
 
+.. image:: https://landscape.io/github/bartvm/blocks/master/landscape.svg
+   :target: https://landscape.io/github/bartvm/blocks/master
+
 Blocks
 ======
 Blocks is a framework that helps you build neural network models on top of

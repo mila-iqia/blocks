@@ -32,6 +32,21 @@ Blocks:
 * Don't recycle variable names (i.e. don't use the same variable name to refer
   to different things in a particular part of code), especially when they are
   arguments to functions.
+* Group trivial attribute assignments from arguments and keyword arguments
+  together, and separate them from remaining code with a blank line. Avoid the
+  use of implicit methods such as ``self.__dict__.update(locals())``.
+
+.. code-block:: python
+
+   class Foo(object):
+       def __init__(self, foo, bar, baz=None, **kwargs):
+           super(Foo, self).__init__(**kwargs)
+           if baz is None:
+               baz = []
+
+           self.foo = foo
+           self.bar = bar
+           self.baz = baz
 
 .. _PEP8 style guide: https://www.python.org/dev/peps/pep-0008/
 .. _Travis CI buildbot: https://travis-ci.org/bartvm/blocks
@@ -138,6 +153,31 @@ For a more detailed list, refer to `Dill's source code`_.
 .. _pickle: https://docs.python.org/3/library/pickle.html
 .. _possible: https://stackoverflow.com/questions/4647566/pickle-a-dynamically-parameterized-sub-class
 .. _Dill's source code: https://github.com/uqfoundation/dill/blob/master/dill/_objects.py
+
+Mutable types as keyword argument defaults
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+A common source of mysterious bugs is the use of mutable types as defaults for
+keyword arguments.
+
+.. code-block:: python
+
+   class Foo(object):
+       def __init__(self, bar=[]):
+           bar.append('baz')
+           self.bar = bar
+
+Initializing two instances of this class results in two objects sharing the same
+attribute ``bar`` with the value ``['baz', 'baz']``, which is often not what was
+intended. Instead, use:
+
+.. code-block:: python
+
+   class Foo(object):
+       def __init__(self, bar=None):
+           if bar is None:
+               bar = []
+           bar.append('baz')
+           self.bar = bar
 
 Docstrings
 ----------
