@@ -75,7 +75,7 @@ class MainLoop(object):
                     self._run_extensions('after_batch', batch)
                     self._check_finish_training()
                 self.log.status.epochs_done += 1
-                self.log.status._epoch_ends.append(
+                self.log.status.epoch_ends.append(
                     self.log.status.iterations_done)
                 self._run_extensions('after_epoch')
                 self._check_finish_training()

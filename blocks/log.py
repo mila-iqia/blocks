@@ -19,7 +19,7 @@ class AbstractTrainingStatus(object):
         The number of iterations done.
     epochs_done : int
         The number of epochs done.
-    _epoch_ends : list
+    epoch_ends : list
         The numbers of the epochs last iterations.
 
     .. todo::
@@ -33,7 +33,7 @@ class AbstractTrainingStatus(object):
     def __init__(self):
         self.iterations_done = 0
         self.epochs_done = 0
-        self._epoch_ends = []
+        self.epoch_ends = []
 
     @abstractmethod
     def __iter__(self):
@@ -181,7 +181,7 @@ class AbstractTrainingLog(object):
 
     @property
     def last_epoch_row(self):
-        return self[self.status._epoch_ends[-1]]
+        return self[self.status.epoch_ends[-1]]
 
     @abstractmethod
     def __iter__(self):

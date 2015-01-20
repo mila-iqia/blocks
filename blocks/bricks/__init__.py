@@ -293,7 +293,7 @@ class Brick(object):
         for child in self.children:
             try:
                 child.push_allocation_config()
-            except:
+            except Exception:
                 self.allocation_config_pushed = False
                 raise
 
@@ -325,7 +325,7 @@ class Brick(object):
         for child in self.children:
             try:
                 child.push_initialization_config()
-            except:
+            except Exception:
                 self.initialization_config_pushed = False
                 raise
 
@@ -582,7 +582,7 @@ class Application(object):
         for i, output in enumerate(outputs):
             try:
                 name = self.outputs[i]
-            except:
+            except Exception:
                 name = "output_{}".format(i)
             if isinstance(output, tensor.Variable):
                 # TODO Tag with dimensions, axes, etc. for error-checking
@@ -1080,7 +1080,7 @@ class Sequence(Brick):
     def __init__(self, bricks, application_methods=None, **kwargs):
         super(Sequence, self).__init__(**kwargs)
         if application_methods is None:
-            application_methods = ['apply' for brick in bricks]
+            application_methods = ['apply' for _ in bricks]
         assert len(application_methods) == len(bricks)
         self.children = bricks
         self.application_methods = application_methods

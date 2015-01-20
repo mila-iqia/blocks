@@ -32,7 +32,7 @@ def test_main_loop():
     main_loop.run()
 
     assert main_loop.log.status.iterations_done == 5
-    assert main_loop.log.status._epoch_ends == [3, 5]
+    assert main_loop.log.status.epoch_ends == [3, 5]
     assert len(list(main_loop.log)) == 7
     for i in range(5):
         assert main_loop.log[i].batch == dict(data=i + 1)

@@ -203,7 +203,7 @@ class StepRule(object):
             A Theano expression for the descent step.
 
         """
-        raise NotImplemented()
+        raise NotImplementedError
 
     def additional_updates(self):
         """Return updates to be done in addition to parameter modification.

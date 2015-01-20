@@ -322,9 +322,9 @@ class ContainerDataset(Dataset):
         while True:
             yield tuple([next(iterator) for iterator in iterators])
 
-    def get_data(self, state, request=None):
-        if request is not None:
-            raise ValueError("Does not accept requests; only next")
+    def get_data(self, state=None, request=None):
+        if state is None or request is not None:
+            raise ValueError
         return next(state)
 
 
@@ -496,7 +496,9 @@ class DataStreamMapping(DataStreamWrapper):
         super(DataStreamMapping, self).__init__(data_stream)
         self.mapping = mapping
 
-    def get_data(self):
+    def get_data(self, request=None):
+        if request is not None:
+            raise ValueError
         return self.mapping(next(self.child_epoch_iterator))
 
 
@@ -518,9 +520,9 @@ class CachedDataStream(DataStreamWrapper):
     def __init__(self, data_stream, iteration_scheme):
         super(CachedDataStream, self).__init__(
             data_stream, iteration_sheme=iteration_scheme)
-        self.cache = [[] for source in self.sources]
+        self.cache = [[] for _ in self.sources]
 
-    def get_data(self, request):
+    def get_data(self, request=None):
         if request >= len(self.cache[0]):
             self._cache()
         data = []

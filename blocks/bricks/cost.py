@@ -29,7 +29,7 @@ class BinaryCrossEntropy(CostMatrix):
 class AbsoluteError(CostMatrix):
     @application
     def cost_matrix(self, y, y_hat):
-        cost = tensor.abs(y - y_hat)
+        cost = abs(y - y_hat)
         return cost
 
 
