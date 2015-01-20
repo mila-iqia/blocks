@@ -33,17 +33,20 @@ Blocks:
   to different things in a particular part of code), especially when they are
   arguments to functions.
 * Group trivial attribute assignments from arguments and keyword arguments
-  together at the beginning of the constructor, and separate them from remaining
-  code with a blank line. Avoid the use of implicit methods such as
-  ``self.__dict__.update(locals())``.
+  together, and separate them from remaining code with a blank line. Avoid the
+  use of implicit methods such as ``self.__dict__.update(locals())``.
 
 .. code-block:: python
 
-   def __init__(self, foo, bar, baz=None):
-       self.foo = foo
-       self.baz = baz
+   class Foo(object):
+       def __init__(self, foo, bar, baz=None, **kwargs):
+           super(Foo, self).__init__(**kwargs)
+           if baz is None:
+               baz = []
 
-       self.bar = bar if isinstance(tuple, bar) else (bar,)
+           self.foo = foo
+           self.bar = bar
+           self.baz = baz
 
 .. _PEP8 style guide: https://www.python.org/dev/peps/pep-0008/
 .. _Travis CI buildbot: https://travis-ci.org/bartvm/blocks
