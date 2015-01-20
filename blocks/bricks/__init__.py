@@ -1079,12 +1079,20 @@ def _activation_factory(name, activation):
     Activation.__name__ = name
     return Activation
 
-Identity = _activation_factory('Identity', lambda x: x)
+
+# Avoiding the use of lambda so that the Pylearn2 wrappers support pickling
+def _identity(var):
+    return var
+
+
+def _rectifier(var):
+    return tensor.switch(var > 0, var, 0)
+
+Identity = _activation_factory('Identity', _identity)
 Tanh = _activation_factory('Tanh', tensor.tanh)
 Sigmoid = _activation_factory('Sigmoid', tensor.nnet.sigmoid)
 Softmax = _activation_factory('Softmax', tensor.nnet.softmax)
-Rectifier = _activation_factory('Rectifier',
-                                lambda x: tensor.switch(x > 0, x, 0))
+Rectifier = _activation_factory('Rectifier', _rectifier)
 
 
 class Sequence(Brick):
