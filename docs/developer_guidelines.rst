@@ -48,20 +48,30 @@ serialize training progress, support Python 2 and 3 simultaneously, etc.
 
 Validating function arguments
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-In general, be Pythonic and use `duck typing`_. That is, don't check the type of
-each argument given, because
+In general, be Pythonic and rely on `duck typing`_.
 
     When I see a bird that walks like a duck and swims like a duck and quacks
     like a duck, I call that bird a duck.
 
     -- James Whitcomb Riley
 
+That is, avoid trivial checks such as
+
+.. code-block:: python
+
+   isinstance(var, six.integer_types)
+   isinstance(var, (tuple, list))
+
+in cases where any number (like a float without a fractional part or a NumPy
+scalar) or iterable (like a dictionary view, custom iterator) would work too.
+
 If you need to perform some sort of input validation, don't use ``assert``
-statements. Raise a ``ValueError`` instead. ``assert`` statements should
-only be used for sanity tests i.e. they *should* never be triggered, unless
+statements. Raise a ``ValueError`` instead. ``assert`` statements `should
+only be used for sanity tests`_ i.e. they *should* never be triggered, unless
 there is a bug in the code.
 
 .. _duck typing: https://en.wikipedia.org/wiki/Duck_typing
+.. _should only be used for sanity tests: https://en.wikipedia.org/wiki/Assertion_%28software_development%29#Comparison_with_error_handling
 
 Abstract classes
 ~~~~~~~~~~~~~~~~
@@ -115,14 +125,19 @@ Serialization
 To ensure the reproducibility of scientific experiments Blocks tries to make
 sure that stopping and resuming training doesn't affect the final results. In
 order to do so it takes a radical approach, serializing the entire training
-state using dill_ (an extension of Python's native pickle_). Some things cannot
+state using Dill_ (an extension of Python's native pickle_). Some things cannot
 be pickled, so their use should be avoided:
 
 * Generators
-* Dynamically generated classes (*possible but complicated*)
+* Dynamically generated classes (possible_ but complicated)
+* Most iterators (Python 2), but not custom iterator types
 
-.. _dill: http://trac.mystic.cacr.caltech.edu/project/pathos/wiki/dill
+For a more detailed list, refer to `Dill's source code`_.
+
+.. _Dill: http://trac.mystic.cacr.caltech.edu/project/pathos/wiki/dill
 .. _pickle: https://docs.python.org/3/library/pickle.html
+.. _possible: https://stackoverflow.com/questions/4647566/pickle-a-dynamically-parameterized-sub-class
+.. _Dill's source code: https://github.com/uqfoundation/dill/blob/master/dill/_objects.py
 
 Docstrings
 ----------
