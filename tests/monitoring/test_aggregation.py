@@ -17,11 +17,11 @@ class TestBrick(bricks.Brick):
     @application(inputs=['input_'], outputs=['output'])
     def apply(self, input_, application_call):
         V = self.params[0]
-        application_call.add_monitor((V ** 2).sum(), name='V_monitor')
-        mean_input = mean(input_.mean(axis=1).sum(), input_.shape[0])
-        application_call.add_monitor(mean_input, name='mean_mean_input')
+        mean_row_mean = mean(input_.mean(axis=1).sum(), input_.shape[0])
+        application_call.add_monitor((V ** 2).sum(), name='V_squared')
+        application_call.add_monitor(mean_row_mean, name='mean_row_mean')
         application_call.add_monitor(input_.mean(),
-                                     name='per_batch_mean_input')
+                                     name='mean_batch_element')
         return input_ + V
 
 
@@ -50,5 +50,5 @@ def test_param_monitor():
     initialize()
     accumulate = theano.function([X], updates=aggregator.accumulation_updates)
     accumulate(numpy.arange(4, dtype=theano.config.floatX).reshape(2, 2))
-    accumulate(numpy.arange(4, 8, dtype=theano.config.floatX).reshape(2, 2))
-    assert_allclose(aggregator.readout_expression.eval(), 3.5)
+    accumulate(numpy.arange(4, 10, dtype=theano.config.floatX).reshape(3, 2))
+    assert_allclose(aggregator.readout_expression.eval(), 4.5)

@@ -50,12 +50,14 @@ class MNIST(InMemoryDataset):
                  **kwargs):
         if which_set not in ('train', 'test'):
             raise ValueError("MNIST only has a train and test set")
-        set_size = 60000 if which_set == 'train' else 10000
-        num_examples = (stop if stop else set_size) - (start if start else 0)
-        self.default_scheme = SequentialScheme(num_examples, 1)
+        if not stop:
+            stop = 60000 if which_set == "train" else 10000
+        if not self.start:
+            start = 0
+        self.num_examples = stop - start
+        self.default_scheme = SequentialScheme(self.num_examples, 1)
         super(MNIST, self).__init__(**kwargs)
 
-        self.num_examples = num_examples
         self.which_set = which_set
         self.start = start
         self.stop = stop
