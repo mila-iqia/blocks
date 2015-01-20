@@ -10,7 +10,7 @@ from blocks.bricks.recurrent import BaseRecurrent
 from blocks.bricks.parallel import Fork, Mixer
 from blocks.bricks.lookup import LookupTable
 from blocks.bricks.recurrent import recurrent
-from blocks.utils import dict_subset, dict_union, update_instance
+from blocks.utils import dict_subset, dict_union
 
 
 class BaseSequenceGenerator(Initializable):
@@ -95,7 +95,9 @@ class BaseSequenceGenerator(Initializable):
     @lazy
     def __init__(self, readout, transition, fork=None, **kwargs):
         super(BaseSequenceGenerator, self).__init__(**kwargs)
-        update_instance(self, locals())
+        self.readout = readout
+        self.transition = transition
+        self.fork = fork
 
         self.state_names = transition.compute_states.outputs
         self.context_names = transition.apply.contexts
@@ -116,7 +118,8 @@ class BaseSequenceGenerator(Initializable):
 
         # Configure fork
         feedback_names = self.readout.feedback.outputs
-        assert len(feedback_names) == 1
+        if not len(feedback_names) == 1:
+            raise ValueError
         self.fork.input_dim = self.readout.get_dim(feedback_names[0])
         self.fork.fork_dims = {
             name: self.transition.get_dim(name)
@@ -318,12 +321,14 @@ class Readout(AbstractReadout):
     def __init__(self, readout_dim=None, emitter=None, feedbacker=None,
                  **kwargs):
         super(Readout, self).__init__(**kwargs)
+        self.readout_dim = readout_dim
 
         if not emitter:
             emitter = TrivialEmitter(readout_dim)
         if not feedbacker:
             feedbacker = TrivialFeedback(readout_dim)
-        update_instance(self, locals())
+        self.emitter = emitter
+        self.feedbacker = feedbacker
 
         self.children = [self.emitter, self.feedbacker]
 
@@ -375,7 +380,8 @@ class LinearReadout(Readout, Initializable):
     @lazy
     def __init__(self, readout_dim, source_names, **kwargs):
         super(LinearReadout, self).__init__(readout_dim, **kwargs)
-        update_instance(self, locals())
+        self.readout_dim = readout_dim
+        self.source_names = source_names
 
         self.projectors = [MLP(name="project_{}".format(name),
                                activations=[Identity()])
@@ -491,7 +497,8 @@ class LookupFeedback(AbstractFeedback, Initializable):
     """
     def __init__(self, num_outputs=None, feedback_dim=None, **kwargs):
         super(LookupFeedback, self).__init__(**kwargs)
-        update_instance(self, locals())
+        self.num_outputs = num_outputs
+        self.feedback_dim = feedback_dim
 
         self.lookup = LookupTable(num_outputs, feedback_dim,
                                   weights_init=self.weights_init)
@@ -545,16 +552,21 @@ class AttentionTransition(AbstractAttentionTransition, Initializable):
                  attended_name=None, attended_mask_name=None,
                  **kwargs):
         super(AttentionTransition, self).__init__(**kwargs)
-        update_instance(self, locals())
+        self.transition = transition
+        self.attention = attention
+        self.mixer = mixer
 
         self.sequence_names = self.transition.apply.sequences
         self.state_names = self.transition.apply.states
         self.context_names = self.transition.apply.contexts
 
-        if not self.attended_name:
-            self.attended_name = self.context_names[0]
-        if not self.attended_mask_name:
-            self.attended_mask_name = self.context_names[1]
+        if not attended_name:
+            attended_name = self.context_names[0]
+        if not attended_mask_name:
+            attended_mask_name = self.context_names[1]
+        self.attended_name = attended_name
+        self.attended_mask_name = attended_mask_name
+
         self.preprocessed_attended_name = "preprocessed_" + self.attended_name
 
         self.glimpse_names = self.attention.take_look.outputs
@@ -729,7 +741,7 @@ class FakeAttentionTransition(AbstractAttentionTransition, Initializable):
     """
     def __init__(self, transition, **kwargs):
         super(FakeAttentionTransition, self).__init__(**kwargs)
-        update_instance(self, locals())
+        self.transition = transition
 
         self.state_names = transition.apply.states
         self.context_names = transition.apply.contexts

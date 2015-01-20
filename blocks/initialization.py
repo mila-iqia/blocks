@@ -6,8 +6,6 @@ import six
 import theano
 from six import add_metaclass
 
-from blocks.utils import update_instance
-
 
 @add_metaclass(ABCMeta)
 class NdarrayInitialization(object):
@@ -183,17 +181,22 @@ class Sparse(NdarrayInitialization):
 
     """
     def __init__(self, num_init, weights_init, sparse_init=None):
+        self.num_init = num_init
+        self.weights_init = weights_init
+
         if sparse_init is None:
             sparse_init = Constant(0.)
-        update_instance(self, locals())
+        self.sparse_init = sparse_init
 
     def generate(self, rng, shape):
         weights = self.sparse_init.generate(rng, shape)
         if isinstance(self.num_init, six.integer_types):
-            assert self.num_init > 0
+            if not self.num_init > 0:
+                raise ValueError
             num_init = self.num_init
         else:
-            assert 1 >= self.num_init > 0
+            if not 1 >= self.num_init > 0:
+                raise ValueError
             num_init = int(self.num_init * shape[1])
         values = self.weights_init.generate(rng, (shape[0], num_init))
         for i in range(shape[0]):

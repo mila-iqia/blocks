@@ -7,9 +7,6 @@ import theano
 from blocks import config
 from blocks.datasets import InMemoryDataset, lazy_properties
 from blocks.datasets.schemes import SequentialScheme
-from blocks.utils import update_instance
-
-
 MNIST_IMAGE_MAGIC = 2051
 MNIST_LABEL_MAGIC = 2049
 
@@ -51,15 +48,19 @@ class MNIST(InMemoryDataset):
 
     def __init__(self, which_set, start=None, stop=None, binary=False,
                  **kwargs):
+        self.which_set = which_set
+        self.start = start
+        self.stop = stop
+        self.binary = binary
+
         if which_set not in ('train', 'test'):
             raise ValueError("MNIST only has a train and test set")
-        if not stop:
-            stop = 60000 if which_set == "train" else 10000
-        if not start:
-            start = 0
-        num_examples = stop - start
-        default_scheme = SequentialScheme(num_examples, 1)
-        update_instance(self, locals())
+        if not self.stop:
+            self.stop = 60000 if which_set == "train" else 10000
+        if not self.start:
+            self.start = 0
+        self.num_examples = self.stop - self.start
+        self.default_scheme = SequentialScheme(self.num_examples, 1)
         super(MNIST, self).__init__(**kwargs)
 
     def load(self):

@@ -89,7 +89,8 @@ class Pylearn2Cost(pylearn2.costs.cost.Cost):
         self.inputs = ComputationGraph(self.cost).dict_of_inputs()
 
     def expr(self, model, data, **kwargs):
-        assert not model.supervised
+        if model.supervised:
+            raise ValueError
         data = pack(data)
         data = [tensor.unbroadcast(var, *range(var.ndim))
                 for var in data]

@@ -1,7 +1,6 @@
 """Introduces Lookup brick."""
 from blocks.bricks import application, Initializable, lazy
-from blocks.utils import (check_theano_variable, shared_floatx_zeros,
-                          update_instance)
+from blocks.utils import check_theano_variable, shared_floatx_zeros
 
 
 class LookupTable(Initializable):
@@ -25,7 +24,8 @@ class LookupTable(Initializable):
     @lazy
     def __init__(self, length, dim, **kwargs):
         super(LookupTable, self).__init__(**kwargs)
-        update_instance(self, locals())
+        self.length = length
+        self.dim = dim
 
     @property
     def W(self):

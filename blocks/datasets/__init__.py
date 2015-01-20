@@ -5,7 +5,7 @@ import numpy
 import six
 from six import add_metaclass
 
-from blocks.utils import update_instance, LambdaIterator, SequenceIterator
+from blocks.utils import LambdaIterator, SequenceIterator
 
 
 @add_metaclass(ABCMeta)
@@ -314,7 +314,8 @@ class ContainerDataset(Dataset):
             self.data_channels = [container[source] for source in self.sources]
         else:
             self.sources = ('data',)
-            assert sources == self.sources or sources is None
+            if not (sources == self.sources or sources is None):
+                raise ValueError
             self.data_channels = [container]
 
     def open(self):
@@ -323,9 +324,9 @@ class ContainerDataset(Dataset):
         return LambdaIterator(
             lambda: tuple([next(iterator) for iterator in iterators]))
 
-    def get_data(self, state, request=None):
-        if request is not None:
-            raise ValueError("Does not accept requests; only next")
+    def get_data(self, state=None, request=None):
+        if state is None or request is not None:
+            raise ValueError
         return next(state)
 
 
@@ -497,7 +498,9 @@ class DataStreamMapping(DataStreamWrapper):
         super(DataStreamMapping, self).__init__(data_stream)
         self.mapping = mapping
 
-    def get_data(self):
+    def get_data(self, request=None):
+        if request is not None:
+            raise ValueError
         return self.mapping(next(self.child_epoch_iterator))
 
 
@@ -519,9 +522,9 @@ class CachedDataStream(DataStreamWrapper):
     def __init__(self, data_stream, iteration_scheme):
         super(CachedDataStream, self).__init__(
             data_stream, iteration_sheme=iteration_scheme)
-        self.cache = [[] for source in self.sources]
+        self.cache = [[] for _ in self.sources]
 
-    def get_data(self, request):
+    def get_data(self, request=None):
         if request >= len(self.cache[0]):
             self._cache()
         data = []
@@ -548,7 +551,9 @@ class DataIterator(six.Iterator):
 
     """
     def __init__(self, data_stream, request_iterator=None, as_dict=False):
-        update_instance(self, locals())
+        self.data_stream = data_stream
+        self.request_iterator = request_iterator
+        self.as_dict = as_dict
 
     def __iter__(self):
         return self
