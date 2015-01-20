@@ -1,6 +1,5 @@
 import logging
 import os
-import pickle
 
 import pylearn2
 import dill
@@ -36,7 +35,7 @@ def test_pylearn2():
     filename = 'unittest_markov_chain'
     try:
         pylearn2_test('train', filename, 0, 3, False)
-    except pickle.PicklingError:
+    except (dill.PicklingError, OSError):
         pass
     os.remove(filename)
 
