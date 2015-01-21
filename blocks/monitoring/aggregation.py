@@ -119,10 +119,11 @@ class Mean(AggregationScheme):
         return aggregator
 
 
-def mean(numerator, denominator):
+def mean(numerator, denominator=1.0):
     """Mean of quantity (numerator) over a number (denominator) values."""
     expression = numerator / denominator
     expression.tag.aggregation_scheme = Mean(numerator, denominator)
+    expression.name = numerator.name
     return expression
 
 

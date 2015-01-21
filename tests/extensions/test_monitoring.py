@@ -4,11 +4,12 @@ from theano import tensor
 from numpy.testing import assert_allclose
 
 from blocks.datasets import ContainerDataset
-from blocks.main_loop import MainLoop
 from blocks.extensions import TrainingExtension, FinishAfter
 from blocks.extensions.monitoring import TrainingDataMonitoring
+from blocks.monitoring import aggregation
 from blocks.algorithms import GradientDescent, SteepestDescent
-from blocks.utils import shared_floatx
+from blocks.utils import shared_floatx, named_copy
+from blocks.main_loop import MainLoop
 
 floatX = theano.config.floatX
 
@@ -23,7 +24,8 @@ def test_training_data_monitoring():
 
     x = tensor.vector('features')
     y = tensor.scalar('targets')
-    W = shared_floatx([0, 0], name="W")
+    W = shared_floatx([0, 0], name='W')
+    W_sum = named_copy(W.sum(), 'W_sum')
     cost = ((x * W).sum() - y) ** 2
     cost.name = 'cost'
 
@@ -40,9 +42,9 @@ def test_training_data_monitoring():
                                   step_rule=SteepestDescent(0.001)),
         extensions=[
             FinishAfter(after_n_epochs=1),
-            TrainingDataMonitoring([W, cost], "train1",
+            TrainingDataMonitoring([W_sum, cost], "train1",
                                    after_every_batch=True),
-            TrainingDataMonitoring([W, cost], "train2",
+            TrainingDataMonitoring([aggregation.mean(W_sum), cost], "train2",
                                    after_every_epoch=True),
             TrueCostExtension()])
 
@@ -56,4 +58,12 @@ def test_training_data_monitoring():
                         main_loop.log[i + 1].train1_cost)
     assert_allclose(
         main_loop.log[n_batches].train2_cost,
-        sum([main_loop.log[i].true_cost for i in range(n_batches)]) / 3)
+        sum([main_loop.log[i].true_cost
+             for i in range(n_batches)]) / n_batches)
+    # Here we legalize (temporarily) wierd behavior of data independent
+    # expressions measured at different stages depending on the aggregation
+    # scheme.
+    assert_allclose(
+        main_loop.log[n_batches].train2_W_sum,
+        sum([main_loop.log[i].train1_W_sum
+             for i in range(1, n_batches)]) / n_batches)

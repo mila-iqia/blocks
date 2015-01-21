@@ -11,6 +11,7 @@ from blocks.initialization import IsotropicGaussian, Constant
 from blocks.datasets import DataStream
 from blocks.datasets.mnist import MNIST
 from blocks.datasets.schemes import SequentialScheme
+from blocks.monitoring import aggregation
 from blocks.extensions import FinishAfter, Printing
 from blocks.extensions.saveload import SerializeMainLoop
 from blocks.extensions.monitoring import (DataStreamMonitoring,
@@ -49,7 +50,7 @@ def main(save_to, num_epochs):
                         prefix="test"),
                     TrainingDataMonitoring(
                         [cost, error_rate,
-                         algorithm.total_gradient_norm],
+                         aggregation.mean(algorithm.total_gradient_norm)],
                         prefix="train",
                         after_every_epoch=True),
                     SerializeMainLoop(save_to),
