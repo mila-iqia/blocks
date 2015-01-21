@@ -223,6 +223,13 @@ def check_theano_variable(variable, n_dim, dtype_prefix):
                              dtype_prefix, variable.dtype))
 
 
+def named_copy(variable, new_name):
+    """Clones a variable and set a new name to the clone."""
+    result = variable.copy()
+    result.name = new_name
+    return result
+
+
 def is_graph_input(variable):
     """Check if variable is a user-provided graph input.
 
@@ -248,30 +255,6 @@ def is_graph_input(variable):
 def is_shared_variable(variable):
     """Check if a variable is a Theano shared variable."""
     return isinstance(variable, SharedVariable)
-
-
-def graph_inputs(variables, blockers=None):
-    """Compute inputs needed to compute values in variables.
-
-    This function is similar to :meth:`theano.gof.graph.inputs`. However,
-    it doesn't treat shared and constant values as inputs.
-
-    Parameters
-    ----------
-    variables : list of theano variables
-        The outputs whose inputs are sought for.
-    blockers : list of theano variables
-        See :meth:`theano.gof.graph.inputs` for documentation.
-
-    Returns
-    -------
-    list
-        Theano variables which are non-constant and non-shared inputs to
-        the computational graph.
-
-    """
-    inps = theano.gof.graph.inputs(variables, blockers=blockers)
-    return [i for i in inps if is_graph_input(i)]
 
 
 def dict_subset(dict_, keys, pop=False, must_have=True):

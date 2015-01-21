@@ -226,7 +226,7 @@ class Printing(SimpleExtension):
         super(Printing, self).__init__(**kwargs)
 
     def _print_attributes(self, attribute_tuples):
-        for attr, value in attribute_tuples:
+        for attr, value in sorted(attribute_tuples, key=lambda t: t[0]):
             if not attr.startswith("_"):
                 print("\t", "{}:".format(attr), value)
 

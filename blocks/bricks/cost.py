@@ -1,9 +1,12 @@
 from abc import ABCMeta, abstractmethod
 
+import theano
 from theano import tensor
 from six import add_metaclass
 
 from blocks.bricks import application, Brick
+
+floatX = theano.config.floatX
 
 
 @add_metaclass(ABCMeta)
@@ -21,7 +24,7 @@ class CostMatrix(Cost):
     Assumes that the data has format (batch, features).
 
     """
-    @application
+    @application(outputs=["cost"])
     def apply(self, y, y_hat):
         return self.cost_matrix.application_method(
             self, y, y_hat).sum(axis=1).mean()
@@ -54,7 +57,14 @@ class SquaredError(CostMatrix):
 
 
 class CategoricalCrossEntropy(Cost):
-    @application
+    @application(outputs=["cost"])
     def apply(self, y, y_hat):
         cost = tensor.nnet.categorical_crossentropy(y_hat, y).mean()
         return cost
+
+
+class MisclassficationRate(Cost):
+    @application(outputs=["error_rate"])
+    def apply(self, y, y_hat):
+        return (tensor.sum(tensor.neq(y, y_hat.argmax(axis=1)))
+                / y.shape[0].astype(floatX))
