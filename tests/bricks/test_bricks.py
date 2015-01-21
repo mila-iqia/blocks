@@ -4,7 +4,7 @@ import theano
 from numpy.testing import assert_allclose, assert_raises
 from theano import tensor
 
-from blocks.bricks import (Application, application, Brick,
+from blocks.bricks import (application, Brick,
                            DEFAULT_SEED, Identity, lazy, Linear,
                            Maxout, LinearMaxout, MLP, Tanh)
 from blocks.initialization import Constant
@@ -227,8 +227,6 @@ def test_application():
     x = tensor.vector()
     brick.apply(x)
     assert brick.initialized
-
-    assert_raises(ValueError, getattr, Application(lambda x: x), 'brick')
 
 
 def test_rng():

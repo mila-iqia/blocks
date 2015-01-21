@@ -6,7 +6,7 @@ from collections import OrderedDict
 import theano
 from theano import tensor
 
-from blocks.bricks import (Application, application, application_wrapper,
+from blocks.bricks import (Application, application,
                            Brick, Initializable, Identity, Sigmoid, lazy)
 from blocks.initialization import NdarrayInitialization
 from blocks.utils import pack, shared_floatx_zeros
@@ -66,137 +66,130 @@ def recurrent(*args, **kwargs):
         Names of the outputs.
 
     """
-    def recurrent_wrapper(application, application_method):
-        arg_spec = inspect.getargspec(application_method)
-        arg_names = arg_spec.args[1:]
+    arg_spec = inspect.getargspec(application_method)
+    arg_names = arg_spec.args[1:]
 
-        def recurrent_apply(brick, *args, **kwargs):
-            """Iterates a transition function.
+    def recurrent_apply(brick, *args, **kwargs):
+        """Iterates a transition function.
 
-            Parameters
-            ----------
-            iterate : bool
-                If ``True`` iteration is made. By default ``True``.
-            reverse : bool
-                If ``True``, the sequences are processed in backward
-                direction. ``False`` by default.
-            return_initial_states : bool
-                If ``True``, initial states are included in the returned
-                state tensors. ``False`` by default.
+        Parameters
+        ----------
+        iterate : bool
+            If ``True`` iteration is made. By default ``True``.
+        reverse : bool
+            If ``True``, the sequences are processed in backward
+            direction. ``False`` by default.
+        return_initial_states : bool
+            If ``True``, initial states are included in the returned
+            state tensors. ``False`` by default.
 
-            .. todo::
+        .. todo::
 
-                * Handle `updates` returned by the `theano.scan`
-                    routine.
-                * ``kwargs`` has a random order; check if this is a
-                    problem.
+            * Handle `updates` returned by the `theano.scan`
+                routine.
+            * ``kwargs`` has a random order; check if this is a
+                problem.
 
-            """
-            # Extract arguments related to iteration.
-            iterate = kwargs.pop('iterate', True)
-            reverse = kwargs.pop('reverse', False)
-            return_initial_states = kwargs.pop('return_initial_states', False)
+        """
+        # Extract arguments related to iteration.
+        iterate = kwargs.pop('iterate', True)
+        reverse = kwargs.pop('reverse', False)
+        return_initial_states = kwargs.pop('return_initial_states', False)
 
-            # Push everything to kwargs
-            for arg, arg_name in zip(args, arg_names):
-                kwargs[arg_name] = arg
-            # Separate kwargs that aren't sequence, context or state variables
-            scan_arguments = (application.sequences + application.states +
-                              application.contexts)
-            rest_kwargs = {key: value for key, value in kwargs.items()
-                           if key not in scan_arguments}
+        # Push everything to kwargs
+        for arg, arg_name in zip(args, arg_names):
+            kwargs[arg_name] = arg
+        # Separate kwargs that aren't sequence, context or state variables
+        scan_arguments = (application.sequences + application.states +
+                          application.contexts)
+        rest_kwargs = {key: value for key, value in kwargs.items()
+                       if key not in scan_arguments}
 
-            # Check what is given and what is not
-            def only_given(arg_names):
-                return OrderedDict((arg_name, kwargs[arg_name])
-                                   for arg_name in arg_names
-                                   if kwargs.get(arg_name))
-            sequences_given = only_given(application.sequences)
-            contexts_given = only_given(application.contexts)
+        # Check what is given and what is not
+        def only_given(arg_names):
+            return OrderedDict((arg_name, kwargs[arg_name])
+                               for arg_name in arg_names
+                               if kwargs.get(arg_name))
+        sequences_given = only_given(application.sequences)
+        contexts_given = only_given(application.contexts)
 
-            # TODO Assumes 1 time dim!
-            if len(sequences_given):
-                shape = list(sequences_given.values())[0].shape
-                if not iterate:
-                    batch_size = shape[0]
-                else:
-                    n_steps = shape[0]
-                    batch_size = shape[1]
-            else:
-                # TODO Raise error if n_steps and batch_size not found?
-                n_steps = kwargs.pop('n_steps')
-                batch_size = kwargs.pop('batch_size')
-
-            # Ensure that all initial states are available.
-            for state_name in application.states:
-                dim = brick.get_dim(state_name)
-                if state_name in kwargs:
-                    if isinstance(kwargs[state_name], NdarrayInitialization):
-                        kwargs[state_name] = tensor.alloc(
-                            kwargs[state_name].generate(brick.rng, (1, dim)),
-                            batch_size, dim)
-                    elif isinstance(kwargs[state_name], Application):
-                        kwargs[state_name] = \
-                            kwargs[state_name](state_name, batch_size,
-                                               *args, **kwargs)
-                else:
-                    # TODO init_func returns 2D-tensor, fails for iterate=False
-                    kwargs[state_name] = \
-                        brick.initial_state(state_name, batch_size,
-                                            *args, **kwargs)
-                    assert kwargs[state_name]
-            states_given = only_given(application.states)
-            assert len(states_given) == len(application.states)
-
-            # Theano issue 1772
-            for name, state in states_given.items():
-                states_given[name] = tensor.unbroadcast(state,
-                                                        *range(state.ndim))
-
-            # Apply methods
+        # TODO Assumes 1 time dim!
+        if len(sequences_given):
+            shape = list(sequences_given.values())[0].shape
             if not iterate:
-                return application_method(brick, **kwargs)
+                batch_size = shape[0]
+            else:
+                n_steps = shape[0]
+                batch_size = shape[1]
+        else:
+            # TODO Raise error if n_steps and batch_size not found?
+            n_steps = kwargs.pop('n_steps')
+            batch_size = kwargs.pop('batch_size')
 
-            def scan_function(*args):
-                args = list(args)
-                arg_names = (list(sequences_given) + list(states_given) +
-                             list(contexts_given))
-                kwargs = dict(zip(arg_names, args))
-                kwargs.update(rest_kwargs)
-                return application_method(brick, **kwargs)
-            outputs_info = (list(states_given.values())
-                            + [None] * (len(application.outputs) -
-                                        len(application.states)))
-            result, updates = theano.scan(
-                scan_function, sequences=list(sequences_given.values()),
-                outputs_info=outputs_info,
-                non_sequences=list(contexts_given.values()),
-                n_steps=n_steps,
-                go_backwards=reverse)
-            result = pack(result)
-            if return_initial_states:
-                # Undo Subtensor
-                for i in range(len(states_given)):
-                    assert isinstance(result[i].owner.op,
-                                      tensor.subtensor.Subtensor)
-                    result[i] = result[i].owner.inputs[0]
-            if updates:
-                list(updates.values())[0].owner.tag.updates = updates
-            return result
+        # Ensure that all initial states are available.
+        for state_name in application.states:
+            dim = brick.get_dim(state_name)
+            if state_name in kwargs:
+                if isinstance(kwargs[state_name], NdarrayInitialization):
+                    kwargs[state_name] = tensor.alloc(
+                        kwargs[state_name].generate(brick.rng, (1, dim)),
+                        batch_size, dim)
+                elif isinstance(kwargs[state_name], Application):
+                    kwargs[state_name] = \
+                        kwargs[state_name](state_name, batch_size,
+                                           *args, **kwargs)
+            else:
+                # TODO init_func returns 2D-tensor, fails for iterate=False
+                kwargs[state_name] = \
+                    brick.initial_state(state_name, batch_size,
+                                        *args, **kwargs)
+                assert kwargs[state_name]
+        states_given = only_given(application.states)
+        assert len(states_given) == len(application.states)
 
-        return recurrent_apply
+        # Theano issue 1772
+        for name, state in states_given.items():
+            states_given[name] = tensor.unbroadcast(state,
+                                                    *range(state.ndim))
+
+        # Apply methods
+        if not iterate:
+            return application_method(brick, **kwargs)
+
+        def scan_function(*args):
+            args = list(args)
+            arg_names = (list(sequences_given) + list(states_given) +
+                         list(contexts_given))
+            kwargs = dict(zip(arg_names, args))
+            kwargs.update(rest_kwargs)
+            return application_method(brick, **kwargs)
+        outputs_info = (list(states_given.values())
+                        + [None] * (len(application.outputs) -
+                                    len(application.states)))
+        result, updates = theano.scan(
+            scan_function, sequences=list(sequences_given.values()),
+            outputs_info=outputs_info,
+            non_sequences=list(contexts_given.values()),
+            n_steps=n_steps,
+            go_backwards=reverse)
+        result = pack(result)
+        if return_initial_states:
+            # Undo Subtensor
+            for i in range(len(states_given)):
+                assert isinstance(result[i].owner.op,
+                                  tensor.subtensor.Subtensor)
+                result[i] = result[i].owner.inputs[0]
+        if updates:
+            list(updates.values())[0].owner.tag.updates = updates
+        return result
 
     # Decorator can be used with or without arguments
     assert (args and not kwargs) or (not args and kwargs)
+    return application(*args, **kwargs)
     if args:
-        application_method, = args
-        application = application_wrapper()(application_method)
-        return application.wrap(recurrent_wrapper)
+        return application(recurrent_apply)
     else:
-        def wrapper(application_method):
-            application = application_wrapper(**kwargs)(application_method)
-            return application.wrap(recurrent_wrapper)
-        return wrapper
+        return application(**kwargs)(recurrent_apply)
 
 
 class Recurrent(BaseRecurrent, Initializable):
