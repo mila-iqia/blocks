@@ -153,7 +153,7 @@ def read_mnist_labels(filename):
 
     """
     with open(filename, 'rb') as f:
-        magic, number = struct.unpack('>ii', f.read(8))
+        magic, _ = struct.unpack('>ii', f.read(8))
         if magic != MNIST_LABEL_MAGIC:
             raise ValueError("Wrong magic number reading MNIST label file")
         array = numpy.fromfile(f, dtype='uint8')
