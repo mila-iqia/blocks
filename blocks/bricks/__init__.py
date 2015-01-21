@@ -176,16 +176,16 @@ class BoundApplication(object):
 
 class _Brick(ABCMeta):
     def __new__(mcl, name, bases, namespace):
-        # Replace application methods with Application instances
         brick = super(_Brick, mcl).__new__(mcl, name, bases, namespace)
+        # Attach the Brick classes to the Application instance
         for attr in namespace.values():
             if isinstance(attr, Application):
                 attr.brick = brick
         return brick
 
     def __call__(cls, *args, **kwargs):
-        # Instantiate the brick and replace Application with BoundedApplication
         brick = super(_Brick, cls).__call__(*args, **kwargs)
+        # Replace Application with BoundApplication and attach Brick instance
         for attr in dir(brick):  # Why is __dict__ empty here?
             value = getattr(brick, attr)
             if isinstance(value, Application):
