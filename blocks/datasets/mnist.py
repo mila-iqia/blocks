@@ -52,7 +52,7 @@ class MNIST(InMemoryDataset):
             raise ValueError("MNIST only has a train and test set")
         if not stop:
             stop = 60000 if which_set == "train" else 10000
-        if not self.start:
+        if not start:
             start = 0
         self.num_examples = stop - start
         self.default_scheme = SequentialScheme(self.num_examples, 1)
