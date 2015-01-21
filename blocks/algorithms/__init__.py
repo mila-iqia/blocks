@@ -7,6 +7,7 @@ from six import add_metaclass
 from theano import tensor
 
 from blocks.graph import ComputationGraph
+from blocks.utils import named_copy
 
 
 @add_metaclass(ABCMeta)
@@ -168,6 +169,9 @@ class GradientDescent(DifferentiableCostMinimizer):
             else dict(
                 zip(self.params, tensor.grad(self.cost, self.params))))
         self.step_rule = step_rule if step_rule else SteepestDescent()
+
+        self.total_gradient_norm = named_copy(
+            sum(g.norm(2) for g in self.gradients), "total_gradient_norm")
 
     def initialize(self):
         all_updates = self.updates

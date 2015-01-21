@@ -13,7 +13,8 @@ from blocks.datasets.mnist import MNIST
 from blocks.datasets.schemes import SequentialScheme
 from blocks.extensions import FinishAfter, Printing
 from blocks.extensions.saveload import SerializeMainLoop
-from blocks.extensions.monitoring import DataStreamMonitoring
+from blocks.extensions.monitoring import (DataStreamMonitoring,
+                                          TrainingDataMonitoring)
 from blocks.main_loop import MainLoop
 
 
@@ -31,13 +32,14 @@ def main(save_to, num_epochs):
     mnist_train = MNIST("train")
     mnist_test = MNIST("test")
 
+    algorithm = GradientDescent(
+        cost=cost, step_rule=SteepestDescent(learning_rate=0.1))
     main_loop = MainLoop(
         mlp,
         DataStream(mnist_train,
                    iteration_scheme=SequentialScheme(
                        mnist_train.num_examples, 50)),
-        GradientDescent(cost=cost,
-                        step_rule=SteepestDescent(learning_rate=0.1)),
+        algorithm,
         extensions=[FinishAfter(after_n_epochs=num_epochs),
                     DataStreamMonitoring(
                         [cost, error_rate],
@@ -45,6 +47,11 @@ def main(save_to, num_epochs):
                                    iteration_scheme=SequentialScheme(
                                        mnist_test.num_examples, 500)),
                         prefix="test"),
+                    TrainingDataMonitoring(
+                        [cost, error_rate,
+                         algorithm.total_gradient_norm],
+                        prefix="train",
+                        after_every_epoch=True),
                     SerializeMainLoop(save_to),
                     Printing()])
     main_loop.run()
