@@ -40,7 +40,6 @@ class Dataset(object):
 
     """
     sources = None
-    default_scheme = None
 
     def __init__(self, sources=None):
         if sources is not None:
