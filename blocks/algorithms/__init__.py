@@ -184,7 +184,9 @@ class GradientDescent(DifferentiableCostMinimizer):
 
     def process_batch(self, batch):
         if not set(batch.keys()) == set([v.name for v in self.inputs]):
-            raise ValueError
+            raise ValueError("The names of the input variables of your"
+                             " computation graph must correspond to the"
+                             " data sources.")
         ordered_batch = [batch[v.name] for v in self.inputs]
         self._function(*ordered_batch)
 
