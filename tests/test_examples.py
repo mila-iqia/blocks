@@ -33,7 +33,10 @@ test_mnist.setup = setup
 
 def test_pylearn2():
     filename = 'unittest_markov_chain'
-    pylearn2_test('train', filename, 0, 3, False)
+    try:
+        pylearn2_test('train', filename, 0, 3, False)
+    except OSError:
+        pass
     os.remove(filename)
 
 test_pylearn2.setup = setup

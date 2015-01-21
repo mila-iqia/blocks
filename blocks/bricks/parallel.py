@@ -103,12 +103,12 @@ class Fork(Parallel):
 
     @application(inputs=['input_'])
     def apply(self, input_):
-        return super(Fork, self).apply(**{name: input_
-                                          for name in self.fork_names})
+        return super(Fork, self).apply.application(
+            self, **{name: input_ for name in self.fork_names})
 
     @apply.property('outputs')
     def apply_outputs(self):
-        return super(Fork, self).apply.outputs
+        return super(Fork, self).apply.outputs.fget(self)
 
 
 class Mixer(Parallel):
@@ -163,8 +163,8 @@ class Mixer(Parallel):
         new = kwargs.pop(self.new_name)
         if not set(kwargs.keys()) == set(self.old_names):
             raise ValueError
-        result = super(Mixer, self).apply(
-            return_list=True, **{name: new for name in self.old_names})
+        result = super(Mixer, self).apply.application(
+            self, return_list=True, **{name: new for name in self.old_names})
         for i, name in enumerate(self.old_names):
             result[i] += kwargs[name]
         return result

@@ -714,6 +714,7 @@ class AttentionTransition(AbstractAttentionTransition, Initializable):
         # I can write self.apply because it can be overriden.
         # Thus I have to hack.
         # TODO: nice interface for this trick.
+        return self.do_apply
         AttentionTransition.do_apply.__get__(self, None)
         return AttentionTransition.do_apply
 

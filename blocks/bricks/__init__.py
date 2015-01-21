@@ -87,8 +87,11 @@ class Application(object):
 
         # Construct the ApplicationCall, used to store data in for this call
         call = ApplicationCall(brick, application)
+        args = list(args)
         if 'application_call' in args_names:
-            kwargs['application_call'] = call
+            args.insert(args_names.index('application_call'), call)
+        if 'application' in args_names:
+            args.insert(args_names.index('application'), application)
 
         # Allocate before applying, and optionally initialize
         if not brick.allocated:
@@ -107,7 +110,6 @@ class Application(object):
             copy.tag.role = role
             return copy
 
-        args = list(args)
         for i, input_ in enumerate(args):
             if isinstance(input_, tensor.Variable):
                 if i < len(args_names):
@@ -162,9 +164,12 @@ class BoundApplication(object):
             return getattr(self.application, name)
         if name in self.properties:
             return self.properties[name](self.brick)
-        if self.delegate_function:
-            return getattr(self.delegate_function(self.brick), name)
-        return getattr(self.application, name)
+        try:
+            return getattr(self.application, name)
+        except AttributeError:
+            if self.delegate_function:
+                return getattr(self.delegate_function(self.brick), name)
+            raise
 
     @property
     def name(self):
@@ -185,9 +190,16 @@ class _Brick(ABCMeta):
 
     def __call__(cls, *args, **kwargs):
         brick = super(_Brick, cls).__call__(*args, **kwargs)
+
         # Replace Application with BoundApplication and attach Brick instance
-        for attr in dir(brick):  # Why is __dict__ empty here?
-            value = getattr(brick, attr)
+        def get_dict_attr(obj, attr):
+            for obj in [obj]+obj.__class__.mro():
+                if attr in obj.__dict__:
+                    return obj.__dict__[attr]
+            raise AttributeError
+
+        for attr in dir(brick):
+            value = get_dict_attr(brick, attr)
             if isinstance(value, Application):
                 bound_application = BoundApplication(value)
                 setattr(brick, attr, bound_application)
