@@ -529,6 +529,10 @@ class Application(object):
         When an attribute can't be found on the application instance and
         this attribute is configured, the attribute is requested from the
         object returned by this function.
+    call_stack : list
+        The call stacks of bricks which are currently in progress. Used to
+        check the the caller of the current application is a parent brick;
+        else an error is raised.
 
     """
     call_stack = []
@@ -562,6 +566,11 @@ class Application(object):
             framework. Do not provide inputs to your apply method in a way
             different than passing them as positional or keyword arguments,
             e.g. as list or tuple elements.
+
+        Raises
+        ------
+        ValueError
+            If the caller is not a parent brick.
 
         Notes
         -----
@@ -668,9 +677,9 @@ def application(*args, **kwargs):
 
     Technically speaking this decorator only tags the method in question as
     being an application method. When the brick is constructed, the
-    :class:`_Brick` metaclass is responsible for replacing this method with
-    an instance of :class:`Application` which will perform the actual
-    wrapping.
+    :class:`_Brick` metaclass is responsible for replacing the decorated
+    method with an instance of :class:`Application` which will perform the
+    actual wrapping.
 
     """
     assert (args and not kwargs) or (not args and kwargs)
