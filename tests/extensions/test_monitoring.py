@@ -12,6 +12,7 @@ from blocks.utils import shared_floatx
 
 floatX = theano.config.floatX
 
+
 def test_training_data_monitoring():
     weights = numpy.array([-1, 1], dtype=floatX)
     features = [numpy.array(f, dtype=floatX)
@@ -40,9 +41,9 @@ def test_training_data_monitoring():
         extensions=[
             FinishAfter(after_n_epochs=1),
             TrainingDataMonitoring([W, cost], "train1",
-                                    after_every_batch=True),
+                                   after_every_batch=True),
             TrainingDataMonitoring([W, cost], "train2",
-                                    after_every_epoch=True),
+                                   after_every_epoch=True),
             TrueCostExtension()])
 
     main_loop.run()

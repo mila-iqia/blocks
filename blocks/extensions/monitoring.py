@@ -46,6 +46,7 @@ class DataStreamMonitoring(SimpleExtension):
         value_dict = self._evaluator.evaluate(self.data_stream)
         _add_records(self.main_loop.log, self.prefix, value_dict.items())
 
+
 class TrainingDataMonitoring(SimpleExtension):
     """Monitors values of Theano expressions on training batches.
 
@@ -60,9 +61,8 @@ class TrainingDataMonitoring(SimpleExtension):
 
     Notes
     -----
-
-        Requires the training algorithm to be an instance of
-        :class:`DifferentiableCostMinimizer`.
+    Requires the training algorithm to be an instance of
+    :class:`DifferentiableCostMinimizer`.
 
     """
     def __init__(self, expressions, prefix, **kwargs):
@@ -86,5 +86,5 @@ class TrainingDataMonitoring(SimpleExtension):
                 raise Exception("TrainingDataMonitoring.do should be invoked"
                                 " no more than once per iteration")
             _add_records(self.main_loop.log, self.prefix,
-                            self._buffer.get_aggregated_values().items())
+                         self._buffer.get_aggregated_values().items())
             self._buffer.initialize_aggregators()
