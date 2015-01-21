@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 def create_unbound_method(func, cls):
-    """https://bitbucket.org/gutworth/six/pull-request/64"""
+    """See https://bitbucket.org/gutworth/six/pull-request/64."""
     if six.PY2:
         return MethodType(func, None, cls)
     if six.PY3:
@@ -37,6 +37,7 @@ class Application(object):
         self.application = application
         self.delegate_function = None
         self.properties = {}
+        self.instances = {}
 
     def property(self, name):
         if not isinstance(name, six.string_types):
@@ -50,6 +51,16 @@ class Application(object):
     def delegate(self, f):
         self.delegate_function = f
         return f
+
+    def __get__(self, instance, owner):
+        if instance is None:
+            return self
+        elif instance in self.instances:
+            return self.instances[instance]
+        else:
+            bounded_application = BoundApplication(self, instance)
+            self.instances[instance] = bounded_application
+            return bounded_application
 
     def __getattr__(self, name):
         if name == 'properties':
@@ -154,8 +165,9 @@ class Application(object):
 
 
 class BoundApplication(object):
-    def __init__(self, application):
+    def __init__(self, application, brick):
         self.application = application
+        self.brick = brick
 
     def __getattr__(self, name):
         if name == 'application':
@@ -186,25 +198,6 @@ class _Brick(ABCMeta):
         for attr in namespace.values():
             if isinstance(attr, Application):
                 attr.brick = brick
-        return brick
-
-    def __call__(cls, *args, **kwargs):
-        brick = super(_Brick, cls).__call__(*args, **kwargs)
-
-        # Replace Application with BoundApplication and attach Brick instance
-        def get_dict_attr(obj, attr):
-            for obj in [obj]+obj.__class__.mro():
-                if attr in obj.__dict__:
-                    return obj.__dict__[attr]
-            raise AttributeError
-
-        for attr in dir(brick):
-            value = get_dict_attr(brick, attr)
-            if isinstance(value, Application):
-                bound_application = BoundApplication(value)
-                setattr(brick, attr, bound_application)
-                bound_application.brick = brick
-
         return brick
 
 

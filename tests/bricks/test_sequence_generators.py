@@ -110,9 +110,7 @@ class TestTransition(Recurrent):
     def apply(self, application, *args, **kwargs):
         for context in TestTransition.apply.contexts:
             kwargs.pop(context)
-        return super(TestTransition, self).apply.application(self, application,
-                *args,
-                                                             **kwargs)
+        return super(TestTransition, self).apply(*args, **kwargs)
 
     @apply.delegate
     def apply_delegate(self):
