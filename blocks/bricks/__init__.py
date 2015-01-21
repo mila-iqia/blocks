@@ -552,6 +552,18 @@ class Application(object):
         else:
             raise AttributeError
 
+    @property
+    def inputs(self):
+        return self._inputs
+
+    @inputs.setter
+    def inputs(self, inputs):
+        args_names, varargs_name, _, _ = inspect.getargspec(
+            self.application_method)
+        if not all(input_ in args_names + [varargs_name] for input_ in inputs):
+            raise ValueError("Unexpected inputs")
+        self._inputs = inputs
+
     def __call__(self, *args, **kwargs):
         """Wraps an application method.
 
