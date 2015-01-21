@@ -101,7 +101,7 @@ class Fork(Parallel):
         self.output_dims = self.fork_dims
         super(Fork, self)._push_allocation_config()
 
-    @application(inputs='input_')
+    @application(inputs=['input_'])
     def apply(self, input_):
         return super(Fork, self).apply(**{name: input_
                                           for name in self.fork_names})

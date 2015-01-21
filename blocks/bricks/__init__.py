@@ -1,22 +1,202 @@
 """The interface of bricks and some simple implementations."""
 import inspect
-import functools
 import logging
+from abc import ABCMeta
 from collections import OrderedDict
 from itertools import chain
+from types import MethodType
 
 import numpy
+import six
 from six import add_metaclass
 from theano import tensor
 
 from blocks.utils import (pack, repr_attrs, reraise_as, shared_floatx_zeros,
-                          unpack, put_hook)
+                          unpack)
 
 DEFAULT_SEED = [2014, 10, 5]
 
 logger = logging.getLogger(__name__)
 
 
+def create_unbound_method(func, cls):
+    """https://bitbucket.org/gutworth/six/pull-request/64"""
+    if six.PY2:
+        return MethodType(func, None, cls)
+    if six.PY3:
+        return func
+
+
+property_ = property
+
+
+class Application(object):
+    call_stack = []
+
+    def __init__(self, application):
+        self.application = application
+        self.delegate_function = None
+        self.properties = {}
+
+    def property(self, name):
+        if not isinstance(name, six.string_types):
+            raise ValueError
+
+        def wrap_property(property_):
+            self.properties[name] = property_
+            return property_
+        return wrap_property
+
+    def delegate(self, f):
+        self.delegate_function = f
+        return f
+
+    def __getattr__(self, name):
+        if name == 'properties':
+            raise AttributeError
+        if name in self.properties:
+            return property(create_unbound_method(self.properties[name],
+                                                  self.brick))
+        raise AttributeError
+
+    def __setattr__(self, name, value):
+        try:
+            is_property = name in self.properties
+        except AttributeError:
+            is_property = False
+        if is_property:
+            raise AttributeError("can't set attribute")
+        super(Application, self).__setattr__(name, value)
+
+    @property_
+    def name(self):
+        return self.application.__name__
+
+    def __call__(self, application, *args, **kwargs):
+        return_dict = kwargs.pop('return_dict', False)
+        return_list = kwargs.pop('return_list', False)
+        if return_list and return_dict:
+            raise ValueError
+
+        brick = application.brick
+
+        # Find the names of the inputs to the application method
+        args_names, varargs_name, _, _ = inspect.getargspec(
+            self.application)
+        args_names = args_names[1:]
+
+        # Construct the ApplicationCall, used to store data in for this call
+        call = ApplicationCall(brick, application)
+        if 'application_call' in args_names:
+            kwargs['application_call'] = call
+
+        # Allocate before applying, and optionally initialize
+        if not brick.allocated:
+            brick.allocate()
+        if not brick.initialized and not brick.lazy:
+            brick.initialize()
+
+        # Annotate all the input variables which are Theano variables
+        def copy_and_tag(variable, role, name):
+            """Helper method to copy a variable and annotate it."""
+            copy = variable.copy()
+            copy.name = "{}_{}_{}".format(  # Theano name
+                brick.name, self.name, name)
+            copy.tag.application_call = call
+            copy.tag.name = name  # Blocks name
+            copy.tag.role = role
+            return copy
+
+        args = list(args)
+        for i, input_ in enumerate(args):
+            if isinstance(input_, tensor.Variable):
+                if i < len(args_names):
+                    name = args_names[i]
+                else:
+                    name = "{}_{}".format(varargs_name, i - len(args_names))
+                args[i] = copy_and_tag(input_, VariableRole.INPUT, name)
+        for name, input_ in kwargs.items():
+            if isinstance(input_, tensor.Variable):
+                kwargs[name] = copy_and_tag(input_, VariableRole.INPUT, name)
+
+        # Run the application method on the annotated variables
+        if self.call_stack and brick is not self.call_stack[-1] and \
+                brick not in self.call_stack[-1].children:
+            raise ValueError
+        self.call_stack.append(brick)
+        try:
+            outputs = self.application(brick, *args, **kwargs)
+            outputs = pack(outputs)
+        finally:
+            self.call_stack.pop()
+
+        # Rename and annotate output variables
+        for i, output in enumerate(outputs):
+            if isinstance(output, tensor.Variable):
+                try:
+                    name = application.outputs[i]
+                except AttributeError:
+                    name = "output_{}".format(i)
+                except IndexError:
+                    reraise_as(ValueError("Unexpected outputs"))
+                # TODO Tag with dimensions, axes, etc. for error-checking
+                outputs[i] = copy_and_tag(outputs[i],
+                                          VariableRole.OUTPUT, name)
+
+        # Return values
+        if return_list:
+            return outputs
+        if return_dict:
+            return OrderedDict(zip(application.outputs, outputs))
+        return unpack(outputs)
+
+
+class BoundApplication(object):
+    def __init__(self, application):
+        self.application = application
+
+    def __getattr__(self, name):
+        if name == 'application':
+            raise AttributeError
+        if name in ('delegate_function', 'properties'):
+            return getattr(self.application, name)
+        if name in self.properties:
+            return self.properties[name](self.brick)
+        if self.delegate_function:
+            return getattr(self.delegate_function(self.brick), name)
+        return getattr(self.application, name)
+
+    @property
+    def name(self):
+        return self.application.name
+
+    def __call__(self, *args, **kwargs):
+        return self.application(self, *args, **kwargs)
+
+
+class _Brick(ABCMeta):
+    def __new__(mcl, name, bases, namespace):
+        # Replace application methods with Application instances
+        brick = super(_Brick, mcl).__new__(mcl, name, bases, namespace)
+        for attr in namespace.values():
+            if isinstance(attr, Application):
+                attr.brick = brick
+        return brick
+
+    def __call__(cls, *args, **kwargs):
+        # Instantiate the brick and replace Application with BoundedApplication
+        brick = super(_Brick, cls).__call__(*args, **kwargs)
+        for attr in dir(brick):  # Why is __dict__ empty here?
+            value = getattr(brick, attr)
+            if isinstance(value, Application):
+                bound_application = BoundApplication(value)
+                setattr(brick, attr, bound_application)
+                bound_application.brick = brick
+
+        return brick
+
+
+@add_metaclass(_Brick)
 class Brick(object):
     """A brick encapsulates Theano operations with parameters.
 
@@ -478,274 +658,19 @@ class ApplicationCall(object):
                                            name=name)
 
 
-class Application(object):
-    """A particular application of a brick.
-
-    Used by the :meth:`application` decorator. This wraps the original
-    application method.
-
-    Parameters
-    ----------
-    application : object
-        The application method (member of a brick) to wrap
-
-    Raises
-    ------
-    ValueError
-        If this class is used without being a member of a brick.
-
-    """
-    def __init__(self, application_method):
-        self.application_method = application_method
-        functools.update_wrapper(self, application_method)
-        self.f = {}
-        self.delegate_method = None
-
-    _last_brick_applied = None
-
-    def __call__(self, *inputs, **kwargs):
-        """Wraps an application method.
-
-        This wrapper will provide some necessary pre- and post-processing
-        of the Theano variables, such as tagging them with the brick that
-        created them and naming them. These changes will apply to Theano
-        variables given as positional arguments and keywords arguments.
-
-        .. warning::
-
-            Properly set tags are important for correct functioning of the
-            framework. Do not provide inputs to your apply method in a way
-            different than passing them as positional or keyword arguments,
-            e.g. as list or tuple elements.
-
-        Notes
-        -----
-        Application methods will allocate the brick parameters with a call
-        :meth:`allocate` if they have not been allocated already.
-
-        """
-        last = Application._last_brick_applied
-        if last and last != self.brick and self.brick not in last.children:
-            raise ValueError("The brick {} called an apply method of the"
-                             " brick {} without having it in the children"
-                             " list."
-                             .format(last, self.brick))
-
-        return_dict = kwargs.pop('return_dict', False)
-        return_list = kwargs.pop('return_list', False)
-        if return_list and return_dict:
-            raise ValueError
-
-        arg_names, varargs_name, _, _ = inspect.getargspec(
-            self.application_method)
-        arg_names = arg_names[1:]
-
-        call = ApplicationCall(self.brick, self)
-
-        if 'application_call' in arg_names:
-            kwargs['application_call'] = call
-
-        def copy_and_tag(variable, role, name):
-            if Brick.print_shapes:
-                variable = put_hook(
-                    variable, lambda x: logger.debug(
-                        "{}.{}.{}.shape = {}".format(
-                            self.brick.name, self.__name__, name, x.shape)))
-            copy = variable.copy()
-            copy.name = "{}_{}_{}".format(self.brick.name, self.__name__, name)
-            copy.tag.application_call = call
-            copy.tag.name = name
-            copy.tag.role = role
-            return copy
-
-        if not self.brick.allocated:
-            self.brick.allocate()
-        if not self.brick.initialized and not self.brick.lazy:
-            self.brick.initialize()
-        inputs = list(inputs)
-        for i, input_ in enumerate(inputs):
-            name = (arg_names[i] if i < len(arg_names) else
-                    "{}_{}".format(varargs_name, i - len(arg_names)))
-            if isinstance(input_, tensor.Variable):
-                inputs[i] = copy_and_tag(input_, VariableRole.INPUT,
-                                         name)
-        for key, value in kwargs.items():
-            if isinstance(value, tensor.Variable):
-                kwargs[key] = copy_and_tag(value, VariableRole.INPUT,
-                                           key)
-        Application._last_brick_applied = self.brick
-        try:
-            outputs = self.application_method(self.brick, *inputs, **kwargs)
-        finally:
-            Application._last_brick_applied = last
-        # TODO allow user to return an OrderedDict
-        outputs = pack(outputs)
-        for i, output in enumerate(outputs):
-            try:
-                name = self.outputs[i]
-            except Exception:
-                name = "output_{}".format(i)
-            if isinstance(output, tensor.Variable):
-                # TODO Tag with dimensions, axes, etc. for error-checking
-                outputs[i] = copy_and_tag(outputs[i],
-                                          VariableRole.OUTPUT, name)
-        if return_list:
-            return outputs
-        if return_dict:
-            return OrderedDict(zip(self.outputs, outputs))
-        return unpack(outputs)
-
-    def __get__(self, instance, owner):
-        # Making this class a descriptor gives us access to the owning brick
-        if instance:
-            self.brick = instance
-        return self
-
-    @property
-    def brick(self):
-        if not hasattr(self, '_brick'):
-            raise ValueError("Application instance must be a member of Brick "
-                             "instance")
-        return self._brick
-
-    @brick.setter
-    def brick(self, value):
-        self._brick = value
-
-    def delegate(self, f):
-        self.delegate_method = f
-        return f
-
-    def wrap(self, wrapper):
-        """Wraps this application method.
-
-        Parameters
-        ----------
-        wrapper : method
-            A method which takes two arguments: An :class:`Application`
-            instance and an application method, and returns a new
-            application method.
-
-        Returns
-        -------
-        The current instance with the wrapped application.
-
-        Notes
-        -----
-        Don't wrap this method naively (e.g. using a decorator), because it
-        will lose the signature of the application method.
-
-        """
-        new_application_method = wrapper(self, self.application_method)
-        self.application_method = new_application_method
-        return self
-
-    def property(self, label):
-        """Decorator to add properties to applications.
-
-        Parameters
-        ----------
-        label : str
-            The name of the attribute
-
-        Examples
-        --------
-        See :meth:`_application` for examples.
-
-        """
-        def add_property(f):
-            self.f[label] = f
-            return f
-        return add_property
-
-    def __getattr__(self, attr):
-
-        if attr == 'f':
-            return {}
-        elif attr == '_brick':
-            raise AttributeError
-        elif attr in self.f:
-            return self.f[attr](self.brick)
-        elif hasattr(self, '_brick') and self.delegate_method is not None:
-            return getattr(self.delegate_method(self.brick), attr)
-        else:
-            raise AttributeError
-
-
-def application_wrapper(**kwargs):
-    """Replaces application methods with :class:`Application` instances.
-
-    This method transparently replaces a brick's application method by a
-    class. This allows attributes and properties to be used, giving other
-    bricks access to important information about this application.
-
-    This method can also be used as a decorator, but in practice it should
-    probably only be called by decorators such as :meth:`application` and
-    :meth:`recurrent.recurrent`.
-
-    Parameters
-    ----------
-    kwargs
-        The attributes to add to the returned :class:`Application`
-        instance.
-
-    Examples
-    --------
-    >>> class SomeBrick(Brick):
-    ...     @application_wrapper(inputs=['x'])
-    ...     def apply(self, x):
-    ...         return x + 1
-    ...
-    ...     @apply.property('outputs')
-    ...     def apply_outputs(self):
-    ...         return ['y']
-    >>> some_brick = SomeBrick()
-    >>> some_brick.apply.inputs
-    ['x']
-    >>> some_brick.apply.outputs
-    ['y']
-
-    """
-    def wrap_application(application_method):
-        assert not isinstance(application_method, Application)
-        application = Application(application_method)
-        for key, value in kwargs.items():
-            setattr(application, key, value)
-        return application
-    return wrap_application
-
-
 def application(*args, **kwargs):
-    r"""Decorator for methods that apply a brick to inputs.
-
-    This decorator performs two functions: It creates an application method
-    (tagging the inputs and outputs as such in the Theano graph) and
-    creates a signature for this method (allowing other bricks to query the
-    in- and outputs of this method).
-
-    Parameters
-    ----------
-    \*args, optional
-        The application method to wrap.
-    \*\*kwargs, optional
-        See :meth:`signature`
-
-    Notes
-    -----
-    This decorator can be used both with and without passing attributes
-    that will become part of the signature.
-
-    """
-    assert (args and not kwargs) or (not args and kwargs)
+    if not ((args and not kwargs) or (not args and kwargs)):
+        raise ValueError
     if args:
-        application_method, = args
-        application = application_wrapper()(application_method)
-        return application
+        application_function, = args
+        return Application(application_function)
     else:
-        def application(application_method):
-            application = application_wrapper(**kwargs)(application_method)
+        def wrap_application(application_function):
+            application = Application(application_function)
+            for key, value in kwargs.items():
+                setattr(application, key, value)
             return application
-        return application
+        return wrap_application
 
 
 class Random(Brick):
@@ -1033,7 +958,7 @@ class LinearMaxout(Initializable):
         return output
 
 
-class ActivationDocumentation(type):
+class ActivationDocumentation(_Brick):
     def __new__(cls, name, bases, classdict):
         classdict['__doc__'] = \
             """Elementwise application of {0} function.""".format(name.lower())
@@ -1052,7 +977,8 @@ class ActivationDocumentation(type):
                     The input with the activation function applied.
 
                 """.format(name.lower())
-        return type.__new__(cls, name, bases, classdict)
+        return super(ActivationDocumentation, cls).__new__(cls, name, bases,
+                                                           classdict)
 
 
 @add_metaclass(ActivationDocumentation)

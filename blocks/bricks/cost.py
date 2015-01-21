@@ -19,7 +19,7 @@ class CostMatrix(Cost):
     """
     @application(outputs=["cost"])
     def apply(self, y, y_hat):
-        return self.cost_matrix.application_method(
+        return self.cost_matrix.application.application(
             self, y, y_hat).sum(axis=1).mean()
 
 
