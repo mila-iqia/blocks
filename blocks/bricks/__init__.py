@@ -22,32 +22,33 @@ class _Brick(ABCMeta):
     """Replace application methods with :class:`Application` instances."""
     def __call__(cls, *args, **kwargs):
         brick = super(_Brick, cls).__call__(*args, **kwargs)
-        applications = {}  # application function -> application
+        applications = {}
         properties = {}
         delegates = {}
+
         for key in dir(brick):
             value = getattr(brick, key)
-            # Replace the application method by an Application instance
+            # Replace the application methods by Application instances
             if hasattr(value, 'application_signature'):
                 application = Application(value)
                 setattr(brick, key, application)
                 applications[value.__func__] = application
 
-            # Set a fake property on the Application instance
+            # Collect the application properties and delegates
             if hasattr(value, 'application_property'):
                 application_function, name = getattr(value,
                                                      'application_property')
                 properties[application_function] = name, value.__func__
-
-            # Delegate requests
             if hasattr(value, 'application_delegate'):
                 application_function = getattr(value, 'application_delegate')
                 delegates[application_function] = partial(value.__func__,
                                                           brick)
+
+        # Attach the properties and delegates to the Application instance
         for application_function, (name, func) in properties.items():
             applications[application_function].properties[name] = func
         for application_function, func in delegates.items():
-            setattr(applications[application_function], 'delegate', func)
+            applications[application_function].delegate = func
         return brick
 
 
@@ -511,20 +512,27 @@ class ApplicationCall(object):
 class Application(object):
     """A particular application of a brick.
 
-    Used by the :meth:`application` decorator. This wraps the original
-    application method.
+    When a brick is constructed, its application methods are automatically
+    replaced by an instance of this class.
 
     Parameters
     ----------
-    application : object
-        The application method (member of a brick) to wrap
+    application_method : object
+        The application method (member of a brick) to replace.
 
-    Raises
-    ------
-    ValueError
-        If this class is used without being a member of a brick.
+    Attributes
+    ----------
+    properties : dict
+        Properties are methods of the brick which are called when a
+        particular attribute is requested of the application.
+    delegate : function
+        When an attribute can't be found on the application instance and
+        this attribute is configured, the attribute is requested from the
+        object returned by this function.
 
     """
+    call_stack = []
+
     def __init__(self, application_method):
         self.application_method = application_method
         self.brick = application_method.__self__
@@ -551,7 +559,7 @@ class Application(object):
         .. warning::
 
             Properly set tags are important for correct functioning of the
-            framework. Do not provide args to your apply method in a way
+            framework. Do not provide inputs to your apply method in a way
             different than passing them as positional or keyword arguments,
             e.g. as list or tuple elements.
 
@@ -586,12 +594,10 @@ class Application(object):
         def copy_and_tag(variable, role, name):
             """Helper method to copy a variable and annotate it."""
             copy = variable.copy()
-            # This is the Theano name
-            copy.name = "{}_{}_{}".format(
+            copy.name = "{}_{}_{}".format(  # Theano name
                 self.brick.name, self.application_method.__name__, name)
             copy.tag.application_call = call
-            # This is the annotated name
-            copy.tag.name = name
+            copy.tag.name = name  # Blocks name
             copy.tag.role = role
             return copy
 
@@ -608,8 +614,15 @@ class Application(object):
                 kwargs[name] = copy_and_tag(input_, VariableRole.INPUT, name)
 
         # Run the application method on the annotated variables
-        outputs = self.application_method(*args, **kwargs)
-        outputs = pack(outputs)
+        if self.call_stack and self.call_stack[-1] is not self.brick and \
+                self.brick not in self.call_stack[-1].children:
+            raise ValueError
+        self.call_stack.append(self.brick)
+        try:
+            outputs = self.application_method(*args, **kwargs)
+            outputs = pack(outputs)
+        finally:
+            self.call_stack.pop()
 
         # Rename and annotate output variables
         for i, output in enumerate(outputs):
@@ -653,6 +666,12 @@ def application(*args, **kwargs):
     This decorator can be used both with and without passing attributes
     that will become part of the signature.
 
+    Technically speaking this decorator only tags the method in question as
+    being an application method. When the brick is constructed, the
+    :class:`_Brick` metaclass is responsible for replacing this method with
+    an instance of :class:`Application` which will perform the actual
+    wrapping.
+
     """
     assert (args and not kwargs) or (not args and kwargs)
 
@@ -679,9 +698,9 @@ def application(*args, **kwargs):
         application_function, = args
         return tag_application_function(application_function)
     else:
-        def wrap_application(application_function):
+        def application(application_function):
             return tag_application_function(application_function)
-        return wrap_application
+        return application
 
 
 class Random(Brick):
