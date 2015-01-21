@@ -4,7 +4,7 @@ import logging
 import theano
 
 from blocks.utils import dict_subset
-from blocks.monitoring.aggregation import _DataIndependent, Mean
+from blocks.monitoring.aggregation import _DataIndependent, Mean, TakeLast
 from blocks.graph import ComputationGraph
 
 logger = logging.getLogger()
@@ -26,6 +26,10 @@ class AggregationBuffer(object):
     expressions : list
         If a list of Theano variables. The variable names are used as
         expression names. All the variables names must be different.
+    use_take_last : bool
+        When ``True``, the :class:`TakeLast` aggregation scheme is used
+        instead of :class:`_DataIndependent` for those expressions that
+        do not require data to be computed.
 
     Attributes
     ----------
@@ -41,8 +45,10 @@ class AggregationBuffer(object):
         The name of the inputs needed for accumulation.
 
     """
-    def __init__(self, expressions):
+    def __init__(self, expressions, use_take_last=False):
         self.expressions = expressions
+        self.use_take_last = use_take_last
+
         self.expression_names = [v.name for v in self.expressions]
         if len(self.expression_names) < len(self.expressions):
             raise ValueError(
@@ -67,7 +73,8 @@ class AggregationBuffer(object):
                     logger.debug('Using _DataIndependent aggregation scheme'
                                  ' for %s since it does not depend on'
                                  ' the data', v.name)
-                    v.tag.aggregation_scheme = _DataIndependent(variable=v)
+                    v.tag.aggregation_scheme = (TakeLast if self.use_take_last
+                                                else _DataIndependent)(v)
                 else:
                     logger.debug('Using the default (average over minibatches)'
                                  ' aggregation scheme for %s', v.name)

@@ -68,7 +68,7 @@ class TrainingDataMonitoring(SimpleExtension):
     def __init__(self, expressions, prefix, **kwargs):
         kwargs.setdefault("before_training", True)
         super(TrainingDataMonitoring, self).__init__(**kwargs)
-        self._buffer = AggregationBuffer(expressions)
+        self._buffer = AggregationBuffer(expressions, use_take_last=True)
         self._last_time_called = -1
         self.prefix = prefix
 

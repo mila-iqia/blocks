@@ -66,4 +66,4 @@ def test_training_data_monitoring():
     assert_allclose(
         main_loop.log[n_batches].train2_W_sum,
         sum([main_loop.log[i].train1_W_sum
-             for i in range(1, n_batches)]) / n_batches)
+             for i in range(1, n_batches + 1)]) / n_batches)
