@@ -1,5 +1,6 @@
 """Introduces Lookup brick."""
-from blocks.bricks import application, Initializable, lazy
+from blocks.bricks import Initializable
+from blocks.bricks.base import application, lazy
 from blocks.utils import check_theano_variable, shared_floatx_zeros
 
 

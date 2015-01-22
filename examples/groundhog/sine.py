@@ -15,7 +15,8 @@ except:
     pass  # TODO matplotlib as dependency?
 from theano import tensor
 
-from blocks.bricks import Brick, Identity, Tanh, MLP, lazy, application
+from blocks.bricks import Identity, Tanh, MLP
+from blocks.bricks.base import Brick, lazy, application
 from blocks.bricks.parallel import Fork
 from blocks.bricks.recurrent import GatedRecurrent
 from blocks.select import Selector

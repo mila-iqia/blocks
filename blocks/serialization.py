@@ -1,7 +1,7 @@
 import numpy
 import logging
 
-from blocks.bricks import Brick
+from blocks.bricks.base import Brick
 from blocks.select import Selector
 
 logger = logging.getLogger(__name__)

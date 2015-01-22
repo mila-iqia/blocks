@@ -126,6 +126,7 @@ class Configuration(object):
 config = Configuration()
 
 # Define configuration options
-config.add_config('data_path', env_var='BLOCKS_DATA_PATH', type_=str)
+config.add_config('data_path', type_=str, env_var='BLOCKS_DATA_PATH')
+config.add_config('default_seed', type_=int, default=1)
 
 config.load_yaml()

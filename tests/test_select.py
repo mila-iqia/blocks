@@ -2,7 +2,7 @@ from copy import deepcopy
 
 import theano
 
-from blocks.bricks import Brick
+from blocks.bricks.base import Brick
 from blocks.select import Path, Selector
 
 

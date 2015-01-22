@@ -6,7 +6,8 @@ are lazy-only, i.e. can not be initialized with a single constructor call.
 """
 import copy
 
-from blocks.bricks import lazy, application, MLP, Identity, Initializable
+from blocks.bricks import MLP, Identity, Initializable
+from blocks.bricks.base import lazy, application
 
 
 class Parallel(Initializable):

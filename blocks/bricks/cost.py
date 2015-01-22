@@ -4,7 +4,7 @@ import theano
 from theano import tensor
 from six import add_metaclass
 
-from blocks.bricks import application, Brick
+from blocks.bricks.base import application, Brick
 
 floatX = theano.config.floatX
 
