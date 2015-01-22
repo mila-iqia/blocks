@@ -140,15 +140,16 @@ class MainLoop(object):
 
     def _check_finish_training(self):
         # In case when keyboard interrupt is handled right at the end of
-        # the iteration it has
+        # the iteration the corresponding log record can be found only in
+        # the previous row.
         if (self.log.current_row.training_finish_requested or
-            self.log.previous_row.training_finish_requested):
+            self.log.current_row.keyboard_interrupt_received or
+            self.log.previous_row.keyboard_interrupt_received):
             raise TrainingFinish
 
     def _handle_keyboard_interrupt(self, signal, frame):
         self._run_extensions('on_interrupt')
         self.log.current_row.keyboard_interrupt_received = True
-        self.log.current_row.training_finish_requested = True
 
 
 class TrainingFinish(Exception):
