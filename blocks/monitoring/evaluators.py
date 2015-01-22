@@ -13,13 +13,10 @@ logger = logging.getLogger()
 class AggregationBuffer(object):
     """Intermediate results of aggregating values of Theano expressions.
 
-    Incapsulates aggregators for a list of Theano expressions. Collects
+    Encapsulates aggregators for a list of Theano expressions. Collects
     the respective updates and provides initialization and readout
     routines.
 
-    .. todo::
-
-        Write a better explanation what it is.
 
     Parameters
     ----------
