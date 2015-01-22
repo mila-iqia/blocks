@@ -163,9 +163,9 @@ class Application(object):
         elif instance in self.bound_applications:
             return self.bound_applications[instance]
         else:
-            bounded_application = BoundApplication(self, instance)
-            self.bound_applications[instance] = bounded_application
-            return bounded_application
+            bound_application = BoundApplication(self, instance)
+            self.bound_applications[instance] = bound_application
+            return bound_application
 
     def __getattr__(self, name):
         # Mimic behaviour of properties
@@ -197,8 +197,8 @@ class Application(object):
         return self.application.__name__
 
     def __call__(self, brick, *args, **kwargs):
-        if not isinstance(brick, Brick):
-            raise ValueError
+        if not isinstance(brick, Brick) and six.PY2:
+            raise TypeError
         bound_application = self.__get__(brick, brick.__class__)
         return self.apply(bound_application, *args, **kwargs)
 

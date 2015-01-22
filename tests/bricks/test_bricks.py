@@ -264,6 +264,8 @@ def test_application():
 def test_apply():
     brick = TestBrick()
     assert TestBrick.apply(brick, [0]) == [0, 1]
+    if six.PY2:
+        assert_raises(TypeError, TestBrick.apply, [0])
 
 
 def test_rng():
