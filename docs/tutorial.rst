@@ -1,9 +1,9 @@
-Quickstart
-==========
+Introduction tutorial
+=====================
 
-In this quick-start tutorial we will use the Blocks framework to train a
-`multilayer perceptron`_ (MLP) to perform handwriting recognition on the `MNIST
-handwritten digit database`_.
+In this tutorial we will examine the example from the :ref:`quickstart
+<quickstart>` use the Blocks framework to train a `multilayer perceptron`_ (MLP) to
+perform handwriting recognition on the `MNIST handwritten digit database`_.
 
 The Task
 --------
