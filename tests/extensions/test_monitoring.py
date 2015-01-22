@@ -60,9 +60,6 @@ def test_training_data_monitoring():
         main_loop.log[n_batches].train2_cost,
         sum([main_loop.log[i].true_cost
              for i in range(n_batches)]) / n_batches)
-    # Here we legalize (temporarily) wierd behavior of data independent
-    # expressions measured at different stages depending on the aggregation
-    # scheme.
     assert_allclose(
         main_loop.log[n_batches].train2_W_sum,
         sum([main_loop.log[i].train1_W_sum
