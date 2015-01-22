@@ -57,6 +57,15 @@ class Application(object):
         The call stack of brick application methods. Used to check whether
         the current call was made by a parent brick.
 
+    Raises
+    ------
+    ValueError
+        If a brick's application method is applied by another brick which
+        does not list the former as a child.
+    ValueError
+        If the application method's inputs and/or outputs don't match with
+        the function signature or the values returned (respectively).
+
     Notes
     -----
     When a :class:`Brick` is instantiated and its application method (i.e.
@@ -67,15 +76,6 @@ class Application(object):
     particular to a brick instance. Any attributes unknown to the bounded
     application are automatically routed to the application that
     instantiated it.
-
-    Raises
-    ------
-    ValueError
-        If a brick's application method is applied by another brick which
-        does not list the former as a child.
-    ValueError
-        If the application method's inputs and/or outputs don't match with
-        the function signature or the values returned (respectively).
 
     """
     call_stack = []
