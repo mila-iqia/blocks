@@ -19,8 +19,7 @@ class CostMatrix(Cost):
     """
     @application(outputs=["cost"])
     def apply(self, y, y_hat):
-        return self.cost_matrix.application.application(
-            self, y, y_hat).sum(axis=1).mean()
+        return self.cost_matrix(y, y_hat).sum(axis=1).mean()
 
 
 class BinaryCrossEntropy(CostMatrix):

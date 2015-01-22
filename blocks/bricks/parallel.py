@@ -103,8 +103,8 @@ class Fork(Parallel):
 
     @application(inputs=['input_'])
     def apply(self, input_):
-        return super(Fork, self).apply(
-            **{name: input_ for name in self.fork_names})
+        return super(Fork, self).apply(**{name: input_
+                                          for name in self.fork_names})
 
     @apply.property('outputs')
     def apply_outputs(self):

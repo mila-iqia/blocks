@@ -6,8 +6,8 @@ from collections import OrderedDict
 import theano
 from theano import tensor
 
-from blocks.bricks import (Application, application,
-                           Brick, Initializable, Identity, Sigmoid, lazy)
+from blocks.bricks import (Application, application, Brick, Initializable,
+                           Identity, Sigmoid, lazy)
 from blocks.initialization import NdarrayInitialization
 from blocks.utils import pack, shared_floatx_zeros
 
@@ -348,8 +348,7 @@ class GatedRecurrent(BaseRecurrent, Initializable):
     def get_dim(self, name):
         if name == 'mask':
             return 0
-        if name in (self.apply.sequences
-                    + self.apply.states):
+        if name in (self.apply.sequences + self.apply.states):
             return self.dim
         return super(GatedRecurrent, self).get_dim(name)
 

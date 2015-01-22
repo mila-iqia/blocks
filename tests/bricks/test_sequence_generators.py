@@ -107,7 +107,7 @@ class TestTransition(Recurrent):
         self.attended_dim = attended_dim
 
     @application(contexts=['attended', 'attended_mask'])
-    def apply(self, application, *args, **kwargs):
+    def apply(self, *args, **kwargs):
         for context in TestTransition.apply.contexts:
             kwargs.pop(context)
         return super(TestTransition, self).apply(*args, **kwargs)

@@ -36,7 +36,8 @@ def test_pylearn2():
     try:
         pylearn2_test('train', filename, 0, 3, False)
     except OSError:
-        pass
+        from unittest import SkipTest
+        raise SkipTest
     os.remove(filename)
 
 test_pylearn2.setup = setup

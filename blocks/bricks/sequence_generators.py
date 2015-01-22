@@ -714,9 +714,9 @@ class AttentionTransition(AbstractAttentionTransition, Initializable):
         # I can write self.apply because it can be overriden.
         # Thus I have to hack.
         # TODO: nice interface for this trick.
+        # Bart: This doesn't work anymore, and probably shouldn't; without a
+        # brick attached, it's impossible to call do_apply(brick)...
         return self.do_apply
-        AttentionTransition.do_apply.__get__(self, None)
-        return AttentionTransition.do_apply
 
     @application
     def initial_state(self, state_name, batch_size, **kwargs):
