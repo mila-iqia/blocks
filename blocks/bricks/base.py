@@ -824,6 +824,7 @@ class ApplicationCall(object):
             expression.name = name
         if role is not None:
             expression.tag.role = role
+        expression.tag.application_call = self
         self.auxiliary_variables.append(expression)
 
 

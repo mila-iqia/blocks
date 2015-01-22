@@ -49,7 +49,6 @@ class ComputationGraph(object):
                     self.application_calls.add(application_call)
                     for av in application_call.auxiliary_variables:
                         self.auxiliary_variables.add(av)
-                        av.tag.application_call = current.tag.application_call
                         recursion(av)
                     self.updates.extend(application_call.updates)
             if current.owner:
@@ -60,9 +59,9 @@ class ComputationGraph(object):
                                      .format(owner))
                         self.updates.extend(owner.tag.updates.items())
                     self.applies.add(owner)
-                for input_ in owner.inputs:
-                    if input_ not in self.variables:
-                        recursion(input_)
+                    for input_ in owner.inputs:
+                        if input_ not in self.variables:
+                            recursion(input_)
 
         for output in self.outputs:
             if output not in self.variables:
