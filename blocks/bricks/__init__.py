@@ -735,7 +735,6 @@ class VariableRole(object):
     INPUT = "input"
     OUTPUT = "output"
     MONITOR = "monitor"
-    ADDITIONAL_COST = "additional_cost"
 
 
 class ApplicationCall(object):
@@ -772,11 +771,6 @@ class ApplicationCall(object):
     def add_monitor(self, expression, name=None):
         return self.add_auxiliary_variable(expression,
                                            role=VariableRole.MONITOR,
-                                           name=name)
-
-    def add_additional_cost(self, expression, name=None):
-        return self.add_auxiliary_variable(expression,
-                                           role=VariableRole.ADDITIONAL_COST,
                                            name=name)
 
 
