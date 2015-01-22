@@ -820,10 +820,11 @@ class ApplicationCall(object):
         >>> y = Foo().apply(x)
         >>> from blocks.graph import ComputationGraph
         >>> cg = ComputationGraph([y])
-        >>> cg.get_variables(roles=[VariableRole.AUXILIARY]) # doctest: +SKIP
-        set([x_minus_1, mean_x])
-        >>> cg.get_variables(roles=[VariableRole.COST])
-        set([mean_x])
+        >>> cg.get_variables(
+        ...     roles=[VariableRole.AUXILIARY]) # doctest: +SKIP
+        {x_minus_1, mean_x}
+        >>> cg.get_variables(roles=[VariableRole.COST]) # doctest: +SKIP
+        {mean_x}
 
         """
         if name is not None:
