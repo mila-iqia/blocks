@@ -84,7 +84,7 @@ class Application(object):
         self.application = application
         self.delegate_function = None
         self.properties = {}
-        self.instances = {}
+        self.bound_applications = {}
 
     def property(self, name):
         """Decorator to make application properties.
@@ -160,12 +160,12 @@ class Application(object):
         """Instantiate :class:`BoundedApplication` for each :class:`Brick`."""
         if instance is None:
             return self
-        elif instance in self.instances:
-            return self.instances[instance]
+        elif instance in self.bound_applications:
+            return self.bound_applications[instance]
         else:
-            bounded_application = BoundApplication(self, instance)
-            self.instances[instance] = bounded_application
-            return bounded_application
+            bound_application = BoundApplication(self, instance)
+            self.bound_applications[instance] = bound_application
+            return bound_application
 
     def __getattr__(self, name):
         # Mimic behaviour of properties
@@ -196,13 +196,19 @@ class Application(object):
     def name(self):
         return self.application.__name__
 
-    def __call__(self, application, *args, **kwargs):
+    def __call__(self, brick, *args, **kwargs):
+        if not isinstance(brick, Brick) and six.PY2:
+            raise TypeError
+        bound_application = self.__get__(brick, brick.__class__)
+        return self.apply(bound_application, *args, **kwargs)
+
+    def apply(self, bound_application, *args, **kwargs):
         return_dict = kwargs.pop('return_dict', False)
         return_list = kwargs.pop('return_list', False)
         if return_list and return_dict:
             raise ValueError
 
-        brick = application.brick
+        brick = bound_application.brick
 
         # Find the names of the inputs to the application method
         args_names, varargs_name, _, _ = inspect.getargspec(
@@ -210,12 +216,12 @@ class Application(object):
         args_names = args_names[1:]
 
         # Construct the ApplicationCall, used to store data in for this call
-        call = ApplicationCall(brick, application)
+        call = ApplicationCall(brick, bound_application)
         args = list(args)
         if 'application_call' in args_names:
             args.insert(args_names.index('application_call'), call)
         if 'application' in args_names:
-            args.insert(args_names.index('application'), application)
+            args.insert(args_names.index('application'), bound_application)
 
         # Allocate before applying, and optionally initialize
         if not brick.allocated:
@@ -260,7 +266,7 @@ class Application(object):
         for i, output in enumerate(outputs):
             if isinstance(output, tensor.Variable):
                 try:
-                    name = application.outputs[i]
+                    name = bound_application.outputs[i]
                 except AttributeError:
                     name = "output_{}".format(i)
                 except IndexError:
@@ -273,7 +279,7 @@ class Application(object):
         if return_list:
             return outputs
         if return_dict:
-            return OrderedDict(zip(application.outputs, outputs))
+            return OrderedDict(zip(bound_application.outputs, outputs))
         return unpack(outputs)
 
 
@@ -305,7 +311,7 @@ class BoundApplication(object):
         return self.application.name
 
     def __call__(self, *args, **kwargs):
-        return self.application(self, *args, **kwargs)
+        return self.application.apply(self, *args, **kwargs)
 
 
 class _Brick(ABCMeta):
@@ -748,12 +754,23 @@ class ApplicationCall(object):
     application method and can be accessed by specifying an
     application_call argument.
 
+    >>> class Foo(Brick):
+    ...     @application
+    ...     def apply(self, x, application_call):
+    ...         application_call.add_monitor(x.mean())
+    ...         return x + 1
+    >>> x = tensor.vector()
+    >>> y = Foo().apply(x)
+    >>> y.tag.application_call # doctest: +ELLIPSIS
+    <blocks.bricks.ApplicationCall object at ...>
+
     Parameters
     ----------
-    brick : object
+    brick : :class:`Brick` instance
         The brick whose application is called
-    application : object
-        The application object being called
+    application : :class:`BoundApplication` instance
+        The bound application (i.e. belong to a brick instance) object
+        being called
 
     """
     def __init__(self, brick, application):

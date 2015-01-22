@@ -261,6 +261,13 @@ def test_application():
     Brick.lazy = True
 
 
+def test_apply():
+    brick = TestBrick()
+    assert TestBrick.apply(brick, [0]) == [0, 1]
+    if six.PY2:
+        assert_raises(TypeError, TestBrick.apply, [0])
+
+
 def test_rng():
     linear = Linear()
     assert isinstance(linear.rng, numpy.random.RandomState)
