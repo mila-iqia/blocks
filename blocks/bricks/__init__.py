@@ -754,12 +754,23 @@ class ApplicationCall(object):
     application method and can be accessed by specifying an
     application_call argument.
 
+    >>> class Foo(Brick):
+    ...     @application
+    ...     def apply(self, x, application_call):
+    ...         application_call.add_monitor(x.mean())
+    ...         return x + 1
+    >>> x = tensor.vector()
+    >>> y = Foo().apply(x)
+    >>> y.tag.application_call # doctest: +ELLIPSIS
+    <blocks.bricks.ApplicationCall object at ...>
+
     Parameters
     ----------
-    brick : object
+    brick : :class:`Brick` instance
         The brick whose application is called
-    application : object
-        The application object being called
+    application : :class:`BoundApplication` instance
+        The bound application (i.e. belong to a brick instance) object
+        being called
 
     """
     def __init__(self, brick, application):
