@@ -228,7 +228,7 @@ def test_application():
     brick.apply(x)
     assert brick.initialized
 
-    assert_raises(ValueError, getattr, Application(lambda x: x), 'brick')
+    assert_raises(AttributeError, getattr, Application(lambda x: x), 'brick')
 
 
 def test_rng():
