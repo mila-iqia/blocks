@@ -84,7 +84,7 @@ class Application(object):
         self.application = application
         self.delegate_function = None
         self.properties = {}
-        self.instances = {}
+        self.bound_applications = {}
 
     def property(self, name):
         """Decorator to make application properties.
@@ -160,11 +160,11 @@ class Application(object):
         """Instantiate :class:`BoundedApplication` for each :class:`Brick`."""
         if instance is None:
             return self
-        elif instance in self.instances:
-            return self.instances[instance]
+        elif instance in self.bound_applications:
+            return self.bound_applications[instance]
         else:
             bounded_application = BoundApplication(self, instance)
-            self.instances[instance] = bounded_application
+            self.bound_applications[instance] = bounded_application
             return bounded_application
 
     def __getattr__(self, name):
