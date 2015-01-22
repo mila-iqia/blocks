@@ -41,14 +41,15 @@ test_mnist.setup = setup
 
 
 def test_pylearn2():
-    filename = 'unittest_markov_chain'
-    try:
-        # This test is currenly off due to problems with PyLearn2
-        # serialization.
-        pass
-    except OSError:
-        from unittest import SkipTest
-        raise SkipTest
-    os.remove(filename)
+    # This test is currenly off due to problems with PyLearn2
+    # serialization.
+    # filename = 'unittest_markov_chain'
+    # try:
+        # pylearn2_test('train', filename, 0, 3, False)
+    # except OSError:
+    #     from unittest import SkipTest
+    #     raise SkipTest
+    # os.remove(filename)
+    pass
 
 test_pylearn2.setup = setup
