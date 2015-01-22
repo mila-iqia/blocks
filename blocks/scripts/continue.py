@@ -7,10 +7,10 @@ import dill
 
 if __name__ == "__main__":
     parser = ArgumentParser("Continues your pickled main loop")
-    parser.add_argument("path",
-        help="A path to a file with a pickled main loop")
-    parser.add_argument("--rec-limit", type=int,
-        help="The recursion depth limit")
+    parser.add_argument(
+        "path", help="A path to a file with a pickled main loop")
+    parser.add_argument(
+        "--rec-limit", type=int, help="The recursion depth limit")
     args = parser.parse_args()
 
     if args.rec_limit:

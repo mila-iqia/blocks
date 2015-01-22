@@ -143,8 +143,8 @@ class MainLoop(object):
         # the iteration the corresponding log record can be found only in
         # the previous row.
         if (self.log.current_row.training_finish_requested or
-            self.log.current_row.keyboard_interrupt_received or
-            self.log.previous_row.keyboard_interrupt_received):
+                self.log.current_row.keyboard_interrupt_received or
+                self.log.previous_row.keyboard_interrupt_received):
             raise TrainingFinish
 
     def _handle_keyboard_interrupt(self, signal, frame):
