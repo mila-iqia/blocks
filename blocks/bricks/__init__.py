@@ -822,9 +822,8 @@ class Initializable(Brick):
         self.weights_init = weights_init
         if self.has_biases:
             self.biases_init = biases_init
-        else:
-            if biases_init is not None or not use_bias:
-                raise ValueError("This brick does not support biases config")
+        elif biases_init is not None or not use_bias:
+            raise ValueError("This brick does not support biases config")
         self.use_bias = use_bias
         self.rng = rng
 
@@ -1002,13 +1001,11 @@ class LinearMaxout(Initializable):
         self.output_dim = output_dim
         self.num_pieces = num_pieces
 
-        self.linear_transformation = Linear(name='linear_to_maxout',
-                                            input_dim=input_dim,
-                                            output_dim=output_dim * num_pieces,
-                                            weights_init=self.weights_init,
-                                            biases_init=self.biases_init,
-                                            use_bias=self.use_bias)
-        self.maxout_transformation = Maxout(name='maxout',
+        self.linear_transformation = Linear(
+            name=self.name + '_linear_to_maxout', input_dim=input_dim,
+            output_dim=output_dim * num_pieces, weights_init=self.weights_init,
+            biases_init=self.biases_init, use_bias=self.use_bias)
+        self.maxout_transformation = Maxout(name=self.name + '_maxout',
                                             num_pieces=num_pieces)
         self.children = [self.linear_transformation,
                          self.maxout_transformation]
@@ -1034,6 +1031,13 @@ class LinearMaxout(Initializable):
 
 
 class ActivationDocumentation(type):
+    """Dynamically adds documentation to activations.
+
+    Notes
+    -----
+    See http://bugs.python.org/issue12773.
+
+    """
     def __new__(cls, name, bases, classdict):
         classdict['__doc__'] = \
             """Elementwise application of {0} function.""".format(name.lower())
@@ -1099,24 +1103,19 @@ class Softmax(Activation):
 class Sequence(Brick):
     """A sequence of bricks.
 
-    This brick simply applies a sequence of bricks, assuming that their in-
-    and outputs are compatible.
+    This brick applies a sequence of bricks, assuming that their in- and
+    outputs are compatible.
 
     Parameters
     ----------
-    bricks : list of :class:`Brick` instances
-        The bricks in the order that they need to be applied.
-    application_methods : list of application method names, optional
-        If not given, it uses ``'apply'`` for each brick.
+    application_methods : list of application methods to apply
 
     """
-    def __init__(self, bricks, application_methods=None, **kwargs):
+    def __init__(self, application_methods, **kwargs):
         super(Sequence, self).__init__(**kwargs)
-        if application_methods is None:
-            application_methods = ['apply' for _ in bricks]
-        if not len(application_methods) == len(bricks):
-            raise ValueError
-        self.children = bricks
+        self.children = [application_method.brick
+                         for application_method in application_methods]
+
         self.application_methods = application_methods
 
     @application(inputs=['input_'], outputs=['output'])
@@ -1124,7 +1123,7 @@ class Sequence(Brick):
         child_input = input_
         for child, application_method in zip(self.children,
                                              self.application_methods):
-            output = getattr(child, application_method)(*pack(child_input))
+            output = application_method(*pack(child_input))
             child_input = output
         return output
 
@@ -1168,12 +1167,14 @@ class MLP(Sequence, Initializable):
         self.linear_transformations = [Linear(name='linear_{}'.format(i))
                                        for i in range(len(activations))]
         # Interleave the transformations and activations
-        children = [child for child in list(chain(*zip(
-            self.linear_transformations, activations))) if child is not None]
+        application_methods = [brick.apply for brick in list(chain(*zip(
+            self.linear_transformations, activations))) if brick is not None]
         if not dims:
             dims = [None] * (len(activations) + 1)
         self.dims = dims
-        super(MLP, self).__init__(children, **kwargs)
+        if len(set(application_methods)) != len(application_methods):
+            import ipdb; ipdb.set_trace()
+        super(MLP, self).__init__(application_methods, **kwargs)
 
     def _push_allocation_config(self):
         if not len(self.dims) - 1 == len(self.linear_transformations):
