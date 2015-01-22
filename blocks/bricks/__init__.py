@@ -923,7 +923,6 @@ class Initializable(Brick):
                 if (isinstance(child, Initializable) and
                         hasattr(child, 'biases_init')):
                     child.biases_init = self.biases_init
-        super(Initializable, self)._push_initialization_config()
 
 
 class Linear(Initializable):

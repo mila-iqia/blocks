@@ -21,14 +21,13 @@ Theano. Currently it supports and provides:
 * Pattern matching to select variables and bricks in large models
 * A pipeline for loading and iterating over training data
 * Algorithms to optimize your model
-* Automatic creation of monitoring channels (*limited support*)
+* Saving and resuming of training
+* Monitoring and analyzing values during training progress (on the training set
+  as well as on test sets)
 * Application of graph transformations, such as dropout (*limited support*)
 
 In the future we also hope to support:
 
-* Saving and resuming of training
-* Monitoring and analyzing values during training progress (on the training set
-  as well as on test sets)
 * Dimension, type and axes-checking
 
 .. warning::
@@ -42,11 +41,68 @@ In the future we also hope to support:
 
 .. _making a GitHub issue: https://github.com/bartvm/blocks/issues/new
 
-Getting started
----------------
+
+.. _quickstart:
+
+Quickstart
+----------
+
+.. doctest::
+   :hide:
+
+   >>> from theano import tensor
+   >>> from blocks.algorithms import GradientDescent, SteepestDescent
+   >>> from blocks.bricks import MLP, Tanh, Softmax
+   >>> from blocks.bricks.cost import CategoricalCrossEntropy, MisclassficationRate
+   >>> from blocks.initialization import IsotropicGaussian, Constant
+   >>> from blocks.datasets import DataStream
+   >>> from blocks.datasets.mnist import MNIST
+   >>> from blocks.datasets.schemes import SequentialScheme
+   >>> from blocks.extensions import FinishAfter, Printing
+   >>> from blocks.extensions.monitoring import DataStreamMonitoring
+   >>> from blocks.main_loop import MainLoop
+
+Construct your model.
+
+>>> mlp = MLP(activations=[Tanh(), Softmax()], dims=[784, 100, 10],
+...           weights_init=IsotropicGaussian(0, 0.01), biases_init=Constant(0))
+>>> mlp.initialize()
+
+Determine your loss function.
+
+>>> x = tensor.matrix('features')
+>>> y = tensor.lmatrix('targets')
+>>> y_hat = mlp.apply(x)
+>>> cost = CategoricalCrossEntropy().apply(y.flatten(), y_hat)
+>>> error_rate = MisclassficationRate().apply(y.flatten(), y_hat)
+
+Load your training data.
+
+>>> mnist_train = MNIST("train")
+>>> mnist_test = MNIST("test")
+
+And train!
+
+>>> main_loop = MainLoop(
+...     model=mlp, data_stream=DataStream(
+...         dataset=mnist_train,
+...         iteration_scheme=SequentialScheme(mnist_train.num_examples, 128)),
+...     algorithm=GradientDescent(cost=cost,step_rule=SteepestDescent(learning_rate=0.1)),
+...     extensions=[FinishAfter(after_n_epochs=5),
+...                 DataStreamMonitoring(
+...                     expressions=[cost, error_rate],
+...                     data_stream=DataStream(
+...                         dataset=mnist_test,
+...                         iteration_scheme=SequentialScheme(mnist_test.num_examples, 500)),
+...                     prefix="test"),
+...                 Printing()])
+>>> main_loop.run() # doctest: +SKIP
+
+Tutorials
+---------
 .. toctree::
    setup
-   quickstart
+   tutorial
 
 In-depth
 --------
