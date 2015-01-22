@@ -1188,10 +1188,11 @@ class Sequence(Brick):
     """
     def __init__(self, application_methods, **kwargs):
         super(Sequence, self).__init__(**kwargs)
-        self.children = [application_method.brick
-                         for application_method in application_methods]
-
         self.application_methods = application_methods
+
+        seen = set()
+        self.children = [app.brick for app in application_methods
+                         if not (app.brick in seen or seen.add(app.brick))]
 
     @application(inputs=['input_'], outputs=['output'])
     def apply(self, input_):
