@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+"""Learn a Markov chain with an RNN and sample from it."""
 
 from __future__ import print_function
 
