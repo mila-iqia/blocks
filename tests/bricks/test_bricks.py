@@ -41,8 +41,8 @@ class TestBrick(Brick):
 
     @application
     def access_application_call(self, x, application_call):
-        application_call.add_monitor(shared_floatx(numpy.ones((1,)),
-                                                   name='test_val'))
+        application_call.add_auxiliary_variable(shared_floatx(numpy.ones((1,)),
+                                                              name='test_val'))
         return x
 
 

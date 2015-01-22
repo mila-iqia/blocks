@@ -758,7 +758,7 @@ class ApplicationCall(object):
     >>> class Foo(Brick):
     ...     @application
     ...     def apply(self, x, application_call):
-    ...         application_call.add_monitor(x.mean())
+    ...         application_call.add_auxiliary_variable(x.mean())
     ...         return x + 1
     >>> x = tensor.vector()
     >>> y = Foo().apply(x)
@@ -780,16 +780,12 @@ class ApplicationCall(object):
         self.auxiliary_variables = []
         self.updates = []
 
-    def add_auxiliary_variable(self, expression, role, name=None):
+    def add_auxiliary_variable(self, expression, role=None, name=None):
         if name is not None:
             expression.name = name
-        expression.tag.role = role
+        if role is not None:
+            expression.tag.role = role
         self.auxiliary_variables.append(expression)
-
-    def add_monitor(self, expression, name=None):
-        return self.add_auxiliary_variable(expression,
-                                           role=VariableRole.MONITOR,
-                                           name=name)
 
 
 def application(*args, **kwargs):

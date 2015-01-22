@@ -18,10 +18,12 @@ class TestBrick(bricks.Brick):
     def apply(self, input_, application_call):
         V = self.params[0]
         mean_row_mean = mean(input_.mean(axis=1).sum(), input_.shape[0])
-        application_call.add_monitor((V ** 2).sum(), name='V_squared')
-        application_call.add_monitor(mean_row_mean, name='mean_row_mean')
-        application_call.add_monitor(input_.mean(),
-                                     name='mean_batch_element')
+        application_call.add_auxiliary_variable((V ** 2).sum(),
+                                                name='V_squared')
+        application_call.add_auxiliary_variable(mean_row_mean,
+                                                name='mean_row_mean')
+        application_call.add_auxiliary_variable(input_.mean(),
+                                                name='mean_batch_element')
         return input_ + V
 
 
