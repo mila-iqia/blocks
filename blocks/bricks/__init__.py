@@ -185,9 +185,9 @@ class Linear(Initializable):
 
         # Attach regularization terms as auxiliary variables
         application_call.add_auxiliary_variable(
-            abs(W).sum(), role=VariableRole.COST, name='L1_W')
+            abs(W).sum(), roles=[VariableRole.COST], name='L1_W')
         application_call.add_auxiliary_variable(
-            tensor.sqrt(tensor.sqr(W).sum()), role=VariableRole.COST,
+            tensor.sqrt(tensor.sqr(W).sum()), roles=[VariableRole.COST],
             name='L2_W')
 
         return output

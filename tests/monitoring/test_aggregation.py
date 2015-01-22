@@ -34,9 +34,8 @@ def test_param_monitor():
     graph = ComputationGraph([y])
 
     # Test the monitors without aggregation schemes
-    monitors = [v for v in graph.variables
-                if getattr(v.tag, 'role', None) == VariableRole.MONITOR and
-                not hasattr(v.tag, 'aggregation_scheme')]
+    monitors = [v for v in graph.get_variables(roles=[VariableRole.AUXILIARY])
+                if not hasattr(v.tag, 'aggregation_scheme')]
     monitors.sort(key=lambda variable: variable.name)
 
     f = theano.function([X], monitors)
@@ -45,7 +44,7 @@ def test_param_monitor():
 
     # Test the aggregation scheme
     monitor, = [v for v in graph.variables
-                if getattr(v.tag, 'role', None) == VariableRole.MONITOR and
+                if VariableRole.AUXILIARY in getattr(v.tag, 'roles', []) and
                 hasattr(v.tag, 'aggregation_scheme')]
     aggregator = monitor.tag.aggregation_scheme.get_aggregator()
     initialize = theano.function([], updates=aggregator.initialization_updates)

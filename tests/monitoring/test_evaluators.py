@@ -18,7 +18,7 @@ def test_dataset_evaluators():
     graph = ComputationGraph([Y])
     monitor_variables = [
         v for v in graph.variables
-        if getattr(v.tag, 'role', None) == VariableRole.MONITOR]
+        if VariableRole.AUXILIARY in getattr(v.tag, 'roles', [])]
     validator = DatasetEvaluator(monitor_variables)
 
     data = [numpy.arange(1, 5, dtype=floatX).reshape(2, 2),

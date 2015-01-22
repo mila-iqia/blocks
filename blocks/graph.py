@@ -37,7 +37,6 @@ class ComputationGraph(object):
         self.applies = set()
         self.application_calls = set()
         self.updates = []
-        self.auxiliary_variables = set()
 
         def recursion(current):
             self.variables.add(current)
@@ -48,7 +47,6 @@ class ComputationGraph(object):
                 if application_call not in self.application_calls:
                     self.application_calls.add(application_call)
                     for av in application_call.auxiliary_variables:
-                        self.auxiliary_variables.add(av)
                         recursion(av)
                     self.updates.extend(application_call.updates)
             if current.owner:
@@ -67,6 +65,21 @@ class ComputationGraph(object):
             if output not in self.variables:
                 recursion(output)
         self.inputs = [v for v in self.variables if is_graph_input(v)]
+
+    def get_variables(self, roles=None):
+        """Return variables of the computation graph.
+
+        Parameters
+        ----------
+        roles : list of :class:`VariableRole` attributes, optional
+            If given, only returns variables that have any of the roles
+            given.
+
+        """
+        if roles is None:
+            return self.variables
+        return set([var for var in self.variables if hasattr(var.tag, 'roles')
+                    and bool(set(roles) & set(var.tag.roles))])
 
     def get_shared_variables(self):
         """Returns all shared variables found in the computation graph."""

@@ -221,14 +221,14 @@ class Application(object):
             brick.initialize()
 
         # Annotate all the input variables which are Theano variables
-        def copy_and_tag(variable, role, name):
+        def copy_and_tag(variable, roles, name):
             """Helper method to copy a variable and annotate it."""
             copy = variable.copy()
             copy.name = "{}_{}_{}".format(  # Theano name
                 brick.name, self.name, name)
             copy.tag.application_call = call
             copy.tag.name = name  # Blocks name
-            copy.tag.role = role
+            copy.tag.roles = getattr(copy.tag, 'roles', []) + roles
             return copy
 
         for i, input_ in enumerate(args):
@@ -237,10 +237,10 @@ class Application(object):
                     name = args_names[i]
                 else:
                     name = "{}_{}".format(varargs_name, i - len(args_names))
-                args[i] = copy_and_tag(input_, VariableRole.INPUT, name)
+                args[i] = copy_and_tag(input_, [VariableRole.INPUT], name)
         for name, input_ in kwargs.items():
             if isinstance(input_, tensor.Variable):
-                kwargs[name] = copy_and_tag(input_, VariableRole.INPUT, name)
+                kwargs[name] = copy_and_tag(input_, [VariableRole.INPUT], name)
 
         # Run the application method on the annotated variables
         if self.call_stack and brick is not self.call_stack[-1] and \
@@ -264,7 +264,7 @@ class Application(object):
                     reraise_as(ValueError("Unexpected outputs"))
                 # TODO Tag with dimensions, axes, etc. for error-checking
                 outputs[i] = copy_and_tag(outputs[i],
-                                          VariableRole.OUTPUT, name)
+                                          [VariableRole.OUTPUT], name)
 
         # Return values
         if return_list:
@@ -738,9 +738,10 @@ def lazy(func):
 
 class VariableRole(object):
     """A collection of constants referring to variable roles."""
-    COST = "cost"
-    INPUT = "input"
-    OUTPUT = "output"
+    AUXILIARY = 'auxiliary'
+    COST = 'cost'
+    INPUT = 'input'
+    OUTPUT = 'output'
 
 
 class ApplicationCall(object):
@@ -783,7 +784,7 @@ class ApplicationCall(object):
         self.auxiliary_variables = []
         self.updates = []
 
-    def add_auxiliary_variable(self, expression, role=None, name=None):
+    def add_auxiliary_variable(self, expression, roles=None, name=None):
         """Attach an auxiliary variable to the graph.
 
         Auxiliary variables are Theano variables that are not part of a
@@ -795,11 +796,12 @@ class ApplicationCall(object):
         ----------
         expression : Theano variable
             The expression of the variable you want to add.
-        role : :class:`VariableRole` attribute, optional
-            The role of this variable. Currently, the only option is
+        roles : list of :class:`VariableRole` attributes, optional
+            The roles of this variable. Currently, the only option is
             :attr:`VariableRole.COST`, which should be reserved for scalar
             variables which could be used for e.g. regularization or as a
-            loss function.
+            loss function. The :attr:`VariableRole.AUXILIARY` role will
+            automatically be added.
         name : str, optional
             The name of the expression; overrides the name of the variable
             if it already has one.
@@ -810,20 +812,27 @@ class ApplicationCall(object):
         ...     @application
         ...     def apply(self, x, application_call):
         ...         application_call.add_auxiliary_variable(
-        ...             x.mean(), role=VariableRole.COST, name='mean_x')
+        ...             x - 1, name='x_minus_1')
+        ...         application_call.add_auxiliary_variable(
+        ...             x.mean(), roles=[VariableRole.COST], name='mean_x')
         ...         return x + 1
         >>> x = tensor.vector()
         >>> y = Foo().apply(x)
         >>> from blocks.graph import ComputationGraph
         >>> cg = ComputationGraph([y])
-        >>> cg.auxiliary_variables
+        >>> cg.get_variables(roles=[VariableRole.AUXILIARY]) # doctest: +SKIP
+        set([x_minus_1, mean_x])
+        >>> cg.get_variables(roles=[VariableRole.COST])
         set([mean_x])
 
         """
         if name is not None:
             expression.name = name
-        if role is not None:
-            expression.tag.role = role
+        if roles is None:
+            roles = []
+        if VariableRole.AUXILIARY not in roles:
+            roles.append(VariableRole.AUXILIARY)
+        expression.tag.roles = getattr(expression.tag, 'roles', []) + roles
         expression.tag.application_call = self
         self.auxiliary_variables.append(expression)
 
