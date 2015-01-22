@@ -55,10 +55,12 @@ script:
         coverage run --source=blocks -m nose2.__main__ tests
       fi
   - |
+      export EXIT=0
       if [ $FORMAT ]; then
-        flake8 blocks tests
+        flake8 blocks bin tests examples || export EXIT=1
         # Ignore D100-103 errors (non-existing docstrings)
-        pep257 blocks --numpy --ignore=D100,D101,D102,D103
+        pep257 blocks bin tests examples --numpy --ignore=D100,D101,D102,D103 || export EXIT=1
+        return $EXIT
       fi
 after_script:
   - if [ $TESTS ]; then coveralls; fi

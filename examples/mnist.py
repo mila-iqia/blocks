@@ -47,7 +47,7 @@ def main(save_to, num_epochs):
                         DataStream(mnist_test,
                                    iteration_scheme=SequentialScheme(
                                        mnist_test.num_examples, 500)),
-                        prefix="test"),
+                        prefix="test_"),
                     TrainingDataMonitoring(
                         [cost, error_rate,
                          aggregation.mean(algorithm.total_gradient_norm)],
@@ -61,8 +61,9 @@ if __name__ == "__main__":
     parser = ArgumentParser("An example of training an MLP on"
                             " the MNIST dataset.")
     parser.add_argument("--num-epochs", type=int, default=2,
-        help="Number of training epochs to do.")
+                        help="Number of training epochs to do.")
     parser.add_argument("save_to", default="mnist.pkl", nargs="?",
-        help="Destination to save the state of the training process.")
+                        help=("Destination to save the state of the training "
+                              "process."))
     args = parser.parse_args()
     main(args.save_to, args.num_epochs)

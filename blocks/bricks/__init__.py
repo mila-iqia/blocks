@@ -36,7 +36,8 @@ class Random(Brick):
         if getattr(self, '_theano_rng', None) is not None:
             return self._theano_rng
         else:
-            return tensor.shared_randomstreams.RandomStreams(config.default_seed)
+            return tensor.shared_randomstreams.RandomStreams(
+                config.default_seed)
 
     @theano_rng.setter
     def theano_rng(self, theano_rng):

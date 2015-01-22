@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 """Learn a Markov chain with an RNN and sample from it."""
-
 from __future__ import print_function
 
 import argparse
@@ -89,10 +88,10 @@ def main(mode, save_path, steps, num_batches):
                 iteration_scheme=ConstantScheme(batch_size)),
             algorithm=algorithm,
             extensions=[FinishAfter(after_n_batches=num_batches),
-                        TrainingDataMonitoring([cost],
-                            prefix="this_step", after_every_batch=True),
-                        TrainingDataMonitoring([cost],
-                            prefix="average", every_n_batches=100),
+                        TrainingDataMonitoring([cost], prefix="this_step",
+                                               after_every_batch=True),
+                        TrainingDataMonitoring([cost], prefix="average",
+                                               every_n_batches=100),
                         SerializeMainLoop(save_path, every_n_batches=500),
                         Printing(every_n_batches=100)])
         main_loop.run()
@@ -124,7 +123,8 @@ def main(mode, save_path, steps, num_batches):
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO,
+    logging.basicConfig(
+        level=logging.INFO,
         format="%(asctime)s: %(name)s: %(levelname)s: %(message)s")
     parser = argparse.ArgumentParser(
         "Case study of generating a Markov chain with RNN.",
