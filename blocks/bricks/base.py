@@ -754,6 +754,18 @@ class ApplicationCall(object):
     application method and can be accessed by specifying an
     application_call argument.
 
+    Also see :meth:`add_auxiliary_variable`.
+
+    Parameters
+    ----------
+    brick : :class:`Brick` instance
+        The brick whose application is called
+    application : :class:`BoundApplication` instance
+        The bound application (i.e. belong to a brick instance) object
+        being called
+
+    Examples
+    --------
     >>> class Foo(Brick):
     ...     @application
     ...     def apply(self, x, application_call):
@@ -763,14 +775,6 @@ class ApplicationCall(object):
     >>> y = Foo().apply(x)
     >>> y.tag.application_call # doctest: +ELLIPSIS
     <blocks.bricks.base.ApplicationCall object at ...>
-
-    Parameters
-    ----------
-    brick : :class:`Brick` instance
-        The brick whose application is called
-    application : :class:`BoundApplication` instance
-        The bound application (i.e. belong to a brick instance) object
-        being called
 
     """
     def __init__(self, brick, application):
@@ -816,7 +820,6 @@ class ApplicationCall(object):
         set([mean_x])
 
         """
-
         if name is not None:
             expression.name = name
         if role is not None:

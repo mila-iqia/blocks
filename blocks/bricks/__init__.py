@@ -7,7 +7,7 @@ from six import add_metaclass
 from theano import tensor
 
 from blocks import config
-from blocks.bricks.base import application, _Brick, Brick, lazy
+from blocks.bricks.base import application, _Brick, Brick, lazy, VariableRole
 from blocks.utils import pack, shared_floatx_zeros
 
 logger = logging.getLogger(__name__)
@@ -161,7 +161,7 @@ class Linear(Initializable):
         self.weights_init.initialize(W, self.rng)
 
     @application(inputs=['input_'], outputs=['output'])
-    def apply(self, input_):
+    def apply(self, input_, application_call):
         """Apply the linear transformation.
 
         Parameters
@@ -182,6 +182,14 @@ class Linear(Initializable):
         output = tensor.dot(input_, W)
         if self.use_bias:
             output += b
+
+        # Attach regularization terms as auxiliary variables
+        application_call.add_auxiliary_variable(
+            abs(W).sum(), role=VariableRole.COST, name='L1_W')
+        application_call.add_auxiliary_variable(
+            tensor.sqrt(tensor.sqr(W).sum()), role=VariableRole.COST,
+            name='L2_W')
+
         return output
 
 
