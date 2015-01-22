@@ -1196,8 +1196,8 @@ class Sequence(Brick):
     @application(inputs=['input_'], outputs=['output'])
     def apply(self, input_):
         child_input = input_
-        for child, application_method in zip(self.children,
-                                             self.application_methods):
+        for _, application_method in zip(self.children,
+                                         self.application_methods):
             output = application_method(*pack(child_input))
             child_input = output
         return output

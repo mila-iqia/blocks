@@ -34,6 +34,16 @@ class TrainingExtension(object):
             name = self.__class__.__name__
         self.name = name
 
+    @property
+    def main_loop(self):
+        if not hasattr(self, '_main_loop'):
+            raise ValueError("main loop must be assigned to extension first")
+        return self._main_loop
+
+    @main_loop.setter
+    def main_loop(self, value):
+        self._main_loop = value
+
     def dispatch(self, callback_name, *args):
         """Runs callback with the given name.
 
