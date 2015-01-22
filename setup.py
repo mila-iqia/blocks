@@ -32,7 +32,8 @@ setup(
         'Programming Language :: Python :: 3.4',
     ],
     keywords='theano machine learning neural networks deep learning',
-    packages=find_packages(exclude=['docs', 'tests']),
+    packages=find_packages(exclude=['examples', 'docs', 'tests']),
+    scripts=['bin/blocks-continue'],
     install_requires=['dill', 'numpy', 'theano', 'six'],
     extras_require={
         'test': ['nose', 'nose2'],
