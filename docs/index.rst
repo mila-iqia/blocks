@@ -98,8 +98,8 @@ And train!
 ...                 Printing()])
 >>> main_loop.run() # doctest: +SKIP
 
-Getting started
----------------
+Tutorials
+---------
 .. toctree::
    setup
    tutorial
