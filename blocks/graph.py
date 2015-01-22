@@ -37,6 +37,7 @@ class ComputationGraph(object):
         self.applies = set()
         self.application_calls = set()
         self.updates = []
+        self.auxiliary_variables = set()
 
         def recursion(current):
             self.variables.add(current)
@@ -47,6 +48,7 @@ class ComputationGraph(object):
                 if application_call not in self.application_calls:
                     self.application_calls.add(application_call)
                     for av in application_call.auxiliary_variables:
+                        self.auxiliary_variables.add(av)
                         av.tag.application_call = current.tag.application_call
                         recursion(av)
                     self.updates.extend(application_call.updates)

@@ -741,7 +741,6 @@ class VariableRole(object):
     COST = "cost"
     INPUT = "input"
     OUTPUT = "output"
-    MONITOR = "monitor"
 
 
 class ApplicationCall(object):
@@ -781,6 +780,43 @@ class ApplicationCall(object):
         self.updates = []
 
     def add_auxiliary_variable(self, expression, role=None, name=None):
+        """Attach an auxiliary variable to the graph.
+
+        Auxiliary variables are Theano variables that are not part of a
+        brick's output, but can be useful nonetheless e.g. as a regularizer
+        or to monitor during training progress. Examples would be weight
+        norms.
+
+        Parameters
+        ----------
+        expression : Theano variable
+            The expression of the variable you want to add.
+        role : :class:`VariableRole` attribute, optional
+            The role of this variable. Currently, the only option is
+            :attr:`VariableRole.COST`, which should be reserved for scalar
+            variables which could be used for e.g. regularization or as a
+            loss function.
+        name : str, optional
+            The name of the expression; overrides the name of the variable
+            if it already has one.
+
+        Examples
+        --------
+        >>> class Foo(Brick):
+        ...     @application
+        ...     def apply(self, x, application_call):
+        ...         application_call.add_auxiliary_variable(
+        ...             x.mean(), role=VariableRole.COST, name='mean_x')
+        ...         return x + 1
+        >>> x = tensor.vector()
+        >>> y = Foo().apply(x)
+        >>> from blocks.graph import ComputationGraph
+        >>> cg = ComputationGraph([y])
+        >>> cg.auxiliary_variables
+        set([mean_x])
+
+        """
+
         if name is not None:
             expression.name = name
         if role is not None:
