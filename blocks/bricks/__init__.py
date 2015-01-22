@@ -202,13 +202,13 @@ class Application(object):
         bound_application = self.__get__(brick, brick.__class__)
         return self.apply(bound_application, *args, **kwargs)
 
-    def apply(self, application, *args, **kwargs):
+    def apply(self, bound_application, *args, **kwargs):
         return_dict = kwargs.pop('return_dict', False)
         return_list = kwargs.pop('return_list', False)
         if return_list and return_dict:
             raise ValueError
 
-        brick = application.brick
+        brick = bound_application.brick
 
         # Find the names of the inputs to the application method
         args_names, varargs_name, _, _ = inspect.getargspec(
@@ -216,12 +216,12 @@ class Application(object):
         args_names = args_names[1:]
 
         # Construct the ApplicationCall, used to store data in for this call
-        call = ApplicationCall(brick, application)
+        call = ApplicationCall(brick, bound_application)
         args = list(args)
         if 'application_call' in args_names:
             args.insert(args_names.index('application_call'), call)
         if 'application' in args_names:
-            args.insert(args_names.index('application'), application)
+            args.insert(args_names.index('application'), bound_application)
 
         # Allocate before applying, and optionally initialize
         if not brick.allocated:
@@ -266,7 +266,7 @@ class Application(object):
         for i, output in enumerate(outputs):
             if isinstance(output, tensor.Variable):
                 try:
-                    name = application.outputs[i]
+                    name = bound_application.outputs[i]
                 except AttributeError:
                     name = "output_{}".format(i)
                 except IndexError:
@@ -279,7 +279,7 @@ class Application(object):
         if return_list:
             return outputs
         if return_dict:
-            return OrderedDict(zip(application.outputs, outputs))
+            return OrderedDict(zip(bound_application.outputs, outputs))
         return unpack(outputs)
 
 
