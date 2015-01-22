@@ -171,7 +171,8 @@ class GradientDescent(DifferentiableCostMinimizer):
         self.step_rule = step_rule if step_rule else SteepestDescent()
 
         self.total_gradient_norm = named_copy(
-            sum(g.norm(2) for g in self.gradients), "total_gradient_norm")
+            tensor.sqrt(sum((g ** 2).sum() for g in self.gradients)),
+            "total_gradient_norm")
 
     def initialize(self):
         all_updates = self.updates
