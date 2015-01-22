@@ -7,7 +7,6 @@ import dill
 import blocks
 from examples.mnist import main as mnist_test
 from examples.markov_chain.main import main as markov_chain_test
-from examples.pylearn2.markov_chain import main as pylearn2_test
 
 
 def setup():
@@ -44,6 +43,8 @@ test_mnist.setup = setup
 def test_pylearn2():
     filename = 'unittest_markov_chain'
     try:
+        # This test is currenly off due to problems with PyLearn2
+        # serialization.
         pass
     except OSError:
         from unittest import SkipTest
