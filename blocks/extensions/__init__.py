@@ -113,6 +113,8 @@ class SimpleExtension(TrainingExtension):
 
     Parameters
     ----------
+    before_training : bool
+        If ``True``, :meth:`do` is invoked before training.
     before_first_epoch : bool
         If ``True``, :meth:`do` is invoked before the first epoch.
     after_every_epoch : bool
@@ -129,11 +131,14 @@ class SimpleExtension(TrainingExtension):
         batches are processed.
 
     """
-    def __init__(self, before_first_epoch=False, after_every_epoch=False,
-                 after_every_batch=False, after_training=False,
+    def __init__(self, before_training=False, before_first_epoch=False,
+                 after_every_epoch=False, after_every_batch=False,
+                 after_training=False,
                  after_n_epochs=None, after_n_batches=None, **kwargs):
         super(SimpleExtension, self).__init__(**kwargs)
         self._conditions = []
+        if before_training:
+            self.add_condition("before_training")
         if before_first_epoch:
             self.add_condition(
                 "before_epoch",

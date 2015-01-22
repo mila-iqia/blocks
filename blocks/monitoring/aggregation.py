@@ -119,10 +119,11 @@ class Mean(AggregationScheme):
         return aggregator
 
 
-def mean(numerator, denominator):
+def mean(numerator, denominator=1.0):
     """Mean of quantity (numerator) over a number (denominator) values."""
     expression = numerator / denominator
     expression.tag.aggregation_scheme = Mean(numerator, denominator)
+    expression.name = numerator.name
     return expression
 
 
@@ -136,3 +137,16 @@ class _DataIndependent(AggregationScheme):
                           initialization_updates=[],
                           accumulation_updates=[],
                           readout_expression=self.variable)
+
+
+class TakeLast(AggregationScheme):
+    """Aggregation scheme which remembers only the last value."""
+    def __init__(self, variable):
+        self.variable = variable
+
+    def get_aggregator(self):
+        self.storage = shared_like(self.variable)
+        return Aggregator(aggregation_scheme=self,
+                          initialization_updates=[(self.storage, 0.0)],
+                          accumulation_updates=[(self.storage, self.variable)],
+                          readout_expression=self.storage)
