@@ -25,7 +25,13 @@ class Dataset(object):
     Attributes
     ----------
     sources : tuple of strings
-        The sources this dataset can provide.
+        The sources this dataset will when queried for data e.g.
+        ``('features',)`` when querying only the data from MNIST.
+    provides_sources : tuple of strings
+        The sources this dataset *is able to* provide e.g. ``('features',
+        'targets')`` for MNIST (regardless of which data the data stream
+        actually requests). Any implementation of a dataset should set this
+        attribute on the class (or at least before calling ``super``).
     default_iteration_scheme : :class:`IterationScheme`, optional
         The default iteration scheme that will be used by
         :meth:`get_default_stream` to create a data stream without needing
@@ -39,13 +45,23 @@ class Dataset(object):
     simultaneously.
 
     """
-    sources = None
+    provides_sources = None
 
     def __init__(self, sources=None):
         if sources is not None:
-            if not all(source in self.sources for source in sources):
+            if not all(source in self.provides_sources for source in sources):
                 raise ValueError("Unable to provide requested sources")
             self.sources = sources
+
+    @property
+    def sources(self):
+        if not hasattr(self, '_sources'):
+            return self.provides_sources
+        return self._sources
+
+    @sources.setter
+    def sources(self, sources):
+        self._sources = sources
 
     def open(self):
         """Return the state if the dataset requires one.
@@ -311,11 +327,11 @@ class ContainerDataset(Dataset):
 
     def __init__(self, container, sources=None):
         if isinstance(container, dict):
-            self.sources = (sources if sources is not None
-                            else tuple(container.keys()))
+            self.provides_sources = (sources if sources is not None
+                                     else tuple(container.keys()))
             self.data_channels = [container[source] for source in self.sources]
         else:
-            self.sources = ('data',)
+            self.provides_sources = ('data',)
             if not (sources == self.sources or sources is None):
                 raise ValueError
             self.data_channels = [container]

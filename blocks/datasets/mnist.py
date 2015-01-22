@@ -44,7 +44,7 @@ class MNIST(InMemoryDataset):
         grayscale. ``False`` by default.
 
     """
-    sources = ('features', 'targets')
+    provides_sources = ('features', 'targets')
 
     def __init__(self, which_set, start=None, stop=None, binary=False,
                  **kwargs):
