@@ -26,11 +26,58 @@ def create_unbound_method(func, cls):
     if six.PY3:
         return func
 
-
+# Rename built-in property to avoid conflict with Application.property
 property_ = property
 
 
 class Application(object):
+    """An application method belonging to a particular type of brick.
+
+    The application methods of each :class:`Brick` class are automatically
+    replaced by an instance of :class:`Application`. This allows us to
+    store metadata about particular application methods (such as their in-
+    and outputs) easily.
+
+    Attributes
+    ----------
+    application : function
+        The original (unbounded) application function defined on the
+        :class:`Brick`.
+    delegate_function : function
+        A function that takes a :class:`Brick` instance as an argument and
+        returns a :class:`BoundedApplication` object to which attribute
+        requests should be routed.
+    properties : dict (str, function)
+        A dictionary of property getters that should be called when an
+        attribute with the given name is requested.
+    instances : dict (brick instance, bound application instance)
+        A record of bound application instances created by the descriptor
+        protocol.
+    call_stack : list of brick instances
+        The call stack of brick application methods. Used to check whether
+        the current call was made by a parent brick.
+
+    Notes
+    -----
+    When a :class:`Brick` is instantiated and its application method (i.e.
+    an instance of this class) requested, the descriptor protocol (through
+    the :meth:`__get__` method) automatically instantiates a
+    :class:`BoundApplication` class and returns this. This bound
+    application class can be used to store application information
+    particular to a brick instance. Any attributes unknown to the bounded
+    application are automatically routed to the application that
+    instantiated it.
+
+    Raises
+    ------
+    ValueError
+        If a brick's application method is applied by another brick which
+        does not list the former as a child.
+    ValueError
+        If the application method's inputs and/or outputs don't match with
+        the function signature or the values returned (respectively).
+
+    """
     call_stack = []
 
     def __init__(self, application):
@@ -40,6 +87,28 @@ class Application(object):
         self.instances = {}
 
     def property(self, name):
+        """Decorator to make application properties.
+
+        Parameters
+        ----------
+        name : str
+            The name the property should take.
+
+        Examples
+        --------
+        >>> class Foo(Brick):
+        ...     @application
+        ...     def apply(self, x):
+        ...         return x + 1
+        ...
+        ...     @apply.property('inputs')
+        ...     def apply_inputs(self):
+        ...         return ['foo', 'bar']
+        >>> foo = Foo()
+        >>> foo.apply.inputs
+        ['foo', 'bar']
+
+        """
         if not isinstance(name, six.string_types):
             raise ValueError
 
@@ -49,10 +118,46 @@ class Application(object):
         return wrap_property
 
     def delegate(self, f):
+        """Decorator to assign a delegate application.
+
+        An application method can assign a delegate application. Whenever
+        an attribute is not available, it will be requested from the
+        delegate instead.
+
+        Examples
+        --------
+        >>> class Foo(Brick):
+        ...     @application(outputs=['baz'])
+        ...     def apply(self, x):
+        ...         return x + 1
+        ...
+        ...     @apply.property('inputs')
+        ...     def apply_inputs(self):
+        ...         return ['foo', 'bar']
+        >>> class Bar(Brick):
+        ...     def __init__(self, foo):
+        ...         self.foo = foo
+        ...
+        ...     @application(outputs=['foo'])
+        ...     def apply(self, x):
+        ...         return x + 1
+        ...
+        ...     @apply.delegate
+        ...     def apply_delegate(self):
+        ...         return self.foo.apply
+        >>> foo = Foo()
+        >>> bar = Bar(foo)
+        >>> bar.apply.outputs
+        ['foo']
+        >>> bar.apply.inputs
+        ['foo', 'bar']
+
+        """
         self.delegate_function = f
         return f
 
     def __get__(self, instance, owner):
+        """Instantiate :class:`BoundedApplication` for each :class:`Brick`."""
         if instance is None:
             return self
         elif instance in self.instances:
@@ -63,21 +168,29 @@ class Application(object):
             return bounded_application
 
     def __getattr__(self, name):
-        if name == 'properties':
-            raise AttributeError
-        if name in self.properties:
+        # Mimic behaviour of properties
+        if 'properties' in self.__dict__ and name in self.properties:
             return property(create_unbound_method(self.properties[name],
                                                   self.brick))
         raise AttributeError
 
     def __setattr__(self, name, value):
-        try:
-            is_property = name in self.properties
-        except AttributeError:
-            is_property = False
-        if is_property:
+        # Mimic behaviour of read-only properties
+        if 'properties' in self.__dict__ and name in self.properties:
             raise AttributeError("can't set attribute")
         super(Application, self).__setattr__(name, value)
+
+    @property_
+    def inputs(self):
+        return self._inputs
+
+    @inputs.setter
+    def inputs(self, inputs):
+        args_names, varargs_name, _, _ = inspect.getargspec(
+            self.application)
+        if not all(input_ in args_names + [varargs_name] for input_ in inputs):
+            raise ValueError("Unexpected inputs")
+        self._inputs = inputs
 
     @property_
     def name(self):
@@ -165,17 +278,21 @@ class Application(object):
 
 
 class BoundApplication(object):
+    """An application method bound to a :class:`Brick` instance."""
     def __init__(self, application, brick):
         self.application = application
         self.brick = brick
 
     def __getattr__(self, name):
+        # Prevent infinite loops
         if name == 'application':
             raise AttributeError
+        # These always belong to the parent (the unbound application)
         if name in ('delegate_function', 'properties'):
             return getattr(self.application, name)
         if name in self.properties:
             return self.properties[name](self.brick)
+        # First try the parent (i.e. class level), before trying the delegate
         try:
             return getattr(self.application, name)
         except AttributeError:
@@ -192,9 +309,9 @@ class BoundApplication(object):
 
 
 class _Brick(ABCMeta):
+    """Metaclass which attaches brick instances to the applications."""
     def __new__(mcl, name, bases, namespace):
         brick = super(_Brick, mcl).__new__(mcl, name, bases, namespace)
-        # Attach the Brick classes to the Application instance
         for attr in namespace.values():
             if isinstance(attr, Application):
                 attr.brick = brick
@@ -664,6 +781,39 @@ class ApplicationCall(object):
 
 
 def application(*args, **kwargs):
+    r"""Decorator for methods that apply a brick to inputs.
+
+    Parameters
+    ----------
+    \*args, optional
+        The application method to wrap.
+    \*\*kwargs, optional
+        See :meth:`signature`
+
+    Notes
+    -----
+    This decorator replaces application methods with :class:`Application`
+    instances. It also sets the attributes given as keyword arguments to
+    the decorator.
+
+    Examples
+    --------
+    >>> class Foo(Brick):
+    ...     @application(inputs=['x'], outputs=['y'])
+    ...     def apply(self, x):
+    ...         return x + 1
+    ...     @application
+    ...     def other_apply(self, x):
+    ...         return x - 1
+    >>> foo = Foo()
+    >>> Foo.apply.inputs
+    ['x']
+    >>> foo.apply.outputs
+    ['y']
+    >>> Foo.other_apply # doctest: +ELLIPSIS
+    <blocks.bricks.Application object at ...>
+
+    """
     if not ((args and not kwargs) or (not args and kwargs)):
         raise ValueError
     if args:
