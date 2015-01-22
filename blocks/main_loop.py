@@ -1,4 +1,6 @@
 """The event-based main loop of Blocks."""
+import signal
+
 from blocks.log import TrainingLog
 from blocks.utils import unpack
 
@@ -65,6 +67,8 @@ class MainLoop(object):
         a `training_finish_requested` record in the log.
 
         """
+        default_action = signal.signal(signal.SIGINT,
+                                       self._handle_keyboard_interrupt)
         try:
             if not self.status._training_started:
                 for extension in self.extensions:
@@ -73,13 +77,14 @@ class MainLoop(object):
                 self._run_extensions('before_training')
                 self.algorithm.initialize()
                 self.status._training_started = True
+            else:
+                self._run_extensions('on_resumption')
             while self._run_epoch():
                 pass
-        except KeyboardInterrupt:
-            self._run_extensions('on_interrupt')
         except TrainingFinish:
             self.log.current_row.training_finished = True
         finally:
+            signal.signal(signal.SIGINT, default_action)
             self._run_extensions('after_training')
 
     def find_extension(self, name):
@@ -97,26 +102,6 @@ class MainLoop(object):
         """
         return unpack([extension for extension in self.extensions
                        if extension.name == name], singleton=True)
-
-    def _run_extensions(self, method_name, *args):
-        for extension in self.extensions:
-            extension.dispatch(method_name, *args)
-
-    def _check_finish_training(self):
-        if self.log.current_row.training_finish_requested:
-            raise TrainingFinish
-
-    def _run_iteration(self):
-        try:
-            batch = next(self.epoch_iterator)
-        except StopIteration:
-            return False
-        self._run_extensions('before_batch', batch)
-        self.algorithm.process_batch(batch)
-        self.status.iterations_done += 1
-        self._run_extensions('after_batch', batch)
-        self._check_finish_training()
-        return True
 
     def _run_epoch(self):
         if not self.status._epoch_started:
@@ -136,6 +121,34 @@ class MainLoop(object):
         self._run_extensions('after_epoch')
         self._check_finish_training()
         return True
+
+    def _run_iteration(self):
+        try:
+            batch = next(self.epoch_iterator)
+        except StopIteration:
+            return False
+        self._run_extensions('before_batch', batch)
+        self.algorithm.process_batch(batch)
+        self.status.iterations_done += 1
+        self._run_extensions('after_batch', batch)
+        self._check_finish_training()
+        return True
+
+    def _run_extensions(self, method_name, *args):
+        for extension in self.extensions:
+            extension.dispatch(method_name, *args)
+
+    def _check_finish_training(self):
+        # In case when keyboard interrupt is handled right at the end of
+        # the iteration it has
+        if (self.log.current_row.training_finish_requested or
+            self.log.previous_row.training_finish_requested):
+            raise TrainingFinish
+
+    def _handle_keyboard_interrupt(self, signal, frame):
+        self._run_extensions('on_interrupt')
+        self.log.current_row.keyboard_interrupt_received = True
+        self.log.current_row.training_finish_requested = True
 
 
 class TrainingFinish(Exception):
