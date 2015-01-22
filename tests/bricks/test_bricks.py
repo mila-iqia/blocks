@@ -4,9 +4,9 @@ import theano
 from numpy.testing import assert_allclose, assert_raises
 from theano import tensor
 
-from blocks.bricks import (Application, application, Brick,
-                           DEFAULT_SEED, Identity, lazy, Linear,
-                           Maxout, LinearMaxout, MLP, Tanh)
+from blocks import config
+from blocks.bricks import Identity, Linear, Maxout, LinearMaxout, MLP, Tanh
+from blocks.bricks.base import Application, application, Brick, lazy
 from blocks.initialization import Constant
 from blocks.utils import shared_floatx
 
@@ -271,7 +271,8 @@ def test_apply():
 def test_rng():
     linear = Linear()
     assert isinstance(linear.rng, numpy.random.RandomState)
-    assert linear.rng.rand() == numpy.random.RandomState(DEFAULT_SEED).rand()
+    assert linear.rng.rand() == \
+        numpy.random.RandomState(config.default_seed).rand()
     linear = Linear(rng=numpy.random.RandomState(1))
     assert linear.rng.rand() == numpy.random.RandomState(1).rand()
 

@@ -10,7 +10,8 @@ of the agent* or simply *states*.
 """
 from theano import tensor
 
-from blocks.bricks import MLP, Identity, lazy, application, Initializable
+from blocks.bricks import MLP, Identity, Initializable
+from blocks.bricks.base import lazy, application
 from blocks.bricks.parallel import Parallel
 
 

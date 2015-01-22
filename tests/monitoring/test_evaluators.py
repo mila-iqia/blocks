@@ -3,7 +3,7 @@ import numpy
 import theano
 
 from blocks.graph import ComputationGraph
-from blocks.bricks import VariableRole
+from blocks.bricks.base import VariableRole
 from blocks.monitoring.evaluators import DatasetEvaluator
 from blocks.datasets import ContainerDataset
 from tests.monitoring.test_aggregation import TestBrick
