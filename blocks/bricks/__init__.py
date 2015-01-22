@@ -1247,8 +1247,6 @@ class MLP(Sequence, Initializable):
         if not dims:
             dims = [None] * (len(activations) + 1)
         self.dims = dims
-        if len(set(application_methods)) != len(application_methods):
-            import ipdb; ipdb.set_trace()
         super(MLP, self).__init__(application_methods, **kwargs)
 
     def _push_allocation_config(self):
