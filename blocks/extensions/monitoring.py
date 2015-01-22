@@ -50,6 +50,15 @@ class DataStreamMonitoring(SimpleExtension):
 class TrainingDataMonitoring(SimpleExtension):
     """Monitors values of Theano expressions on training batches.
 
+    Use this extension to monitor a quantity on every training batch
+    cheaply. It integrates with the training algorithm in order to avoid
+    recomputing same things several times. For instance, if you are
+    training a network and you want to log the norm of the gradient on
+    every batch, the backpropagation will only be done once.  By
+    controlling the frequency with which the :meth:`do` method is called,
+    you can aggregate the monitored expressions, e.g. only log the gradient
+    norm average over an epoch.
+
     Parameters
     ----------
     expressions : list of Theano variables
@@ -61,6 +70,9 @@ class TrainingDataMonitoring(SimpleExtension):
 
     Notes
     -----
+    All the monitored expressions are evaluated _before_ the parameter
+    update.
+
     Requires the training algorithm to be an instance of
     :class:`DifferentiableCostMinimizer`.
 
@@ -73,7 +85,16 @@ class TrainingDataMonitoring(SimpleExtension):
         self.prefix = prefix
 
     def do(self, callback_name, *args):
-        """Write the values of monitored expressions to the log."""
+        """Initializes the buffer or commits the values to the log.
+
+        What this method does depends on from what callback it is called.
+        When called within `before_training`, it initializes the
+        aggregation buffer and instructs the training algorithm what
+        additional computations should be carried at each step by adding
+        corresponding updates to it. In all other cases it writes
+        aggregated values of the monitored expressions to the log.
+
+        """
         if callback_name == self.before_training.__name__:
             if not isinstance(self.main_loop.algorithm,
                               DifferentiableCostMinimizer):
