@@ -196,7 +196,13 @@ class Application(object):
     def name(self):
         return self.application.__name__
 
-    def __call__(self, application, *args, **kwargs):
+    def __call__(self, brick, *args, **kwargs):
+        if not isinstance(brick, Brick):
+            raise ValueError
+        bound_application = self.__get__(brick, brick.__class__)
+        return self.apply(bound_application, *args, **kwargs)
+
+    def apply(self, application, *args, **kwargs):
         return_dict = kwargs.pop('return_dict', False)
         return_list = kwargs.pop('return_list', False)
         if return_list and return_dict:
@@ -305,7 +311,7 @@ class BoundApplication(object):
         return self.application.name
 
     def __call__(self, *args, **kwargs):
-        return self.application(self, *args, **kwargs)
+        return self.application.apply(self, *args, **kwargs)
 
 
 class _Brick(ABCMeta):
