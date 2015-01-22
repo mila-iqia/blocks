@@ -509,7 +509,7 @@ class LookupFeedback(AbstractFeedback, Initializable):
         self.lookup.dim = self.feedback_dim
 
     @application
-    def feedback(self, outputs, **kwargs):
+    def feedback(self, outputs):
         assert self.output_dim == 0
         return self.lookup.lookup(outputs)
 
@@ -711,11 +711,8 @@ class AttentionTransition(AbstractAttentionTransition, Initializable):
 
     @apply.delegate
     def apply_delegate(self):
-        # I can write self.apply because it can be overriden.
-        # Thus I have to hack.
-        # TODO: nice interface for this trick.
-        AttentionTransition.do_apply.__get__(self, None)
-        return AttentionTransition.do_apply
+        # TODO: Nice interface for this trick?
+        return self.do_apply.__get__(self, None)
 
     @application
     def initial_state(self, state_name, batch_size, **kwargs):

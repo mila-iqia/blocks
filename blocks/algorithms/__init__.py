@@ -7,6 +7,7 @@ from six import add_metaclass
 from theano import tensor
 
 from blocks.graph import ComputationGraph
+from blocks.utils import named_copy
 
 
 @add_metaclass(ABCMeta)
@@ -169,6 +170,10 @@ class GradientDescent(DifferentiableCostMinimizer):
                 zip(self.params, tensor.grad(self.cost, self.params))))
         self.step_rule = step_rule if step_rule else SteepestDescent()
 
+        self.total_gradient_norm = named_copy(
+            tensor.sqrt(sum((g ** 2).sum() for g in self.gradients)),
+            "total_gradient_norm")
+
     def initialize(self):
         all_updates = self.updates
         for param in self.params:
@@ -180,7 +185,9 @@ class GradientDescent(DifferentiableCostMinimizer):
 
     def process_batch(self, batch):
         if not set(batch.keys()) == set([v.name for v in self.inputs]):
-            raise ValueError
+            raise ValueError("The names of the input variables of your"
+                             " computation graph must correspond to the"
+                             " data sources.")
         ordered_batch = [batch[v.name] for v in self.inputs]
         self._function(*ordered_batch)
 

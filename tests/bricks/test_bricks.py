@@ -32,7 +32,7 @@ class TestBrick(Brick):
         return self.second_apply.inputs + self.second_apply.outputs
 
     @application
-    def delegated_apply(self):
+    def delegated_apply(self, x, w):
         pass
 
     @delegated_apply.delegate
@@ -58,6 +58,18 @@ class ParentBrick(Brick):
     def apply(self, *args, **kwargs):
         return self.child.apply(*args, **kwargs)
 
+    @application
+    def second_apply(self, x):
+        return x - 1
+
+    @second_apply.property('inputs')
+    def second_apply_inputs(self):
+        return self.child.second_apply.all
+
+    @second_apply.delegate
+    def second_apply_delegate(self):
+        return self.child.delegated_apply
+
 
 class BrokenAllocateBrick(Brick):
     def _push_allocation_config(self):
@@ -79,7 +91,6 @@ class ParameterBrick(Brick):
 
 
 def test_super():
-    Brick.lazy = True
     brick = TestBrick()
     assert isinstance(brick.name, six.string_types)
     assert brick.children == []
@@ -94,7 +105,6 @@ def test_super():
 
 
 def test_repr():
-    Brick.lazy = True
     brick = TestBrick()
     assert 'name=testbrick' in repr(brick)
     assert hex(id(brick)) in repr(brick)
@@ -104,8 +114,8 @@ def test_repr():
 def test_lazy():
     Brick.lazy = False
     assert_raises(TypeError, TestBrick)
-
     Brick.lazy = True
+
     brick = TestBrick()
     assert brick.config is None
     brick = TestBrick(config='config')
@@ -114,7 +124,6 @@ def test_lazy():
 
 
 def test_allocate():
-    Brick.lazy = True
     brick = TestBrick()
     brick.allocate()
     assert brick.allocated
@@ -144,10 +153,10 @@ def test_allocate():
     assert_raises(AttributeError, broken_parent_brick.allocate)
     assert not broken_parent_brick.allocation_config_pushed
     assert not broken_parent_brick.allocated
+    Brick.lazy = True
 
 
 def test_initialize():
-    Brick.lazy = True
     brick = TestBrick()
     brick.initialize()
 
@@ -160,10 +169,10 @@ def test_initialize():
     Brick.lazy = False
     broken_parent_brick = ParentBrick(BrokenInitializeBrick())
     assert_raises(AttributeError, broken_parent_brick.initialize)
+    Brick.lazy = True
 
 
 def test_tagging():
-    Brick.lazy = True
     brick = TestBrick()
     x = tensor.vector('x')
     y = tensor.vector('y')
@@ -199,7 +208,6 @@ def test_tagging():
 
 
 def test_apply_not_child():
-    Brick.lazy = True
     child = TestBrick()
     parent = ParentBrick(child)
     parent.children = []
@@ -212,7 +220,6 @@ def test_request_unknown_dimension():
 
 
 def test_application():
-    Brick.lazy = True
     brick = TestBrick()
     assert brick.second_apply.inputs == ['x']
     assert brick.second_apply.outputs == ['y']
@@ -222,17 +229,46 @@ def test_application():
 
     assert brick.second_apply.all == ['x', 'y']
 
+    brick.second_apply.inputs = ['x', 'z']
+    assert brick.second_apply.inputs == ['x', 'z']
+    assert brick.second_apply.all == ['x', 'z', 'y']
+
+    brick.delegated_apply.outputs = ['z']
+    assert brick.delegated_apply.outputs == ['z']
+    assert brick.delegated_apply.inputs == ['x', 'z']
+
+    parent_brick = ParentBrick(brick)
+    parent_brick.second_apply.inputs = ['x', 'z', 'y']
+    parent_brick.second_apply.inputs == ['x', 'z']
+
+    assert_raises(AttributeError, setattr, TestBrick.second_apply, 'all', 'w')
+
+    TestBrick.delegated_apply.inputs = ['w']
+    assert TestBrick.delegated_apply.inputs == ['w']
+    test_brick = TestBrick()
+    assert test_brick.delegated_apply.inputs == ['w']
+    test_brick.delegated_apply.inputs = ['x']
+    assert test_brick.delegated_apply.inputs == ['x']
+    assert TestBrick.delegated_apply.inputs == ['w']
+
     Brick.lazy = False
     brick = TestBrick('config')
     x = tensor.vector()
     brick.apply(x)
     assert brick.initialized
 
-    assert_raises(ValueError, getattr, Application(lambda x: x), 'brick')
+    assert_raises(AttributeError, getattr, Application(lambda x: x), 'brick')
+    Brick.lazy = True
+
+
+def test_apply():
+    brick = TestBrick()
+    assert TestBrick.apply(brick, [0]) == [0, 1]
+    if six.PY2:
+        assert_raises(TypeError, TestBrick.apply, [0])
 
 
 def test_rng():
-    Brick.lazy = True
     linear = Linear()
     assert isinstance(linear.rng, numpy.random.RandomState)
     assert linear.rng.rand() == numpy.random.RandomState(DEFAULT_SEED).rand()
@@ -298,7 +334,6 @@ def test_activations():
 def test_mlp():
     x = tensor.matrix()
     x_val = numpy.random.rand(2, 16).astype(theano.config.floatX)
-    Brick.lazy = True
     mlp = MLP(activations=[Tanh(), None], dims=[16, 8, 4],
               weights_init=Constant(1), biases_init=Constant(1))
     y = mlp.apply(x)
@@ -318,7 +353,6 @@ def test_mlp():
 
 def test_application_call():
     X = tensor.matrix('X')
-    Brick.lazy = True
     brick = TestBrick()
     Y = brick.access_application_call(X)
     assert Y.tag.application_call.auxiliary_variables[0].name == 'test_val'

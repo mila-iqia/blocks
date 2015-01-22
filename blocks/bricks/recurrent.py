@@ -6,8 +6,8 @@ from collections import OrderedDict
 import theano
 from theano import tensor
 
-from blocks.bricks import (Application, application, application_wrapper,
-                           Brick, Initializable, Identity, Sigmoid, lazy)
+from blocks.bricks import (Application, application, Brick, Initializable,
+                           Identity, Sigmoid, lazy)
 from blocks.initialization import NdarrayInitialization
 from blocks.utils import pack, shared_floatx_zeros
 
@@ -66,11 +66,11 @@ def recurrent(*args, **kwargs):
         Names of the outputs.
 
     """
-    def recurrent_wrapper(application, application_method):
-        arg_spec = inspect.getargspec(application_method)
+    def recurrent_wrapper(application_function):
+        arg_spec = inspect.getargspec(application_function)
         arg_names = arg_spec.args[1:]
 
-        def recurrent_apply(brick, *args, **kwargs):
+        def recurrent_apply(brick, application, *args, **kwargs):
             """Iterates a transition function.
 
             Parameters
@@ -155,7 +155,7 @@ def recurrent(*args, **kwargs):
 
             # Apply methods
             if not iterate:
-                return application_method(brick, **kwargs)
+                return application_function(brick, **kwargs)
 
             def scan_function(*args):
                 args = list(args)
@@ -163,7 +163,7 @@ def recurrent(*args, **kwargs):
                              list(contexts_given))
                 kwargs = dict(zip(arg_names, args))
                 kwargs.update(rest_kwargs)
-                return application_method(brick, **kwargs)
+                return application_function(brick, **kwargs)
             outputs_info = (list(states_given.values())
                             + [None] * (len(application.outputs) -
                                         len(application.states)))
@@ -189,14 +189,13 @@ def recurrent(*args, **kwargs):
     # Decorator can be used with or without arguments
     assert (args and not kwargs) or (not args and kwargs)
     if args:
-        application_method, = args
-        application = application_wrapper()(application_method)
-        return application.wrap(recurrent_wrapper)
+        application_function, = args
+        return application(recurrent_wrapper(application_function))
     else:
-        def wrapper(application_method):
-            application = application_wrapper(**kwargs)(application_method)
-            return application.wrap(recurrent_wrapper)
-        return wrapper
+        def wrap_application(application_function):
+            return application(**kwargs)(
+                recurrent_wrapper(application_function))
+        return wrap_application
 
 
 class Recurrent(BaseRecurrent, Initializable):
@@ -349,8 +348,7 @@ class GatedRecurrent(BaseRecurrent, Initializable):
     def get_dim(self, name):
         if name == 'mask':
             return 0
-        if name in (GatedRecurrent.apply.sequences
-                    + GatedRecurrent.apply.states):
+        if name in (self.apply.sequences + self.apply.states):
             return self.dim
         return super(GatedRecurrent, self).get_dim(name)
 
@@ -463,7 +461,7 @@ class Bidirectional(Initializable):
         super(Bidirectional, self).__init__(**kwargs)
         self.prototype = prototype
 
-        self.children = [copy.deepcopy(prototype) for i in range(2)]
+        self.children = [copy.deepcopy(prototype) for _ in range(2)]
         self.children[0].name = 'forward'
         self.children[1].name = 'backward'
 

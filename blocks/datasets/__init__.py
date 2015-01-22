@@ -39,6 +39,8 @@ class Dataset(object):
     simultaneously.
 
     """
+    sources = None
+
     def __init__(self, sources=None):
         if sources is not None:
             if not all(source in self.sources for source in sources):
