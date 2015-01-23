@@ -9,7 +9,7 @@ class TextFileState(object):
 
 
 class TextFile(Dataset):
-    """Reads text files and numberizes them given a dictionary.
+    r"""Reads text files and numberizes them given a dictionary.
 
     Parameters
     ----------
