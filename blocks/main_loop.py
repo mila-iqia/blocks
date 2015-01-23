@@ -33,7 +33,7 @@ class MainLoop(object):
     algorithm : object
         The training algorithm.
     log : instance of :class:`TrainingLog`
-        The log. When not given, a :class:`RAMTrainingLog` is created.
+        The log. When not given, a :class:`TrainingLog` is created.
     extensions : list of :class:`TrainingExtension` instances
         The training extensions. Will be called in the same order as given
         here.
