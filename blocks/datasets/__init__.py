@@ -580,6 +580,15 @@ class CachedDataStream(DataStreamWrapper):
         which must necessarily be smaller than the child data stream i.e.
         the batches returned must be smaller than the cache size.
 
+    Attributes
+    ----------
+    cache : list of lists of objects
+        This attribute holds the cache at any given point. It is a list of
+        the same size as the :attr:`sources` attribute. Each element in
+        this list in its turn a list of examples that are currently in the
+        cache. The cache gets emptied at the start of each epoch, and gets
+        refilled when needed through the :meth:`get_data` method.
+
     """
     def __init__(self, data_stream, iteration_scheme):
         super(CachedDataStream, self).__init__(
@@ -615,6 +624,12 @@ class NGramStream(CachedDataStream):
     ----------
     ngram_order : int
         The order of the n-grams to output e.g. 3 for trigrams.
+    data_stream : :class:`DataStream` instance
+        The data stream providing sentences. Each example is assumed to be
+        a list of integers.
+    target_source : str, optional
+        This data stream adds a new source for the target words. By default
+        this source is 'targets'.
 
     Notes
     -----
