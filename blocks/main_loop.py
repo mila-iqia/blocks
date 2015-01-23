@@ -23,6 +23,12 @@ class MainLoop(object):
     such a record after every batch and every epoch and terminates when
     finds it.
 
+    The `MainLoop` also handles interruption signal SIGINT for you (e.g.
+    the one program receives when you press Ctrl + C). It notes this event
+    in the log and at the next iteration or epoch end the main loop will
+    be gracefully finished, with calling all necessary extension callbacks
+    and waiting until they finish.
+
     Parameters
     ----------
     model : object
@@ -67,8 +73,7 @@ class MainLoop(object):
         a `training_finish_requested` record in the log.
 
         """
-        default_action = signal.signal(signal.SIGINT,
-                                       self._handle_keyboard_interrupt)
+        signal.signal(signal.SIGINT, self._handle_keyboard_interrupt)
         try:
             if not self.status._training_started:
                 for extension in self.extensions:
@@ -84,8 +89,8 @@ class MainLoop(object):
         except TrainingFinish:
             self.log.current_row.training_finished = True
         finally:
-            signal.signal(signal.SIGINT, default_action)
             self._run_extensions('after_training')
+            signal.signal(signal.SIGINT, signal.SIG_DFL)
 
     def find_extension(self, name):
         """Find an extension with a given name.
@@ -148,6 +153,9 @@ class MainLoop(object):
             raise TrainingFinish
 
     def _handle_keyboard_interrupt(self, signal, frame):
+        # After receiving a first keyboard interrupt signal,
+        # ignore all following ones.
+        signal.signal(signal.SIGINT, signal.SIG_DFL)
         self._run_extensions('on_interrupt')
         self.log.current_row.keyboard_interrupt_received = True
 
