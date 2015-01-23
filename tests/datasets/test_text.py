@@ -2,8 +2,10 @@ import dill
 from numpy.testing import assert_raises
 
 from blocks.datasets.text import TextFile
+from tests import temporary_files
 
 
+@temporary_files('sentences1.txt', 'sentences2.txt', 'text_stream.pkl')
 def test_text():
     with open('sentences1.txt', 'w') as f:
         f.write("This is a sentence\n")

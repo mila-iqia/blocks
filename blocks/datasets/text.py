@@ -56,6 +56,12 @@ class TextFile(Dataset):
     ([2, 0, 3, 0, 1],)
     ([2, 0, 4, 1],)
 
+    .. doctest::
+       :hide:
+
+       >>> import os
+       >>> os.remove('sentences.txt')
+
     """
     provides_sources = ('features',)
     default_scheme = None

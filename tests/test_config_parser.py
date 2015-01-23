@@ -3,8 +3,10 @@ import os
 from numpy.testing import assert_raises
 
 from blocks.config_parser import Configuration, ConfigurationError
+from tests import temporary_files
 
 
+@temporary_files('.test_blocksrc')
 def test_config_parser():
     _environ = dict(os.environ)
     os.environ['BLOCKS_CONFIG'] = os.path.join(os.getcwd(),
@@ -35,6 +37,5 @@ def test_config_parser():
         config.new_config = 'new_config'
         assert config.new_config == 'new_config'
     finally:
-        os.remove(os.environ['BLOCKS_CONFIG'])
         os.environ.clear()
         os.environ.update(_environ)
