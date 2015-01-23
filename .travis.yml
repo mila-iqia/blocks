@@ -18,12 +18,12 @@ env:
 before_install:
   - |
       if [ $TESTS ]; then
-        # Set up Python environment
+        # Setup Python environment with BLAS libraries
         export PATH=$HOME/miniconda/bin:$PATH
         if [ ! `which conda` ]; then
-          rm -rf $HOME/miniconda
           wget -q http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
           chmod +x miniconda.sh
+          rm -rf $HOME/miniconda
           ./miniconda.sh -b
         fi
         conda update -q --yes conda
