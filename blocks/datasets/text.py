@@ -2,7 +2,6 @@ import os
 
 from blocks import config
 from blocks.datasets import Dataset
-from blocks.datasets.schemes import ConstantScheme
 
 
 class TextFileState(object):
@@ -79,6 +78,8 @@ class TextFile(Dataset):
         if unk_token not in dictionary:
             raise ValueError
         self.unk_token = unk_token
+        if level not in ('word', 'character'):
+            raise ValueError
         self.level = level
         self.preprocess = preprocess
 
@@ -107,14 +108,17 @@ class TextFile(Dataset):
                 break
         if self.preprocess is not None:
             sentence = self.preprocess(sentence)
-        data = [self.dictionary[self.bos_token]] if self.bos_token else []
-        data += [self.dictionary.get(word, self.dictionary[self.unk_token])
-                 for word in sentence.split()]
-        data += [self.dictionary[self.eos_token]] if self.eos_token else []
+        if self.level == 'word':
+            data = [self.dictionary[self.bos_token]] if self.bos_token else []
+            data += [self.dictionary.get(word, self.dictionary[self.unk_token])
+                     for word in sentence.split()]
+            data += [self.dictionary[self.eos_token]] if self.eos_token else []
+        else:
+            raise NotImplementedError
         return (data,)
 
 
-class OneBillionWord(Dataset):
+class OneBillionWord(TextFile):
     """Google's One Billion Word benchmark.
 
     This monolingual corpus contains 829,250,940 tokens (including sentance
@@ -146,56 +150,28 @@ class OneBillionWord(Dataset):
         an input and returns a modified string. A useful function to pass
         could be ``str.lower``.
 
+    See :class:`TextFile` for remaining keyword arguments.
+
     """
-    default_scheme = ConstantScheme(1)
-    sources = ('features',)
-
-    def __init__(self, which_set, which_partitions, dictionary,
-                 preprocess=None):
-        self.which_set = which_set
-        self.which_partitions = which_partitions
-        self.dictionary = dictionary
-        self.preprocess = preprocess
-
-    def open(self):
-        class State(object):
-            pass
-        state = State()
-        state.current_index = 0
-        state.file = self._open_file(state.current_index)
-        return state
-
-    def _open_file(self, partition_index):
-        partition = self.which_partitions[partition_index]
-        if self.which_set == 'training':
-            data_path = os.path.join(
+    def __init__(self, which_set, which_partitions, dictionary, **kwargs):
+        if which_set not in ('training', 'heldout'):
+            raise ValueError
+        if which_set == 'training':
+            if not all(partition in range(1, 100)
+                       for partition in which_partitions):
+                raise ValueError
+            files = [os.path.join(
                 config.data_path, '1-billion-word',
                 'training-monolingual.tokenized.shuffled',
                 'news.en-{:05d}-of-00100'.format(partition))
+                for partition in which_partitions]
         else:
-            data_path = os.path.join(
+            if not all(partition in range(50)
+                       for partition in which_partitions):
+                raise ValueError
+            files = [os.path.join(
                 config.data_path, '1-billion-word',
                 'heldout-monolingual.tokenized.shuffled',
                 'news.en.heldout-{:05d}-of-00050'.format(partition))
-        return open(data_path)
-
-    def get_data(self, state=None, request=None):
-        data = []
-        while len(data) < request:
-            sentence = state.file.readline()
-            if not sentence:
-                state.file.close()
-                if state.current_index == len(self.which_partitions) - 1:
-                    if not data:
-                        raise StopIteration
-                    else:
-                        break
-                else:
-                    state.current_index += 1
-                    state.file = self._open_file(state.current_index)
-            else:
-                data.append(
-                    [self.dictionary['<S>']] +
-                    [self.dictionary.get(word, self.dictionary['<UNK>'])
-                     for word in sentence.split()] + [self.dictionary['</S>']])
-        return (data,)
+                for partition in which_partitions]
+        super(OneBillionWord, self).__init__(files, dictionary, **kwargs)
