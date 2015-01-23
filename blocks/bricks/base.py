@@ -21,6 +21,65 @@ def create_unbound_method(func, cls):
 property_ = property
 
 
+class Annotation(object):
+    def __init__(self):
+        self.auxiliary_variables = []
+        self.updates = []
+
+    def add_auxiliary_variable(self, expression, roles=None, name=None):
+        """Attach an auxiliary variable to the graph.
+
+        Auxiliary variables are Theano variables that are not part of a
+        brick's output, but can be useful nonetheless e.g. as a regularizer
+        or to monitor during training progress. Examples would be weight
+        norms.
+
+        Parameters
+        ----------
+        expression : Theano variable
+            The expression of the variable you want to add.
+        roles : list of :class:`VariableRole` attributes, optional
+            The roles of this variable. Currently, the only option is
+            :attr:`VariableRole.COST`, which should be reserved for scalar
+            variables which could be used for e.g. regularization or as a
+            loss function. The :attr:`VariableRole.AUXILIARY` role will
+            automatically be added.
+        name : str, optional
+            The name of the expression; overrides the name of the variable
+            if it already has one.
+
+        Examples
+        --------
+        >>> class Foo(Brick):
+        ...     @application
+        ...     def apply(self, x, application_call):
+        ...         application_call.add_auxiliary_variable(
+        ...             x - 1, name='x_minus_1')
+        ...         application_call.add_auxiliary_variable(
+        ...             x.mean(), roles=[VariableRole.COST], name='mean_x')
+        ...         return x + 1
+        >>> x = tensor.vector()
+        >>> y = Foo().apply(x)
+        >>> from blocks.graph import ComputationGraph
+        >>> cg = ComputationGraph([y])
+        >>> cg.get_variables(
+        ...     roles=[VariableRole.AUXILIARY]) # doctest: +SKIP
+        {x_minus_1, mean_x}
+        >>> cg.get_variables(roles=[VariableRole.COST]) # doctest: +SKIP
+        {mean_x}
+
+        """
+        if name is not None:
+            expression.name = name
+        if roles is None:
+            roles = []
+        if VariableRole.AUXILIARY not in roles:
+            roles.append(VariableRole.AUXILIARY)
+        for role in roles:
+            VariableRole.add_role(expression, role)
+        self.auxiliary_variables.append(expression)
+
+
 class Application(object):
     """An application method belonging to a particular type of brick.
 
@@ -317,7 +376,7 @@ class _Brick(ABCMeta):
 
 
 @add_metaclass(_Brick)
-class Brick(object):
+class Brick(Annotation):
     """A brick encapsulates Theano operations with parameters.
 
     A brick goes through the following stages:
@@ -486,6 +545,11 @@ class Brick(object):
         self.allocation_config_pushed = False
         self.initialized = False
         self.initialization_config_pushed = False
+        super(Brick, self).__init__()
+
+    def add_auxiliary_variable(self, expression, *args, **kwargs):
+        expression.brick = self
+        super(Brick, self).add_auxiliary_variable(expression, *args, **kwargs)
 
     def __repr__(self):
         return repr_attrs(self, 'name')
@@ -769,13 +833,15 @@ class VariableRole(object):
 
         """
         roles = getattr(var.tag, 'roles', [])
-        if role in (cls.WEIGHTS, cls.BIASES) and cls.PARAMETER not in roles:
-            roles.append(cls.PARAMETER)
-        roles.append(role)
-        var.tag.roles = roles
+        if role not in roles:
+            if role in (cls.WEIGHTS, cls.BIASES) and \
+                    cls.PARAMETER not in roles:
+                roles.append(cls.PARAMETER)
+            roles.append(role)
+            var.tag.roles = roles
 
 
-class ApplicationCall(object):
+class ApplicationCall(Annotation):
     """A link between the variable tags and bricks.
 
     The application call can be used to attach to an apply call auxiliary
@@ -812,62 +878,12 @@ class ApplicationCall(object):
     def __init__(self, brick, application):
         self.brick = brick
         self.application = application
-        self.auxiliary_variables = []
-        self.updates = []
+        super(ApplicationCall, self).__init__()
 
-    def add_auxiliary_variable(self, expression, roles=None, name=None):
-        """Attach an auxiliary variable to the graph.
-
-        Auxiliary variables are Theano variables that are not part of a
-        brick's output, but can be useful nonetheless e.g. as a regularizer
-        or to monitor during training progress. Examples would be weight
-        norms.
-
-        Parameters
-        ----------
-        expression : Theano variable
-            The expression of the variable you want to add.
-        roles : list of :class:`VariableRole` attributes, optional
-            The roles of this variable. Currently, the only option is
-            :attr:`VariableRole.COST`, which should be reserved for scalar
-            variables which could be used for e.g. regularization or as a
-            loss function. The :attr:`VariableRole.AUXILIARY` role will
-            automatically be added.
-        name : str, optional
-            The name of the expression; overrides the name of the variable
-            if it already has one.
-
-        Examples
-        --------
-        >>> class Foo(Brick):
-        ...     @application
-        ...     def apply(self, x, application_call):
-        ...         application_call.add_auxiliary_variable(
-        ...             x - 1, name='x_minus_1')
-        ...         application_call.add_auxiliary_variable(
-        ...             x.mean(), roles=[VariableRole.COST], name='mean_x')
-        ...         return x + 1
-        >>> x = tensor.vector()
-        >>> y = Foo().apply(x)
-        >>> from blocks.graph import ComputationGraph
-        >>> cg = ComputationGraph([y])
-        >>> cg.get_variables(
-        ...     roles=[VariableRole.AUXILIARY]) # doctest: +SKIP
-        {x_minus_1, mean_x}
-        >>> cg.get_variables(roles=[VariableRole.COST]) # doctest: +SKIP
-        {mean_x}
-
-        """
-        if name is not None:
-            expression.name = name
-        if roles is None:
-            roles = []
-        if VariableRole.AUXILIARY not in roles:
-            roles.append(VariableRole.AUXILIARY)
-        for role in roles:
-            VariableRole.add_role(expression, role)
+    def add_auxiliary_variable(self, expression, *args, **kwargs):
         expression.tag.application_call = self
-        self.auxiliary_variables.append(expression)
+        super(ApplicationCall, self).add_auxiliary_variable(expression, *args,
+                                                            **kwargs)
 
 
 def application(*args, **kwargs):

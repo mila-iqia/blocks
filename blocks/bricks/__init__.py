@@ -146,14 +146,15 @@ class Linear(Initializable):
         self.output_dim = output_dim
 
     def _allocate(self):
-        self.params.append(shared_floatx_zeros((self.input_dim,
-                                                self.output_dim),
-                           name="W"))
-        VariableRole.add_role(self.params[0], VariableRole.WEIGHTS)
+        W = shared_floatx_zeros((self.input_dim, self.output_dim), name='W')
+        VariableRole.add_role(W, VariableRole.WEIGHTS)
+        self.params.append(W)
+        self.add_auxiliary_variable(W.mean(), name='W_mean')
         if self.use_bias:
-            self.params.append(shared_floatx_zeros((self.output_dim,),
-                               name="b"))
-            VariableRole.add_role(self.params[1], VariableRole.BIASES)
+            b = shared_floatx_zeros((self.output_dim,), name='b')
+            VariableRole.add_role(b, VariableRole.BIASES)
+            self.params.append(b)
+            self.add_auxiliary_variable(b.mean(), name='b_mean')
 
     def _initialize(self):
         if self.use_bias:
