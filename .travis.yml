@@ -2,9 +2,7 @@ sudo: false
 cache:
   directories:
     - miniconda
-    - pylearn2
     - mnist
-    - .local
 branches:
   only:
     - master
@@ -30,13 +28,14 @@ before_install:
         conda update -q --yes conda
         # Download MNIST for tests
         if [ ! -d mnist ]; then
-          (mkdir mnist
+          mkdir mnist
           cd mnist
           curl -O http://yann.lecun.com/exdb/mnist/train-images-idx3-ubyte.gz \
                -O http://yann.lecun.com/exdb/mnist/train-labels-idx1-ubyte.gz \
                -O http://yann.lecun.com/exdb/mnist/t10k-images-idx3-ubyte.gz \
                -O http://yann.lecun.com/exdb/mnist/t10k-labels-idx1-ubyte.gz
-          gunzip *-ubyte.gz)
+          gunzip *-ubyte.gz
+          cd -
         fi
         export BLOCKS_DATA_PATH=$PWD
       fi
@@ -47,14 +46,10 @@ install:
         conda install -q --yes python=$TRAVIS_PYTHON_VERSION nose numpy pip coverage six scipy
         pip install -q --no-deps git+git://github.com/Theano/Theano.git # Development version
         pip install -q nose2[coverage-plugin] coveralls
-        if [ ! -d pylearn2 ]; then
-          (git clone -q git://github.com/lisa-lab/pylearn2.git # Pylearn2 doesn't support pip
-          cd pylearn2
-          python setup.py -q develop)
-        else
-          (cd pylearn2
-          git pull)
-        fi
+        git clone -q git://github.com/lisa-lab/pylearn2.git # Pylearn2 doesn't support pip
+        cd pylearn2
+        python setup.py -q develop
+        cd -
       fi
   - |
       if [ $FORMAT ]; then
@@ -66,7 +61,7 @@ script:
       if [ $TESTS ]; then
         python setup.py -q install # Tests setup.py (also installs dill)
         # Must export environment variable so that the subprocess is aware of it
-        export THEANO_FLAGS=floatX=$TESTS,blas.ldflags='-lblas -lgfortran'
+        export THEANO_FLAGS=floatX=$TESTS
         # Running nose2 within coverage makes imports count towards coverage
         coverage run --source=blocks -m nose2.__main__ tests
       fi
