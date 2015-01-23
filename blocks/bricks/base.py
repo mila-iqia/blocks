@@ -50,7 +50,11 @@ class Annotation(object):
 
         Examples
         --------
+        >>> from blocks.utils import shared_floatx_zeros
         >>> class Foo(Brick):
+        ...     def _allocate(self):
+        ...         W = shared_floatx_zeros((10, 10))
+        ...         self.add_auxiliary_variable(W.mean(), name='mean_W')
         ...     @application
         ...     def apply(self, x, application_call):
         ...         application_call.add_auxiliary_variable(
@@ -64,7 +68,7 @@ class Annotation(object):
         >>> cg = ComputationGraph([y])
         >>> cg.get_variables(
         ...     roles=[VariableRole.AUXILIARY]) # doctest: +SKIP
-        {x_minus_1, mean_x}
+        {x_minus_1, mean_W, mean_x}
         >>> cg.get_variables(roles=[VariableRole.COST]) # doctest: +SKIP
         {mean_x}
 
