@@ -5,6 +5,10 @@ from blocks.datasets import Dataset
 from blocks.datasets.schemes import ConstantScheme
 
 
+class TextFileState(object):
+    pass
+
+
 class TextFile(Dataset):
     """Reads text files and numberizes them given a dictionary.
 
@@ -47,7 +51,6 @@ class TextFile(Dataset):
     >>> dictionary = {'<UNK>': 0, '</S>': 1, 'this': 2, 'a': 3, 'one': 4}
     >>> text_data = TextFile(files=['sentences.txt'], dictionary=dictionary,
     ...                      bos_token=None, preprocess=str.lower)
-    >>> state = text_data.open()
     >>> for sentence in text_data.get_default_stream().get_epoch_iterator():
     ...     print(sentence)
     ([2, 0, 3, 0, 1],)
@@ -74,8 +77,6 @@ class TextFile(Dataset):
         self.preprocess = preprocess
 
     def open(self):
-        class TextFileState(object):
-            pass
         state = TextFileState()
         state.current_index = 0
         state.file = self._open_file(state.current_index)
