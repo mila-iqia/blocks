@@ -48,10 +48,11 @@ class TextFile(Dataset):
     ...     f.write("This is a sentence\\n")
     ...     f.write("This another one")
     >>> dictionary = {'<UNK>': 0, '</S>': 1, 'this': 2, 'a': 3, 'one': 4}
-    >>> text_data = TextFile(files=['sentences.txt'], dictionary=dictionary,
-    ...                      bos_token=None, preprocess=str.lower)
-    >>> for sentence in text_data.get_default_stream().get_epoch_iterator():
-    ...     print(sentence)
+    >>> text_data = TextFile(files=['sentences.txt'],
+    ...                      dictionary=dictionary, bos_token=None,
+    ...                      preprocess=str.lower)
+    >>> for data in text_data.get_default_stream().get_epoch_iterator():
+    ...     print(data)
     ([2, 0, 3, 0, 1],)
     ([2, 0, 4, 1],)
 

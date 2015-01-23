@@ -22,8 +22,8 @@ class MNIST(InMemoryDataset):
     testing images. The images are grayscale and 28 x 28 pixels large.
 
     .. [LBBH] Yann LeCun, Léon Bottou, Yoshu Bengio, and Patrick Haffner,
-       *Gradient-based learning applied to document recognition*, Proceedings
-       of the IEEE, November 1998, 86(11):2278-2324.
+       *Gradient-based learning applied to document recognition*,
+       Proceedings of the IEEE, November 1998, 86(11):2278-2324.
 
     .. todo::
 
