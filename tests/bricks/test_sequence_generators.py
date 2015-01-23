@@ -3,7 +3,8 @@ import numpy
 import theano
 from theano import tensor
 
-from blocks.bricks import Tanh, application
+from blocks.bricks import Tanh
+from blocks.bricks.base import application
 from blocks.bricks.parallel import Mixer
 from blocks.bricks.recurrent import Recurrent, GatedRecurrent
 from blocks.bricks.attention import SequenceContentAttention

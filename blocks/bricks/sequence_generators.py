@@ -4,8 +4,8 @@ from abc import ABCMeta, abstractmethod
 from six import add_metaclass
 from theano import tensor
 
-from blocks.bricks import (application, Brick, Initializable, Identity, lazy,
-                           MLP, Random)
+from blocks.bricks import Initializable, Identity, MLP, Random
+from blocks.bricks.base import application, Brick, lazy
 from blocks.bricks.recurrent import BaseRecurrent
 from blocks.bricks.parallel import Fork, Mixer
 from blocks.bricks.lookup import LookupTable

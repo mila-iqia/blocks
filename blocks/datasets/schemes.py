@@ -122,7 +122,7 @@ class SequentialIterator(six.Iterator):
     def __next__(self):
         if self.current >= self.num_examples:
             raise StopIteration
-        slice_ = slice(self.current, min(self.num_examples,
+        slice_ = range(self.current, min(self.num_examples,
                                          self.current + self.batch_size))
         self.current += self.batch_size
         return slice_

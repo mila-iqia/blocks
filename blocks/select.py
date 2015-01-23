@@ -4,7 +4,7 @@ from collections import OrderedDict
 
 import six
 
-from blocks.bricks import Brick
+from blocks.bricks.base import Brick
 from blocks.utils import dict_union
 
 logger = logging.getLogger(__name__)

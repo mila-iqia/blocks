@@ -4,7 +4,7 @@ from numpy.testing import assert_allclose
 from theano import tensor
 
 from blocks import bricks
-from blocks.bricks import application, VariableRole
+from blocks.bricks.base import application, VariableRole
 from blocks.graph import ComputationGraph
 from blocks.monitoring.aggregation import mean
 from blocks.utils import shared_floatx

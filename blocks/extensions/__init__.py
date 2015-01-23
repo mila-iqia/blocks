@@ -56,6 +56,9 @@ class TrainingExtension(object):
         """
         getattr(self, callback_name)(*args)
 
+    def on_resumption(self):
+        """The callback invoked after training is resumed."""
+
     def before_training(self):
         """The callback invoked before training is started."""
         pass
@@ -117,6 +120,8 @@ class SimpleExtension(TrainingExtension):
         If ``True``, :meth:`do` is invoked before training.
     before_first_epoch : bool
         If ``True``, :meth:`do` is invoked before the first epoch.
+    on_resumption : bool, optional
+        If ``True``, :meth:`do` is invoked when training is resumed.
     after_every_epoch : bool
         If ``True``, :meth:`do` is invoked after every epoch.
     after_every_batch: bool
@@ -129,12 +134,16 @@ class SimpleExtension(TrainingExtension):
     after_n_batches : int, optional
         If not ``None``, :meth:`do` is invoked when `after_n_batches`
         batches are processed.
+    every_n_batches : int, optional
+        If not ``None``, :meth:`do` is invoked after every n-th batch.
 
     """
     def __init__(self, before_training=False, before_first_epoch=False,
+                 on_resumption=False,
                  after_every_epoch=False, after_every_batch=False,
                  after_training=False,
-                 after_n_epochs=None, after_n_batches=None, **kwargs):
+                 after_n_epochs=None, after_n_batches=None,
+                 every_n_batches=None, **kwargs):
         super(SimpleExtension, self).__init__(**kwargs)
         self._conditions = []
         if before_training:
@@ -143,6 +152,8 @@ class SimpleExtension(TrainingExtension):
             self.add_condition(
                 "before_epoch",
                 predicate=lambda log: log.status.epochs_done == 0)
+        if on_resumption:
+            self.add_condition("on_resumption")
         if after_every_epoch:
             self.add_condition("after_epoch")
         if after_every_batch:
@@ -153,6 +164,8 @@ class SimpleExtension(TrainingExtension):
             self.invoke_after_n_epochs(after_n_epochs)
         if after_n_batches:
             self.invoke_after_n_batches(after_n_batches)
+        if every_n_batches:
+            self.invoke_every_n_batches(every_n_batches)
 
     def add_condition(self, callback_name, predicate=None, arguments=None):
         """Adds a condition under which a :meth:`do` is called.
@@ -189,6 +202,12 @@ class SimpleExtension(TrainingExtension):
             "after_batch",
             predicate=lambda log:
                 log.status.iterations_done == n_batches)
+
+    def invoke_every_n_batches(self, n_batches):
+        self.add_condition(
+            "after_batch",
+            predicate=lambda log:
+                log.status.iterations_done % n_batches == 0)
 
     @abstractmethod
     def do(self, which_callback, *args):
@@ -236,6 +255,7 @@ class Printing(SimpleExtension):
     """Prints log messages to the screen."""
     def __init__(self, **kwargs):
         kwargs.setdefault("before_first_epoch", True)
+        kwargs.setdefault("on_resumption", True)
         kwargs.setdefault("after_training", True)
         kwargs.setdefault("after_every_epoch", True)
         super(Printing, self).__init__(**kwargs)
@@ -250,6 +270,8 @@ class Printing(SimpleExtension):
         print("".join(79 * "-"))
         if which_callback == "before_epoch" and log.status.epochs_done == 0:
             print("BEFORE FIRST EPOCH")
+        elif which_callback == "on_resumption":
+            print("TRAINING HAS BEEN RESUMED")
         elif which_callback == "after_training":
             print("TRAINING HAS BEEN FINISHED:")
         elif which_callback == "after_epoch":

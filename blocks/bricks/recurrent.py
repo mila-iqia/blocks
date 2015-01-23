@@ -6,8 +6,8 @@ from collections import OrderedDict
 import theano
 from theano import tensor
 
-from blocks.bricks import (Application, application, Brick, Initializable,
-                           Identity, Sigmoid, lazy)
+from blocks.bricks import Initializable, Identity, Sigmoid
+from blocks.bricks.base import Application, application, Brick, lazy
 from blocks.initialization import NdarrayInitialization
 from blocks.utils import pack, shared_floatx_zeros
 

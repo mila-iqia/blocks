@@ -4,7 +4,7 @@ from numpy.testing import assert_allclose
 from theano import tensor
 from theano.tensor.shared_randomstreams import RandomStreams
 
-from blocks.bricks import Brick
+from blocks.bricks.base import Brick
 from blocks.graph import apply_noise, ComputationGraph
 from tests.bricks.test_bricks import TestBrick
 
