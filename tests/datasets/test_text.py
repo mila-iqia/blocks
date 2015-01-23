@@ -7,6 +7,7 @@ from tests import temporary_files
 
 @temporary_files('sentences1.txt', 'sentences2.txt', 'text_stream.pkl')
 def test_text():
+    # Test word level and epochs.
     with open('sentences1.txt', 'w') as f:
         f.write("This is a sentence\n")
         f.write("This another one")
@@ -30,3 +31,14 @@ def test_text():
         epoch = dill.load(f)
     assert next(epoch) == sentence
     assert_raises(StopIteration, next, epoch)
+
+    # Test character level.
+    dictionary = dict([(chr(ord('a') + i), i) for i in range(26)]
+                      + [(' ', 26)] + [('<S>', 27)]
+                      + [('</S>', 28)] + [('<UNK>', 29)])
+    text_data = TextFile(files=['sentences1.txt', 'sentences2.txt'],
+                         dictionary=dictionary, preprocess=str.lower,
+                         level="character")
+    sentence = next(text_data.get_default_stream().get_epoch_iterator())[0]
+    assert sentence[:3] == [27, 19, 7]
+    assert sentence[-3:] == [2, 4, 28]

@@ -36,7 +36,8 @@ class TextFile(Dataset):
         word replaced with its number as given by the dictionary, resulting
         in each example being a single list of numbers. If 'character' the
         dictionary is expected to contain single letters as keys. A single
-        example will be a list of lists, each sublist representing a word.
+        example will be a list of character numbers, starting with the
+        first non-whitespace character and finishing with the last one.
     preprocess : function, optional
         A function which takes a sentence (string) as an input and returns
         a modified string. For example ``str.lower`` in order to lowercase
@@ -109,13 +110,14 @@ class TextFile(Dataset):
                 break
         if self.preprocess is not None:
             sentence = self.preprocess(sentence)
+        data = [self.dictionary[self.bos_token]] if self.bos_token else []
         if self.level == 'word':
-            data = [self.dictionary[self.bos_token]] if self.bos_token else []
             data += [self.dictionary.get(word, self.dictionary[self.unk_token])
                      for word in sentence.split()]
-            data += [self.dictionary[self.eos_token]] if self.eos_token else []
         else:
-            raise NotImplementedError
+            data += [self.dictionary.get(char, self.dictionary[self.unk_token])
+                     for char in sentence.strip()]
+        data += [self.dictionary[self.eos_token]] if self.eos_token else []
         return (data,)
 
 
