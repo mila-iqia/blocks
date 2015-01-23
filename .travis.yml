@@ -27,7 +27,7 @@ before_install:
         fi
         conda update -q --yes conda
         # Download MNIST for tests
-        if [ ! -d mnist ]; then
+        if find mnist -empty | read; then
           mkdir mnist
           cd mnist
           curl -O http://yann.lecun.com/exdb/mnist/train-images-idx3-ubyte.gz \
