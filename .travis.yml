@@ -22,6 +22,7 @@ before_install:
         ./miniconda.sh -b
         export PATH=$HOME/miniconda/bin:$PATH
         conda update -q --yes conda
+        mv license_academic_20141009155056.txt $HOME/.continuum
         # Download MNIST for tests if not loaded from cache
         if find mnist -empty | read; then
           mkdir mnist
