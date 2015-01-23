@@ -1,12 +1,10 @@
 sudo: false
 cache:
   directories:
-    - $HOME/miniconda
     - $TRAVIS_BUILD_DIR/mnist
 branches:
   only:
     - master
-    - travis_cache
 language: python
 python:
   - "2.7"
@@ -19,15 +17,12 @@ before_install:
   - |
       if [ $TESTS ]; then
         # Setup Python environment with BLAS libraries
+        wget -q http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
+        chmod +x miniconda.sh
+        ./miniconda.sh -b
         export PATH=$HOME/miniconda/bin:$PATH
-        if [ ! `which conda` ]; then
-          wget -q http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
-          chmod +x miniconda.sh
-          rm -rf $HOME/miniconda
-          ./miniconda.sh -b
-        fi
         conda update -q --yes conda
-        # Download MNIST for tests
+        # Download MNIST for tests if not loaded from cache
         if find mnist -empty | read; then
           mkdir mnist
           cd mnist
