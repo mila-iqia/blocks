@@ -5,6 +5,7 @@ cache:
 branches:
   only:
     - master
+    - travis_cache
 language: python
 python:
   - "2.7"
