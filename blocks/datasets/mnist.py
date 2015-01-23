@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os
 import struct
 
@@ -13,7 +14,16 @@ MNIST_LABEL_MAGIC = 2049
 
 @lazy_properties('features', 'targets')
 class MNIST(InMemoryDataset):
-    """The MNIST dataset of handwritten digits.
+    u"""The MNIST dataset of handwritten digits.
+
+    MNIST (Mixed National Institute of Standards and Technology) [LBBH] is
+    a database of handwritten digits. It is one of the most famous datasets
+    in machine learning and consists of 60,000 training images and 10,000
+    testing images. The images are grayscale and 28 x 28 pixels large.
+
+    .. [LBBH] Yann LeCun, Léon Bottou, Yoshu Bengio, and Patrick Haffner,
+       *Gradient-based learning applied to document recognition*, Proceedings
+       of the IEEE, November 1998, 86(11):2278-2324.
 
     .. todo::
 
