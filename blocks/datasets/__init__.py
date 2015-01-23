@@ -25,7 +25,13 @@ class Dataset(object):
     Attributes
     ----------
     sources : tuple of strings
-        The sources this dataset can provide.
+        The sources this dataset will when queried for data e.g.
+        ``('features',)`` when querying only the data from MNIST.
+    provides_sources : tuple of strings
+        The sources this dataset *is able to* provide e.g. ``('features',
+        'targets')`` for MNIST (regardless of which data the data stream
+        actually requests). Any implementation of a dataset should set this
+        attribute on the class (or at least before calling ``super``).
     default_iteration_scheme : :class:`IterationScheme`, optional
         The default iteration scheme that will be used by
         :meth:`get_default_stream` to create a data stream without needing
@@ -39,13 +45,24 @@ class Dataset(object):
     simultaneously.
 
     """
-    sources = None
+    provides_sources = None
 
     def __init__(self, sources=None):
         if sources is not None:
-            if not all(source in self.sources for source in sources):
-                raise ValueError("Unable to provide requested sources")
+            if not sources or not all(source in self.provides_sources
+                                      for source in sources):
+                raise ValueError("unable to provide requested sources")
             self.sources = sources
+
+    @property
+    def sources(self):
+        if not hasattr(self, '_sources'):
+            return self.provides_sources
+        return self._sources
+
+    @sources.setter
+    def sources(self, sources):
+        self._sources = sources
 
     def open(self):
         """Return the state if the dataset requires one.
@@ -132,6 +149,37 @@ class Dataset(object):
             raise ValueError("Dataset does not provide a default iterator")
         return DataStream(self, iteration_scheme=self.default_scheme)
 
+    def filter_sources(self, data):
+        """Filter the requested sources from those provided by the dataset.
+
+        A dataset can be asked to provide only a subset of the sources it
+        can provide (e.g. asking MNIST only for the features, not for the
+        labels). A dataset can choose to use this information to e.g. only
+        load the requested sources into memory. However, in case the
+        performance gain of doing so would be negligible, the dataset can
+        load all the data sources and then use this method to return only
+        those requested.
+
+        Parameters
+        ----------
+        data : tuple of objects
+            The data from all the sources i.e. should be of the same length
+            as :attr:`provides_sources`.
+
+        Examples
+        --------
+        >>> class Random(Dataset):
+        ...     provides_sources = ('features', 'targets')
+        ...     def get_data(self, state=None, request=None):
+        ...         data = (numpy.random.rand(10), numpy.random.randn(3))
+        ...         return self.filter_sources(data)
+        >>> Random(sources=('targets',)).get_data() # doctest: +SKIP
+        (array([-1.82436737,  0.08265948,  0.63206168]),)
+
+        """
+        return tuple([d for d, s in zip(data, self.provides_sources)
+                      if s in self.sources])
+
 
 class InMemoryDataset(Dataset):
     """Datasets who hold all of their data in memory.
@@ -161,7 +209,7 @@ class InMemoryDataset(Dataset):
     >>> from blocks.datasets.mnist import MNIST
     >>> mnist = MNIST('train')
     >>> print("{:,d} KB".format(
-    ...     mnist.data['features'].nbytes / 1024)) # doctest: +SKIP
+    ...     mnist.features.nbytes / 1024)) # doctest: +SKIP
     183,750 KB
     >>> with open('mnist.pkl', 'wb') as f:
     ...     dill.dump(mnist, f)
@@ -173,7 +221,7 @@ class InMemoryDataset(Dataset):
 
     >>> with open('mnist.pkl', 'rb') as f:
     ...     mnist = dill.load(f)
-    >>> print(mnist.data['features'].shape)
+    >>> print(mnist.features.shape)
     (60000, 784)
 
     However, if the data files can't be found on disk, accessing the data
@@ -184,7 +232,7 @@ class InMemoryDataset(Dataset):
     >>> config.data_path = '/non/existing/path'
     >>> with open('mnist.pkl', 'rb') as f:
     ...     mnist = dill.load(f)
-    >>> print(mnist.data['features'].shape) # doctest: +SKIP
+    >>> print(mnist.features.shape) # doctest: +SKIP
     Traceback (most recent call last):
       ...
     FileNotFoundError: [Errno 2] No such file or directory: ...
@@ -193,7 +241,7 @@ class InMemoryDataset(Dataset):
     dataset, correct the situation, and then continue.
 
     >>> config.data_path = correct_path
-    >>> print(mnist.data['features'].shape)
+    >>> print(mnist.features.shape)
     (60000, 784)
 
     .. doctest::
@@ -294,13 +342,13 @@ class ContainerDataset(Dataset):
     Parameters
     ----------
     container : iterable
-        The container to provide interface to. The container's
-        `__iter__` method should return a new iterator over the
-        container. If the container given is an instance of `dict`
-        or `OrderedDict`, its values are interpreted as data channels and
-        its keys are used as source names. Note, that only if
-        the container is an OrderedDict is the order of elements
-        in the returned tuples determined.
+        The container to provide interface to. The container's `__iter__`
+        method should return a new iterator over the container. If the
+        container given is an instance of `dict` or `OrderedDict`, its
+        values are interpreted as data channels and its keys are used as
+        source names. Note, that only if the container is an OrderedDict
+        the order of elements in the returned tuples is determined. If the
+        iterable is not a dictionary, the source ``'data'`` will be used.
 
     .. todo::
 
@@ -311,11 +359,11 @@ class ContainerDataset(Dataset):
 
     def __init__(self, container, sources=None):
         if isinstance(container, dict):
-            self.sources = (sources if sources is not None
-                            else tuple(container.keys()))
+            self.provides_sources = (sources if sources is not None
+                                     else tuple(container.keys()))
             self.data_channels = [container[source] for source in self.sources]
         else:
-            self.sources = ('data',)
+            self.provides_sources = ('data',)
             if not (sources == self.sources or sources is None):
                 raise ValueError
             self.data_channels = [container]
@@ -434,7 +482,13 @@ class DataStream(AbstractDataStream):
 
     @property
     def sources(self):
+        if hasattr(self, '_sources'):
+            return self._sources
         return self.dataset.sources
+
+    @sources.setter
+    def sources(self, value):
+        self._sources = value
 
     def close(self):
         self.data_state = self.dataset.close(self.data_state)
@@ -468,7 +522,13 @@ class DataStreamWrapper(AbstractDataStream):
 
     @property
     def sources(self):
+        if hasattr(self, '_sources'):
+            return self._sources
         return self.data_stream.sources
+
+    @sources.setter
+    def sources(self, value):
+        self._sources = value
 
     def close(self):
         self.data_stream.close()
@@ -520,14 +580,23 @@ class CachedDataStream(DataStreamWrapper):
         which must necessarily be smaller than the child data stream i.e.
         the batches returned must be smaller than the cache size.
 
+    Attributes
+    ----------
+    cache : list of lists of objects
+        This attribute holds the cache at any given point. It is a list of
+        the same size as the :attr:`sources` attribute. Each element in
+        this list in its turn a list of examples that are currently in the
+        cache. The cache gets emptied at the start of each epoch, and gets
+        refilled when needed through the :meth:`get_data` method.
+
     """
     def __init__(self, data_stream, iteration_scheme):
         super(CachedDataStream, self).__init__(
-            data_stream, iteration_sheme=iteration_scheme)
+            data_stream, iteration_scheme=iteration_scheme)
         self.cache = [[] for _ in self.sources]
 
     def get_data(self, request=None):
-        if request >= len(self.cache[0]):
+        if request > len(self.cache[0]):
             self._cache()
         data = []
         for i, cache in enumerate(self.cache):
@@ -535,9 +604,74 @@ class CachedDataStream(DataStreamWrapper):
             self.cache[i] = cache[request:]
         return tuple(data)
 
+    def get_epoch_iterator(self, **kwargs):
+        self.cache = [[] for _ in self.sources]
+        return super(CachedDataStream, self).get_epoch_iterator(**kwargs)
+
     def _cache(self):
         for cache, data in zip(self.cache, next(self.child_epoch_iterator)):
             cache.extend(data)
+
+
+class NGramStream(CachedDataStream):
+    """Return n-grams from a stream.
+
+    This data stream wrapper takes as an input a data stream outputting
+    batches of sentences. From these sentences n-grams of a fixed order
+    (e.g. bigrams, trigrams, etc.) are extracted and returned. It also
+    creates a ``targets`` data source. For each example, the target is the
+    word immediately following that n-gram. It is normally used for
+    language modelling, where we try to predict the next word from the
+    previous n words.
+
+    Parameters
+    ----------
+    ngram_order : int
+        The order of the n-grams to output e.g. 3 for trigrams.
+    data_stream : :class:`DataStream` instance
+        The data stream providing sentences. Each example is assumed to be
+        a list of integers.
+    target_source : str, optional
+        This data stream adds a new source for the target words. By default
+        this source is 'targets'.
+
+    Notes
+    -----
+    This class inherits from :class:`CachedDataStream` because it makes use
+    of a cache to store the sentences from the wrapped data stream in.
+
+    """
+    def __init__(self, ngram_order, data_stream, target_source='targets',
+                 iteration_scheme=None):
+        if len(data_stream.sources) > 1:
+            raise ValueError
+        super(NGramStream, self).__init__(data_stream, iteration_scheme)
+        self.sources = self.sources + (target_source,)
+        self.ngram_order = ngram_order
+
+    def get_data(self, request=None):
+        if not self.cache[0]:
+            self._cache()
+        features, targets = [], []
+        for i, sentence in enumerate(self.cache[0]):
+            for j in range(request):
+                features.append(sentence[j:j + self.ngram_order])
+                targets.append([sentence[j + self.ngram_order]])
+                if j + self.ngram_order == len(sentence) - 1:
+                    sentence_ended = True
+                    break
+                elif len(features) == request:
+                    sentence_ended = False
+                    break
+            if sentence_ended:
+                self.cache[0].pop(0)
+                if not self.cache[0]:
+                    self._cache()
+            else:
+                self.cache[0][0] = self.cache[0][0][j + 1:]
+            if len(features) == request:
+                break
+        return tuple(numpy.asarray(data) for data in (features, targets))
 
 
 class DataIterator(six.Iterator):

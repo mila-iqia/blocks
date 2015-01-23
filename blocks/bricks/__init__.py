@@ -36,7 +36,8 @@ class Random(Brick):
         if getattr(self, '_theano_rng', None) is not None:
             return self._theano_rng
         else:
-            return tensor.shared_randomstreams.RandomStreams(config.default_seed)
+            return tensor.shared_randomstreams.RandomStreams(
+                config.default_seed)
 
     @theano_rng.setter
     def theano_rng(self, theano_rng):
@@ -197,9 +198,9 @@ class Maxout(Brick):
     """Maxout pooling transformation.
 
     A brick that does max pooling over groups of input units. If you use
-    this code in a research project, please cite [GWFM1313]_.
+    this code in a research project, please cite [GWFM13]_.
 
-    .. [GWFM1313] Ian J. Goodfellow, David Warde-Farley, Mehdi Mirza, Aaron
+    .. [GWFM13] Ian J. Goodfellow, David Warde-Farley, Mehdi Mirza, Aaron
        Courville, and Yoshua Bengio, *Maxout networks*, ICML (2013), pp.
        1319-1327.
 

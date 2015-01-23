@@ -1,3 +1,7 @@
+sudo: false
+cache:
+  directories:
+    - $TRAVIS_BUILD_DIR/mnist
 branches:
   only:
     - master
@@ -13,32 +17,36 @@ before_install:
   - |
       if [ $TESTS ]; then
         # Setup Python environment with BLAS libraries
-        sudo apt-get install -qq libatlas3gf-base libatlas-dev liblapack-dev gfortran
         wget -q http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
         chmod +x miniconda.sh
         ./miniconda.sh -b
-        export PATH=/home/travis/miniconda/bin:$PATH
+        export PATH=$HOME/miniconda/bin:$PATH
         conda update -q --yes conda
-        # Download MNIST for tests
-        (mkdir mnist
-        cd mnist
-        curl -O http://yann.lecun.com/exdb/mnist/train-images-idx3-ubyte.gz \
-             -O http://yann.lecun.com/exdb/mnist/train-labels-idx1-ubyte.gz \
-             -O http://yann.lecun.com/exdb/mnist/t10k-images-idx3-ubyte.gz \
-             -O http://yann.lecun.com/exdb/mnist/t10k-labels-idx1-ubyte.gz
-        gunzip *-ubyte.gz)
+        mv license_academic_20141009155056.txt $HOME/.continuum
+        # Download MNIST for tests if not loaded from cache
+        if find mnist -empty | read; then
+          mkdir mnist
+          cd mnist
+          curl -O http://yann.lecun.com/exdb/mnist/train-images-idx3-ubyte.gz \
+               -O http://yann.lecun.com/exdb/mnist/train-labels-idx1-ubyte.gz \
+               -O http://yann.lecun.com/exdb/mnist/t10k-images-idx3-ubyte.gz \
+               -O http://yann.lecun.com/exdb/mnist/t10k-labels-idx1-ubyte.gz
+          gunzip *-ubyte.gz
+          cd -
+        fi
         export BLOCKS_DATA_PATH=$PWD
       fi
 install:
   # Install all Python dependencies
   - |
       if [ $TESTS ]; then
-        conda install -q --yes python=$TRAVIS_PYTHON_VERSION nose numpy pip coverage six scipy
+        conda install -q --yes python=$TRAVIS_PYTHON_VERSION mkl nose numpy pip coverage six scipy
         pip install -q --no-deps git+git://github.com/Theano/Theano.git # Development version
         pip install -q nose2[coverage-plugin] coveralls
-        (git clone -q git://github.com/lisa-lab/pylearn2.git # Pylearn2 doesn't support pip
+        git clone -q git://github.com/lisa-lab/pylearn2.git # Pylearn2 doesn't support pip
         cd pylearn2
-        python setup.py -q develop)
+        python setup.py -q develop
+        cd -
       fi
   - |
       if [ $FORMAT ]; then
@@ -50,15 +58,17 @@ script:
       if [ $TESTS ]; then
         python setup.py -q install # Tests setup.py (also installs dill)
         # Must export environment variable so that the subprocess is aware of it
-        export THEANO_FLAGS=floatX=$TESTS,blas.ldflags='-lblas -lgfortran'
+        export THEANO_FLAGS=floatX=$TESTS
         # Running nose2 within coverage makes imports count towards coverage
         coverage run --source=blocks -m nose2.__main__ tests
       fi
   - |
+      export EXIT=0
       if [ $FORMAT ]; then
-        flake8 blocks tests
+        flake8 blocks bin tests examples || export EXIT=1
         # Ignore D100-103 errors (non-existing docstrings)
-        pep257 blocks --numpy --ignore=D100,D101,D102,D103
+        pep257 blocks bin tests examples --numpy --ignore=D100,D101,D102,D103 || export EXIT=1
+        return $EXIT
       fi
 after_script:
   - if [ $TESTS ]; then coveralls; fi

@@ -69,7 +69,7 @@ def test_training_resumption():
 
         if with_serialization:
             string_io = BytesIO()
-            dill.dump(main_loop, string_io)
+            dill.dump(main_loop, string_io, fmode=dill.CONTENTS_FMODE)
             string_io.seek(0)
             main_loop = dill.load(string_io)
 
