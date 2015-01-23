@@ -2,6 +2,9 @@ sudo: false
 cache:
   directories:
     - miniconda
+    - pylearn2
+    - mnist
+    - .local
 branches:
   only:
     - master
@@ -50,7 +53,7 @@ install:
           python setup.py -q develop)
         else
           (cd pylearn2
-          git pull
+          git pull)
         fi
       fi
   - |
