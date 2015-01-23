@@ -49,8 +49,9 @@ class Dataset(object):
 
     def __init__(self, sources=None):
         if sources is not None:
-            if not all(source in self.provides_sources for source in sources):
-                raise ValueError("Unable to provide requested sources")
+            if not sources or not all(source in self.provides_sources
+                                      for source in sources):
+                raise ValueError("unable to provide requested sources")
             self.sources = sources
 
     @property

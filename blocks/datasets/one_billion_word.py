@@ -34,13 +34,31 @@ class TextFile(Dataset):
         in each example being a single list of numbers. If 'character' the
         dictionary is expected to contain single letters as keys. A single
         example will be a list of lists, each sublist representing a word.
+    preprocess : function, optional
+        A function which takes a sentence (string) as an input and returns
+        a modified string. For example ``str.lower`` in order to lowercase
+        the sentence before numberizing.
+
+    Examples
+    --------
+    >>> with open('sentences.txt', 'w') as f:
+    ...     f.write("This is a sentence\\n")
+    ...     f.write("This another one")
+    >>> dictionary = {'<UNK>': 0, '</S>': 1, 'this': 2, 'a': 3, 'one': 4}
+    >>> text_data = TextFile(files=['sentences.txt'], dictionary=dictionary,
+    ...                      bos_token=None, preprocess=str.lower)
+    >>> state = text_data.open()
+    >>> for sentence in text_data.get_default_stream().get_epoch_iterator():
+    ...     print(sentence)
+    ([2, 0, 3, 0, 1],)
+    ([2, 0, 4, 1],)
 
     """
     provides_sources = ('features',)
     default_scheme = None
 
     def __init__(self, files, dictionary, bos_token='<S>', eos_token='</S>',
-                 unk_token='<UNK>', level='word'):
+                 unk_token='<UNK>', level='word', preprocess=None):
         self.files = files
         self.dictionary = dictionary
         if bos_token is not None and bos_token not in dictionary:
@@ -53,6 +71,7 @@ class TextFile(Dataset):
             raise ValueError
         self.unk_token = unk_token
         self.level = level
+        self.preprocess = preprocess
 
     def open(self):
         class TextFileState(object):
@@ -68,24 +87,23 @@ class TextFile(Dataset):
     def get_data(self, state=None, request=None):
         if request is not None:
             raise ValueError
-        data = []
-        while len(data) < request:
+        while True:
             sentence = state.file.readline()
             if not sentence:
                 state.file.close()
-                if state.current_index == len(self.which_partitions) - 1:
-                    if not data:
-                        raise StopIteration
-                    else:
-                        break
+                if state.current_index == len(self.files) - 1:
+                    raise StopIteration
                 else:
                     state.current_index += 1
                     state.file = self._open_file(state.current_index)
             else:
-                data.append(
-                    [self.dictionary['<S>']] +
-                    [self.dictionary.get(word, self.dictionary['<UNK>'])
-                     for word in sentence.split()] + [self.dictionary['</S>']])
+                break
+        if self.preprocess is not None:
+            sentence = self.preprocess(sentence)
+        data = [self.dictionary[self.bos_token]] if self.bos_token else []
+        data += [self.dictionary.get(word, self.dictionary[self.unk_token])
+                 for word in sentence.split()]
+        data += [self.dictionary[self.eos_token]] if self.eos_token else []
         return (data,)
 
 
