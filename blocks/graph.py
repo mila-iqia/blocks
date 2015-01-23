@@ -1,13 +1,17 @@
 """Annotated computation graph management."""
 import logging
+from itertools import chain
 
 import theano
 from theano import Variable
+from theano.gof import graph
+from theano.gof.sched import make_dependence_cmp, sort_apply_nodes
 from theano.tensor.shared_randomstreams import RandomStreams
 
 from blocks.utils import is_graph_input, is_shared_variable
 
 logger = logging.getLogger(__name__)
+dependence = make_dependence_cmp()
 
 
 class ComputationGraph(object):
@@ -33,46 +37,37 @@ class ComputationGraph(object):
         self._get_variables()
 
     def _get_variables(self):
-        self.variables = set()
-        self.applies = set()
-        self.application_calls = set()
-        self.bricks = set()
-        self.updates = []
+        application_calls = set()
+        updates = []
 
-        def recursion(current):
-            self.variables.add(current)
+        inputs = graph.inputs(self.outputs)
+        sorted_apply_nodes = sort_apply_nodes([inputs], self.outputs,
+                                              [dependence])
+        seen = set()
+        variables = [var for var in list(chain(
+            *[apply_node.inputs for apply_node in sorted_apply_nodes]))
+            if not (var in seen or seen.add(var))] + self.outputs
+        inputs = [v for v in inputs if is_graph_input(v)]
 
-            if hasattr(current.tag, 'application_call'):
-                logger.debug("found application call of {}".format(current))
-                application_call = current.tag.application_call
-                if application_call not in self.application_calls:
-                    self.application_calls.add(application_call)
-                    for av in application_call.auxiliary_variables:
-                        recursion(av)
-                    brick = application_call.brick
-                    if brick not in self.bricks:
-                        self.bricks.add(brick)
-                        for av in brick.auxiliary_variables:
-                            recursion(av)
-                    self.updates.extend(application_call.updates)
-            if current.owner:
-                owner = current.owner
-                if owner not in self.applies:
-                    if hasattr(owner.tag, 'updates'):
-                        logger.debug("found updates in application of {}"
-                                     .format(owner))
-                        self.updates.extend(owner.tag.updates.items())
-                    self.applies.add(owner)
-                    for input_ in owner.inputs:
-                        if input_ not in self.variables:
-                            recursion(input_)
+        i = 0
+        while i < len(variables):
+            var = variables[i]
+            if hasattr(var.tag, 'application_call'):
+                application_call = var.tag.application_call
+                if application_call not in application_calls:
+                    variables = (
+                        variables[:i + 1] +
+                        [av for av in application_call.auxiliary_variables
+                         if av not in variables] +
+                        variables[i + 1:])
+                    i += len(application_call.auxiliary_variables)
+            i += 1
 
-        for output in self.outputs:
-            if output not in self.variables:
-                recursion(output)
-        self.inputs = [v for v in self.variables if is_graph_input(v)]
+        self.updates = updates
+        self.inputs = inputs
+        self.variables = variables
 
-    def get_variables(self, roles=None):
+    def get_variables(self, roles=None, predicate=None):
         """Return variables of the computation graph.
 
         Parameters
@@ -80,12 +75,20 @@ class ComputationGraph(object):
         roles : list of :class:`VariableRole` attributes, optional
             If given, only returns variables that have any of the roles
             given.
+        predicate : function
+            A function which takes a variable as an input, and returns
+            ``True`` if the value should be returned, ``False`` otherwise.
 
         """
-        if roles is None:
-            return self.variables
-        return set([var for var in self.variables if hasattr(var.tag, 'roles')
-                    and bool(set(roles) & set(var.tag.roles))])
+        if roles is not None:
+            variables = [var for var in self.variables
+                         if hasattr(var.tag, 'roles') and
+                         bool(set(roles) & set(var.tag.roles))]
+        else:
+            variables = self.variables
+        if predicate is not None:
+            variables = [var for var in variables if predicate(var)]
+        return variables
 
     def get_shared_variables(self):
         """Returns all shared variables found in the computation graph."""

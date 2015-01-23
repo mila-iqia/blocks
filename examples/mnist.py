@@ -6,11 +6,13 @@ from theano import tensor
 
 from blocks.algorithms import GradientDescent, SteepestDescent
 from blocks.bricks import MLP, Tanh, Softmax
+from blocks.bricks.base import VariableRole
 from blocks.bricks.cost import CategoricalCrossEntropy, MisclassficationRate
 from blocks.initialization import IsotropicGaussian, Constant
 from blocks.datasets import DataStream
 from blocks.datasets.mnist import MNIST
 from blocks.datasets.schemes import SequentialScheme
+from blocks.graph import ComputationGraph
 from blocks.monitoring import aggregation
 from blocks.extensions import FinishAfter, Printing
 from blocks.extensions.saveload import SerializeMainLoop
@@ -29,6 +31,12 @@ def main(save_to, num_epochs):
     probs = mlp.apply(x)
     cost = CategoricalCrossEntropy().apply(y.flatten(), probs)
     error_rate = MisclassficationRate().apply(y.flatten(), probs)
+
+    cg = ComputationGraph([cost])
+    weights = cg.get_variables(roles=[VariableRole.WEIGHTS])
+    cost = cost + .00005 * weights.pop().norm(2) + \
+        .00005 * weights.pop().norm(2)
+    cost.name = 'final_cost'
 
     mnist_train = MNIST("train")
     mnist_test = MNIST("test")

@@ -39,6 +39,7 @@ def test_computation_graph():
     assert set(cg.inputs) == {x, y}
     assert set(cg.outputs) == {a, b}
     assert set(cg.variables) == {x, y, z, a, b}
+    assert cg.variables[2] is z
     assert ComputationGraph(a).inputs == cg.inputs
 
     cg2 = cg.replace({z: r})
