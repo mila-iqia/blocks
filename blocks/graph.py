@@ -36,6 +36,7 @@ class ComputationGraph(object):
         self.variables = set()
         self.applies = set()
         self.application_calls = set()
+        self.bricks = set()
         self.updates = []
 
         def recursion(current):
@@ -48,6 +49,11 @@ class ComputationGraph(object):
                     self.application_calls.add(application_call)
                     for av in application_call.auxiliary_variables:
                         recursion(av)
+                    brick = application_call.brick
+                    if brick not in self.bricks:
+                        self.bricks.add(brick)
+                        for av in brick.auxiliary_variables:
+                            recursion(av)
                     self.updates.extend(application_call.updates)
             if current.owner:
                 owner = current.owner
