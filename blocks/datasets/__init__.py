@@ -148,6 +148,37 @@ class Dataset(object):
             raise ValueError("Dataset does not provide a default iterator")
         return DataStream(self, iteration_scheme=self.default_scheme)
 
+    def filter_sources(self, data):
+        """Filter the requested sources from those provided by the dataset.
+
+        A dataset can be asked to provide only a subset of the sources it
+        can provide (e.g. asking MNIST only for the features, not for the
+        labels). A dataset can choose to use this information to e.g. only
+        load the requested sources into memory. However, in case the
+        performance gain of doing so would be negligible, the dataset can
+        load all the data sources and then use this method to return only
+        those requested.
+
+        Parameters
+        ----------
+        data : tuple of objects
+            The data from all the sources i.e. should be of the same length
+            as :attr:`provides_sources`.
+
+        Examples
+        --------
+        >>> class Random(Dataset):
+        ...     provides_sources = ('features', 'targets')
+        ...     def get_data(self, state=None, request=None):
+        ...         data = (numpy.random.rand(10), numpy.random.randn(3))
+        ...         return self.filter_sources(data)
+        >>> Random(sources=('targets',)).get_data() # doctest: +SKIP
+        (array([-1.82436737,  0.08265948,  0.63206168]),)
+
+        """
+        return tuple([d for d, s in zip(data, self.provides_sources)
+                      if s in self.sources])
+
 
 class InMemoryDataset(Dataset):
     """Datasets who hold all of their data in memory.
@@ -177,7 +208,7 @@ class InMemoryDataset(Dataset):
     >>> from blocks.datasets.mnist import MNIST
     >>> mnist = MNIST('train')
     >>> print("{:,d} KB".format(
-    ...     mnist.data['features'].nbytes / 1024)) # doctest: +SKIP
+    ...     mnist.features.nbytes / 1024)) # doctest: +SKIP
     183,750 KB
     >>> with open('mnist.pkl', 'wb') as f:
     ...     dill.dump(mnist, f)
@@ -189,7 +220,7 @@ class InMemoryDataset(Dataset):
 
     >>> with open('mnist.pkl', 'rb') as f:
     ...     mnist = dill.load(f)
-    >>> print(mnist.data['features'].shape)
+    >>> print(mnist.features.shape)
     (60000, 784)
 
     However, if the data files can't be found on disk, accessing the data
@@ -200,7 +231,7 @@ class InMemoryDataset(Dataset):
     >>> config.data_path = '/non/existing/path'
     >>> with open('mnist.pkl', 'rb') as f:
     ...     mnist = dill.load(f)
-    >>> print(mnist.data['features'].shape) # doctest: +SKIP
+    >>> print(mnist.features.shape) # doctest: +SKIP
     Traceback (most recent call last):
       ...
     FileNotFoundError: [Errno 2] No such file or directory: ...
@@ -209,7 +240,7 @@ class InMemoryDataset(Dataset):
     dataset, correct the situation, and then continue.
 
     >>> config.data_path = correct_path
-    >>> print(mnist.data['features'].shape)
+    >>> print(mnist.features.shape)
     (60000, 784)
 
     .. doctest::

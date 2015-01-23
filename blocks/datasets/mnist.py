@@ -11,7 +11,7 @@ MNIST_IMAGE_MAGIC = 2051
 MNIST_LABEL_MAGIC = 2049
 
 
-@lazy_properties('data')
+@lazy_properties('features', 'targets')
 class MNIST(InMemoryDataset):
     """The MNIST dataset of handwritten digits.
 
@@ -71,20 +71,22 @@ class MNIST(InMemoryDataset):
             data = 't10k-images-idx3-ubyte'
             labels = 't10k-labels-idx1-ubyte'
         data_path = os.path.join(config.data_path, 'mnist')
-        X = read_mnist_images(
+        x = read_mnist_images(
             os.path.join(data_path, data),
             'bool' if self.binary
             else theano.config.floatX)[self.start:self.stop]
-        X = X.reshape((X.shape[0], numpy.prod(X.shape[1:])))
+        x = x.reshape((x.shape[0], numpy.prod(x.shape[1:])))
         y = read_mnist_labels(
             os.path.join(data_path, labels))[self.start:self.stop,
                                              numpy.newaxis]
-        self.data = {'features': X, 'targets': y}
+        self.features = x
+        self.targets = y
 
     def get_data(self, state=None, request=None):
         if state is not None:
             raise ValueError("MNIST does not have a state")
-        return tuple(self.data[source][request] for source in self.sources)
+        return self.filter_sources((self.features[request],
+                                    self.targets[request]))
 
 
 def read_mnist_images(filename, dtype=None):

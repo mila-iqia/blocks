@@ -8,12 +8,12 @@ from blocks.datasets.mnist import MNIST
 
 def test_mnist():
     mnist_train = MNIST('train', start=20000)
-    assert len(mnist_train.data['features']) == 40000
-    assert len(mnist_train.data['targets']) == 40000
+    assert len(mnist_train.features) == 40000
+    assert len(mnist_train.targets) == 40000
     assert mnist_train.num_examples == 40000
     mnist_test = MNIST('test', sources=('targets',))
-    assert len(mnist_test.data['features']) == 10000
-    assert len(mnist_test.data['targets']) == 10000
+    assert len(mnist_test.features) == 10000
+    assert len(mnist_test.targets) == 10000
     assert mnist_test.num_examples == 10000
 
     first_feature, first_target = mnist_train.get_data(request=[0])

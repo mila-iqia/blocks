@@ -3,7 +3,90 @@ import os
 from blocks import config
 from blocks.datasets import Dataset
 from blocks.datasets.schemes import ConstantScheme
-from blocks.utils import update_instance
+
+
+class TextFile(Dataset):
+    """Reads text files and numberizes them given a dictionary.
+
+    Parameters
+    ----------
+    files : list of str
+        The names of the files in order which they should be read. Each
+        file is expected to have a sentence per line.
+    dictionary : str or dict
+        Either the path to a Pickled dictionary mapping tokens to integers,
+        or the dictionary itself. At the very least this dictionary must
+        map the unknown word-token to an integer.
+    bos_token : str or None, optional
+        The beginning-of-sentence (BOS) token in the dictionary that
+        denotes the beginning of a sentence. Is ``<S>`` by default. If
+        passed ``None`` no beginning of sentence markers will be added.
+    eos_token : str or None, optional
+        The end-of-sentence (EOS) token is ``</S>`` by default, see
+        ``bos_taken``.
+    unk_token : str, optional
+        The token in the dictionary to fall back on when a token could not
+        be found in the dictionary.
+    level : 'word' or 'character', optional
+        If 'word' the dictionary is expected to contain full words. The
+        sentences in the text file will be split at the spaces, and each
+        word replaced with its number as given by the dictionary, resulting
+        in each example being a single list of numbers. If 'character' the
+        dictionary is expected to contain single letters as keys. A single
+        example will be a list of lists, each sublist representing a word.
+
+    """
+    provides_sources = ('features',)
+    default_scheme = None
+
+    def __init__(self, files, dictionary, bos_token='<S>', eos_token='</S>',
+                 unk_token='<UNK>', level='word'):
+        self.files = files
+        self.dictionary = dictionary
+        if bos_token is not None and bos_token not in dictionary:
+            raise ValueError
+        self.bos_token = bos_token
+        if eos_token is not None and eos_token not in dictionary:
+            raise ValueError
+        self.eos_token = eos_token
+        if unk_token not in dictionary:
+            raise ValueError
+        self.unk_token = unk_token
+        self.level = level
+
+    def open(self):
+        class TextFileState(object):
+            pass
+        state = TextFileState()
+        state.current_index = 0
+        state.file = self._open_file(state.current_index)
+        return state
+
+    def _open_file(self, partition_index):
+        return open(self.files[partition_index])
+
+    def get_data(self, state=None, request=None):
+        if request is not None:
+            raise ValueError
+        data = []
+        while len(data) < request:
+            sentence = state.file.readline()
+            if not sentence:
+                state.file.close()
+                if state.current_index == len(self.which_partitions) - 1:
+                    if not data:
+                        raise StopIteration
+                    else:
+                        break
+                else:
+                    state.current_index += 1
+                    state.file = self._open_file(state.current_index)
+            else:
+                data.append(
+                    [self.dictionary['<S>']] +
+                    [self.dictionary.get(word, self.dictionary['<UNK>'])
+                     for word in sentence.split()] + [self.dictionary['</S>']])
+        return (data,)
 
 
 class OneBillionWord(Dataset):
@@ -42,9 +125,12 @@ class OneBillionWord(Dataset):
     default_scheme = ConstantScheme(1)
     sources = ('features',)
 
-    def __init__(self, which_set, which_partitions, vocabulary,
+    def __init__(self, which_set, which_partitions, dictionary,
                  preprocess=None):
-        update_instance(self, locals())
+        self.which_set = which_set
+        self.which_partitions = which_partitions
+        self.dictionary = dictionary
+        self.preprocess = preprocess
 
     def open(self):
         class State(object):
@@ -84,7 +170,7 @@ class OneBillionWord(Dataset):
                     state.file = self._open_file(state.current_index)
             else:
                 data.append(
-                    [self.vocabulary['<S>']] +
-                    [self.vocabulary.get(word, self.vocabulary['<UNK>'])
-                     for word in sentence.split()] + [self.vocabulary['</S>']])
+                    [self.dictionary['<S>']] +
+                    [self.dictionary.get(word, self.dictionary['<UNK>'])
+                     for word in sentence.split()] + [self.dictionary['</S>']])
         return (data,)

@@ -17,7 +17,7 @@ def test_in_memory():
     for i, (features, targets) in enumerate(epoch):
         if i == 1:
             break
-    assert numpy.all(features == mnist.data['features'][256:512])
+    assert numpy.all(features == mnist.features[256:512])
 
     # Pickle the epoch and make sure that the data wasn't dumped
     filename = 'epoch_test.pkl'
@@ -32,7 +32,7 @@ def test_in_memory():
         with open(filename, 'rb') as f:
             epoch = dill.load(f)
         features, targets = next(epoch)
-        assert numpy.all(features == mnist.data['features'][512:768])
+        assert numpy.all(features == mnist.features[512:768])
     finally:
         # Clean up
         os.remove(filename)
