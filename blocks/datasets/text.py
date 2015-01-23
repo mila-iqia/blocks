@@ -109,13 +109,14 @@ class TextFile(Dataset):
                 break
         if self.preprocess is not None:
             sentence = self.preprocess(sentence)
+        data = [self.dictionary[self.bos_token]] if self.bos_token else []
         if self.level == 'word':
-            data = [self.dictionary[self.bos_token]] if self.bos_token else []
             data += [self.dictionary.get(word, self.dictionary[self.unk_token])
                      for word in sentence.split()]
-            data += [self.dictionary[self.eos_token]] if self.eos_token else []
         else:
-            raise NotImplementedError
+            data += [self.dictionary.get(char, self.dictionary[self.unk_token])
+                     for char in sentence.strip()]
+        data += [self.dictionary[self.eos_token]] if self.eos_token else []
         return (data,)
 
 
