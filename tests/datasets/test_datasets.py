@@ -1,9 +1,13 @@
 from collections import OrderedDict
 
+import numpy
 from six.moves import zip
 
-from blocks.datasets import ContainerDataset, DataStream, DataStreamMapping
-from blocks.datasets.schemes import ConstantScheme, BatchSizeScheme
+from blocks.datasets import (CachedDataStream, ContainerDataset, DataStream,
+                             DataStreamMapping)
+from blocks.datasets.mnist import MNIST
+from blocks.datasets.schemes import (BatchSizeScheme, ConstantScheme,
+                                     SequentialScheme)
 
 
 def test_dataset():
@@ -18,10 +22,6 @@ def test_dataset():
     # Check if iterating over multiple epochs works
     for i, epoch in zip(range(2), stream.iterate_epochs()):
         assert list(epoch) == list(zip(data))
-    for i, epoch in enumerate(stream.iterate_epochs()):
-        assert list(epoch) == list(zip(data))
-        if i == 1:
-            break
 
     # Check whether the returning as a dictionary of sources works
     assert next(stream.get_epoch_iterator(as_dict=True)) == {"data": 1}
@@ -45,7 +45,6 @@ def test_sources_selection():
 
 
 def test_data_driven_epochs():
-
     class TestDataset(ContainerDataset):
         sources = ('data',)
         default_scheme = ConstantScheme(1)
@@ -96,3 +95,33 @@ def test_data_driven_epochs():
     stream = DataStream(TestDataset(), iteration_scheme=TestScheme())
     for i, epoch in zip(range(2), stream.iterate_epochs()):
         assert list(epoch) == epochs[i]
+
+
+def test_cache():
+    mnist = MNIST('test')
+    stream = DataStream(
+        mnist, iteration_scheme=SequentialScheme(mnist.num_examples, 11))
+    cached_stream = CachedDataStream(stream, ConstantScheme(7))
+    epoch = cached_stream.get_epoch_iterator()
+
+    # Make sure that cache is filled as expected
+    for (features, targets), cache_size in zip(epoch, [4, 8, 1, 5, 9, 2,
+                                                       6, 10, 3, 7, 0, 4]):
+        assert len(cached_stream.cache[0]) == cache_size
+
+    # Make sure that the epoch finishes correctly
+    for features, targets in cached_stream.get_epoch_iterator():
+        pass
+    assert len(features) == mnist.num_examples % 7
+    assert not cached_stream.cache[0]
+
+    # Ensure that the epoch transition is correct
+    cached_stream = CachedDataStream(stream, ConstantScheme(7, times=3))
+    for _, epoch in zip(range(2), cached_stream.iterate_epochs()):
+        cache_sizes = [4, 8, 1]
+        for i, (features, targets) in enumerate(epoch):
+            assert len(cached_stream.cache[0]) == cache_sizes[i]
+            assert len(features) == 7
+            assert numpy.all(mnist.features[i * 7:(i + 1) * 7] ==
+                             features)
+        assert i == 2

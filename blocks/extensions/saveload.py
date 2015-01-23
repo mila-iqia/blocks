@@ -57,5 +57,5 @@ class SerializeMainLoop(SaveLoadBase):
     def do(self, callback_name, *args):
         """Pickle the main loop object to the disk."""
         with open(self.path, "wb") as destination:
-            dill.dump(self.main_loop, destination)
+            dill.dump(self.main_loop, destination, fmode=dill.CONTENTS_FMODE)
         self.log_saving_done(self.path)
