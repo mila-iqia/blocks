@@ -1,8 +1,8 @@
 sudo: false
 cache:
   directories:
-    - miniconda
-    - mnist
+    - $HOME/miniconda
+    - $TRAVIS_BUILD_DIR/mnist
 branches:
   only:
     - master
@@ -19,7 +19,7 @@ before_install:
   - |
       if [ $TESTS ]; then
         # Set up Python environment
-        export PATH=/home/travis/miniconda/bin:$PATH
+        export PATH=$HOME/miniconda/bin:$PATH
         if [ ! `which conda` ]; then
           wget -q http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
           chmod +x miniconda.sh
