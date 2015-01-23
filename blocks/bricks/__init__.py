@@ -149,9 +149,11 @@ class Linear(Initializable):
         self.params.append(shared_floatx_zeros((self.input_dim,
                                                 self.output_dim),
                            name="W"))
+        VariableRole.add_role(self.params[0], VariableRole.WEIGHTS)
         if self.use_bias:
             self.params.append(shared_floatx_zeros((self.output_dim,),
                                name="b"))
+            VariableRole.add_role(self.params[1], VariableRole.BIASES)
 
     def _initialize(self):
         if self.use_bias:
@@ -162,7 +164,7 @@ class Linear(Initializable):
         self.weights_init.initialize(W, self.rng)
 
     @application(inputs=['input_'], outputs=['output'])
-    def apply(self, input_, application_call):
+    def apply(self, input_):
         """Apply the linear transformation.
 
         Parameters
@@ -183,14 +185,6 @@ class Linear(Initializable):
         output = tensor.dot(input_, W)
         if self.use_bias:
             output += b
-
-        # Attach regularization terms as auxiliary variables
-        application_call.add_auxiliary_variable(
-            abs(W).sum(), roles=[VariableRole.COST], name='L1_W')
-        application_call.add_auxiliary_variable(
-            tensor.sqrt(tensor.sqr(W).sum()), roles=[VariableRole.COST],
-            name='L2_W')
-
         return output
 
 

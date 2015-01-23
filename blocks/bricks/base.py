@@ -228,7 +228,8 @@ class Application(object):
                 brick.name, self.name, name)
             copy.tag.application_call = call
             copy.tag.name = name  # Blocks name
-            copy.tag.roles = getattr(copy.tag, 'roles', []) + roles
+            for role in roles:
+                VariableRole.add_role(variable, role)
             return copy
 
         for i, input_ in enumerate(args):
@@ -738,10 +739,31 @@ def lazy(func):
 
 class VariableRole(object):
     """A collection of constants referring to variable roles."""
+    #: Any variable attached to a brick or application call
     AUXILIARY = 'auxiliary'
+    #: A scalar variable which represents some cost or regularization penalty
     COST = 'cost'
+    #: The input to a brick
     INPUT = 'input'
+    #: The output of a brick
     OUTPUT = 'output'
+    #: The weights of a particular linear transformation
+    WEIGHTS = 'weights'
+    #: The biases added after a linear transformation
+    BIASES = 'biases'
+
+    @staticmethod
+    def add_role(var, role):
+        """Add a role to a given Theano variable.
+
+        Parameters
+        ----------
+        var : Theano variable
+            The variable to assign the new role to.
+        role : attribute of :class:`VariableRole`
+
+        """
+        var.tag.roles = getattr(var.tag, 'roles', []) + [role]
 
 
 class ApplicationCall(object):
@@ -833,7 +855,8 @@ class ApplicationCall(object):
             roles = []
         if VariableRole.AUXILIARY not in roles:
             roles.append(VariableRole.AUXILIARY)
-        expression.tag.roles = getattr(expression.tag, 'roles', []) + roles
+        for role in roles:
+            VariableRole.add_role(expression, role)
         expression.tag.application_call = self
         self.auxiliary_variables.append(expression)
 
