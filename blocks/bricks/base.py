@@ -747,14 +747,19 @@ class VariableRole(object):
     INPUT = 'input'
     #: The output of a brick
     OUTPUT = 'output'
+    #: Any parameter of the model
+    PARAMETER = 'parameter'
     #: The weights of a particular linear transformation
     WEIGHTS = 'weights'
     #: The biases added after a linear transformation
     BIASES = 'biases'
 
-    @staticmethod
-    def add_role(var, role):
+    @classmethod
+    def add_role(cls, var, role):
         """Add a role to a given Theano variable.
+
+        Some roles will imply others, using this helper function will make
+        sure that these roles are also added.
 
         Parameters
         ----------
@@ -763,7 +768,11 @@ class VariableRole(object):
         role : attribute of :class:`VariableRole`
 
         """
-        var.tag.roles = getattr(var.tag, 'roles', []) + [role]
+        roles = getattr(var.tag, 'roles', [])
+        if role in (cls.WEIGHTS, cls.BIASES) and cls.PARAMETER not in roles:
+            roles.append(cls.PARAMETER)
+        roles.append(role)
+        var.tag.roles = roles
 
 
 class ApplicationCall(object):
