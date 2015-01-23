@@ -19,12 +19,12 @@ before_install:
   - |
       if [ $TESTS ]; then
         # Set up Python environment
+        export PATH=/home/travis/miniconda/bin:$PATH
         if [ ! `which conda` ]; then
           wget -q http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
           chmod +x miniconda.sh
           ./miniconda.sh -b
         fi
-        export PATH=/home/travis/miniconda/bin:$PATH
         conda update -q --yes conda
         # Download MNIST for tests
         if [ ! -d mnist ]; then
@@ -43,7 +43,7 @@ install:
   # Install all Python dependencies
   - |
       if [ $TESTS ]; then
-        conda install -q --yes python=$TRAVIS_PYTHON_VERSION nose numpy pip coverage six scipy
+        conda install -q --yes python=$TRAVIS_PYTHON_VERSION mkl nose numpy pip coverage six scipy
         pip install -q --no-deps git+git://github.com/Theano/Theano.git # Development version
         pip install -q nose2[coverage-plugin] coveralls
         git clone -q git://github.com/lisa-lab/pylearn2.git # Pylearn2 doesn't support pip
