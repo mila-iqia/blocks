@@ -618,7 +618,11 @@ class NGramStream(CachedDataStream):
 
     This data stream wrapper takes as an input a data stream outputting
     batches of sentences. From these sentences n-grams of a fixed order
-    (e.g. bigrams, trigrams, etc.) are extracted and returned.
+    (e.g. bigrams, trigrams, etc.) are extracted and returned. It also
+    creates a ``targets`` data source. For each example, the target is the
+    word immediately following that n-gram. It is normally used for
+    language modelling, where we try to predict the next word from the
+    previous n words.
 
     Parameters
     ----------

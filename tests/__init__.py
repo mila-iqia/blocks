@@ -11,7 +11,8 @@ def temporary_files(*files):
                 test(*args, **kwargs)
             finally:
                 for file_ in files:
-                    os.remove(file_)
+                    if os.path.exists(file_):
+                        os.remove(file_)
         update_wrapper(wrapped_test, test)
         return wrapped_test
     return wrap_test
