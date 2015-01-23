@@ -21,6 +21,7 @@ before_install:
         # Set up Python environment
         export PATH=$HOME/miniconda/bin:$PATH
         if [ ! `which conda` ]; then
+          rm -rf $HOME/miniconda
           wget -q http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
           chmod +x miniconda.sh
           ./miniconda.sh -b
