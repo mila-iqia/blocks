@@ -36,7 +36,8 @@ class TextFile(Dataset):
         word replaced with its number as given by the dictionary, resulting
         in each example being a single list of numbers. If 'character' the
         dictionary is expected to contain single letters as keys. A single
-        example will be a list of lists, each sublist representing a word.
+        example will be a list of character numbers, starting with the
+        first non-whitespace character and finishing with the last one.
     preprocess : function, optional
         A function which takes a sentence (string) as an input and returns
         a modified string. For example ``str.lower`` in order to lowercase
