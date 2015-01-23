@@ -45,7 +45,7 @@ class TextFile(Dataset):
     Examples
     --------
     >>> with open('sentences.txt', 'w') as f:
-    ...     f.write("This is a sentence\\n")
+    ...     f.write("This is a sentence\n")
     ...     f.write("This another one")
     >>> dictionary = {'<UNK>': 0, '</S>': 1, 'this': 2, 'a': 3, 'one': 4}
     >>> text_data = TextFile(files=['sentences.txt'],
