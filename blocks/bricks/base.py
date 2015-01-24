@@ -1,6 +1,6 @@
 import inspect
 from abc import ABCMeta
-from collections import OrderedDict
+from collections import OrderedDict, MutableSequence
 from types import MethodType
 
 import six
@@ -8,7 +8,8 @@ from six import add_metaclass
 from theano import tensor
 
 from blocks.graph import Annotation, VariableRole
-from blocks.utils import pack, repr_attrs, reraise_as, unpack
+from blocks.utils import (pack, repr_attrs, reraise_as, unpack,
+                          is_shared_variable)
 
 
 def create_unbound_method(func, cls):
@@ -20,6 +21,42 @@ def create_unbound_method(func, cls):
 
 # Rename built-in property to avoid conflict with Application.property
 property_ = property
+
+
+class Parameters(MutableSequence):
+    def __init__(self, brick, params):
+        self.brick = brick
+        self._params = []
+        for param in params:
+            self.append(param)
+
+    def __repr__(self):
+        return repr(self._params)
+
+    def __getitem__(self, key):
+        return self._params.__getitem__(key)
+
+    def _annotate(self, value):
+        if is_shared_variable(value):
+            VariableRole.add_role(value, VariableRole.PARAMETER)
+            annotations = getattr(value.tag, 'annotations', []) + [self.brick]
+            value.tag.annotations = annotations
+        elif value is not None:
+            raise ValueError
+
+    def __setitem__(self, key, value):
+        self._annotate(value)
+        self._params.__setitem__(key, value)
+
+    def __delitem__(self, key):
+        self._params.__delitem__(key)
+
+    def __len__(self):
+        return self._params.__len__()
+
+    def insert(self, index, value):
+        self._annotate(value)
+        self._params.insert(index, value)
 
 
 class Application(object):
@@ -225,7 +262,8 @@ class Application(object):
             copy = variable.copy()
             copy.name = "{}_{}_{}".format(  # Theano name
                 brick.name, self.name, name)
-            copy.tag.application_call = call
+            annotations = getattr(copy.tag, 'annotations', []) + [brick, call]
+            copy.tag.annotations = annotations
             copy.tag.name = name  # Blocks name
             VariableRole.add_role(variable, role)
             return copy
@@ -486,12 +524,16 @@ class Brick(Annotation):
         self.initialization_config_pushed = False
         super(Brick, self).__init__()
 
-    def add_auxiliary_variable(self, expression, *args, **kwargs):
-        expression.brick = self
-        super(Brick, self).add_auxiliary_variable(expression, *args, **kwargs)
-
     def __repr__(self):
         return repr_attrs(self, 'name')
+
+    @property
+    def params(self):
+        return self._params
+
+    @params.setter
+    def params(self, value):
+        self._params = Parameters(self, value)
 
     def allocate(self):
         """Allocate shared variables for parameters.
@@ -770,7 +812,7 @@ class ApplicationCall(Annotation):
     ...         return x + 1
     >>> x = tensor.vector()
     >>> y = Foo().apply(x)
-    >>> y.tag.application_call # doctest: +ELLIPSIS
+    >>> y.tag.annotations[1] # doctest: +ELLIPSIS
     <blocks.bricks.base.ApplicationCall object at ...>
 
     """
@@ -778,16 +820,6 @@ class ApplicationCall(Annotation):
         self.brick = brick
         self.application = application
         super(ApplicationCall, self).__init__()
-
-    def add_auxiliary_variable(self, expression, *args, **kwargs):
-        """Add an auxiliary variable to this application call.
-
-        See :meth:`Annotation.add_auxiliary_variable`.
-
-        """
-        expression.tag.application_call = self
-        super(ApplicationCall, self).add_auxiliary_variable(expression, *args,
-                                                            **kwargs)
 
 
 def application(*args, **kwargs):

@@ -1,6 +1,33 @@
 from inspect import isclass
 
-from blocks.bricks.base import Brick
+from blocks.bricks.base import ApplicationCall, Brick
+
+
+def get_annotation(var, cls):
+    """A helper function to retrieve an annotation of a particular type.
+
+    Notes
+    -----
+    This function returns the first annotation of a particular type. If
+    there are multiple--there shouldn't be--it will ignore them.
+
+    """
+    for annotation in getattr(var.tag, 'annotations', []):
+        if isinstance(annotation, cls):
+            return annotation
+
+
+def get_brick(var):
+    """A helper function to retrieve the brick that created this variable.
+
+    See :func:`get_annotation`.
+
+    """
+    return get_annotation(var, Brick)
+
+
+def get_application_call(var):
+    return get_annotation(var, ApplicationCall)
 
 
 class VariableFilter(object):
@@ -25,8 +52,9 @@ class VariableFilter(object):
     >>> cg = ComputationGraph(y_hat)
     >>> from blocks.filter import VariableFilter
     >>> var_filter = VariableFilter(roles=[VariableRole.BIASES],
-    ...                             bricks=mlp.linear_transformations[0])
-    >>> first_biases, = var_filter(cg.variables)
+    ...                             bricks=[mlp.linear_transformations[0]])
+    >>> var_filter(cg.variables)
+    [b]
 
     """
     def __init__(self, roles=None, bricks=None):
@@ -48,11 +76,10 @@ class VariableFilter(object):
         if self.bricks is not None:
             filtered_variables = []
             for var in variables:
-                try:
-                    var_brick, = [annotation for annotation in
-                                  getattr(var.tag, 'annotations', [])
-                                  if isinstance(annotation, Brick)]
-                except ValueError:
+                var_brick = get_brick(var)
+                if var_brick is None:
+                    import ipdb; ipdb.set_trace()
+                if var_brick is None:
                     continue
                 for brick in self.bricks:
                     if isclass(brick) and isinstance(var_brick, brick):

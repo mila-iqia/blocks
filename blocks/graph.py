@@ -92,15 +92,14 @@ class ComputationGraph(object):
             if not (var in seen or seen.add(var))] + self.outputs
 
         # While preserving order add auxiliary variables, and collect updates
-        seen = {'application_call': set(), 'annotation': set(), 'brick': set()}
+        seen = set()
         seen_avs = set(main_vars)  # Intermediate variables could be auxiliary
         variables = []
         for var in main_vars:
             variables.append(var)
-            for tag in ('application_call', 'annotation', 'brick'):
-                annotation = getattr(var.tag, tag, None)
-                if annotation and annotation not in seen[tag]:
-                    seen[tag].add(annotation)
+            for annotation in getattr(var.tag, 'annotations', []):
+                if annotation not in seen:
+                    seen.add(annotation)
                     new_avs = [av for av in annotation.auxiliary_variables
                                if not (av in seen_avs or seen_avs.add(av))]
                     variables.extend(new_avs)
@@ -212,7 +211,7 @@ class Annotation(object):
     >>> x = tensor.vector()
     >>> annotation = Annotation()
     >>> annotation.add_auxiliary_variable(x + 1, name='x_plus_1')
-    >>> x.tag.annotation = annotation
+    >>> x.tag.annotations = [annotation]
     >>> y = x ** 2
     >>> from blocks.graph import ComputationGraph
     >>> cg = ComputationGraph([y])
@@ -271,6 +270,8 @@ class Annotation(object):
         {mean_x}
 
         """
+        annotations = getattr(expression.tag, 'annotations', []) + [self]
+        expression.tag.annotations = annotations
         if name is not None:
             expression.name = name
         VariableRole.add_role(expression, VariableRole.AUXILIARY)

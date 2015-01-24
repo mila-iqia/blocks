@@ -13,6 +13,7 @@ from groundhog.datasets import LMIterator
 from groundhog.trainer.SGD import SGD
 
 from blocks.bricks import Tanh
+from blocks.filter import get_brick, get_application_call
 from blocks.graph import VariableRole
 from blocks.bricks.recurrent import GatedRecurrent
 from blocks.select import Selector
@@ -101,12 +102,11 @@ def main():
             generator.cost(x, states=init_states * reset).sum())
         # TODO: better search routine
         states = [v for v in cost.variables
-                  if hasattr(v.tag, 'application_call')
-                  and v.tag.application_call.brick == generator.transition
-                  and (v.tag.application_call.application ==
+                  if get_brick(v) is generator.transition
+                  and (get_application_call(v).application ==
                        generator.transition.apply)
-                  and v.tag.role == VariableRole.OUTPUT
-                  and v.tag.name == 'states']
+                  and VariableRole.OUTPUT in getattr(v.tag, 'roles', [])
+                  and v.name == 'states']
         assert len(states) == 1
         states = states[0]
 
