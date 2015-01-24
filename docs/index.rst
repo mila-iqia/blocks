@@ -1,17 +1,3 @@
-.. image:: https://coveralls.io/repos/bartvm/blocks/badge.svg?branch=master
-   :target: https://coveralls.io/r/bartvm/blocks?branch=master
-
-.. image:: https://travis-ci.org/bartvm/blocks.svg?branch=master
-   :target: https://travis-ci.org/bartvm/blocks
-
-.. image:: https://readthedocs.org/projects/blocks/badge/?version=latest
-   :target: https://blocks.readthedocs.org/
-
-.. image:: https://landscape.io/github/bartvm/blocks/master/landscape.svg
-   :target: https://landscape.io/github/bartvm/blocks/master
-
-|
-
 Welcome to Blocks's documentation!
 ==================================
 Blocks is a framework that helps you build and manage neural network models on
@@ -131,6 +117,18 @@ And train!
     ...                     prefix="test"),
     ...                 Printing()])
     >>> main_loop.run() # doctest: +SKIP
+
+.. image:: https://coveralls.io/repos/bartvm/blocks/badge.svg?branch=master
+   :target: https://coveralls.io/r/bartvm/blocks?branch=master
+
+.. image:: https://travis-ci.org/bartvm/blocks.svg?branch=master
+   :target: https://travis-ci.org/bartvm/blocks
+
+.. image:: https://readthedocs.org/projects/blocks/badge/?version=latest
+   :target: https://blocks.readthedocs.org/
+
+.. image:: https://landscape.io/github/bartvm/blocks/master/landscape.svg
+   :target: https://landscape.io/github/bartvm/blocks/master
 
 Indices and tables
 ==================
