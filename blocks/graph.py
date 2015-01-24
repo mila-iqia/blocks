@@ -158,6 +158,15 @@ def add_role(var, role):
     var.tag.roles = roles
 
 
+def add_annotation(var, annotation):
+    annotations = getattr(var.tag, 'annotations', [])
+    if any(old_annotation.__class__ == annotation.__class__
+           for old_annotation in annotations):
+        raise ValueError
+    else:
+        var.tag.annotations = annotations + [annotation]
+
+
 class Annotation(object):
     """Annotations on Theano variables in a graph.
 
@@ -190,7 +199,7 @@ class Annotation(object):
     >>> x = tensor.vector()
     >>> annotation = Annotation()
     >>> annotation.add_auxiliary_variable(x + 1, name='x_plus_1')
-    >>> x.tag.annotations = [annotation]
+    >>> add_annotation(x, annotation)
     >>> y = x ** 2
     >>> from blocks.graph import ComputationGraph
     >>> cg = ComputationGraph([y])
@@ -249,8 +258,7 @@ class Annotation(object):
         {mean_x}
 
         """
-        annotations = getattr(expression.tag, 'annotations', []) + [self]
-        expression.tag.annotations = annotations
+        add_annotation(expression, self)
         if name is not None:
             expression.name = name
         add_role(expression, AUXILIARY)

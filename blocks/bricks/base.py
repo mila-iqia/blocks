@@ -8,7 +8,8 @@ from six import add_metaclass
 from theano import tensor
 from theano.gof import Variable
 
-from blocks.graph import add_role, Annotation, INPUT, OUTPUT, PARAMETER
+from blocks.graph import (add_annotation, add_role, Annotation, INPUT, OUTPUT,
+                          PARAMETER)
 from blocks.utils import pack, repr_attrs, reraise_as, unpack
 
 
@@ -48,8 +49,7 @@ class Parameters(MutableSequence):
         """
         if isinstance(value, Variable):
             add_role(value, PARAMETER)
-            annotations = getattr(value.tag, 'annotations', []) + [self.brick]
-            value.tag.annotations = annotations
+            add_annotation(value, self.brick)
 
     def __setitem__(self, key, value):
         self._annotate(value)
@@ -269,8 +269,8 @@ class Application(object):
             copy = variable.copy()
             copy.name = "{}_{}_{}".format(  # Theano name
                 brick.name, self.name, name)
-            annotations = getattr(copy.tag, 'annotations', []) + [brick, call]
-            copy.tag.annotations = annotations
+            add_annotation(copy, brick)
+            add_annotation(copy, call)
             copy.tag.name = name  # Blocks name
             add_role(copy, role)
             return copy
@@ -821,7 +821,8 @@ class ApplicationCall(Annotation):
     ...         return x + 1
     >>> x = tensor.vector()
     >>> y = Foo().apply(x)
-    >>> y.tag.annotations[1] # doctest: +ELLIPSIS
+    >>> from blocks.filter import get_application_call
+    >>> get_application_call(y) # doctest: +ELLIPSIS
     <blocks.bricks.base.ApplicationCall object at ...>
 
     """
