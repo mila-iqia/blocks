@@ -48,7 +48,7 @@ def test_computation_graph():
 
     W = theano.shared(numpy.zeros((3, 3), dtype=floatX))
     cg3 = ComputationGraph([z + W])
-    assert set(cg3.get_shared_variables()) == {W}
+    assert set(cg3.shared_variables) == {W}
 
 
 def test_apply_noise():

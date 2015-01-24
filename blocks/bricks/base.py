@@ -22,6 +22,44 @@ property_ = property
 
 
 class Annotation(object):
+    """Annotations on Theano variables in a graph.
+
+    Blocks automatically adds annotations to variables created using
+    bricks. One form of annotation is that many variables are assigned a
+    role (see :class:`VariableRole`). A second form of annotation comes in
+    the form of attaching a :class:`Annotation` instance to the variable's
+    ``tag`` attribute, with auxiliary variables and/or updates.
+
+    For example, we might be interested in the mean activation of certain
+    application of a :class:`Linear` brick. The variable representing the
+    mean activation is attached as an auxiliary variable to the annotations
+    of the input and output variables of this brick. Using the
+    :class:`ComputationGraph` class (the
+    :meth:`ComputationGraph.get_variables` method in particular) we can
+    retrieve these Theano variables to pass on to the monitor, use as a
+    regularizer, etc.
+
+    In most cases, annotations are added on a brick level (e.g. each brick
+    will assign the weight norm of its weights as an auxiliary value) or on
+    an application level (e.g. each time a brick is applied, its mean
+    activation will become an auxiliary variable). However, you can also
+    add annotations manually, by setting the ``annotation`` value of a
+    variable's ``tag`` field.
+
+    Examples
+    --------
+    >>> from theano import tensor
+    >>> x = tensor.vector()
+    >>> annotation = Annotation()
+    >>> annotation.add_auxiliary_variable(x + 1, name='x_plus_1')
+    >>> x.tag.annotation = annotation
+    >>> y = x ** 2
+    >>> from blocks.graph import ComputationGraph
+    >>> cg = ComputationGraph([y])
+    >>> cg.auxiliary_variables
+    [x_plus_1]
+
+    """
     def __init__(self):
         self.auxiliary_variables = []
         self.updates = []
