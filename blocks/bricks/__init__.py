@@ -151,12 +151,12 @@ class Linear(Initializable):
         W = shared_floatx_zeros((self.input_dim, self.output_dim), name='W')
         VariableRole.add_role(W, VariableRole.WEIGHTS)
         self.params.append(W)
-        self.add_auxiliary_variable(W.mean(), name='W_mean')
+        self.add_auxiliary_variable(W.norm(2), name='W_norm')
         if self.use_bias:
             b = shared_floatx_zeros((self.output_dim,), name='b')
             VariableRole.add_role(b, VariableRole.BIASES)
             self.params.append(b)
-            self.add_auxiliary_variable(b.mean(), name='b_mean')
+            self.add_auxiliary_variable(b.norm(2), name='b_norm')
 
     def _initialize(self):
         if self.use_bias:
