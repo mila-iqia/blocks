@@ -81,9 +81,6 @@ class ComputationGraph(object):
 
     def _get_variables(self):
         """Collect variables, updates and auxiliary variables."""
-        application_calls = set()
-        annotations = set()
-        bricks = set()
         updates = OrderedDict()
 
         # Sort apply nodes topologically, get variables and remove duplicates
@@ -97,13 +94,13 @@ class ComputationGraph(object):
 
         # While preserving order add auxiliary variables, and collect updates
         i = 0
+        seen = {'application_call': set(), 'annotation': set(), 'brick': set()}
         while i < len(variables):
             var = variables[i]
             for tag in ('application_call', 'annotation', 'brick'):
                 annotation = getattr(var.tag, tag, None)
-                seen = locals()[tag + 's']
-                if annotation and annotation not in seen:
-                    seen.add(annotation)
+                if annotation and annotation not in seen[tag]:
+                    seen[tag].add(annotation)
                     new_avs = [av for av in annotation.auxiliary_variables
                                if av not in variables]
                     variables = variables[:i + 1] + new_avs + variables[i + 1:]
