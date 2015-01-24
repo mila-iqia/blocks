@@ -14,6 +14,20 @@ class VariableFilter(object):
         Matches any variable whose brick is either the given brick, or
         whose brick is of a given class
 
+    Examples
+    --------
+    >>> from blocks.bricks import MLP, Linear, Sigmoid, Identity
+    >>> mlp = MLP(activations=[Identity(), Sigmoid()], dims=[20, 10, 20])
+    >>> from theano import tensor
+    >>> x = tensor.matrix()
+    >>> y_hat = mlp.apply(x)
+    >>> from blocks.graph import ComputationGraph, VariableRole
+    >>> cg = ComputationGraph(y_hat)
+    >>> from blocks.filter import VariableFilter
+    >>> var_filter = VariableFilter(roles=[VariableRole.BIASES],
+    ...                             bricks=mlp.linear_transformations[0])
+    >>> first_biases, = var_filter(cg.variables)
+
     """
     def __init__(self, roles=None, bricks=None):
         self.roles = roles
