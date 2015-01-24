@@ -8,7 +8,7 @@ import theano
 from theano import Variable
 from theano.gof import graph
 from theano.gof.sched import make_dependence_cmp, sort_apply_nodes
-from theano.tensor.shared_randomstreams import RandomStreams
+from theano.sandbox.rng_mrg import MRG_RandomStreams
 
 from blocks.bricks.base import VariableRole
 from blocks.utils import is_graph_input, is_shared_variable, dict_union
@@ -202,7 +202,7 @@ def apply_noise(graph, variables, level, rng=None):
 
     """
     if not rng:
-        rng = RandomStreams(1)
+        rng = MRG_RandomStreams(1)
     replace = {}
     for variable in variables:
         replace[variable] = (variable +

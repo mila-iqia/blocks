@@ -5,6 +5,7 @@ from itertools import chain
 import numpy
 from six import add_metaclass
 from theano import tensor
+from theano.sandbox.rng_mrg import MRG_RandomStreams
 
 from blocks import config
 from blocks.bricks.base import application, _Brick, Brick, lazy, VariableRole
@@ -19,7 +20,7 @@ class Random(Brick):
     Parameters
     ----------
     theano_rng : object
-        A ``tensor.shared_randomstreams.RandomStreams`` instance.
+        A ``MRG_RandomStreams`` instance.
 
     """
     def __init__(self, theano_rng=None, **kwargs):
@@ -36,7 +37,7 @@ class Random(Brick):
         if getattr(self, '_theano_rng', None) is not None:
             return self._theano_rng
         else:
-            return tensor.shared_randomstreams.RandomStreams(
+            return MRG_RandomStreams(
                 config.default_seed)
 
     @theano_rng.setter
