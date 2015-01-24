@@ -68,7 +68,7 @@ API Reference
 .. _quickstart:
 
 Quickstart
-----------
+==========
 
 .. doctest::
    :hide:
