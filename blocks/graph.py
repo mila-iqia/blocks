@@ -1,7 +1,6 @@
 """Annotated computation graph management."""
 import logging
 from collections import OrderedDict
-from enum import Enum
 from itertools import chain
 
 import theano
@@ -76,7 +75,7 @@ class ComputationGraph(object):
     @property
     def auxiliary_variables(self):
         return [var for var in self.variables if hasattr(var.tag, 'roles') and
-                VariableRole.AUXILIARY in var.tag.roles]
+                AUXILIARY in var.tag.roles]
 
     def _get_variables(self):
         """Collect variables, updates and auxiliary variables."""
@@ -131,52 +130,32 @@ class ComputationGraph(object):
                                updates=self.updates)
 
 
-class VariableRole(str, Enum):
-    """A collection of constants referring to variable roles."""
-    #: Any variable attached to a brick or application call
-    AUXILIARY = 'auxiliary'
-    #: A scalar variable which represents some cost or regularization penalty
-    COST = 'cost'
-    #: The input to a brick
-    INPUT = 'input'
-    #: The output of a brick
-    OUTPUT = 'output'
-    #: Any parameter of the model
-    PARAMETER = 'parameter'
-    #: The weights of a particular linear transformation
-    WEIGHTS = 'weights'
-    #: The biases added after a linear transformation
-    BIASES = 'biases'
+def add_role(var, role):
+    r"""Add a role to a given Theano variable.
 
-    @classmethod
-    def add_role(cls, var, role):
-        r"""Add a role to a given Theano variable.
+    Some roles will imply others, using this helper function will make
+    sure that these roles are also added.
 
-        Some roles will imply others, using this helper function will make
-        sure that these roles are also added.
+    Parameters
+    ----------
+    var : Theano variable
+        The variable to assign the new role to.
+    role : :class:`VariableRole` instance
 
-        Parameters
-        ----------
-        var : Theano variable
-            The variable to assign the new role to.
-        role : attribute of :class:`VariableRole`
+    Examples
+    --------
+    >>> from theano import tensor
+    >>> W = tensor.matrix()
+    >>> from blocks.bricks import WEIGHTS
+    >>> add_role(W, WEIGHTS)
+    >>> print(*W.tag.roles)
+    WEIGHTS
 
-        Examples
-        --------
-        >>> from theano import tensor
-        >>> W = tensor.matrix()
-        >>> VariableRole.add_role(W, VariableRole.WEIGHTS)
-        >>> print(*W.tag.roles)
-        VariableRole.PARAMETER VariableRole.WEIGHTS
-
-        """
-        roles = getattr(var.tag, 'roles', [])
-        if role not in roles:
-            if role in (cls.WEIGHTS, cls.BIASES) and \
-                    cls.PARAMETER not in roles:
-                roles.append(cls.PARAMETER)
-            roles.append(role)
-            var.tag.roles = roles
+    """
+    roles = getattr(var.tag, 'roles', [])
+    roles = [old_role for old_role in roles
+             if not isinstance(role, old_role.__class__)] + [role]
+    var.tag.roles = roles
 
 
 class Annotation(object):
@@ -234,10 +213,10 @@ class Annotation(object):
         ----------
         expression : Theano variable
             The expression of the variable you want to add.
-        roles : list of :class:`VariableRole` attributes, optional
-            The roles of this variable. The :attr:`VariableRole.AUXILIARY`
+        roles : list of :class:`VariableRole` instances, optional
+            The roles of this variable. The :const:`AUXILIARY`
             role will automatically be added. Other options are
-            :attr:`VariableRole.COST`, :attr:`VariableRole.WEIGHTS`, etc.
+            :const:`COST`, :const:`WEIGHTS`, etc.
         name : str, optional
             The name of the expression; overrides the name of the variable
             if it already has one.
@@ -255,17 +234,17 @@ class Annotation(object):
         ...         application_call.add_auxiliary_variable(
         ...             x - 1, name='x_minus_1')
         ...         application_call.add_auxiliary_variable(
-        ...             x.mean(), roles=[VariableRole.COST], name='mean_x')
+        ...             x.mean(), roles=[COST], name='mean_x')
         ...         return x + 1
         >>> from theano import tensor
         >>> x = tensor.vector()
         >>> y = Foo().apply(x)
         >>> from blocks.filter import VariableFilter
         >>> cg = ComputationGraph([y])
-        >>> var_filter = VariableFilter(roles=[VariableRole.AUXILIARY])
+        >>> var_filter = VariableFilter(roles=[AUXILIARY])
         >>> var_filter(cg.variables) # doctest: +SKIP
         {x_minus_1, mean_W, mean_x}
-        >>> var_filter = VariableFilter(roles=[VariableRole.COST])
+        >>> var_filter = VariableFilter(roles=[COST])
         >>> var_filter(cg.variables) # doctest: +SKIP
         {mean_x}
 
@@ -274,10 +253,10 @@ class Annotation(object):
         expression.tag.annotations = annotations
         if name is not None:
             expression.name = name
-        VariableRole.add_role(expression, VariableRole.AUXILIARY)
+        add_role(expression, AUXILIARY)
         if roles is not None:
             for role in roles:
-                VariableRole.add_role(expression, role)
+                add_role(expression, role)
         self.auxiliary_variables.append(expression)
 
 
@@ -304,3 +283,38 @@ def apply_noise(graph, variables, level, rng=None):
         replace[variable] = (variable +
                              rng.normal(variable.shape, std=level))
     return graph.replace(replace)
+
+
+class VariableRole(object):
+    def __str__(self):
+        return self.__class__.__name__[:-4].upper()
+
+
+class InputRole(VariableRole):
+    pass
+
+INPUT = InputRole()
+
+
+class OutputRole(VariableRole):
+    pass
+
+OUTPUT = OutputRole
+
+
+class CostRole(VariableRole):
+    pass
+
+COST = CostRole()
+
+
+class ParameterRole(VariableRole):
+    pass
+
+PARAMETER = ParameterRole()
+
+
+class AuxiliaryRole(VariableRole):
+    pass
+
+AUXILIARY = AuxiliaryRole()

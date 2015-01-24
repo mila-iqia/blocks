@@ -14,7 +14,7 @@ from groundhog.trainer.SGD import SGD
 
 from blocks.bricks import Tanh
 from blocks.filter import get_brick, get_application_call
-from blocks.graph import VariableRole
+from blocks.graph import OUTPUT
 from blocks.bricks.recurrent import GatedRecurrent
 from blocks.select import Selector
 from blocks.filter import VariableFilter
@@ -102,7 +102,7 @@ def main():
         cost = ComputationGraph(
             generator.cost(x, states=init_states * reset).sum())
         # TODO: better search routine
-        var_filter = VariableFilter(roles=[VariableRole.OUTPUT])
+        var_filter = VariableFilter(roles=[OUTPUT])
         states = [v for v in var_filter(cost.variables)
                   if get_brick(v) is generator.transition
                   and (get_application_call(v).application ==

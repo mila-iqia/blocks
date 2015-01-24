@@ -8,7 +8,7 @@ from six import add_metaclass
 from theano import tensor
 from theano.gof import Variable
 
-from blocks.graph import Annotation, VariableRole
+from blocks.graph import add_role, Annotation, INPUT, OUTPUT, PARAMETER
 from blocks.utils import pack, repr_attrs, reraise_as, unpack
 
 
@@ -47,7 +47,7 @@ class Parameters(MutableSequence):
 
         """
         if isinstance(value, Variable):
-            VariableRole.add_role(value, VariableRole.PARAMETER)
+            add_role(value, PARAMETER)
             annotations = getattr(value.tag, 'annotations', []) + [self.brick]
             value.tag.annotations = annotations
 
@@ -272,7 +272,7 @@ class Application(object):
             annotations = getattr(copy.tag, 'annotations', []) + [brick, call]
             copy.tag.annotations = annotations
             copy.tag.name = name  # Blocks name
-            VariableRole.add_role(copy, role)
+            add_role(copy, role)
             return copy
 
         for i, input_ in enumerate(args):
@@ -281,10 +281,10 @@ class Application(object):
                     name = args_names[i]
                 else:
                     name = "{}_{}".format(varargs_name, i - len(args_names))
-                args[i] = copy_and_tag(input_, VariableRole.INPUT, name)
+                args[i] = copy_and_tag(input_, INPUT, name)
         for name, input_ in kwargs.items():
             if isinstance(input_, tensor.Variable):
-                kwargs[name] = copy_and_tag(input_, VariableRole.INPUT, name)
+                kwargs[name] = copy_and_tag(input_, INPUT, name)
 
         # Run the application method on the annotated variables
         if self.call_stack and brick is not self.call_stack[-1] and \
@@ -308,7 +308,7 @@ class Application(object):
                     reraise_as(ValueError("Unexpected outputs"))
                 # TODO Tag with dimensions, axes, etc. for error-checking
                 outputs[i] = copy_and_tag(outputs[i],
-                                          VariableRole.OUTPUT, name)
+                                          OUTPUT, name)
 
         # Return values
         if return_list:

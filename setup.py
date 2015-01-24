@@ -34,7 +34,7 @@ setup(
     keywords='theano machine learning neural networks deep learning',
     packages=find_packages(exclude=['examples', 'docs', 'tests']),
     scripts=['bin/blocks-continue'],
-    install_requires=['dill', 'enum34', 'numpy', 'theano', 'six'],
+    install_requires=['dill', 'numpy', 'theano', 'six'],
     extras_require={
         'test': ['nose', 'nose2'],
     },

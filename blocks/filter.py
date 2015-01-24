@@ -40,7 +40,7 @@ class VariableFilter(object):
 
     Parameters
     ----------
-    roles : list of :class:`VariableRole` attributes, optional
+    roles : list of :class:`VariableRole` instances, optional
         Matches any attribute which has one of the roles given.
     bricks : list of :class:`Brick` classes or instances, optional
         Matches any variable whose brick is either the given brick, or
@@ -58,15 +58,15 @@ class VariableFilter(object):
 
     Examples
     --------
-    >>> from blocks.bricks import MLP, Linear, Sigmoid, Identity
+    >>> from blocks.bricks import MLP, Linear, Sigmoid, Identity, BIASES
     >>> mlp = MLP(activations=[Identity(), Sigmoid()], dims=[20, 10, 20])
     >>> from theano import tensor
     >>> x = tensor.matrix()
     >>> y_hat = mlp.apply(x)
-    >>> from blocks.graph import ComputationGraph, VariableRole
+    >>> from blocks.graph import ComputationGraph
     >>> cg = ComputationGraph(y_hat)
     >>> from blocks.filter import VariableFilter
-    >>> var_filter = VariableFilter(roles=[VariableRole.BIASES],
+    >>> var_filter = VariableFilter(roles=[BIASES],
     ...                             bricks=[mlp.linear_transformations[0]])
     >>> var_filter(cg.variables)
     [b]
@@ -85,15 +85,19 @@ class VariableFilter(object):
         variables : list of Theano variables
 
         """
-        if self.roles is not None:
-            if self.each_role:
-                variables = [var for var in variables if
-                             hasattr(var.tag, 'roles') and
-                             bool(set(self.roles) <= set(var.tag.roles))]
-            else:
-                variables = [var for var in variables if
-                             hasattr(var.tag, 'roles') and
-                             bool(set(self.roles) & set(var.tag.roles))]
+        if self.roles:
+            filtered_variables = []
+            for var in variables:
+                var_roles = getattr(var.tag, 'roles', [])
+                if self.each_role:
+                    if all(any(isinstance(var_role, role.__class__) for
+                               var_role in var_roles) for role in self.roles):
+                        filtered_variables.append(var)
+                else:
+                    if any(any(isinstance(var_role, role.__class__) for
+                               var_role in var_roles) for role in self.roles):
+                        filtered_variables.append(var)
+            variables = filtered_variables
         if self.bricks is not None:
             filtered_variables = []
             for var in variables:
