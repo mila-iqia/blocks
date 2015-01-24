@@ -5,7 +5,6 @@ from theano import tensor
 
 from blocks import bricks
 from blocks.bricks.base import application, VariableRole
-from blocks.filter import VariableFilter
 from blocks.graph import ComputationGraph
 from blocks.monitoring.aggregation import mean
 from blocks.utils import shared_floatx
@@ -35,8 +34,8 @@ def test_param_monitor():
     graph = ComputationGraph([y])
 
     # Test the monitors without aggregation schemes
-    monitors = [v for v in VariableFilter(roles=[VariableRole.AUXILIARY])
-                (graph.variables) if not hasattr(v.tag, 'aggregation_scheme')]
+    monitors = [v for v in graph.auxiliary_variables
+                if not hasattr(v.tag, 'aggregation_scheme')]
     monitors.sort(key=lambda variable: variable.name)
 
     f = theano.function([X], monitors)

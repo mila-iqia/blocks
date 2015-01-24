@@ -42,7 +42,7 @@ class VariableFilter(object):
     ----------
     roles : list of :class:`VariableRole` attributes, optional
         Matches any attribute which has one of the roles given.
-    bricks : list of :class:`Brick` classes or instances. optional
+    bricks : list of :class:`Brick` classes or instances, optional
         Matches any variable whose brick is either the given brick, or
         whose brick is of a given class.
 
