@@ -64,52 +64,56 @@ Quickstart
 
 Construct your model.
 
->>> mlp = MLP(activations=[Tanh(), Softmax()], dims=[784, 100, 10],
-...           weights_init=IsotropicGaussian(0, 0.01), biases_init=Constant(0))
->>> mlp.initialize()
+    >>> mlp = MLP(activations=[Tanh(), Softmax()], dims=[784, 100, 10],
+    ...           weights_init=IsotropicGaussian(0, 0.01), biases_init=Constant(0))
+    >>> mlp.initialize()
 
-Determine your loss function.
+Calculate your loss function.
 
->>> x = tensor.matrix('features')
->>> y = tensor.lmatrix('targets')
->>> y_hat = mlp.apply(x)
->>> cost = CategoricalCrossEntropy().apply(y.flatten(), y_hat)
->>> error_rate = MisclassficationRate().apply(y.flatten(), y_hat)
+    >>> x = tensor.matrix('features')
+    >>> y = tensor.lmatrix('targets')
+    >>> y_hat = mlp.apply(x)
+    >>> cost = CategoricalCrossEntropy().apply(y.flatten(), y_hat)
+    >>> error_rate = MisclassficationRate().apply(y.flatten(), y_hat)
 
 Load your training data.
 
->>> mnist_train = MNIST("train")
->>> mnist_test = MNIST("test")
+    >>> mnist_train = MNIST("train")
+    >>> train_stream = DataStream(
+    ...     dataset=mnist_train,
+    ...     iteration_scheme=SequentialScheme(mnist_train.num_examples, 128))
+    >>> mnist_test = MNIST("test")
+    >>> test_stream = DataStream(
+    ...     dataset=mnist_test,
+    ...     iteration_scheme=SequentialScheme(mnist_train.num_examples, 1024))
 
 And train!
 
->>> main_loop = MainLoop(
-...     model=mlp, data_stream=DataStream(
-...         dataset=mnist_train,
-...         iteration_scheme=SequentialScheme(mnist_train.num_examples, 128)),
-...     algorithm=GradientDescent(cost=cost,step_rule=SteepestDescent(learning_rate=0.1)),
-...     extensions=[FinishAfter(after_n_epochs=5),
-...                 DataStreamMonitoring(
-...                     expressions=[cost, error_rate],
-...                     data_stream=DataStream(
-...                         dataset=mnist_test,
-...                         iteration_scheme=SequentialScheme(mnist_test.num_examples, 500)),
-...                     prefix="test"),
-...                 Printing()])
->>> main_loop.run() # doctest: +SKIP
+    >>> main_loop = MainLoop(
+    ...     model=mlp, data_stream=train_stream,
+    ...     algorithm=GradientDescent(
+    ...         cost=cost, step_rule=SteepestDescent(learning_rate=0.1)),
+    ...     extensions=[FinishAfter(after_n_epochs=5),
+    ...                 DataStreamMonitoring(
+    ...                     expressions=[cost, error_rate],
+    ...                     data_stream=test_stream,
+    ...                     prefix="test"),
+    ...                 Printing()])
+    >>> main_loop.run() # doctest: +SKIP
 
 Tutorials
 ---------
 .. toctree::
    setup
    tutorial
+   bricks_overview
+   cg
 
 In-depth
 --------
 .. toctree::
    :maxdepth: 2
 
-   bricks_overview
    configuration
    developer_guidelines
 
@@ -120,8 +124,10 @@ API Reference
    initialization
    datasets
    utils
-   serialization
    graph
+   log
+   main_loop
+   select
 
 Indices and tables
 ==================

@@ -72,7 +72,7 @@ class VariableFilter(object):
     [b]
 
     """
-    def __init__(self, roles=None, bricks=None, each_role=True):
+    def __init__(self, roles=None, bricks=None, each_role=False):
         self.roles = roles
         self.bricks = bricks
         self.each_role = each_role
