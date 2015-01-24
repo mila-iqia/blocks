@@ -136,6 +136,8 @@ And train!
 .. image:: https://landscape.io/github/bartvm/blocks/master/landscape.svg
    :target: https://landscape.io/github/bartvm/blocks/master
 
+|
+
 Indices and tables
 ==================
 * :ref:`genindex`
