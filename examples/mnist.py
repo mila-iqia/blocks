@@ -34,7 +34,7 @@ def main(save_to, num_epochs):
 
     cg = ComputationGraph([cost])
     W1, W2 = VariableFilter(roles=[VariableRole.WEIGHTS])(cg.variables)
-    cost = cost + .00005 * W1.norm(2) + .00005 * W2.norm(2)
+    cost = cost + .00005 * (W1 ** 2).sum() + .00005 * (W2 ** 2).sum()
     cost.name = 'final_cost'
 
     mnist_train = MNIST("train")
