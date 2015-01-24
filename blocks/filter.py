@@ -35,11 +35,17 @@ class VariableFilter(object):
 
     Parameters
     ----------
-    roles : list of :class:`VariableRole` attributes
+    roles : list of :class:`VariableRole` attributes, optional
         Matches any attribute which has one of the roles given.
-    bricks : list of :class:`Brick` classes or instances
+    bricks : list of :class:`Brick` classes or instances. optional
         Matches any variable whose brick is either the given brick, or
-        whose brick is of a given class
+        whose brick is of a given class.
+
+    Notes
+    -----
+    Note that only auxiliary variables, parameters, inputs and outputs are
+    tagged with the brick that created them. Other Theano variables that
+    were created in the process of applying a brick will be filtered out.
 
     Examples
     --------

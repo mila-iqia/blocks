@@ -24,6 +24,7 @@ property_ = property
 
 
 class Parameters(MutableSequence):
+    """Behaves exactly like a list, but annotates the variables."""
     def __init__(self, brick, params):
         self.brick = brick
         self._params = []
@@ -37,6 +38,14 @@ class Parameters(MutableSequence):
         return self._params.__getitem__(key)
 
     def _annotate(self, value):
+        """Annotates the variable.
+
+        Raises
+        ------
+        ValueError
+            If the parameter isn't a shared variable or ``None``.
+
+        """
         if is_shared_variable(value):
             VariableRole.add_role(value, VariableRole.PARAMETER)
             annotations = getattr(value.tag, 'annotations', []) + [self.brick]
@@ -433,10 +442,12 @@ class Brick(Annotation):
     print_shapes : bool
         ``False`` by default. If ``True`` it logs the shapes of all the
         input and output variables, which can be useful for debugging.
-    params : list of Theano shared variables
+    params : list of Theano shared variables and ``None``
         After calling the :meth:`allocate` method this attribute will be
         populated with the shared variables storing this brick's
-        parameters.
+        parameters. Allows for ``None`` so that parameters can always be
+        accessed at the same index, even if some parameters are only
+        defined given a particular configuration.
     children : list of bricks
         The children of this brick.
     allocated : bool
