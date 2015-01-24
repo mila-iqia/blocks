@@ -33,9 +33,8 @@ def main(save_to, num_epochs):
     error_rate = MisclassficationRate().apply(y.flatten(), probs)
 
     cg = ComputationGraph([cost])
-    weights = VariableFilter(roles=[VariableRole.WEIGHTS])(cg.variables)
-    cost = cost + .00005 * weights.pop().norm(2) + \
-        .00005 * weights.pop().norm(2)
+    W1, W2 = VariableFilter(roles=[VariableRole.WEIGHTS])(cg.variables)
+    cost = cost + .00005 * W1.norm(2) + .00005 * W2.norm(2)
     cost.name = 'final_cost'
 
     mnist_train = MNIST("train")
