@@ -40,7 +40,7 @@ Tutorials
 In-depth
 --------
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
    configuration
    developer_guidelines
