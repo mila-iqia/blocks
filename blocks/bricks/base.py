@@ -31,19 +31,16 @@ class Annotation(object):
 
         Auxiliary variables are Theano variables that are not part of a
         brick's output, but can be useful nonetheless e.g. as a regularizer
-        or to monitor during training progress. Examples would be weight
-        norms.
+        or to monitor during training progress.
 
         Parameters
         ----------
         expression : Theano variable
             The expression of the variable you want to add.
         roles : list of :class:`VariableRole` attributes, optional
-            The roles of this variable. Currently, the only option is
-            :attr:`VariableRole.COST`, which should be reserved for scalar
-            variables which could be used for e.g. regularization or as a
-            loss function. The :attr:`VariableRole.AUXILIARY` role will
-            automatically be added.
+            The roles of this variable. The :attr:`VariableRole.AUXILIARY`
+            role will automatically be added. Other options are
+            :attr:`VariableRole.COST`, :attr:`VariableRole.WEIGHTS`, etc.
         name : str, optional
             The name of the expression; overrides the name of the variable
             if it already has one.
@@ -75,12 +72,10 @@ class Annotation(object):
         """
         if name is not None:
             expression.name = name
-        if roles is None:
-            roles = []
-        if VariableRole.AUXILIARY not in roles:
-            roles.append(VariableRole.AUXILIARY)
-        for role in roles:
-            VariableRole.add_role(expression, role)
+        VariableRole.add_role(expression, VariableRole.AUXILIARY)
+        if roles is not None:
+            for role in roles:
+                VariableRole.add_role(expression, role)
         self.auxiliary_variables.append(expression)
 
 
@@ -214,12 +209,10 @@ class Application(object):
         """Instantiate :class:`BoundedApplication` for each :class:`Brick`."""
         if instance is None:
             return self
-        elif instance in self.bound_applications:
-            return self.bound_applications[instance]
-        else:
+        elif instance not in self.bound_applications:
             bound_application = BoundApplication(self, instance)
             self.bound_applications[instance] = bound_application
-            return bound_application
+        return self.bound_applications[instance]
 
     def __getattr__(self, name):
         # Mimic behaviour of properties
@@ -284,15 +277,14 @@ class Application(object):
             brick.initialize()
 
         # Annotate all the input variables which are Theano variables
-        def copy_and_tag(variable, roles, name):
+        def copy_and_tag(variable, role, name):
             """Helper method to copy a variable and annotate it."""
             copy = variable.copy()
             copy.name = "{}_{}_{}".format(  # Theano name
                 brick.name, self.name, name)
             copy.tag.application_call = call
             copy.tag.name = name  # Blocks name
-            for role in roles:
-                VariableRole.add_role(variable, role)
+            VariableRole.add_role(variable, role)
             return copy
 
         for i, input_ in enumerate(args):
@@ -301,10 +293,10 @@ class Application(object):
                     name = args_names[i]
                 else:
                     name = "{}_{}".format(varargs_name, i - len(args_names))
-                args[i] = copy_and_tag(input_, [VariableRole.INPUT], name)
+                args[i] = copy_and_tag(input_, VariableRole.INPUT, name)
         for name, input_ in kwargs.items():
             if isinstance(input_, tensor.Variable):
-                kwargs[name] = copy_and_tag(input_, [VariableRole.INPUT], name)
+                kwargs[name] = copy_and_tag(input_, VariableRole.INPUT, name)
 
         # Run the application method on the annotated variables
         if self.call_stack and brick is not self.call_stack[-1] and \
@@ -328,7 +320,7 @@ class Application(object):
                     reraise_as(ValueError("Unexpected outputs"))
                 # TODO Tag with dimensions, axes, etc. for error-checking
                 outputs[i] = copy_and_tag(outputs[i],
-                                          [VariableRole.OUTPUT], name)
+                                          VariableRole.OUTPUT, name)
 
         # Return values
         if return_list:
@@ -835,6 +827,14 @@ class VariableRole(object):
             The variable to assign the new role to.
         role : attribute of :class:`VariableRole`
 
+        Examples
+        --------
+        >>> from theano import tensor
+        >>> W = tensor.matrix()
+        >>> VariableRole.add_role(W, VariableRole.WEIGHTS)
+        >>> W.tag.roles
+        ['parameter', 'weights']
+
         """
         roles = getattr(var.tag, 'roles', [])
         if role not in roles:
@@ -885,6 +885,11 @@ class ApplicationCall(Annotation):
         super(ApplicationCall, self).__init__()
 
     def add_auxiliary_variable(self, expression, *args, **kwargs):
+        """Add an auxiliary variable to this application call.
+
+        See :meth:`Annotation.add_auxiliary_variable`.
+
+        """
         expression.tag.application_call = self
         super(ApplicationCall, self).add_auxiliary_variable(expression, *args,
                                                             **kwargs)
