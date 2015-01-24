@@ -3,6 +3,7 @@ from abc import ABCMeta, abstractmethod
 
 import numpy
 import six
+import theano
 from six import add_metaclass
 
 from blocks.utils import LambdaIterator, SequenceIterator
@@ -515,7 +516,17 @@ class DataStream(AbstractDataStream):
 
 @add_metaclass(ABCMeta)
 class DataStreamWrapper(AbstractDataStream):
-    """A data stream that wraps another data stream."""
+    """A data stream that wraps another data stream.
+
+    Attributes
+    ----------
+    child_epoch_iterator : iterator type
+        When a new epoch iterator is requested, a new epoch creator is
+        automatically requested from the wrapped data stream and stored in
+        this attribute. Use it to access data from the wrapped data stream
+        by calling ``next(self.child_epoch_iterator)``.
+
+    """
     def __init__(self, data_stream, **kwargs):
         super(DataStreamWrapper, self).__init__(**kwargs)
         self.data_stream = data_stream
@@ -653,6 +664,67 @@ class BatchDataStream(DataStreamWrapper):
                 else:
                     break
         return tuple(numpy.asarray(source_data) for source_data in data)
+
+
+class MaskDataStream(DataStreamWrapper):
+    """Creates a mask for minibatches of variable length.
+
+    For each data source that is masked, a new source will be added. This
+    source will have the name of the original source with the suffix
+    ``_mask`` (e.g. ``features_mask``).
+
+    Parameters
+    ----------
+    data_stream : :class:`AbstractDataStream` instance
+        The data stream to wrap
+    mask_sources : tuple of strings, optional
+        The sources for which we need to add a mask. If not provided, a
+        mask will be created for all data sources
+
+    """
+    def __init__(self, data_stream, mask_sources=None):
+        super(MaskDataStream, self).__init__(data_stream)
+        if mask_sources is None:
+            mask_sources = self.data_stream.sources
+        self.mask_sources = mask_sources
+
+    @property
+    def sources(self):
+        sources = []
+        for source in self.data_stream.sources:
+            sources.append(source)
+            if source in self.mask_sources:
+                sources.append(source + '_mask')
+        return tuple(sources)
+
+    def get_data(self, request=None):
+        if request is not None:
+            raise ValueError
+        data = list(next(self.child_epoch_iterator))
+        data_with_masks = []
+        for i, (source, source_data) in enumerate(zip(self.sources, data)):
+            if source not in self.mask_sources:
+                data_with_masks.append(source_data)
+                continue
+            sequence_lengths = [len(sample) for sample in source_data]
+            max_sequence_length = max(sequence_lengths)
+
+            try:
+                dtype = source_data[0].dtype
+            except Exception:
+                dtype = theano.config.floatX
+            padded_data = numpy.zeros((len(source_data), max_sequence_length),
+                                      dtype=dtype)
+            for i, sample in enumerate(source_data):
+                padded_data[i, :len(sample)] = sample
+            data_with_masks.append(padded_data)
+
+            mask = numpy.zeros((len(source_data), max_sequence_length),
+                               dtype=theano.config.floatX)
+            for i, sequence_length in enumerate(sequence_lengths):
+                mask[:sequence_length, i] = 1
+            data_with_masks.append(mask)
+        return tuple(data_with_masks)
 
 
 class DataIterator(six.Iterator):
