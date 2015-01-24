@@ -1,6 +1,7 @@
 """Annotated computation graph management."""
 import logging
 from collections import OrderedDict
+from enum import Enum
 from inspect import isclass
 from itertools import chain
 
@@ -10,7 +11,6 @@ from theano.gof import graph
 from theano.gof.sched import make_dependence_cmp, sort_apply_nodes
 from theano.sandbox.rng_mrg import MRG_RandomStreams
 
-from blocks.bricks.base import VariableRole
 from blocks.utils import is_graph_input, is_shared_variable, dict_union
 
 logger = logging.getLogger(__name__)
@@ -180,6 +180,54 @@ class VariableFilter(object):
                         break
             variables = filtered_variables
         return variables
+
+
+class VariableRole(str, Enum):
+    """A collection of constants referring to variable roles."""
+    #: Any variable attached to a brick or application call
+    AUXILIARY = 'auxiliary'
+    #: A scalar variable which represents some cost or regularization penalty
+    COST = 'cost'
+    #: The input to a brick
+    INPUT = 'input'
+    #: The output of a brick
+    OUTPUT = 'output'
+    #: Any parameter of the model
+    PARAMETER = 'parameter'
+    #: The weights of a particular linear transformation
+    WEIGHTS = 'weights'
+    #: The biases added after a linear transformation
+    BIASES = 'biases'
+
+    @classmethod
+    def add_role(cls, var, role):
+        r"""Add a role to a given Theano variable.
+
+        Some roles will imply others, using this helper function will make
+        sure that these roles are also added.
+
+        Parameters
+        ----------
+        var : Theano variable
+            The variable to assign the new role to.
+        role : attribute of :class:`VariableRole`
+
+        Examples
+        --------
+        >>> from theano import tensor
+        >>> W = tensor.matrix()
+        >>> VariableRole.add_role(W, VariableRole.WEIGHTS)
+        >>> print(*W.tag.roles)
+        VariableRole.PARAMETER VariableRole.WEIGHTS
+
+        """
+        roles = getattr(var.tag, 'roles', [])
+        if role not in roles:
+            if role in (cls.WEIGHTS, cls.BIASES) and \
+                    cls.PARAMETER not in roles:
+                roles.append(cls.PARAMETER)
+            roles.append(role)
+            var.tag.roles = roles
 
 
 def apply_noise(graph, variables, level, rng=None):

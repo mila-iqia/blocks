@@ -8,7 +8,8 @@ from theano import tensor
 from theano.sandbox.rng_mrg import MRG_RandomStreams
 
 from blocks import config
-from blocks.bricks.base import application, _Brick, Brick, lazy, VariableRole
+from blocks.bricks.base import application, _Brick, Brick, lazy
+from blocks.graph import VariableRole
 from blocks.utils import pack, shared_floatx_zeros
 
 logger = logging.getLogger(__name__)

@@ -6,7 +6,7 @@ from theano import tensor
 
 from blocks.algorithms import GradientDescent, SteepestDescent
 from blocks.bricks import MLP, Tanh, Softmax
-from blocks.bricks.base import VariableRole
+from blocks.graph import VariableRole
 from blocks.bricks.cost import CategoricalCrossEntropy, MisclassficationRate
 from blocks.initialization import IsotropicGaussian, Constant
 from blocks.datasets import DataStream

@@ -7,6 +7,7 @@ import six
 from six import add_metaclass
 from theano import tensor
 
+from blocks.graph import VariableRole
 from blocks.utils import pack, repr_attrs, reraise_as, unpack
 
 
@@ -834,54 +835,6 @@ def lazy(func):
 
         return func(self, *args, **kwargs)
     return init
-
-
-class VariableRole(object):
-    """A collection of constants referring to variable roles."""
-    #: Any variable attached to a brick or application call
-    AUXILIARY = 'auxiliary'
-    #: A scalar variable which represents some cost or regularization penalty
-    COST = 'cost'
-    #: The input to a brick
-    INPUT = 'input'
-    #: The output of a brick
-    OUTPUT = 'output'
-    #: Any parameter of the model
-    PARAMETER = 'parameter'
-    #: The weights of a particular linear transformation
-    WEIGHTS = 'weights'
-    #: The biases added after a linear transformation
-    BIASES = 'biases'
-
-    @classmethod
-    def add_role(cls, var, role):
-        """Add a role to a given Theano variable.
-
-        Some roles will imply others, using this helper function will make
-        sure that these roles are also added.
-
-        Parameters
-        ----------
-        var : Theano variable
-            The variable to assign the new role to.
-        role : attribute of :class:`VariableRole`
-
-        Examples
-        --------
-        >>> from theano import tensor
-        >>> W = tensor.matrix()
-        >>> VariableRole.add_role(W, VariableRole.WEIGHTS)
-        >>> W.tag.roles
-        ['parameter', 'weights']
-
-        """
-        roles = getattr(var.tag, 'roles', [])
-        if role not in roles:
-            if role in (cls.WEIGHTS, cls.BIASES) and \
-                    cls.PARAMETER not in roles:
-                roles.append(cls.PARAMETER)
-            roles.append(role)
-            var.tag.roles = roles
 
 
 class ApplicationCall(Annotation):

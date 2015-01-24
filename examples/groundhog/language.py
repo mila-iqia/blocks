@@ -13,7 +13,7 @@ from groundhog.datasets import LMIterator
 from groundhog.trainer.SGD import SGD
 
 from blocks.bricks import Tanh
-from blocks.bricks.base import VariableRole
+from blocks.graph import VariableRole
 from blocks.bricks.recurrent import GatedRecurrent
 from blocks.select import Selector
 from blocks.graph import ComputationGraph
