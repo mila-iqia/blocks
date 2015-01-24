@@ -18,7 +18,7 @@ def get_annotation(var, cls):
 
 
 def get_brick(var):
-    """A helper function to retrieve the brick that created this variable.
+    """Retrieves the brick that created this variable.
 
     See :func:`get_annotation`.
 
@@ -27,6 +27,11 @@ def get_brick(var):
 
 
 def get_application_call(var):
+    """Retrieves the application call that created this variable.
+
+    See :func:`get_annotation`.
+
+    """
     return get_annotation(var, ApplicationCall)
 
 
