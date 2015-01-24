@@ -6,10 +6,10 @@ from types import MethodType
 import six
 from six import add_metaclass
 from theano import tensor
+from theano.gof import Variable
 
 from blocks.graph import Annotation, VariableRole
-from blocks.utils import (pack, repr_attrs, reraise_as, unpack,
-                          is_shared_variable)
+from blocks.utils import pack, repr_attrs, reraise_as, unpack
 
 
 def create_unbound_method(func, cls):
@@ -46,12 +46,10 @@ class Parameters(MutableSequence):
             If the parameter isn't a shared variable or ``None``.
 
         """
-        if is_shared_variable(value):
+        if isinstance(value, Variable):
             VariableRole.add_role(value, VariableRole.PARAMETER)
             annotations = getattr(value.tag, 'annotations', []) + [self.brick]
             value.tag.annotations = annotations
-        elif value is not None:
-            raise ValueError
 
     def __setitem__(self, key, value):
         self._annotate(value)
