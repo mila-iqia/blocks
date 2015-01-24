@@ -25,11 +25,12 @@ property_ = property
 class Annotation(object):
     """Annotations on Theano variables in a graph.
 
-    Blocks automatically adds annotations to variables created using
-    bricks. One form of annotation is that many variables are assigned a
-    role (see :class:`VariableRole`). A second form of annotation comes in
-    the form of attaching a :class:`Annotation` instance to the variable's
-    ``tag`` attribute, with auxiliary variables and/or updates.
+    In Blocks annotations are automatically attached to variables created
+    using bricks. One form of annotation is that many variables are
+    assigned a role (see :class:`VariableRole`). A second form of
+    annotation comes in the form of attaching a :class:`Annotation`
+    instance to the variable's ``tag`` attribute, with auxiliary variables
+    and/or updates.
 
     For example, we might be interested in the mean activation of certain
     application of a :class:`Linear` brick. The variable representing the
