@@ -88,25 +88,24 @@ class ComputationGraph(object):
         sorted_apply_nodes = sort_apply_nodes([inputs], self.outputs,
                                               [dependence])
         seen = set()
-        variables = [var for var in list(chain(
+        main_vars = [var for var in list(chain(
             *[apply_node.inputs for apply_node in sorted_apply_nodes]))
             if not (var in seen or seen.add(var))] + self.outputs
 
         # While preserving order add auxiliary variables, and collect updates
-        i = 0
         seen = {'application_call': set(), 'annotation': set(), 'brick': set()}
-        while i < len(variables):
-            var = variables[i]
+        seen_avs = set(main_vars)  # Intermediate variables could be auxiliary
+        variables = []
+        for var in main_vars:
+            variables.append(var)
             for tag in ('application_call', 'annotation', 'brick'):
                 annotation = getattr(var.tag, tag, None)
                 if annotation and annotation not in seen[tag]:
                     seen[tag].add(annotation)
                     new_avs = [av for av in annotation.auxiliary_variables
-                               if av not in variables]
-                    variables = variables[:i + 1] + new_avs + variables[i + 1:]
-                    i += len(new_avs)
+                               if not (av in seen_avs or seen_avs.add(av))]
+                    variables.extend(new_avs)
                     updates = dict_union(updates, annotation.updates)
-            i += 1
 
         self.variables = variables
         self.updates = updates
