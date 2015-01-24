@@ -1,5 +1,6 @@
 """Annotated computation graph management."""
 import logging
+from collections import OrderedDict
 from inspect import isclass
 from itertools import chain
 
@@ -10,7 +11,7 @@ from theano.gof.sched import make_dependence_cmp, sort_apply_nodes
 from theano.tensor.shared_randomstreams import RandomStreams
 
 from blocks.bricks.base import VariableRole
-from blocks.utils import is_graph_input, is_shared_variable
+from blocks.utils import is_graph_input, is_shared_variable, dict_union
 
 logger = logging.getLogger(__name__)
 dependence = make_dependence_cmp()
@@ -83,7 +84,7 @@ class ComputationGraph(object):
         application_calls = set()
         annotations = set()
         bricks = set()
-        updates = []
+        updates = OrderedDict()
 
         # Sort apply nodes topologically, get variables and remove duplicates
         inputs = graph.inputs(self.outputs)
@@ -100,12 +101,14 @@ class ComputationGraph(object):
             var = variables[i]
             for tag in ('application_call', 'annotation', 'brick'):
                 annotation = getattr(var.tag, tag, None)
-                if annotation and annotation not in locals()[tag + 's']:
+                seen = locals()[tag + 's']
+                if annotation and annotation not in seen:
+                    seen.add(annotation)
                     new_avs = [av for av in annotation.auxiliary_variables
                                if av not in variables]
                     variables = variables[:i + 1] + new_avs + variables[i + 1:]
                     i += len(new_avs)
-                    updates.extend(annotation.updates)
+                    updates = dict_union(updates, annotation.updates)
             i += 1
 
         self.variables = variables

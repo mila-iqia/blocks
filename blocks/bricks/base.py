@@ -62,7 +62,7 @@ class Annotation(object):
     """
     def __init__(self):
         self.auxiliary_variables = []
-        self.updates = []
+        self.updates = OrderedDict()
 
     def add_auxiliary_variable(self, expression, roles=None, name=None):
         """Attach an auxiliary variable to the graph.
@@ -304,10 +304,10 @@ class Application(object):
         # Construct the ApplicationCall, used to store data in for this call
         call = ApplicationCall(brick, bound_application)
         args = list(args)
-        if 'application_call' in args_names:
-            args.insert(args_names.index('application_call'), call)
         if 'application' in args_names:
             args.insert(args_names.index('application'), bound_application)
+        if 'application_call' in args_names:
+            args.insert(args_names.index('application_call'), call)
 
         # Allocate before applying, and optionally initialize
         if not brick.allocated:
