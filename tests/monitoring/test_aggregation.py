@@ -5,7 +5,8 @@ from theano import tensor
 
 from blocks import bricks
 from blocks.bricks.base import application, VariableRole
-from blocks.graph import ComputationGraph, VariableFilter
+from blocks.filter import VariableFilter
+from blocks.graph import ComputationGraph
 from blocks.monitoring.aggregation import mean
 from blocks.utils import shared_floatx
 

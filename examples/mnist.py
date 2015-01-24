@@ -12,7 +12,8 @@ from blocks.initialization import IsotropicGaussian, Constant
 from blocks.datasets import DataStream
 from blocks.datasets.mnist import MNIST
 from blocks.datasets.schemes import SequentialScheme
-from blocks.graph import ComputationGraph, VariableFilter
+from blocks.filter import VariableFilter
+from blocks.graph import ComputationGraph
 from blocks.monitoring import aggregation
 from blocks.extensions import FinishAfter, Printing
 from blocks.extensions.saveload import SerializeMainLoop

@@ -2,7 +2,6 @@
 import logging
 from collections import OrderedDict
 from enum import Enum
-from inspect import isclass
 from itertools import chain
 
 import theano
@@ -133,54 +132,6 @@ class ComputationGraph(object):
                                updates=self.updates)
 
 
-class VariableFilter(object):
-    """Filters Theano variables based on a range of criteria.
-
-    Parameters
-    ----------
-    roles : list of :class:`VariableRole` attributes
-        Matches any attribute which has one of the roles given.
-    bricks : list of :class:`Brick` classes or instances
-        Matches any variable whose brick is either the given brick, or
-        whose brick is of a given class
-
-    """
-    def __init__(self, roles=None, bricks=None):
-        self.roles = roles
-        self.bricks = bricks
-
-    def __call__(self, variables):
-        """Filter the given variables.
-
-        Parameters
-        ----------
-        variables : list of Theano variables
-
-        """
-        if self.roles is not None:
-            variables = [var for var in variables if
-                         hasattr(var.tag, 'roles') and
-                         bool(set(self.roles) & set(var.tag.roles))]
-        if self.bricks is not None:
-            filtered_variables = []
-            for var in variables:
-                if hasattr(var, 'brick'):
-                    var_brick = var.brick
-                elif hasattr(var, 'application_call'):
-                    var_brick = var.application_call.brick
-                else:
-                    continue
-                for brick in self.bricks:
-                    if isclass(brick) and isinstance(var_brick, brick):
-                        filtered_variables.append(var)
-                        break
-                    elif var_brick is brick:
-                        filtered_variables.append(var)
-                        break
-            variables = filtered_variables
-        return variables
-
-
 class VariableRole(str, Enum):
     """A collection of constants referring to variable roles."""
     #: Any variable attached to a brick or application call
@@ -294,6 +245,7 @@ class Annotation(object):
 
         Examples
         --------
+        >>> from blocks.bricks.base import application, Brick
         >>> from blocks.utils import shared_floatx_zeros
         >>> class Foo(Brick):
         ...     def _allocate(self):
@@ -306,9 +258,10 @@ class Annotation(object):
         ...         application_call.add_auxiliary_variable(
         ...             x.mean(), roles=[VariableRole.COST], name='mean_x')
         ...         return x + 1
+        >>> from theano import tensor
         >>> x = tensor.vector()
         >>> y = Foo().apply(x)
-        >>> from blocks.graph import ComputationGraph, VariableFilter
+        >>> from blocks.filter import VariableFilter
         >>> cg = ComputationGraph([y])
         >>> var_filter = VariableFilter(roles=[VariableRole.AUXILIARY])
         >>> var_filter(cg.variables) # doctest: +SKIP
