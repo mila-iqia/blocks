@@ -17,6 +17,7 @@ from blocks.filter import get_brick, get_application_call
 from blocks.graph import VariableRole
 from blocks.bricks.recurrent import GatedRecurrent
 from blocks.select import Selector
+from blocks.filter import VariableFilter
 from blocks.graph import ComputationGraph
 from blocks.bricks.sequence_generators import (
     SequenceGenerator, LinearReadout, SoftmaxEmitter, LookupFeedback)
@@ -101,12 +102,12 @@ def main():
         cost = ComputationGraph(
             generator.cost(x, states=init_states * reset).sum())
         # TODO: better search routine
-        states = [v for v in cost.variables
+        var_filter = VariableFilter(roles=[VariableRole.OUTPUT])
+        states = [v for v in var_filter(cost.variables)
                   if get_brick(v) is generator.transition
                   and (get_application_call(v).application ==
                        generator.transition.apply)
-                  and VariableRole.OUTPUT in getattr(v.tag, 'roles', [])
-                  and v.name == 'states']
+                  and v.tag.name == 'states']
         assert len(states) == 1
         states = states[0]
 

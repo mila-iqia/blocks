@@ -45,6 +45,10 @@ class VariableFilter(object):
     bricks : list of :class:`Brick` classes or instances, optional
         Matches any variable whose brick is either the given brick, or
         whose brick is of a given class.
+    each_role : bool, optional
+        If ``True``, the variable needs to have all given roles.  If
+        ``False``, a variable matching any of the roles given will be
+        returned. ``False`` by default.
 
     Notes
     -----
@@ -68,9 +72,10 @@ class VariableFilter(object):
     [b]
 
     """
-    def __init__(self, roles=None, bricks=None):
+    def __init__(self, roles=None, bricks=None, each_role=True):
         self.roles = roles
         self.bricks = bricks
+        self.each_role = each_role
 
     def __call__(self, variables):
         """Filter the given variables.
@@ -81,15 +86,18 @@ class VariableFilter(object):
 
         """
         if self.roles is not None:
-            variables = [var for var in variables if
-                         hasattr(var.tag, 'roles') and
-                         bool(set(self.roles) & set(var.tag.roles))]
+            if self.each_role:
+                variables = [var for var in variables if
+                             hasattr(var.tag, 'roles') and
+                             bool(set(self.roles) <= set(var.tag.roles))]
+            else:
+                variables = [var for var in variables if
+                             hasattr(var.tag, 'roles') and
+                             bool(set(self.roles) & set(var.tag.roles))]
         if self.bricks is not None:
             filtered_variables = []
             for var in variables:
                 var_brick = get_brick(var)
-                if var_brick is None:
-                    import ipdb; ipdb.set_trace()
                 if var_brick is None:
                     continue
                 for brick in self.bricks:

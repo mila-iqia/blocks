@@ -274,7 +274,7 @@ class Application(object):
             annotations = getattr(copy.tag, 'annotations', []) + [brick, call]
             copy.tag.annotations = annotations
             copy.tag.name = name  # Blocks name
-            VariableRole.add_role(variable, role)
+            VariableRole.add_role(copy, role)
             return copy
 
         for i, input_ in enumerate(args):
