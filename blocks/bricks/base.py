@@ -99,12 +99,13 @@ class Annotation(object):
         ...         return x + 1
         >>> x = tensor.vector()
         >>> y = Foo().apply(x)
-        >>> from blocks.graph import ComputationGraph
+        >>> from blocks.graph import ComputationGraph, VariableFilter
         >>> cg = ComputationGraph([y])
-        >>> cg.get_variables(
-        ...     roles=[VariableRole.AUXILIARY]) # doctest: +SKIP
+        >>> var_filter = VariableFilter(roles=[VariableRole.AUXILIARY])
+        >>> var_filter(cg.variables) # doctest: +SKIP
         {x_minus_1, mean_W, mean_x}
-        >>> cg.get_variables(roles=[VariableRole.COST]) # doctest: +SKIP
+        >>> var_filter = VariableFilter(roles=[VariableRole.COST])
+        >>> var_filter(cg.variables) # doctest: +SKIP
         {mean_x}
 
         """
@@ -894,7 +895,7 @@ class ApplicationCall(Annotation):
     application method and can be accessed by specifying an
     application_call argument.
 
-    Also see :meth:`add_auxiliary_variable`.
+    Also see :class:`Annotation`.
 
     Parameters
     ----------

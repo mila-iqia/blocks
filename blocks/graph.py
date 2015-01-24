@@ -1,5 +1,6 @@
 """Annotated computation graph management."""
 import logging
+from inspect import isclass
 from itertools import chain
 
 import theano
@@ -110,29 +111,6 @@ class ComputationGraph(object):
         self.variables = variables
         self.updates = updates
 
-    def get_variables(self, roles=None, predicate=None):
-        """Return variables of the computation graph.
-
-        Parameters
-        ----------
-        roles : list of :class:`VariableRole` attributes, optional
-            If given, only returns variables that have any of the roles
-            given.
-        predicate : function
-            A function which takes a variable as an input, and returns
-            ``True`` if the value should be returned, ``False`` otherwise.
-
-        """
-        if roles is not None:
-            variables = [var for var in self.variables
-                         if hasattr(var.tag, 'roles') and
-                         bool(set(roles) & set(var.tag.roles))]
-        else:
-            variables = self.variables
-        if predicate is not None:
-            variables = [var for var in variables if predicate(var)]
-        return variables
-
     def dict_of_inputs(self):
         """Return a mapping from an input name to the input."""
         return {var.name: var for var in self.inputs}
@@ -154,6 +132,54 @@ class ComputationGraph(object):
         """Create Theano function from the graph contained."""
         return theano.function(self.inputs, self.outputs,
                                updates=self.updates)
+
+
+class VariableFilter(object):
+    """Filters Theano variables based on a range of criteria.
+
+    Parameters
+    ----------
+    roles : list of :class:`VariableRole` attributes
+        Matches any attribute which has one of the roles given.
+    bricks : list of :class:`Brick` classes or instances
+        Matches any variable whose brick is either the given brick, or
+        whose brick is of a given class
+
+    """
+    def __init__(self, roles=None, bricks=None):
+        self.roles = roles
+        self.bricks = bricks
+
+    def __call__(self, variables):
+        """Filter the given variables.
+
+        Parameters
+        ----------
+        variables : list of Theano variables
+
+        """
+        if self.roles is not None:
+            variables = [var for var in variables if
+                         hasattr(var.tag, 'roles') and
+                         bool(set(self.roles) & set(var.tag.roles))]
+        if self.bricks is not None:
+            filtered_variables = []
+            for var in variables:
+                if hasattr(var, 'brick'):
+                    var_brick = var.brick
+                elif hasattr(var, 'application_call'):
+                    var_brick = var.application_call.brick
+                else:
+                    continue
+                for brick in self.bricks:
+                    if isclass(brick) and isinstance(var_brick, brick):
+                        filtered_variables.append(var)
+                        break
+                    elif var_brick is brick:
+                        filtered_variables.append(var)
+                        break
+            variables = filtered_variables
+        return variables
 
 
 def apply_noise(graph, variables, level, rng=None):

@@ -12,7 +12,7 @@ from blocks.initialization import IsotropicGaussian, Constant
 from blocks.datasets import DataStream
 from blocks.datasets.mnist import MNIST
 from blocks.datasets.schemes import SequentialScheme
-from blocks.graph import ComputationGraph
+from blocks.graph import ComputationGraph, VariableFilter
 from blocks.monitoring import aggregation
 from blocks.extensions import FinishAfter, Printing
 from blocks.extensions.saveload import SerializeMainLoop
@@ -33,7 +33,7 @@ def main(save_to, num_epochs):
     error_rate = MisclassficationRate().apply(y.flatten(), probs)
 
     cg = ComputationGraph([cost])
-    weights = cg.get_variables(roles=[VariableRole.WEIGHTS])
+    weights = VariableFilter(roles=[VariableRole.WEIGHTS])(cg.variables)
     cost = cost + .00005 * weights.pop().norm(2) + \
         .00005 * weights.pop().norm(2)
     cost.name = 'final_cost'
