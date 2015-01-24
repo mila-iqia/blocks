@@ -38,4 +38,5 @@ setup(
     extras_require={
         'test': ['nose', 'nose2'],
     },
+    zip_safe=False
 )
