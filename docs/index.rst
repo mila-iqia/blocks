@@ -14,8 +14,8 @@
 
 Welcome to Blocks's documentation!
 ==================================
-Blocks is a framework that helps you build neural network models on top of
-Theano. Currently it supports and provides:
+Blocks is a framework that helps you build and manage neural network models on
+using Theano. Currently it supports and provides:
 
 * Constructing parametrized Theano operations, called "bricks"
 * Pattern matching to select variables and bricks in large models
@@ -41,6 +41,37 @@ In the future we also hope to support:
 
 .. _making a GitHub issue: https://github.com/bartvm/blocks/issues/new
 
+Tutorials
+---------
+.. toctree::
+   :maxdepth: 1
+
+   setup
+   tutorial
+   bricks_overview
+   cg
+
+In-depth
+--------
+.. toctree::
+   :maxdepth: 2
+
+   configuration
+   developer_guidelines
+
+API Reference
+-------------
+.. toctree::
+   :maxdepth: 1
+
+   bricks
+   initialization
+   datasets
+   utils
+   graph
+   log
+   main_loop
+   select
 
 .. _quickstart:
 
@@ -100,34 +131,6 @@ And train!
     ...                     prefix="test"),
     ...                 Printing()])
     >>> main_loop.run() # doctest: +SKIP
-
-Tutorials
----------
-.. toctree::
-   setup
-   tutorial
-   bricks_overview
-   cg
-
-In-depth
---------
-.. toctree::
-   :maxdepth: 2
-
-   configuration
-   developer_guidelines
-
-API Reference
--------------
-.. toctree::
-   bricks
-   initialization
-   datasets
-   utils
-   graph
-   log
-   main_loop
-   select
 
 Indices and tables
 ==================
