@@ -16,6 +16,10 @@ In the future we also hope to support:
 
 * Dimension, type and axes-checking
 
+Want to get try it out? Start by :doc:`installing <setup>` Blocks and having a
+look at the :ref:`quickstart` further down this page. Once you're hooked, try
+your hand at the :ref:`tutorials`.
+
 .. warning::
    Blocks is a new project which is still under development. As such, certain
    (all) parts of the framework are subject to change.
@@ -26,6 +30,8 @@ In the future we also hope to support:
    by `making a GitHub issue`_.
 
 .. _making a GitHub issue: https://github.com/bartvm/blocks/issues/new
+
+.. _tutorials:
 
 Tutorials
 ---------
