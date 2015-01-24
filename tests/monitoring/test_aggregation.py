@@ -4,7 +4,7 @@ from numpy.testing import assert_allclose
 from theano import tensor
 
 from blocks import bricks
-from blocks.bricks.base import application, VariableRole
+from blocks.bricks.base import application
 from blocks.graph import ComputationGraph
 from blocks.monitoring.aggregation import mean
 from blocks.utils import shared_floatx
@@ -43,9 +43,8 @@ def test_param_monitor():
     assert_allclose(monitor_vals, [4., 1.5])
 
     # Test the aggregation scheme
-    monitor, = [v for v in graph.variables
-                if VariableRole.AUXILIARY in getattr(v.tag, 'roles', []) and
-                hasattr(v.tag, 'aggregation_scheme')]
+    monitor, = [v for v in graph.auxiliary_variables
+                if hasattr(v.tag, 'aggregation_scheme')]
     aggregator = monitor.tag.aggregation_scheme.get_aggregator()
     initialize = theano.function([], updates=aggregator.initialization_updates)
     initialize()
