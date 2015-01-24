@@ -613,65 +613,46 @@ class CachedDataStream(DataStreamWrapper):
             cache.extend(data)
 
 
-class NGramStream(CachedDataStream):
-    """Return n-grams from a stream.
+class BatchDataStream(DataStreamWrapper):
+    """Creates minibatches from data streams providing single examples.
 
-    This data stream wrapper takes as an input a data stream outputting
-    batches of sentences. From these sentences n-grams of a fixed order
-    (e.g. bigrams, trigrams, etc.) are extracted and returned. It also
-    creates a ``targets`` data source. For each example, the target is the
-    word immediately following that n-gram. It is normally used for
-    language modelling, where we try to predict the next word from the
-    previous n words.
+    Some datasets only return one example at at time e.g. when reading text
+    files a line at a time. This wrapper reads several examples
+    sequentially to turn those into minibatches.
 
     Parameters
     ----------
-    ngram_order : int
-        The order of the n-grams to output e.g. 3 for trigrams.
-    data_stream : :class:`DataStream` instance
-        The data stream providing sentences. Each example is assumed to be
-        a list of integers.
-    target_source : str, optional
-        This data stream adds a new source for the target words. By default
-        this source is 'targets'.
-
-    Notes
-    -----
-    This class inherits from :class:`CachedDataStream` because it makes use
-    of a cache to store the sentences from the wrapped data stream in.
+    data_stream : :class:`AbstractDataStream` instance
+        The data stream to wrap.
+    iteration_scheme : :class:`BatchSizeScheme` instance
+        The iteration scheme to use; should return integers representing
+        the size of the batch to return.
+    strict : bool, optional
+        Whether the batch size should be strictly adhered to or not. For
+        example, if the dataset ends before the last batch is being filled,
+        can a smaller batch still be returned? By default ``False``.
 
     """
-    def __init__(self, ngram_order, data_stream, target_source='targets',
-                 iteration_scheme=None):
-        if len(data_stream.sources) > 1:
-            raise ValueError
-        super(NGramStream, self).__init__(data_stream, iteration_scheme)
-        self.sources = self.sources + (target_source,)
-        self.ngram_order = ngram_order
+    def __init__(self, data_stream, iteration_scheme, strict=False):
+        super(BatchDataStream, self).__init__(
+            data_stream, iteration_scheme=iteration_scheme)
+        self.strict = strict
 
     def get_data(self, request=None):
-        if not self.cache[0]:
-            self._cache()
-        features, targets = [], []
-        for i, sentence in enumerate(self.cache[0]):
-            for j in range(request):
-                features.append(sentence[j:j + self.ngram_order])
-                targets.append([sentence[j + self.ngram_order]])
-                if j + self.ngram_order == len(sentence) - 1:
-                    sentence_ended = True
+        """Get data from the dataset."""
+        if request is None:
+            raise ValueError
+        data = [[] for _ in self.sources]
+        for i in range(request):
+            try:
+                [source_data.append(example) for source_data, example
+                 in zip(data, next(self.child_epoch_iterator))]
+            except StopIteration:
+                if self.strict:
+                    raise
+                else:
                     break
-                elif len(features) == request:
-                    sentence_ended = False
-                    break
-            if sentence_ended:
-                self.cache[0].pop(0)
-                if not self.cache[0]:
-                    self._cache()
-            else:
-                self.cache[0][0] = self.cache[0][0][j + 1:]
-            if len(features) == request:
-                break
-        return tuple(numpy.asarray(data) for data in (features, targets))
+        return tuple(numpy.asarray(source_data) for source_data in data)
 
 
 class DataIterator(six.Iterator):
