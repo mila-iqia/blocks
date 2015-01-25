@@ -1,10 +1,12 @@
-Bricks
-======
+Building with bricks
+====================
 
 Blocks is a framework that is supposed to make it easier to build complicated
 neural network models on top of Theano_. In order to do so, we introduce the
-concept of "bricks". Bricks are *parametrized Theano operations*. As such, they
-take Theano variables as inputs, and provide Theano variables as outputs.
+concept of "bricks", which you might have already come across in :ref:`the
+introduction tutorial <model_building>`. Bricks are *parametrized Theano
+operations*. As such, they take Theano variables as inputs, and provide Theano
+variables as outputs.
 
     >>> import theano
     >>> from theano import tensor
@@ -51,7 +53,7 @@ brick lifecycle: *initialization*.
 
 Keep in mind that at the end of the day, bricks just help you construct a Theano
 computational graph, so it is possible to mix in regular Theano statements when
-building models.  (However, you might miss out on some of the niftier features
+building models. (However, you might miss out on some of the niftier features
 of Blocks, such as variable annotation.)
 
     >>> z = tensor.max(y + 4)

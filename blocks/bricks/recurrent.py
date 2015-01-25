@@ -9,7 +9,7 @@ from theano import tensor
 from blocks.bricks import Initializable, Identity, Sigmoid
 from blocks.bricks.base import Application, application, Brick, lazy
 from blocks.initialization import NdarrayInitialization
-from blocks.utils import pack, shared_floatx_zeros
+from blocks.utils import pack, shared_floatx_zeros, dict_union
 
 
 class BaseRecurrent(Brick):
@@ -70,7 +70,8 @@ def recurrent(*args, **kwargs):
         arg_spec = inspect.getargspec(application_function)
         arg_names = arg_spec.args[1:]
 
-        def recurrent_apply(brick, application, *args, **kwargs):
+        def recurrent_apply(brick, application, application_call,
+                            *args, **kwargs):
             """Iterates a transition function.
 
             Parameters
@@ -181,7 +182,8 @@ def recurrent(*args, **kwargs):
                                       tensor.subtensor.Subtensor)
                     result[i] = result[i].owner.inputs[0]
             if updates:
-                list(updates.values())[0].owner.tag.updates = updates
+                application_call.updates = dict_union(application_call.updates,
+                                                      updates)
             return result
 
         return recurrent_apply
