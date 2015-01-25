@@ -41,7 +41,7 @@ class VariableFilter(object):
     Parameters
     ----------
     roles : list of :class:`VariableRole` instances, optional
-        Matches any attribute which has one of the roles given.
+        Matches any variable which has one of the roles given.
     bricks : list of :class:`Brick` classes or instances, optional
         Matches any variable whose brick is either the given brick, or
         whose brick is of a given class.
@@ -55,6 +55,14 @@ class VariableFilter(object):
     Note that only auxiliary variables, parameters, inputs and outputs are
     tagged with the brick that created them. Other Theano variables that
     were created in the process of applying a brick will be filtered out.
+
+    Note that technically speaking, bricks are able to have non-shared
+    variables as parameters. For example, we can use the tranpose of
+    another weight matrix as the parameter of a particular brick. This
+    means that in some unusual cases, filtering by the :const:`PARAMETER`
+    role alone will not be enough to retrieve all trainable parameters in
+    your model; you will need to filter out the shared variables from these
+    (using e.g. :func:`is_shared_variable`).
 
     Examples
     --------
