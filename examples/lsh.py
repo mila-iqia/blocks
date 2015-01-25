@@ -57,5 +57,11 @@ h = theano.function(
 # Given neighbors + target, update
 sample = tensor.lvector('sample')
 y_hat_estimate = Softmax().apply(tensor.dot(hidden_state, W[:, sample]))
-cost = CategoricalCrossEntropy().apply(y, y_hat_estimate)
+cost = CategoricalCrossEntropy().apply(y.flatten(), y_hat_estimate)
+
+i = theano.function([x, sample, y], [cost])
+
 print(g(numpy.random.randint(vocab_size, size=(batch_size, n_gram_order))))
+print(i(numpy.random.randint(vocab_size, size=(batch_size, n_gram_order)),
+        numpy.random.randint(vocab_size, size=(10,)),
+        numpy.random.randint(10, size=(batch_size, 1))))  # Index of subsample
