@@ -17,6 +17,7 @@ from blocks.graph import ComputationGraph
 from blocks.filter import VariableFilter
 from blocks.main_loop import MainLoop
 from blocks.extensions import FinishAfter, Printing
+from blocks.extensions.saveload import SerializeMainLoop
 from blocks.extensions.monitoring import (DataStreamMonitoring,
                                           TrainingDataMonitoring)
 
@@ -27,6 +28,9 @@ num_hidden = 256
 embedding_size = 300
 batch_size = 1
 
+import sys
+sys.setrecursionlimit(10000)
+
 
 def main():
 
@@ -36,7 +40,7 @@ def main():
 
     # Input -> hidden state
     lookup = LookupTable(length=vocab_size, dim=embedding_size, name='lookup',
-                         weights_init=IsotropicGaussian(0.01))
+                         weights_init=IsotropicGaussian(0.001))
     lookup.initialize()
     embeddings = lookup.lookup(x)
     embeddings = embeddings.reshape(
@@ -54,7 +58,8 @@ def main():
     output.initialize()
     W = output.linear_transformations[0].params[0]
 
-    real_cost = CategoricalCrossEntropy().apply(y.flatten(), output)
+    real_cost = CategoricalCrossEntropy().apply(y.flatten(),
+                                                output.apply(hidden_state))
 
     # Create a hasher and hash the weight matrix vectors and the hidden state
     hasher = Hash(num_hidden, bits)
@@ -72,9 +77,12 @@ def main():
                        tensor.concatenate([neighbors, y.flatten()]))
 
     # Calculate the cost of the softmax approximation
-    y_hat_estimate = Softmax().apply(tensor.dot(hidden_state, W[:, neighbors]))
     y_estimate = tensor.eq(neighbors, y.flatten()[0]).nonzero()[0]
-    cost = -(tensor.log(y_hat_estimate[0])[y_estimate[0]]).mean()
+    z = tensor.dot(hidden_state, W[:, neighbors])
+    z = z - z.max(axis=1).dimshuffle(0, 'x')
+    log_prob = z - tensor.log(tensor.exp(z).sum(axis=1).dimshuffle(0, 'x'))
+    log_prob_of = log_prob[0, y_estimate[0]]
+    cost = -log_prob_of.mean()
     cost.name = 'cost'
     # cost = CategoricalCrossEntropy().apply(y_estimate, y_hat_estimate)
 
@@ -93,7 +101,7 @@ def main():
     n_gram_stream = NGramStream(n_gram_order, batch_stream,
                                 iteration_scheme=ConstantScheme(1))
 
-    test = OneBillionWord('test', range(1, 100), vocab)
+    test = OneBillionWord('heldout', range(1), vocab)
     test_stream = test.get_default_stream()
     test_batch_stream = BatchDataStream(test_stream, ConstantScheme(1))
     test_n_gram_stream = NGramStream(n_gram_order, test_batch_stream,
@@ -101,7 +109,7 @@ def main():
 
     cg = ComputationGraph(cost)
     algorithm = GradientDescent(
-        cost=cost, step_rule=SteepestDescent(learning_rate=0.0001),
+        cost=cost, step_rule=SteepestDescent(learning_rate=0.001),
         params=[var for var in cg.shared_variables if var not in [hashes] +
                 VariableFilter(bricks=[hasher])(cg.shared_variables)])
     algorithm.add_updates(
@@ -110,12 +118,12 @@ def main():
 
     main_loop = MainLoop(
         model=None, data_stream=n_gram_stream, algorithm=algorithm,
-        extensions=[FinishAfter(after_n_epochs=5),
-                    DataStreamMonitoring([real_cost], test_n_gram_stream,
-                                         prefix='test'),
+        extensions=[DataStreamMonitoring([real_cost], test_n_gram_stream,
+                                         prefix='test', every_n_batches=5000),
                     TrainingDataMonitoring([cost], prefix='train',
                                            after_every_batch=True),
-                    Printing(after_every_batch=True)])
+                    Printing(every_n_batches=50),
+                    SerializeMainLoop('lsh.pkl', every_n_batches=5000)])
     main_loop.run()
 
 if __name__ == "__main__":

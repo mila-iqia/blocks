@@ -648,20 +648,25 @@ class BatchDataStream(DataStreamWrapper):
         super(BatchDataStream, self).__init__(
             data_stream, iteration_scheme=iteration_scheme)
         self.strict = strict
+        self._finished = False
 
     def get_data(self, request=None):
         """Get data from the dataset."""
         if request is None:
             raise ValueError
+        if self._finished:
+            self._finished = False
+            raise StopIteration
         data = [[] for _ in self.sources]
         for i in range(request):
             try:
                 [source_data.append(example) for source_data, example
                  in zip(data, next(self.child_epoch_iterator))]
             except StopIteration:
-                if self.strict:
+                if self.strict or not data[0]:
                     raise
                 else:
+                    self._finished = True
                     break
         return tuple(numpy.asarray(source_data) for source_data in data)
 
