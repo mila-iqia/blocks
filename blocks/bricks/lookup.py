@@ -1,7 +1,11 @@
 """Introduces Lookup brick."""
+import numpy
+from theano import tensor
+
 from blocks.bricks import Initializable
 from blocks.bricks.base import application, lazy
-from blocks.utils import check_theano_variable, shared_floatx_zeros
+from blocks.utils import (check_theano_variable, shared_floatx_zeros,
+                          shared_floatx)
 
 
 class LookupTable(Initializable):
@@ -61,3 +65,34 @@ class LookupTable(Initializable):
         output_shape = [indices.shape[i]
                         for i in range(indices.ndim)] + [self.dim]
         return self.W[indices.flatten()].reshape(output_shape)
+
+
+class Hash(Initializable):
+    has_bias = False
+
+    @lazy
+    def __init__(self, dim, bits, **kwargs):
+        super(Hash, self).__init__(**kwargs)
+        self.dim = dim
+        self.bits = bits
+
+    def _allocate(self):
+        self.params = [shared_floatx(self.rng.normal(shape=(self.bits,
+                                                            self.size + 1)))]
+
+    @application
+    def apply(self, W, indices=None):
+        hash_vectors = self.params[0]
+        if indices is not None:
+            W = W[indices]
+        W_norms = W.norm(2, axis=1)
+        max_W_norm = W_norms.max()
+        scaled_W = W / max_W_norm
+        mappings = (tensor.dot(hash_vectors[:, :self.dim], scaled_W.T) +
+                    tensor.outer(hash_vectors[:, -1],
+                                 tensor.sqrt(1 - tensor.sqrt(W_norms /
+                                                             max_W_norm))))
+        signs = tensor.switch(mappings < 0, numpy.int64(0), numpy.int64(1)).T
+        hashes = (signs * (2 ** tensor.arange(self.bits,
+                                              dtype='int64'))).sum(axis=1)
+        return hashes
