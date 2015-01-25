@@ -139,6 +139,14 @@ def add_role(var, role):
         The variable to assign the new role to.
     role : :class:`VariableRole` instance
 
+    Notes
+    -----
+    Some roles are subroles of others (e.g. :const:`WEIGHTS` is a subrole
+    of :const:`PARAMETER`). This function will not add a role if a more
+    specific role has already been added. If you need to replace a role
+    with a parent role (e.g. replace :const:`WEIGHTS` with
+    :const:`PARAMETER`) you must do so manually.
+
     Examples
     --------
     >>> from theano import tensor
@@ -147,14 +155,6 @@ def add_role(var, role):
     >>> add_role(W, WEIGHTS)
     >>> print(*W.tag.roles)
     WEIGHTS
-
-    Notes
-    -----
-    Some roles are subroles of others (e.g. :const:`WEIGHTS` is a subrole
-    of :const:`PARAMETER`). This function will not add a role if a more
-    specific role has already been added. If you need to replace a role
-    with a parent role (e.g. replace :const:`WEIGHTS` with
-    :const:`PARAMETER`) you must do so manually.
 
     """
     roles = getattr(var.tag, 'roles', [])
