@@ -6,9 +6,8 @@ import six
 import theano
 from theano import tensor
 from theano import printing
-from theano.scalar import ScalarConstant
-from theano.tensor import TensorConstant
 from theano.tensor.sharedvar import SharedVariable
+from theano.gof.graph import Constant
 
 
 def pack(arg):
@@ -248,8 +247,7 @@ def is_graph_input(variable):
     """
     return (not variable.owner and
             not isinstance(variable, SharedVariable) and
-            not isinstance(variable, TensorConstant) and
-            not isinstance(variable, ScalarConstant))
+            not isinstance(variable, Constant))
 
 
 def is_shared_variable(variable):

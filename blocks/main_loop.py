@@ -152,7 +152,7 @@ class MainLoop(object):
                 self.log.previous_row.keyboard_interrupt_received):
             raise TrainingFinish
 
-    def _handle_keyboard_interrupt(self, signal, frame):
+    def _handle_keyboard_interrupt(self, signal_number, frame):
         # After receiving a first keyboard interrupt signal,
         # ignore all following ones.
         signal.signal(signal.SIGINT, signal.SIG_DFL)

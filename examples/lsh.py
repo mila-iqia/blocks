@@ -1,67 +1,107 @@
-import numpy
 import theano
 from theano import tensor
+from theano.ifelse import ifelse
 
-from blocks.bricks import MLP, Rectifier, Softmax
-from blocks.bricks.cost import CategoricalCrossEntropy
-from blocks.graph import ComputationGraph, OUTPUT
+from blocks.bricks import MLP, Sigmoid, Softmax
 from blocks.bricks.lookup import Hash, LookupTable
-from blocks.filter import VariableFilter
 from blocks.initialization import IsotropicGaussian, Constant
 from blocks.utils import shared_floatx_zeros
 
+from blocks.datasets import BatchDataStream
+from blocks.datasets.schemes import ConstantScheme
+from blocks.datasets.text import OneBillionWord, NGramStream
+
+from blocks.algorithms import GradientDescent, SteepestDescent
+from blocks.graph import ComputationGraph
+from blocks.filter import VariableFilter
+from blocks.main_loop import MainLoop
+from blocks.extensions import FinishAfter, Printing
+from blocks.extensions.monitoring import TrainingDataMonitoring
+
 bits = 4
 n_gram_order = 5
-vocab_size = 1000
+vocab_size = 100000
 num_hidden = 256
 embedding_size = 300
 batch_size = 1
 
-x = tensor.lmatrix('features')
-y = tensor.lmatrix('targets')
-hashes = shared_floatx_zeros(vocab_size, dtype='int64', name='hashes')
+def main():
 
-lookup = LookupTable(length=vocab_size, dim=embedding_size, name='lookup',
-                     weights_init=IsotropicGaussian(0.01))
-lookup.initialize()
-embeddings = lookup.lookup(x)
-embeddings = embeddings.reshape((embeddings.shape[0],
-                                 embeddings.shape[1] * embeddings.shape[2]))
-mlp = MLP(activations=[Rectifier(), Softmax()],
-          dims=[lookup.dim * n_gram_order, num_hidden, vocab_size],
-          weights_init=IsotropicGaussian(0.01), biases_init=Constant(0.001))
-mlp.initialize()
-y_hat = mlp.apply(embeddings)
+    # The input and the targets
+    x = tensor.lmatrix('features')
+    y = tensor.lmatrix('targets')
 
-cg = ComputationGraph(y_hat)
+    # Input -> hidden state
+    lookup = LookupTable(length=vocab_size, dim=embedding_size, name='lookup',
+                         weights_init=IsotropicGaussian(0.01))
+    lookup.initialize()
+    embeddings = lookup.lookup(x)
+    embeddings = embeddings.reshape((embeddings.shape[0],
+                                     embeddings.shape[1] * embeddings.shape[2]))
+    hidden = MLP(activations=[Sigmoid()],
+                 dims=[lookup.dim * n_gram_order, num_hidden],
+                 weights_init=IsotropicGaussian(0.01), biases_init=Constant(0.001))
+    hidden.initialize()
+    hidden_state = hidden.apply(embeddings)
 
-W = mlp.linear_transformations[1].params[0]
-hasher = Hash(num_hidden, bits)
-W_hashes = hasher.apply(W)
-hidden_state, = VariableFilter(
-    roles=[OUTPUT], bricks=[mlp.linear_transformations[0]])(cg.variables)
-hidden_state_hash = hasher.apply(hidden_state.T).sum()
+    # Initialize the weight matrix for the output layer
+    output = MLP(activations=[Softmax()], dims=[num_hidden, vocab_size],
+                 weights_init=IsotropicGaussian(0.001), use_bias=False)
+    output.initialize()
+    W = output.linear_transformations[0].params[0]
 
-neighbors = tensor.eq(hashes, hidden_state_hash).nonzero()[0]
+    # Create a hasher and hash the weight matrix vectors and the hidden state
+    hasher = Hash(num_hidden, bits)
+    W_hashes = hasher.apply(W)
 
-# Initialize the hashes
-f = theano.function([], [], updates=[(hashes, W_hashes)])
-f()
-# Function to calculate neighbors
-g = theano.function([x], [neighbors])
-# Function to update hashes after update
-h = theano.function(
-    [x], [], updates=[(hashes,
-                      tensor.set_subtensor(hashes[neighbors],
-                                           hasher.apply(W, neighbors)))])
-# Given neighbors + target, update
-sample = tensor.lvector('sample')
-y_hat_estimate = Softmax().apply(tensor.dot(hidden_state, W[:, sample]))
-cost = CategoricalCrossEntropy().apply(y.flatten(), y_hat_estimate)
+    # We want to store the weight hashes somewhere
+    hashes = shared_floatx_zeros(vocab_size, dtype='int64', name='hashes')
+    f = theano.function([], [], updates=[(hashes, W_hashes)])
+    f()
 
-i = theano.function([x, sample, y], [cost])
+    # Calculate neighbors and add the target to the neighbours if it's not there
+    hidden_state_hash = hasher.apply(hidden_state.T).sum()
+    neighbors = tensor.eq(hashes, hidden_state_hash).nonzero()[0]
+    neighbors = ifelse(tensor.eq(neighbors, y.flatten()[0]).sum(), neighbors,
+                       tensor.concatenate([neighbors, y.flatten()]))
 
-print(g(numpy.random.randint(vocab_size, size=(batch_size, n_gram_order))))
-print(i(numpy.random.randint(vocab_size, size=(batch_size, n_gram_order)),
-        numpy.random.randint(vocab_size, size=(10,)),
-        numpy.random.randint(10, size=(batch_size, 1))))  # Index of subsample
+    # Calculate the cost of the softmax approximation
+    y_hat_estimate = Softmax().apply(tensor.dot(hidden_state, W[:, neighbors]))
+    y_estimate = tensor.eq(neighbors, y.flatten()[0]).nonzero()[0]
+    cost = -(tensor.log(y_hat_estimate[0])[y_estimate[0]]).mean()
+    cost.name = 'cost'
+    # cost = CategoricalCrossEntropy().apply(y_estimate, y_hat_estimate)
+
+    # Function to update hashes after update
+    import cPickle
+    with open('/data/lisa/datasets/1-billion-word/processed/'
+              'one_billion_counter_full.pkl') as f:
+        counter = cPickle.load(f)
+    vocab = dict(counter.most_common(vocab_size - 3) +
+                 [('<S>', 0), ('</S>', 1), ('<UNK>', 2)])
+    vocab = dict((word, index) for word, index in vocab.items()
+                 if index < vocab_size)
+    train = OneBillionWord('training', range(1, 100), vocab)
+    stream = train.get_default_stream()
+    batch_stream = BatchDataStream(stream, ConstantScheme(1))
+    n_gram_stream = NGramStream(n_gram_order, batch_stream,
+                                iteration_scheme=ConstantScheme(1))
+
+    cg = ComputationGraph(cost)
+    algorithm = GradientDescent(
+        cost=cost, step_rule=SteepestDescent(learning_rate=0.0001),
+        params=[var for var in cg.shared_variables if var
+                not in [hashes] + VariableFilter(bricks=[hasher])(cg.shared_variables)])
+    algorithm.add_updates(
+        [(hashes,
+         tensor.set_subtensor(hashes[neighbors], hasher.apply(W, neighbors)))])
+
+    main_loop = MainLoop(
+        model=None, data_stream=n_gram_stream, algorithm=algorithm,
+        extensions=[FinishAfter(after_n_epochs=5),
+                    TrainingDataMonitoring([cost], prefix='train', after_every_batch=True),
+                    Printing(after_every_batch=True)])
+    main_loop.run()
+
+if __name__ == "__main__":
+    main()

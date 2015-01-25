@@ -85,7 +85,7 @@ class Hash(Initializable):
     def apply(self, W, indices=None):
         hash_vectors = self.params[0]
         if indices is not None:
-            W = W[indices]
+            W = W[:, indices]
         W_norms = W.norm(2, axis=0)
         max_W_norm = W_norms.max()
         scaled_W = W / max_W_norm
