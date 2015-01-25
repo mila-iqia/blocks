@@ -35,12 +35,12 @@ y_hat = mlp.apply(embeddings)
 
 cg = ComputationGraph(y_hat)
 
-W = mlp.linear_transformations[1].params[0].T
-hasher = Hash(bits, num_hidden)
+W = mlp.linear_transformations[1].params[0]
+hasher = Hash(num_hidden, bits)
 W_hashes = hasher.apply(W)
 hidden_state, = VariableFilter(
     roles=[OUTPUT], bricks=[mlp.linear_transformations[0]])(cg.variables)
-hidden_state_hash = hasher.apply(hidden_state).sum()
+hidden_state_hash = hasher.apply(hidden_state.T).sum()
 
 neighbors = tensor.eq(hashes, hidden_state_hash).nonzero()[0]
 
@@ -51,7 +51,7 @@ f()
 g = theano.function([x], [neighbors])
 # Function to update hashes after update
 h = theano.function(
-    [], [], updates=[(hashes,
+    [x], [], updates=[(hashes,
                       tensor.set_subtensor(hashes[neighbors],
                                            hasher.apply(W, neighbors)))])
 # Given neighbors + target, update

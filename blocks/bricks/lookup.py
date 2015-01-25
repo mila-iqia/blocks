@@ -1,5 +1,6 @@
 """Introduces Lookup brick."""
 import numpy
+import theano
 from theano import tensor
 
 from blocks.bricks import Initializable
@@ -77,21 +78,22 @@ class Hash(Initializable):
         self.bits = bits
 
     def _allocate(self):
-        self.params = [shared_floatx(self.rng.normal(shape=(self.bits,
-                                                            self.size + 1)))]
+        self.params = [shared_floatx(self.rng.normal(size=(self.bits,
+                                                           self.dim + 1)))]
 
     @application
     def apply(self, W, indices=None):
         hash_vectors = self.params[0]
         if indices is not None:
             W = W[indices]
-        W_norms = W.norm(2, axis=1)
+        W_norms = W.norm(2, axis=0)
         max_W_norm = W_norms.max()
         scaled_W = W / max_W_norm
-        mappings = (tensor.dot(hash_vectors[:, :self.dim], scaled_W.T) +
-                    tensor.outer(hash_vectors[:, -1],
-                                 tensor.sqrt(1 - tensor.sqrt(W_norms /
-                                                             max_W_norm))))
+        part_1 = tensor.dot(hash_vectors[:, :-1], scaled_W)
+        part_2 = tensor.outer(hash_vectors[:, -1],
+                              tensor.sqrt(1 - tensor.sqrt(W_norms /
+                                                          max_W_norm)))
+        mappings = part_1 + part_2
         signs = tensor.switch(mappings < 0, numpy.int64(0), numpy.int64(1)).T
         hashes = (signs * (2 ** tensor.arange(self.bits,
                                               dtype='int64'))).sum(axis=1)
