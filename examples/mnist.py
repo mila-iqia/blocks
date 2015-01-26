@@ -55,7 +55,7 @@ def main(save_to, num_epochs):
                         DataStream(mnist_test,
                                    iteration_scheme=SequentialScheme(
                                        mnist_test.num_examples, 500)),
-                        prefix="test_"),
+                        prefix="test"),
                     TrainingDataMonitoring(
                         [cost, error_rate,
                          aggregation.mean(algorithm.total_gradient_norm)],
