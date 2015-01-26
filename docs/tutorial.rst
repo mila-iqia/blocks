@@ -21,8 +21,9 @@ The Model
 We will train a simple MLP with a single hidden layer that uses the rectifier_
 activation function. Our output layer will consist of a softmax_ function with
 10 units; one for each class. Mathematically speaking, our model is parametrized
-by the weight matrices :math:`\mathbf{W}_h` and :math:`\mathbf{W}_y`, and bias
-vectors :math:`\mathbf{b}_h` and :math:`\mathbf{b}_y`. The rectifier activation
+by the parameters :math:`\mathbf{\theta}`, defined as the weight matrices
+:math:`\mathbf{W}^{(1)}` and :math:`\mathbf{W}^{(2)}`, and bias vectors
+:math:`\mathbf{b}^{(1)}` and :math:`\mathbf{b}^{(2)}`. The rectifier activation
 function is defined as
 
 .. math:: \mathrm{ReLU}(\mathbf{x})_i = \max(0, \mathbf{x}_i)
@@ -33,20 +34,20 @@ and our softmax output function is defined
 
 Hence, our complete model is
 
-.. math:: f(\mathbf{x}) = \mathrm{softmax}(\mathbf{W}_y\mathrm{ReLU}(\mathbf{W}_h\mathbf{x} + \mathbf{b}_h) + \mathbf{b}_y)
+.. math:: f(\mathbf{x}; \mathbf{\theta}) = \mathrm{softmax}(\mathbf{W}^{(2)}\mathrm{ReLU}(\mathbf{W}^{(1)}\mathbf{x} + \mathbf{b}^{(1)}) + \mathbf{b}^{(2)})
 
-Since the output of a softmax represents a categorical probability distribution
-we can consider :math:`f(\mathbf{x}) = \hat p(\mathbf{y} \mid \mathbf{x})`,
-where :math:`\mathbf{x}` is the 784-dimensional (28 × 28) input, and
-:math:`\mathbf{y}` the probability distribution of it belonging to classes
-:math:`i = 0,\dots,9`. We can train the parameters of our model by minimizing
-the negative log-likelihood i.e.  the categorical cross-entropy between our
-model's output and the target distribution. That is, we minimize the sum of
+Since the output of a softmax sums to 1, we can interpret it as a categorical
+probability distribution: :math:`f(\mathbf{x})_c = \hat p(y = c \mid
+\mathbf{x})`, where :math:`\mathbf{x}` is the 784-dimensional (28 × 28) input
+and :math:`c \in \{0, ..., 9\}` one of the 10 classes. We can train the
+parameters of our model by minimizing the negative log-likelihood i.e. the
+cross-entropy between our model's output and the target distribution. We
+minimize the sum of
 
-.. math:: - \log \sum_{i=0}^{10} p(\mathbf{y} = i) \hat p(\mathbf{y} = i \mid \mathbf{x})
+.. math:: l(\mathbf{f}(\mathbf{x}), y) = -\sum_{c=0}^9 \mathbf{1}_{(y=c)} \log f(\mathbf{x})_c = -\log f(\mathbf{x})_y
 
-over all examples. We do so by using `stochastic gradient descent`_ (SGD) on
-mini-batches.
+over all examples (where :math:`\mathbf{1}` is the indicator function). We do so
+by using `stochastic gradient descent`_ (SGD) on mini-batches.
 
 .. _model_building:
 
@@ -81,8 +82,11 @@ applying the linear transformations and activations.
 Blocks' uses "bricks" to build models. Bricks are parametrized Theano ops. What
 this means is that we start by initializing them with certain parameters e.g.
 ``input_dim``. After initialization we can apply our bricks on Theano variables
-to build the model we want.
+to build the model we want. We'll talk more about bricks in the next tutorial,
+:doc:`bricks_overview`.
 
+Loss function and regularization
+--------------------------------
 Now that we have built our model, let's define the cost to minimize. For this,
 we will need the Theano variable representing the target labels.
 
@@ -90,8 +94,28 @@ we will need the Theano variable representing the target labels.
 >>> from blocks.bricks.cost import CategoricalCrossEntropy
 >>> cost = CategoricalCrossEntropy().apply(y.flatten(), y_hat)
 
-That's it! But creating a simple MLP this way is rather cumbersome. In practice,
-we would have simply used the :class:`~blocks.bricks.MLP` class.
+To make sure that our network doesn't overfit we can use regularization, that
+is, we will penalize the complexity of the model. We will use
+:math:`L2`-regularization, also known as *weight decay*. So our final objective
+function is:
+
+.. math:: l(\mathbf{f}(\mathbf{x}), y) = -\log f(\mathbf{x})_y + \lambda_1\|\mathbf{W}^{(1)}\|^2 + \lambda_2\|\mathbf{W}^{(2)}\|^2
+
+To get the weights from our model, we will use Blocks' annotation futures (read
+more about them in the :doc:`cg` tutorial).
+
+    >>> from blocks.bricks import WEIGHTS
+    >>> from blocks.graph import ComputationGraph
+    >>> from blocks.filter import VariableFilter
+    >>> cg = ComputationGraph(cost)
+    >>> W1, W2 = VariableFilter(roles=[WEIGHTS])(cg.variables)
+    >>> cost = cost + 0.005 * (W1 ** 2).sum() + 0.005 * (W2 ** 2).sum()
+
+Where we set :math:`\lambda_1 = \lambda_2 = 0.005`. And that's it! We now have
+the final objective function we want to optimize.
+
+But creating a simple MLP this way is rather cumbersome. In practice, we would
+have used the :class:`~blocks.bricks.MLP` class instead.
 
 >>> from blocks.bricks import MLP
 >>> mlp = MLP(activations=[Rectifier(), Softmax()], dims=[784, 100, 10]).apply(x)
