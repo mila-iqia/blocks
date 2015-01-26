@@ -103,6 +103,7 @@ class TextFile(Dataset):
             sentence = state.file.readline()
             if not sentence:
                 state.file.close()
+                state.file = None
                 if state.current_index == len(self.files) - 1:
                     raise StopIteration
                 else:

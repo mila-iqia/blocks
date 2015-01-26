@@ -72,7 +72,10 @@ def main():
 
     # Calculate neighbors and add the target to the neighbours if not there
     hidden_state_hash = hasher.apply(hidden_state.T).sum()
-    neighbors = tensor.eq(hashes, hidden_state_hash).nonzero()[0]
+    # neighbors = tensor.eq(hashes, hidden_state_hash).nonzero()[0]
+    from theano.tensor.shared_randomstreams import RandomStreams
+    rng = RandomStreams(1)
+    neighbors = rng.choice(a=vocab_size, size=(vocab_size // 2 ** bits,))
     neighbors = ifelse(tensor.eq(neighbors, y.flatten()[0]).sum(), neighbors,
                        tensor.concatenate([neighbors, y.flatten()]))
 
@@ -123,7 +126,7 @@ def main():
                     TrainingDataMonitoring([cost], prefix='train',
                                            after_every_batch=True),
                     Printing(every_n_batches=50),
-                    SerializeMainLoop('lsh.pkl', every_n_batches=5000)])
+                    SerializeMainLoop('lsh.pkl', every_n_batches=500)])
     main_loop.run()
 
 if __name__ == "__main__":
