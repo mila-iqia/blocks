@@ -43,10 +43,6 @@ install:
         conda install -q --yes python=$TRAVIS_PYTHON_VERSION mkl nose numpy pip coverage six scipy
         pip install -q --no-deps git+git://github.com/Theano/Theano.git # Development version
         pip install -q nose2[coverage-plugin] coveralls
-        git clone -q git://github.com/lisa-lab/pylearn2.git # Pylearn2 doesn't support pip
-        cd pylearn2
-        python setup.py -q develop
-        cd -
       fi
   - |
       if [ $FORMAT ]; then
