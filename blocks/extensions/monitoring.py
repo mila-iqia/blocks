@@ -1,9 +1,12 @@
 """Extensions for monitoring the training process."""
+import logging
+
 from blocks.extensions import SimpleExtension
 from blocks.algorithms import DifferentiableCostMinimizer
 from blocks.monitoring.evaluators import AggregationBuffer, DatasetEvaluator
 
 PREFIX_SEPARATOR = '_'
+logger = logging.getLogger()
 
 
 def _add_records(log, prefix, record_tuples):
@@ -43,8 +46,10 @@ class DataStreamMonitoring(SimpleExtension):
 
     def do(self, callback_name, *args):
         """Write the values of monitored expressions to the log."""
+        logger.info("Monitoring on auxiliary data started")
         value_dict = self._evaluator.evaluate(self.data_stream)
         _add_records(self.main_loop.log, self.prefix, value_dict.items())
+        logger.info("Monitoring on auxiliary data finished")
 
 
 class TrainingDataMonitoring(SimpleExtension):
