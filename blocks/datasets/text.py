@@ -100,9 +100,12 @@ class TextFile(Dataset):
         if request is not None:
             raise ValueError
         while True:
+            if state.file is None:
+                raise StopIteration
             sentence = state.file.readline()
             if not sentence:
                 state.file.close()
+                state.file = None
                 if state.current_index == len(self.files) - 1:
                     raise StopIteration
                 else:
