@@ -104,12 +104,19 @@ function is:
 To get the weights from our model, we will use Blocks' annotation futures (read
 more about them in the :doc:`cg` tutorial).
 
-    >>> from blocks.bricks import WEIGHTS
-    >>> from blocks.graph import ComputationGraph
-    >>> from blocks.filter import VariableFilter
-    >>> cg = ComputationGraph(cost)
-    >>> W1, W2 = VariableFilter(roles=[WEIGHTS])(cg.variables)
-    >>> cost = cost + 0.005 * (W1 ** 2).sum() + 0.005 * (W2 ** 2).sum()
+>>> from blocks.bricks import WEIGHTS
+>>> from blocks.graph import ComputationGraph
+>>> from blocks.filter import VariableFilter
+>>> cg = ComputationGraph(cost)
+>>> W1, W2 = VariableFilter(roles=[WEIGHTS])(cg.variables)
+>>> cost = cost + 0.005 * (W1 ** 2).sum() + 0.005 * (W2 ** 2).sum()
+>>> cost.name = 'cost_with_regularization'
+
+.. note::
+
+   Note that we explicitly gave our variable a name. We do this so that when we
+   monitor the performance of our model, the progress monitor will know what
+   name to report in the logs.
 
 Where we set :math:`\lambda_1 = \lambda_2 = 0.005`. And that's it! We now have
 the final objective function we want to optimize.
@@ -128,16 +135,16 @@ All of these parameters were set to 0. Before we start training our network, we
 will want to initialize these parameters by sampling them from a particular
 probability distribution. Bricks can do this for you.
 
-    >>> from blocks.initialization import IsotropicGaussian, Constant
-    >>> input_to_hidden.weights_init = hidden_to_output.weights_init = IsotropicGaussian(std=0.01)
-    >>> input_to_hidden.biases_init = hidden_to_output.biases_init = Constant(0)
-    >>> input_to_hidden.initialize()
-    >>> hidden_to_output.initialize()
+>>> from blocks.initialization import IsotropicGaussian, Constant
+>>> input_to_hidden.weights_init = hidden_to_output.weights_init = IsotropicGaussian(std=0.01)
+>>> input_to_hidden.biases_init = hidden_to_output.biases_init = Constant(0)
+>>> input_to_hidden.initialize()
+>>> hidden_to_output.initialize()
 
 We have now initialized our weight matrices with entries drawn from a normal
 distribution with a standard deviation of 0.01.
 
-    >>> W1.get_value() # doctest: +SKIP
+>>> W1.get_value() # doctest: +SKIP
         array([[ 0.01624345, -0.00611756, -0.00528172, ...,  0.00043597, ...
 
 Training your model
@@ -168,39 +175,63 @@ As our algorithm we will use straightforward SGD with a fixed learning rate.
 >>> from blocks.algorithms import GradientDescent, SteepestDescent
 >>> algorithm = GradientDescent(cost=cost, step_rule=SteepestDescent(learning_rate=0.1))
 
-That's all we need! We can use the :class:`~blocks.main_loop.MainLoop` to
-combine all the different pieces. Let's train our model for a single epoch and
-print the progress to see how it works.
+During training we will want to monitor the performance of our model on
+separate validation. Let's create a new data stream for that.
+
+>>> mnist_test = MNIST("test")
+>>> data_stream_test = DataStream(mnist_test, iteration_scheme=SequentialScheme(
+...     num_examples=mnist_test.num_examples, batch_size=1024))
+
+In order to monitor our performance on this data stream during training, we need
+to use one of Blocks' extensions. In particular, we need to use the
+:class:`DataStreamMonitoring` extension.
+
+>>> from blocks.extensions.monitoring import DataStreamMonitoring
+>>> monitor = DataStreamMonitoring(
+...     expressions=[cost], data_stream=data_stream_test, prefix="test")
+
+We can use the :class:`~blocks.main_loop.MainLoop` to combine all the different
+bits and pieces now. We use two more extensions to make our training stop after
+a single epoch and to make sure that our progress is printed.
 
 >>> from blocks.main_loop import MainLoop
 >>> from blocks.extensions import FinishAfter, Printing
 >>> main_loop = MainLoop(model=mlp, data_stream=data_stream, algorithm=algorithm,
-...                      extensions=[FinishAfter(after_n_epochs=1), Printing()])
+...                      extensions=[monitor, FinishAfter(after_n_epochs=1), Printing()])
 >>> main_loop.run() # doctest: +SKIP
+<BLANKLINE>
 -------------------------------------------------------------------------------
 BEFORE FIRST EPOCH
 -------------------------------------------------------------------------------
 Training status:
-     iterations_done: 0
      epochs_done: 0
+     iterations_done: 0
 Log records from the iteration 0:
+     test_cost_with_regularization: 2.34244632721
+<BLANKLINE>
+<BLANKLINE>
 -------------------------------------------------------------------------------
 AFTER ANOTHER EPOCH
 -------------------------------------------------------------------------------
 Training status:
-     iterations_done: 235
      epochs_done: 1
+     iterations_done: 235
 Log records from the iteration 235:
+     test_cost_with_regularization: 0.664899230003
      training_finish_requested: True
+<BLANKLINE>
+<BLANKLINE>
 -------------------------------------------------------------------------------
 TRAINING HAS BEEN FINISHED:
 -------------------------------------------------------------------------------
 Training status:
-     iterations_done: 235
      epochs_done: 1
+     iterations_done: 235
 Log records from the iteration 235:
+     test_cost_with_regularization: 0.664899230003
      training_finish_requested: True
      training_finished: True
+<BLANKLINE>
 
 .. _multilayer perceptron: https://en.wikipedia.org/wiki/Multilayer_perceptron
 .. _MNIST handwritten digit database: http://yann.lecun.com/exdb/mnist/
