@@ -515,7 +515,17 @@ class DataStream(AbstractDataStream):
 
 @add_metaclass(ABCMeta)
 class DataStreamWrapper(AbstractDataStream):
-    """A data stream that wraps another data stream."""
+    """A data stream that wraps another data stream.
+
+    Attributes
+    ----------
+    child_epoch_iterator : iterator type
+        When a new epoch iterator is requested, a new epoch creator is
+        automatically requested from the wrapped data stream and stored in
+        this attribute. Use it to access data from the wrapped data stream
+        by calling ``next(self.child_epoch_iterator)``.
+
+    """
     def __init__(self, data_stream, **kwargs):
         super(DataStreamWrapper, self).__init__(**kwargs)
         self.data_stream = data_stream
