@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import logging
 from argparse import ArgumentParser
 
 from theano import tensor
@@ -65,6 +66,7 @@ def main(save_to, num_epochs):
     main_loop.run()
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     parser = ArgumentParser("An example of training an MLP on"
                             " the MNIST dataset.")
     parser.add_argument("--num-epochs", type=int, default=2,

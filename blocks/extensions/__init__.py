@@ -122,6 +122,8 @@ class SimpleExtension(TrainingExtension):
         If ``True``, :meth:`do` is invoked before the first epoch.
     on_resumption : bool, optional
         If ``True``, :meth:`do` is invoked when training is resumed.
+    on_interrupt : bool, optional
+        If ``True``, :meth:`do` is invoked when training is interrupted.
     after_every_epoch : bool
         If ``True``, :meth:`do` is invoked after every epoch.
     after_every_batch: bool
@@ -139,7 +141,7 @@ class SimpleExtension(TrainingExtension):
 
     """
     def __init__(self, before_training=False, before_first_epoch=False,
-                 on_resumption=False,
+                 on_resumption=False, on_interrupt=False,
                  after_every_epoch=False, after_every_batch=False,
                  after_training=False,
                  after_n_epochs=None, after_n_batches=None,
@@ -154,6 +156,8 @@ class SimpleExtension(TrainingExtension):
                 predicate=lambda log: log.status.epochs_done == 0)
         if on_resumption:
             self.add_condition("on_resumption")
+        if on_interrupt:
+            self.add_condition("on_interrupt")
         if after_every_epoch:
             self.add_condition("after_epoch")
         if after_every_batch:
@@ -258,6 +262,7 @@ class Printing(SimpleExtension):
         kwargs.setdefault("on_resumption", True)
         kwargs.setdefault("after_training", True)
         kwargs.setdefault("after_every_epoch", True)
+        kwargs.setdefault("on_interrupt", True)
         super(Printing, self).__init__(**kwargs)
 
     def _print_attributes(self, attribute_tuples):
@@ -267,6 +272,9 @@ class Printing(SimpleExtension):
 
     def do(self, which_callback, *args):
         log = self.main_loop.log
+        print_status = True
+
+        print()
         print("".join(79 * "-"))
         if which_callback == "before_epoch" and log.status.epochs_done == 0:
             print("BEFORE FIRST EPOCH")
@@ -276,9 +284,14 @@ class Printing(SimpleExtension):
             print("TRAINING HAS BEEN FINISHED:")
         elif which_callback == "after_epoch":
             print("AFTER ANOTHER EPOCH")
+        elif which_callback == "on_interrupt":
+            print("TRAINING HAS BEEN INTERRUPTED")
+            print_status = False
         print("".join(79 * "-"))
-        print("Training status:")
-        self._print_attributes(log.status)
-        print("Log records from the iteration {}:".format(
-            log.status.iterations_done))
-        self._print_attributes(log.current_row)
+        if print_status:
+            print("Training status:")
+            self._print_attributes(log.status)
+            print("Log records from the iteration {}:".format(
+                log.status.iterations_done))
+            self._print_attributes(log.current_row)
+        print()
