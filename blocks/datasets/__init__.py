@@ -658,29 +658,33 @@ class NGramStream(CachedDataStream):
         super(NGramStream, self).__init__(data_stream, iteration_scheme)
         self.sources = self.sources + (target_source,)
         self.ngram_order = ngram_order
+        self._finished = False
 
     def get_data(self, request=None):
-        if not self.cache[0]:
-            self._cache()
         features, targets = [], []
-        for i, sentence in enumerate(self.cache[0]):
-            for j in range(request):
-                features.append(sentence[j:j + self.ngram_order])
-                targets.append([sentence[j + self.ngram_order]])
-                if j + self.ngram_order == len(sentence) - 1:
-                    sentence_ended = True
-                    break
-                elif len(features) == request:
-                    sentence_ended = False
-                    break
-            if sentence_ended:
-                self.cache[0].pop(0)
+        if self._finished:
+            self._finished = False
+            raise StopIteration
+        try:
+            while len(features) < request:
                 if not self.cache[0]:
                     self._cache()
+                sentence = self.cache[0][0]
+                j = -1
+                for j in range(len(sentence) - self.ngram_order):
+                    features.append(sentence[j:j + self.ngram_order])
+                    targets.append([sentence[j + self.ngram_order]])
+                    if len(features) == request:
+                        break
+                self.cache[0][0] = sentence[j + 1:]
+                if len(self.cache[0][0]) <= self.ngram_order:
+                    self.cache[0].pop(0)
+        except StopIteration:
+            if len(features):
+                self._finished = True
+                pass
             else:
-                self.cache[0][0] = self.cache[0][0][j + 1:]
-            if len(features) == request:
-                break
+                raise
         return tuple(numpy.asarray(data) for data in (features, targets))
 
 
