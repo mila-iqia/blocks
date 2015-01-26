@@ -3,6 +3,7 @@ from abc import ABCMeta, abstractmethod
 
 import numpy
 import six
+import theano
 from six import add_metaclass
 
 from blocks.utils import LambdaIterator, SequenceIterator
@@ -623,69 +624,121 @@ class CachedDataStream(DataStreamWrapper):
             cache.extend(data)
 
 
-class NGramStream(CachedDataStream):
-    """Return n-grams from a stream.
+class BatchDataStream(DataStreamWrapper):
+    """Creates minibatches from data streams providing single examples.
 
-    This data stream wrapper takes as an input a data stream outputting
-    batches of sentences. From these sentences n-grams of a fixed order
-    (e.g. bigrams, trigrams, etc.) are extracted and returned. It also
-    creates a ``targets`` data source. For each example, the target is the
-    word immediately following that n-gram. It is normally used for
-    language modelling, where we try to predict the next word from the
-    previous n words.
+    Some datasets only return one example at at time e.g. when reading text
+    files a line at a time. This wrapper reads several examples
+    sequentially to turn those into minibatches.
 
     Parameters
     ----------
-    ngram_order : int
-        The order of the n-grams to output e.g. 3 for trigrams.
-    data_stream : :class:`DataStream` instance
-        The data stream providing sentences. Each example is assumed to be
-        a list of integers.
-    target_source : str, optional
-        This data stream adds a new source for the target words. By default
-        this source is 'targets'.
-
-    Notes
-    -----
-    This class inherits from :class:`CachedDataStream` because it makes use
-    of a cache to store the sentences from the wrapped data stream in.
+    data_stream : :class:`AbstractDataStream` instance
+        The data stream to wrap.
+    iteration_scheme : :class:`BatchSizeScheme` instance
+        The iteration scheme to use; should return integers representing
+        the size of the batch to return.
+    strict : bool, optional
+        Whether the batch size should be strictly adhered to or not. For
+        example, if the dataset ends before the last batch is being filled,
+        can a smaller batch still be returned? By default ``False``.
 
     """
-    def __init__(self, ngram_order, data_stream, target_source='targets',
-                 iteration_scheme=None):
-        if len(data_stream.sources) > 1:
-            raise ValueError
-        super(NGramStream, self).__init__(data_stream, iteration_scheme)
-        self.sources = self.sources + (target_source,)
-        self.ngram_order = ngram_order
-        self._finished = False
+    def __init__(self, data_stream, iteration_scheme, strict=False):
+        super(BatchDataStream, self).__init__(
+            data_stream, iteration_scheme=iteration_scheme)
+        self.strict = strict
 
     def get_data(self, request=None):
-        features, targets = [], []
-        if self._finished:
-            self._finished = False
-            raise StopIteration
-        try:
-            while len(features) < request:
-                if not self.cache[0]:
-                    self._cache()
-                sentence = self.cache[0][0]
-                j = -1
-                for j in range(len(sentence) - self.ngram_order):
-                    features.append(sentence[j:j + self.ngram_order])
-                    targets.append([sentence[j + self.ngram_order]])
-                    if len(features) == request:
-                        break
-                self.cache[0][0] = sentence[j + 1:]
-                if len(self.cache[0][0]) <= self.ngram_order:
-                    self.cache[0].pop(0)
-        except StopIteration:
-            if len(features):
-                self._finished = True
-                pass
-            else:
+        """Get data from the dataset."""
+        if request is None:
+            raise ValueError
+        data = [[] for _ in self.sources]
+        for i in range(request):
+            try:
+                for source_data, example in zip(
+                        data, next(self.child_epoch_iterator)):
+                    source_data.append(example)
+            except StopIteration:
+                if self.strict and data[0]:
+                    raise ValueError("Not enough examples to form a batch of"
+                                     " requested size")
+                # If some data has been extracted and `strict` is not set,
+                # we should spit out this data before stopping iteration.
+                if data[0]:
+                    break
                 raise
-        return tuple(numpy.asarray(data) for data in (features, targets))
+        return tuple(numpy.asarray(source_data) for source_data in data)
+
+
+class PaddingDataStream(DataStreamWrapper):
+    """Adds padding to variable-length sequences.
+
+    When your batches consist of variable-length sequences, use this class
+    to equalize lengthes by adding zero-padding. To distinguish between
+    data and padding masks can be produced. For each data source that is
+    masked, a new source will be added. This source will have the name of
+    the original source with the suffix ``_mask`` (e.g. ``features_mask``).
+
+    Elements of incoming batches will be treated as numpy arrays (i.e.
+    using `numpy.asarray`). If they have more than one dimension,
+    all dimensions except length, that is the first one, must be equal.
+
+    Parameters
+    ----------
+    data_stream : :class:`AbstractDataStream` instance
+        The data stream to wrap
+    mask_sources : tuple of strings, optional
+        The sources for which we need to add a mask. If not provided, a
+        mask will be created for all data sources
+
+    """
+    def __init__(self, data_stream, mask_sources=None):
+        super(PaddingDataStream, self).__init__(data_stream)
+        if mask_sources is None:
+            mask_sources = self.data_stream.sources
+        self.mask_sources = mask_sources
+
+    @property
+    def sources(self):
+        sources = []
+        for source in self.data_stream.sources:
+            sources.append(source)
+            if source in self.mask_sources:
+                sources.append(source + '_mask')
+        return tuple(sources)
+
+    def get_data(self, request=None):
+        if request is not None:
+            raise ValueError
+        data = list(next(self.child_epoch_iterator))
+        data_with_masks = []
+        for i, (source, source_data) in enumerate(zip(self.sources, data)):
+            if source not in self.mask_sources:
+                data_with_masks.append(source_data)
+                continue
+
+            shapes = [numpy.asarray(sample).shape for sample in source_data]
+            lengthes = [shape[0] for shape in shapes]
+            max_sequence_length = max(lengthes)
+            rest_shape = shapes[0][1:]
+            if not all([shape[1:] == rest_shape for shape in shapes]):
+                raise ValueError("All dimensions except length must be equal")
+            dtype = numpy.asarray(source_data[0]).dtype
+
+            padded_data = numpy.zeros(
+                (len(source_data), max_sequence_length) + rest_shape,
+                dtype=dtype)
+            for i, sample in enumerate(source_data):
+                padded_data[i, :len(sample)] = sample
+            data_with_masks.append(padded_data)
+
+            mask = numpy.zeros((len(source_data), max_sequence_length),
+                               dtype=theano.config.floatX)
+            for i, sequence_length in enumerate(lengthes):
+                mask[i, :sequence_length] = 1
+            data_with_masks.append(mask)
+        return tuple(data_with_masks)
 
 
 class DataIterator(six.Iterator):
