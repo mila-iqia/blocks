@@ -30,7 +30,7 @@ function is defined as
 
 and our softmax output function is defined
 
-.. math:: \mathrm{softmax}(\mathbf{x})_i = \frac{e^{\mathbf{x}_i}}{\sum_{j=1}^n \mathbf{x}_j}
+.. math:: \mathrm{softmax}(\mathbf{x})_i = \frac{e^{\mathbf{x}_i}}{\sum_{j=1}^n e^{\mathbf{x}_j}}
 
 Hence, our complete model is
 
@@ -41,13 +41,13 @@ probability distribution: :math:`f(\mathbf{x})_c = \hat p(y = c \mid
 \mathbf{x})`, where :math:`\mathbf{x}` is the 784-dimensional (28 × 28) input
 and :math:`c \in \{0, ..., 9\}` one of the 10 classes. We can train the
 parameters of our model by minimizing the negative log-likelihood i.e. the
-cross-entropy between our model's output and the target distribution. We
-minimize the sum of
+cross-entropy between our model's output and the target distribution. This
+means we will minimize the sum of
 
 .. math:: l(\mathbf{f}(\mathbf{x}), y) = -\sum_{c=0}^9 \mathbf{1}_{(y=c)} \log f(\mathbf{x})_c = -\log f(\mathbf{x})_y
 
-over all examples (where :math:`\mathbf{1}` is the indicator function). We do so
-by using `stochastic gradient descent`_ (SGD) on mini-batches.
+(where :math:`\mathbf{1}` is the indicator function) over all examples. We use
+`stochastic gradient descent`_ (SGD) on mini-batches for this.
 
 .. _model_building:
 
@@ -70,8 +70,8 @@ because the name needs to match the name of the data source we want to train on.
 MNIST defines two data sources: ``'features'`` and ``'targets'``.
 
 For the sake of this tutorial, we will go through building an MLP the long way.
-For a much quicker way, skip right to the end of this section. We begin with
-applying the linear transformations and activations.
+For a much quicker way, skip right to the end of the next section. We begin
+with applying the linear transformations and activations.
 
 >>> from blocks.bricks import Linear, Rectifier, Softmax
 >>> input_to_hidden = Linear(name='input_to_hidden', input_dim=784, output_dim=100)
@@ -79,11 +79,11 @@ applying the linear transformations and activations.
 >>> hidden_to_output = Linear(name='hidden_to_output', input_dim=100, output_dim=10)
 >>> y_hat = Softmax().apply(hidden_to_output.apply(h))
 
-Blocks' uses "bricks" to build models. Bricks are parametrized Theano ops. What
-this means is that we start by initializing them with certain parameters e.g.
-``input_dim``. After initialization we can apply our bricks on Theano variables
-to build the model we want. We'll talk more about bricks in the next tutorial,
-:doc:`bricks_overview`.
+Blocks' uses "bricks" to build models. Bricks are parametrized Theano
+operations. What this means is that we start by initializing bricks with
+certain parameters e.g. ``input_dim``. After initialization we can apply our
+bricks on Theano variables to build the model we want. We'll talk more about
+bricks in the next tutorial, :doc:`bricks_overview`.
 
 Loss function and regularization
 --------------------------------
@@ -119,6 +119,26 @@ have used the :class:`~blocks.bricks.MLP` class instead.
 
 >>> from blocks.bricks import MLP
 >>> mlp = MLP(activations=[Rectifier(), Softmax()], dims=[784, 100, 10]).apply(x)
+
+Initializing the parameters
+---------------------------
+When we constructed the :class:`Linear` bricks to build our model, they
+automatically initialized Theano shared variables to store their parameters in.
+All of these parameters were set to 0. Before we start training our network, we
+will want to initialize these parameters by sampling them from a particular
+probability distribution. Bricks can do this for you.
+
+    >>> from blocks.initialization import IsotropicGaussian, Constant
+    >>> input_to_hidden.weights_init = hidden_to_output.weights_init = IsotropicGaussian(std=0.01)
+    >>> input_to_hidden.biases_init = hidden_to_output.biases_init = Constant(0)
+    >>> input_to_hidden.initialize()
+    >>> hidden_to_output.initialize()
+
+We have now initialized our weight matrices with entries drawn from a normal
+distribution with a standard deviation of 0.01.
+
+    >>> W1.get_value() # doctest: +SKIP
+        array([[ 0.01624345, -0.00611756, -0.00528172, ...,  0.00043597, ...
 
 Training your model
 -------------------
