@@ -86,7 +86,7 @@ class DifferentiableCostMinimizer(TrainingAlgorithm):
     def __init__(self, cost, params=None):
         self.cost = cost
         self.params = (params if params
-                       else ComputationGraph(cost).get_shared_variables())
+                       else ComputationGraph(cost).shared_variables)
         self._cost_computation_graph = ComputationGraph(self.cost)
         self._updates = []
 

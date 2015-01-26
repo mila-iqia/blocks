@@ -5,12 +5,26 @@ from itertools import chain
 import numpy
 from six import add_metaclass
 from theano import tensor
+from theano.sandbox.rng_mrg import MRG_RandomStreams
 
 from blocks import config
 from blocks.bricks.base import application, _Brick, Brick, lazy
+from blocks.graph import add_role, ParameterRole
 from blocks.utils import pack, shared_floatx_zeros
 
 logger = logging.getLogger(__name__)
+
+
+class WeightsRole(ParameterRole):
+    pass
+
+WEIGHTS = WeightsRole()
+
+
+class BiasesRole(ParameterRole):
+    pass
+
+BIASES = BiasesRole()
 
 
 class Random(Brick):
@@ -19,7 +33,7 @@ class Random(Brick):
     Parameters
     ----------
     theano_rng : object
-        A ``tensor.shared_randomstreams.RandomStreams`` instance.
+        A ``MRG_RandomStreams`` instance.
 
     """
     def __init__(self, theano_rng=None, **kwargs):
@@ -36,7 +50,7 @@ class Random(Brick):
         if getattr(self, '_theano_rng', None) is not None:
             return self._theano_rng
         else:
-            return tensor.shared_randomstreams.RandomStreams(
+            return MRG_RandomStreams(
                 config.default_seed)
 
     @theano_rng.setter
@@ -146,12 +160,15 @@ class Linear(Initializable):
         self.output_dim = output_dim
 
     def _allocate(self):
-        self.params.append(shared_floatx_zeros((self.input_dim,
-                                                self.output_dim),
-                           name="W"))
+        W = shared_floatx_zeros((self.input_dim, self.output_dim), name='W')
+        add_role(W, WEIGHTS)
+        self.params.append(W)
+        self.add_auxiliary_variable(W.norm(2), name='W_norm')
         if self.use_bias:
-            self.params.append(shared_floatx_zeros((self.output_dim,),
-                               name="b"))
+            b = shared_floatx_zeros((self.output_dim,), name='b')
+            add_role(b, BIASES)
+            self.params.append(b)
+            self.add_auxiliary_variable(b.norm(2), name='b_norm')
 
     def _initialize(self):
         if self.use_bias:

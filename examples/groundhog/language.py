@@ -13,9 +13,11 @@ from groundhog.datasets import LMIterator
 from groundhog.trainer.SGD import SGD
 
 from blocks.bricks import Tanh
-from blocks.bricks.base import VariableRole
+from blocks.filter import get_brick, get_application_call
+from blocks.graph import OUTPUT
 from blocks.bricks.recurrent import GatedRecurrent
 from blocks.select import Selector
+from blocks.filter import VariableFilter
 from blocks.graph import ComputationGraph
 from blocks.bricks.sequence_generators import (
     SequenceGenerator, LinearReadout, SoftmaxEmitter, LookupFeedback)
@@ -100,12 +102,11 @@ def main():
         cost = ComputationGraph(
             generator.cost(x, states=init_states * reset).sum())
         # TODO: better search routine
-        states = [v for v in cost.variables
-                  if hasattr(v.tag, 'application_call')
-                  and v.tag.application_call.brick == generator.transition
-                  and (v.tag.application_call.application ==
+        var_filter = VariableFilter(roles=[OUTPUT])
+        states = [v for v in var_filter(cost.variables)
+                  if get_brick(v) is generator.transition
+                  and (get_application_call(v).application ==
                        generator.transition.apply)
-                  and v.tag.role == VariableRole.OUTPUT
                   and v.tag.name == 'states']
         assert len(states) == 1
         states = states[0]

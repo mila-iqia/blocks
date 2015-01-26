@@ -11,6 +11,7 @@ from blocks.bricks.attention import SequenceContentAttention
 from blocks.bricks.sequence_generators import (
     SequenceGenerator, LinearReadout, TrivialEmitter,
     SoftmaxEmitter, LookupFeedback, AttentionTransition)
+from blocks.graph import ComputationGraph
 from blocks.initialization import Orthogonal, IsotropicGaussian, Constant
 
 floatX = theano.config.floatX
@@ -93,9 +94,10 @@ def test_integer_sequence_generator():
 
     states, outputs, costs = generator.generate(
         iterate=True, batch_size=batch_size, n_steps=n_steps)
+    cg = ComputationGraph(states + outputs + costs)
     states_val, outputs_val, costs_val = theano.function(
         [], [states, outputs, costs],
-        updates=costs.owner.inputs[0].owner.tag.updates)()
+        updates=cg.updates)()
     assert states_val.shape == (n_steps, batch_size, dim)
     assert outputs_val.shape == (n_steps, batch_size)
     assert outputs_val.dtype == 'int64'

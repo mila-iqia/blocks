@@ -73,7 +73,8 @@ class MainLoop(object):
         a `training_finish_requested` record in the log.
 
         """
-        signal.signal(signal.SIGINT, self._handle_keyboard_interrupt)
+        original_handler = signal.signal(signal.SIGINT,
+                                         self._handle_keyboard_interrupt)
         try:
             if not self.status._training_started:
                 for extension in self.extensions:
@@ -90,7 +91,7 @@ class MainLoop(object):
             self.log.current_row.training_finished = True
         finally:
             self._run_extensions('after_training')
-            signal.signal(signal.SIGINT, signal.SIG_DFL)
+            signal.signal(signal.SIGINT, original_handler)
 
     def find_extension(self, name):
         """Find an extension with a given name.
@@ -152,7 +153,7 @@ class MainLoop(object):
                 self.log.previous_row.keyboard_interrupt_received):
             raise TrainingFinish
 
-    def _handle_keyboard_interrupt(self, signal, frame):
+    def _handle_keyboard_interrupt(self, signal_number, frame):
         # After receiving a first keyboard interrupt signal,
         # ignore all following ones.
         signal.signal(signal.SIGINT, signal.SIG_DFL)

@@ -48,6 +48,8 @@ model's output and the target distribution. That is, we minimize the sum of
 over all examples. We do so by using `stochastic gradient descent`_ (SGD) on
 mini-batches.
 
+.. _model_building:
+
 Building the model
 ------------------
 Constructing the model with Blocks is very simple. We start by defining the

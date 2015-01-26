@@ -3,7 +3,6 @@ import numpy
 import theano
 
 from blocks.graph import ComputationGraph
-from blocks.bricks.base import VariableRole
 from blocks.monitoring.evaluators import DatasetEvaluator
 from blocks.datasets import ContainerDataset
 from tests.monitoring.test_aggregation import TestBrick
@@ -16,9 +15,7 @@ def test_dataset_evaluators():
     brick = TestBrick(name='test_brick')
     Y = brick.apply(X)
     graph = ComputationGraph([Y])
-    monitor_variables = [
-        v for v in graph.variables
-        if getattr(v.tag, 'role', None) == VariableRole.MONITOR]
+    monitor_variables = [v for v in graph.auxiliary_variables]
     validator = DatasetEvaluator(monitor_variables)
 
     data = [numpy.arange(1, 5, dtype=floatX).reshape(2, 2),

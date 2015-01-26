@@ -7,6 +7,7 @@ from theano import tensor
 from blocks import config
 from blocks.bricks import Identity, Linear, Maxout, LinearMaxout, MLP, Tanh
 from blocks.bricks.base import Application, application, Brick, lazy
+from blocks.filter import get_application_call
 from blocks.initialization import Constant
 from blocks.utils import shared_floatx
 
@@ -41,8 +42,8 @@ class TestBrick(Brick):
 
     @application
     def access_application_call(self, x, application_call):
-        application_call.add_monitor(shared_floatx(numpy.ones((1,)),
-                                                   name='test_val'))
+        application_call.add_auxiliary_variable(shared_floatx(numpy.ones((1,)),
+                                                              name='test_val'))
         return x
 
 
@@ -179,8 +180,8 @@ def test_tagging():
     z = tensor.vector('z')
 
     def check_output_variable(o):
-        assert o.tag.application_call.brick is brick
-        assert o.owner.inputs[0].tag.application_call.brick is brick
+        assert get_application_call(o).brick is brick
+        assert get_application_call(o.owner.inputs[0]).brick is brick
 
     # Case 1: both positional arguments are provided.
     u, v = brick.apply(x, y)
@@ -356,4 +357,4 @@ def test_application_call():
     X = tensor.matrix('X')
     brick = TestBrick()
     Y = brick.access_application_call(X)
-    assert Y.tag.application_call.auxiliary_variables[0].name == 'test_val'
+    assert get_application_call(Y).auxiliary_variables[0].name == 'test_val'

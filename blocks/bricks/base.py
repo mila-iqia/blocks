@@ -1,12 +1,15 @@
 import inspect
 from abc import ABCMeta
-from collections import OrderedDict
+from collections import OrderedDict, MutableSequence
 from types import MethodType
 
 import six
 from six import add_metaclass
 from theano import tensor
+from theano.gof import Variable
 
+from blocks.graph import (add_annotation, add_role, Annotation, INPUT, OUTPUT,
+                          PARAMETER)
 from blocks.utils import pack, repr_attrs, reraise_as, unpack
 
 
@@ -19,6 +22,48 @@ def create_unbound_method(func, cls):
 
 # Rename built-in property to avoid conflict with Application.property
 property_ = property
+
+
+class Parameters(MutableSequence):
+    """Behaves exactly like a list, but annotates the variables."""
+    def __init__(self, brick, params):
+        self.brick = brick
+        self._params = []
+        for param in params:
+            self.append(param)
+
+    def __repr__(self):
+        return repr(self._params)
+
+    def __getitem__(self, key):
+        return self._params.__getitem__(key)
+
+    def _annotate(self, value):
+        """Annotates the variable.
+
+        Raises
+        ------
+        ValueError
+            If the parameter isn't a shared variable or ``None``.
+
+        """
+        if isinstance(value, Variable):
+            add_role(value, PARAMETER)
+            add_annotation(value, self.brick)
+
+    def __setitem__(self, key, value):
+        self._annotate(value)
+        self._params.__setitem__(key, value)
+
+    def __delitem__(self, key):
+        self._params.__delitem__(key)
+
+    def __len__(self):
+        return self._params.__len__()
+
+    def insert(self, index, value):
+        self._annotate(value)
+        self._params.insert(index, value)
 
 
 class Application(object):
@@ -151,12 +196,10 @@ class Application(object):
         """Instantiate :class:`BoundedApplication` for each :class:`Brick`."""
         if instance is None:
             return self
-        elif instance in self.bound_applications:
-            return self.bound_applications[instance]
-        else:
+        elif instance not in self.bound_applications:
             bound_application = BoundApplication(self, instance)
             self.bound_applications[instance] = bound_application
-            return bound_application
+        return self.bound_applications[instance]
 
     def __getattr__(self, name):
         # Mimic behaviour of properties
@@ -209,10 +252,10 @@ class Application(object):
         # Construct the ApplicationCall, used to store data in for this call
         call = ApplicationCall(brick, bound_application)
         args = list(args)
-        if 'application_call' in args_names:
-            args.insert(args_names.index('application_call'), call)
         if 'application' in args_names:
             args.insert(args_names.index('application'), bound_application)
+        if 'application_call' in args_names:
+            args.insert(args_names.index('application_call'), call)
 
         # Allocate before applying, and optionally initialize
         if not brick.allocated:
@@ -226,9 +269,10 @@ class Application(object):
             copy = variable.copy()
             copy.name = "{}_{}_{}".format(  # Theano name
                 brick.name, self.name, name)
-            copy.tag.application_call = call
+            add_annotation(copy, brick)
+            add_annotation(copy, call)
             copy.tag.name = name  # Blocks name
-            copy.tag.role = role
+            add_role(copy, role)
             return copy
 
         for i, input_ in enumerate(args):
@@ -237,10 +281,10 @@ class Application(object):
                     name = args_names[i]
                 else:
                     name = "{}_{}".format(varargs_name, i - len(args_names))
-                args[i] = copy_and_tag(input_, VariableRole.INPUT, name)
+                args[i] = copy_and_tag(input_, INPUT, name)
         for name, input_ in kwargs.items():
             if isinstance(input_, tensor.Variable):
-                kwargs[name] = copy_and_tag(input_, VariableRole.INPUT, name)
+                kwargs[name] = copy_and_tag(input_, INPUT, name)
 
         # Run the application method on the annotated variables
         if self.call_stack and brick is not self.call_stack[-1] and \
@@ -264,7 +308,7 @@ class Application(object):
                     reraise_as(ValueError("Unexpected outputs"))
                 # TODO Tag with dimensions, axes, etc. for error-checking
                 outputs[i] = copy_and_tag(outputs[i],
-                                          VariableRole.OUTPUT, name)
+                                          OUTPUT, name)
 
         # Return values
         if return_list:
@@ -316,7 +360,7 @@ class _Brick(ABCMeta):
 
 
 @add_metaclass(_Brick)
-class Brick(object):
+class Brick(Annotation):
     """A brick encapsulates Theano operations with parameters.
 
     A brick goes through the following stages:
@@ -396,10 +440,12 @@ class Brick(object):
     print_shapes : bool
         ``False`` by default. If ``True`` it logs the shapes of all the
         input and output variables, which can be useful for debugging.
-    params : list of Theano shared variables
+    params : list of Theano shared variables and ``None``
         After calling the :meth:`allocate` method this attribute will be
         populated with the shared variables storing this brick's
-        parameters.
+        parameters. Allows for ``None`` so that parameters can always be
+        accessed at the same index, even if some parameters are only
+        defined given a particular configuration.
     children : list of bricks
         The children of this brick.
     allocated : bool
@@ -485,9 +531,18 @@ class Brick(object):
         self.allocation_config_pushed = False
         self.initialized = False
         self.initialization_config_pushed = False
+        super(Brick, self).__init__()
 
     def __repr__(self):
         return repr_attrs(self, 'name')
+
+    @property
+    def params(self):
+        return self._params
+
+    @params.setter
+    def params(self, value):
+        self._params = Parameters(self, value)
 
     def allocate(self):
         """Allocate shared variables for parameters.
@@ -736,15 +791,7 @@ def lazy(func):
     return init
 
 
-class VariableRole(object):
-    """A collection of constants referring to variable roles."""
-    COST = "cost"
-    INPUT = "input"
-    OUTPUT = "output"
-    MONITOR = "monitor"
-
-
-class ApplicationCall(object):
+class ApplicationCall(Annotation):
     """A link between the variable tags and bricks.
 
     The application call can be used to attach to an apply call auxiliary
@@ -755,15 +802,7 @@ class ApplicationCall(object):
     application method and can be accessed by specifying an
     application_call argument.
 
-    >>> class Foo(Brick):
-    ...     @application
-    ...     def apply(self, x, application_call):
-    ...         application_call.add_monitor(x.mean())
-    ...         return x + 1
-    >>> x = tensor.vector()
-    >>> y = Foo().apply(x)
-    >>> y.tag.application_call # doctest: +ELLIPSIS
-    <blocks.bricks.base.ApplicationCall object at ...>
+    Also see :class:`Annotation`.
 
     Parameters
     ----------
@@ -773,23 +812,24 @@ class ApplicationCall(object):
         The bound application (i.e. belong to a brick instance) object
         being called
 
+    Examples
+    --------
+    >>> class Foo(Brick):
+    ...     @application
+    ...     def apply(self, x, application_call):
+    ...         application_call.add_auxiliary_variable(x.mean())
+    ...         return x + 1
+    >>> x = tensor.vector()
+    >>> y = Foo().apply(x)
+    >>> from blocks.filter import get_application_call
+    >>> get_application_call(y) # doctest: +ELLIPSIS
+    <blocks.bricks.base.ApplicationCall object at ...>
+
     """
     def __init__(self, brick, application):
         self.brick = brick
         self.application = application
-        self.auxiliary_variables = []
-        self.updates = []
-
-    def add_auxiliary_variable(self, expression, role, name=None):
-        if name is not None:
-            expression.name = name
-        expression.tag.role = role
-        self.auxiliary_variables.append(expression)
-
-    def add_monitor(self, expression, name=None):
-        return self.add_auxiliary_variable(expression,
-                                           role=VariableRole.MONITOR,
-                                           name=name)
+        super(ApplicationCall, self).__init__()
 
 
 def application(*args, **kwargs):
