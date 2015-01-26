@@ -4,8 +4,9 @@ import numpy
 from six.moves import zip
 from nose.tools import assert_raises
 
-from blocks.datasets import (CachedDataStream, ContainerDataset, DataStream,
-                             DataStreamMapping, BatchDataStream)
+from blocks.datasets import (
+    CachedDataStream, ContainerDataset, DataStream,
+    DataStreamMapping, BatchDataStream, MaskDataStream)
 from blocks.datasets.mnist import MNIST
 from blocks.datasets.schemes import (BatchSizeScheme, ConstantScheme,
                                      SequentialScheme)
@@ -147,3 +148,22 @@ def test_batch_data_stream():
     stream2 = ContainerDataset([1, 2, 3, 4, 5, 6]).get_default_stream()
     assert len(list(BatchDataStream(stream2, ConstantScheme(2), strict=True)
                     .get_epoch_iterator())) == 3
+
+
+def test_mask_data_stream():
+    stream = BatchDataStream(
+        ContainerDataset([[1], [2, 3], [], [4, 5, 6], [7]]).get_default_stream(),
+        ConstantScheme(2))
+    mask_stream = MaskDataStream(stream)
+    assert mask_stream.sources == ("data", "data_mask")
+    it = mask_stream.get_epoch_iterator()
+    data, mask = next(it)
+    assert (data == numpy.array([[1, 0], [2, 3]])).all()
+    assert (mask == numpy.array([[1, 0], [1, 1]])).all()
+    data, mask = next(it)
+    assert (data == numpy.array([[0, 0, 0], [4, 5, 6]])).all()
+    assert (mask == numpy.array([[0, 0, 0], [1, 1, 1]])).all()
+    data, mask = next(it)
+    assert (data == numpy.array([[7]])).all()
+    assert (mask == numpy.array([[1]])).all()
+

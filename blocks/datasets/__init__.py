@@ -727,7 +727,7 @@ class MaskDataStream(DataStreamWrapper):
             mask = numpy.zeros((len(source_data), max_sequence_length),
                                dtype=theano.config.floatX)
             for i, sequence_length in enumerate(sequence_lengths):
-                mask[:sequence_length, i] = 1
+                mask[i, :sequence_length] = 1
             data_with_masks.append(mask)
         return tuple(data_with_masks)
 
