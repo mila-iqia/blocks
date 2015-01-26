@@ -671,12 +671,18 @@ class BatchDataStream(DataStreamWrapper):
         return tuple(numpy.asarray(source_data) for source_data in data)
 
 
-class MaskDataStream(DataStreamWrapper):
-    """Creates a mask for minibatches of variable length.
+class PaddingDataStream(DataStreamWrapper):
+    """Adds padding to variable-length sequences.
 
-    For each data source that is masked, a new source will be added. This
-    source will have the name of the original source with the suffix
-    ``_mask`` (e.g. ``features_mask``).
+    When your batches consist of variable-length sequences, use this class
+    to equalize lengthes by adding zero-padding. To distinguish between
+    data and padding masks can be produced. For each data source that is
+    masked, a new source will be added. This source will have the name of
+    the original source with the suffix ``_mask`` (e.g. ``features_mask``).
+
+    Elements of incoming batches will be treated as numpy arrays (i.e.
+    using `numpy.asarray`). If they have more than one dimension,
+    all dimensions except length, that is the first one, must be equal.
 
     Parameters
     ----------
@@ -688,7 +694,7 @@ class MaskDataStream(DataStreamWrapper):
 
     """
     def __init__(self, data_stream, mask_sources=None):
-        super(MaskDataStream, self).__init__(data_stream)
+        super(PaddingDataStream, self).__init__(data_stream)
         if mask_sources is None:
             mask_sources = self.data_stream.sources
         self.mask_sources = mask_sources
@@ -711,22 +717,25 @@ class MaskDataStream(DataStreamWrapper):
             if source not in self.mask_sources:
                 data_with_masks.append(source_data)
                 continue
-            sequence_lengths = [len(sample) for sample in source_data]
-            max_sequence_length = max(sequence_lengths)
 
-            try:
-                dtype = source_data[0].dtype
-            except Exception:
-                dtype = theano.config.floatX
-            padded_data = numpy.zeros((len(source_data), max_sequence_length),
-                                      dtype=dtype)
+            shapes = [numpy.asarray(sample).shape for sample in source_data]
+            lengthes = [shape[0] for shape in shapes]
+            max_sequence_length = max(lengthes)
+            rest_shape = shapes[0][1:]
+            if not all([shape[1:] == rest_shape for shape in shapes]):
+                raise ValueError("All dimensions except length must be equal")
+            dtype = numpy.asarray(source_data[0]).dtype
+
+            padded_data = numpy.zeros(
+                (len(source_data), max_sequence_length) + rest_shape,
+                dtype=dtype)
             for i, sample in enumerate(source_data):
                 padded_data[i, :len(sample)] = sample
             data_with_masks.append(padded_data)
 
             mask = numpy.zeros((len(source_data), max_sequence_length),
                                dtype=theano.config.floatX)
-            for i, sequence_length in enumerate(sequence_lengths):
+            for i, sequence_length in enumerate(lengthes):
                 mask[i, :sequence_length] = 1
             data_with_masks.append(mask)
         return tuple(data_with_masks)

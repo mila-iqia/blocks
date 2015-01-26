@@ -6,7 +6,7 @@ from nose.tools import assert_raises
 
 from blocks.datasets import (
     CachedDataStream, ContainerDataset, DataStream,
-    DataStreamMapping, BatchDataStream, MaskDataStream)
+    DataStreamMapping, BatchDataStream, PaddingDataStream)
 from blocks.datasets.mnist import MNIST
 from blocks.datasets.schemes import (BatchSizeScheme, ConstantScheme,
                                      SequentialScheme)
@@ -150,11 +150,12 @@ def test_batch_data_stream():
                     .get_epoch_iterator())) == 3
 
 
-def test_mask_data_stream():
+def test_padding_data_stream():
+    # 1-D sequences
     stream = BatchDataStream(
         ContainerDataset([[1], [2, 3], [], [4, 5, 6], [7]]).get_default_stream(),
         ConstantScheme(2))
-    mask_stream = MaskDataStream(stream)
+    mask_stream = PaddingDataStream(stream)
     assert mask_stream.sources == ("data", "data_mask")
     it = mask_stream.get_epoch_iterator()
     data, mask = next(it)
@@ -167,3 +168,14 @@ def test_mask_data_stream():
     assert (data == numpy.array([[7]])).all()
     assert (mask == numpy.array([[1]])).all()
 
+    # 2D sequences
+    stream2 = BatchDataStream(
+        ContainerDataset([numpy.ones((3, 4)), 2 * numpy.ones((2, 4))])
+        .get_default_stream(),
+        ConstantScheme(2))
+    it = PaddingDataStream(stream2).get_epoch_iterator()
+    data, mask = next(it)
+    assert data.shape == (2, 3, 4)
+    assert (data[0, :, :] == 1).all()
+    assert (data[1, :2, :] == 2).all()
+    assert (mask == numpy.array([[1, 1, 1], [1, 1, 0]])).all()
