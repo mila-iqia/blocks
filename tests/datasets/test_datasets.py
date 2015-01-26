@@ -153,7 +153,8 @@ def test_batch_data_stream():
 def test_padding_data_stream():
     # 1-D sequences
     stream = BatchDataStream(
-        ContainerDataset([[1], [2, 3], [], [4, 5, 6], [7]]).get_default_stream(),
+        ContainerDataset([[1], [2, 3], [], [4, 5, 6], [7]])
+        .get_default_stream(),
         ConstantScheme(2))
     mask_stream = PaddingDataStream(stream)
     assert mask_stream.sources == ("data", "data_mask")
