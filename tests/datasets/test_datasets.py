@@ -2,9 +2,10 @@ from collections import OrderedDict
 
 import numpy
 from six.moves import zip
+from nose.tools import assert_raises
 
 from blocks.datasets import (CachedDataStream, ContainerDataset, DataStream,
-                             DataStreamMapping)
+                             DataStreamMapping, BatchDataStream)
 from blocks.datasets.mnist import MNIST
 from blocks.datasets.schemes import (BatchSizeScheme, ConstantScheme,
                                      SequentialScheme)
@@ -125,3 +126,24 @@ def test_cache():
             assert numpy.all(mnist.features[i * 7:(i + 1) * 7] ==
                              features)
         assert i == 2
+
+
+def test_batch_data_stream():
+    stream = ContainerDataset([1, 2, 3, 4, 5]).get_default_stream()
+    batches = list(BatchDataStream(stream, ConstantScheme(2))
+                   .get_epoch_iterator())
+    expected = [(numpy.array([1, 2]),),
+                (numpy.array([3, 4]),),
+                (numpy.array([5]),)]
+    assert len(batches) == len(expected)
+    for b, e in zip(batches, expected):
+        assert (b[0] == e[0]).all()
+
+    # Check the `strict` flag
+    def try_strict():
+        list(BatchDataStream(stream, ConstantScheme(2), strict=True)
+             .get_epoch_iterator())
+    assert_raises(ValueError, try_strict)
+    stream2 = ContainerDataset([1, 2, 3, 4, 5, 6]).get_default_stream()
+    assert len(list(BatchDataStream(stream2, ConstantScheme(2), strict=True)
+                    .get_epoch_iterator())) == 3

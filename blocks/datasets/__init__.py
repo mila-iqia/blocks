@@ -656,13 +656,18 @@ class BatchDataStream(DataStreamWrapper):
         data = [[] for _ in self.sources]
         for i in range(request):
             try:
-                [source_data.append(example) for source_data, example
-                 in zip(data, next(self.child_epoch_iterator))]
+                for source_data, example in zip(
+                        data, next(self.child_epoch_iterator)):
+                    source_data.append(example)
             except StopIteration:
-                if self.strict:
-                    raise
-                else:
+                if self.strict and data[0]:
+                    raise ValueError("Not enough examples to form a batch of"
+                                     " requested size")
+                # If some data has been extracted and `strict` is not set,
+                # we should spit out this data before stopping iteration.
+                if data[0]:
                     break
+                raise
         return tuple(numpy.asarray(source_data) for source_data in data)
 
 
