@@ -836,6 +836,8 @@ class ApplicationCall(Annotation):
         if name:
             expression.name = _variable_name(
                 self.brick.name, self.application.name, name)
+            expression.tag.name = name
+            name = None
         return super(ApplicationCall, self).add_auxiliary_variable(
             expression, roles, name)
 
