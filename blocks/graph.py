@@ -9,7 +9,8 @@ from theano.gof import graph
 from theano.gof.sched import make_dependence_cmp, sort_apply_nodes
 from theano.sandbox.rng_mrg import MRG_RandomStreams
 
-from blocks.utils import is_graph_input, is_shared_variable, dict_union
+from blocks.utils import (is_graph_input, is_shared_variable, dict_union,
+                          shared_like)
 
 logger = logging.getLogger(__name__)
 dependence = make_dependence_cmp()
@@ -124,10 +125,34 @@ class ComputationGraph(object):
         return ComputationGraph(theano.clone(self.outputs,
                                              replace=replacements))
 
-    def get_theano_function(self):
+    def get_theano_function(self, additional_updates=None):
         """Create Theano function from the graph contained."""
-        return theano.function(self.inputs, self.outputs,
-                               updates=self.updates)
+        updates = self.updates
+        if additional_updates:
+            updates = dict_union(updates, OrderedDict(additional_updates))
+        return theano.function(self.inputs, self.outputs, updates=updates)
+
+    def get_snapshot(self, data):
+        """Evaluate all role-carrying Theano variables on given data.
+
+        Parameters
+        ----------
+        data : dict of (data source, data) pairs
+            Data for input variables. The sources should match with the
+            names of the input variables.
+
+        Return
+        ------
+        Dictionary of (variable, variable value on given data) pairs.
+
+        """
+        role_variables = [var for var in self.variables if hasattr(var.tag, "roles")]
+        value_holders = [shared_like(var) for var in role_variables]
+        function = self.get_theano_function(zip(value_holders, role_variables))
+        function(*(data[input_.name] for input_ in self.inputs))
+        return OrderedDict([(var, value_holder.get_value(borrow=True))
+                            for var, value_holder in zip(role_variables,
+                                                         value_holders)])
 
 
 def add_role(var, role):
@@ -265,7 +290,7 @@ class Annotation(object):
         """
         add_annotation(expression, self)
         if name is not None:
-            expression.name = name
+            expression.tag.name = name
         add_role(expression, AUXILIARY)
         if roles is not None:
             for role in roles:

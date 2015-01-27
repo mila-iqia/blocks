@@ -267,11 +267,12 @@ class Application(object):
         def copy_and_tag(variable, role, name):
             """Helper method to copy a variable and annotate it."""
             copy = variable.copy()
-            copy.name = "{}_{}_{}".format(  # Theano name
-                brick.name, self.name, name)
+            # Theano name
+            copy.name = _variable_name(brick.name, self.name, name)
             add_annotation(copy, brick)
             add_annotation(copy, call)
-            copy.tag.name = name  # Blocks name
+            # Blocks name
+            copy.tag.name = name
             add_role(copy, role)
             return copy
 
@@ -831,6 +832,13 @@ class ApplicationCall(Annotation):
         self.application = application
         super(ApplicationCall, self).__init__()
 
+    def add_auxiliary_variable(self, expression, roles=None, name=None):
+        if name:
+            expression.name = _variable_name(
+                self.brick.name, self.application.name, name)
+        return super(ApplicationCall, self).add_auxiliary_variable(
+            expression, roles, name)
+
 
 def application(*args, **kwargs):
     r"""Decorator for methods that apply a brick to inputs.
@@ -878,3 +886,7 @@ def application(*args, **kwargs):
                 setattr(application, key, value)
             return application
         return wrap_application
+
+
+def _variable_name(brick_name, application_name, name):
+    return "{}_{}_{}".format(brick_name, application_name, name)

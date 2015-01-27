@@ -126,7 +126,7 @@ class BaseSequenceGenerator(Initializable):
             for name in self.fork.apply.outputs}
 
     @application
-    def cost(self, outputs, mask=None, **kwargs):
+    def cost(self, application_call, outputs, mask=None, **kwargs):
         """Returns generation costs for output sequences.
 
         Parameters
@@ -171,11 +171,11 @@ class BaseSequenceGenerator(Initializable):
             feedback=feedback, **dict_union(states, glimpses, contexts))
         costs = self.readout.cost(readouts, outputs)
 
+        for name, variable in glimpses.items():
+            application_call.add_auxiliary_variable(
+                variable.copy(), name=name)
+
         # In case the user needs some glimpses or states or smth else
-        also_return = kwargs.get("also_return")
-        if also_return:
-            others = {name: results[name] for name in also_return}
-            return (costs, others)
         return costs
 
     @recurrent

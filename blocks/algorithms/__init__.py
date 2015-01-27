@@ -1,6 +1,7 @@
 """Training algorithms."""
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
+import logging
 
 import theano
 from six import add_metaclass
@@ -8,6 +9,8 @@ from theano import tensor
 
 from blocks.graph import ComputationGraph
 from blocks.utils import named_copy
+
+logger = logging.getLogger(__name__)
 
 
 @add_metaclass(ABCMeta)
@@ -164,17 +167,20 @@ class GradientDescent(DifferentiableCostMinimizer):
     """
     def __init__(self, step_rule=None, gradients=None, **kwargs):
         super(GradientDescent, self).__init__(**kwargs)
-        self.gradients = (
-            gradients if gradients
-            else dict(
-                zip(self.params, tensor.grad(self.cost, self.params))))
+        self.gradients = gradients
+        if not self.gradients:
+            logger.info("Taking the cost gradient")
+            self.gradients = dict(
+                zip(self.params, tensor.grad(self.cost, self.params)))
+            logger.info("The cost gradient computation graph is built")
         self.step_rule = step_rule if step_rule else SteepestDescent()
 
         self.total_gradient_norm = named_copy(
-            tensor.sqrt(sum((g ** 2).sum() for g in self.gradients)),
+            tensor.sqrt(sum((g ** 2).sum() for g in self.gradients.values())),
             "total_gradient_norm")
 
     def initialize(self):
+        logger.info("Initializing the training algorithm")
         all_updates = self.updates
         for param in self.params:
             all_updates.append((param,
@@ -182,6 +188,7 @@ class GradientDescent(DifferentiableCostMinimizer):
                                     param,
                                     self.gradients[param])))
         self._function = theano.function(self.inputs, [], updates=all_updates)
+        logger.info("The training algorithm is initialized")
 
     def process_batch(self, batch):
         if not set(batch.keys()) == set([v.name for v in self.inputs]):
