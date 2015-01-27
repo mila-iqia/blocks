@@ -265,7 +265,7 @@ class Annotation(object):
         """
         add_annotation(expression, self)
         if name is not None:
-            expression.name = name
+            expression.tag.name = name
         add_role(expression, AUXILIARY)
         if roles is not None:
             for role in roles:
