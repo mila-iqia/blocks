@@ -73,8 +73,8 @@ class MainLoop(object):
         a `training_finish_requested` record in the log.
 
         """
-        self.original_handler = signal.signal(signal.SIGINT,
-            self._handle_keyboard_interrupt)
+        self.original_handler = signal.signal(
+            signal.SIGINT, self._handle_keyboard_interrupt)
         try:
             if not self.status._training_started:
                 for extension in self.extensions:

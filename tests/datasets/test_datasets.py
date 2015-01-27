@@ -26,6 +26,7 @@ def test_dataset():
     # Check whether the returning as a dictionary of sources works
     assert next(stream.get_epoch_iterator(as_dict=True)) == {"data": 1}
 
+
 def test_data_stream_mapping():
     data = [1, 2, 3]
     data_doubled = [2, 4, 6]

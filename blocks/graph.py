@@ -141,12 +141,13 @@ class ComputationGraph(object):
             Data for input variables. The sources should match with the
             names of the input variables.
 
-        Return
-        ------
+        Returns
+        -------
         Dictionary of (variable, variable value on given data) pairs.
 
         """
-        role_variables = [var for var in self.variables if hasattr(var.tag, "roles")]
+        role_variables = [var for var in self.variables
+                          if hasattr(var.tag, "roles")]
         value_holders = [shared_like(var) for var in role_variables]
         function = self.get_theano_function(zip(value_holders, role_variables))
         function(*(data[input_.name] for input_ in self.inputs))

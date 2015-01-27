@@ -148,7 +148,7 @@ class TakeLast(AggregationScheme):
     def get_aggregator(self):
         self.storage = shared_like(self.variable)
         return Aggregator(aggregation_scheme=self,
-                          initialization_updates=
-                            [(self.storage, tensor.zeros_like(self.storage))],
+                          initialization_updates=[
+                              (self.storage, tensor.zeros_like(self.storage))],
                           accumulation_updates=[(self.storage, self.variable)],
                           readout_expression=self.storage)

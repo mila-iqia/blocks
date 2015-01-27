@@ -1,7 +1,7 @@
 from inspect import isclass
 import re
 
-from blocks.bricks.base import Application, ApplicationCall, Brick
+from blocks.bricks.base import ApplicationCall, Brick
 
 
 def get_annotation(var, cls):
@@ -137,5 +137,5 @@ class VariableFilter(object):
             variables = [var for var in variables
                          if get_application_call(var)
                          and get_application_call(var).application
-                             == self.application]
+                         == self.application]
         return variables

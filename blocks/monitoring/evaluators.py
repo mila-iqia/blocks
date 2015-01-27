@@ -75,7 +75,8 @@ class AggregationBuffer(object):
                     v.tag.aggregation_scheme = scheme(v)
                 else:
                     if v.ndim == 0:
-                        logger.debug('Using the default (average over minibatches)'
+                        logger.debug('Using the default '
+                                     ' (average over minibatches)'
                                      ' aggregation scheme for %s', v.name)
                         v.tag.aggregation_scheme = Mean(v, 1.0)
                     else:
