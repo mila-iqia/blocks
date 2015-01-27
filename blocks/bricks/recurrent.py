@@ -6,19 +6,19 @@ from collections import OrderedDict
 import theano
 from theano import tensor
 
-from blocks.bricks import (Application, application, application_wrapper,
-                           Brick, DefaultRNG, Identity, Sigmoid, lazy,
-                           Initializeable)
+from blocks.bricks import Initializable, Identity, Sigmoid
+from blocks.bricks.base import Application, application, Brick, lazy
 from blocks.initialization import NdarrayInitialization
-from blocks.utils import pack, shared_floatx_zeros, update_instance
+from blocks.utils import pack, shared_floatx_zeros, dict_union
 
 
 class BaseRecurrent(Brick):
     """Base class for brick with recurrent application method."""
+    has_bias = False
 
     @application
     def initial_state(self, state_name, batch_size, *args, **kwargs):
-        """Return an initial state for an application call.
+        r"""Return an initial state for an application call.
 
         Parameters
         ----------
@@ -26,9 +26,9 @@ class BaseRecurrent(Brick):
             The name of the state.
         batch_size : int
             The batch size.
-        *args
+        \*args
             The positional arguments of the application call.
-        **kwargs
+        \*\*kwargs
             The keyword arguments of the application call.
 
         """
@@ -66,11 +66,12 @@ def recurrent(*args, **kwargs):
         Names of the outputs.
 
     """
-    def recurrent_wrapper(application, application_method):
-        arg_spec = inspect.getargspec(application_method)
+    def recurrent_wrapper(application_function):
+        arg_spec = inspect.getargspec(application_function)
         arg_names = arg_spec.args[1:]
 
-        def recurrent_apply(brick, *args, **kwargs):
+        def recurrent_apply(brick, application, application_call,
+                            *args, **kwargs):
             """Iterates a transition function.
 
             Parameters
@@ -155,7 +156,7 @@ def recurrent(*args, **kwargs):
 
             # Apply methods
             if not iterate:
-                return application_method(brick, **kwargs)
+                return application_function(brick, **kwargs)
 
             def scan_function(*args):
                 args = list(args)
@@ -163,7 +164,7 @@ def recurrent(*args, **kwargs):
                              list(contexts_given))
                 kwargs = dict(zip(arg_names, args))
                 kwargs.update(rest_kwargs)
-                return application_method(brick, **kwargs)
+                return application_function(brick, **kwargs)
             outputs_info = (list(states_given.values())
                             + [None] * (len(application.outputs) -
                                         len(application.states)))
@@ -181,7 +182,8 @@ def recurrent(*args, **kwargs):
                                       tensor.subtensor.Subtensor)
                     result[i] = result[i].owner.inputs[0]
             if updates:
-                list(updates.values())[0].owner.tag.updates = updates
+                application_call.updates = dict_union(application_call.updates,
+                                                      updates)
             return result
 
         return recurrent_apply
@@ -189,26 +191,22 @@ def recurrent(*args, **kwargs):
     # Decorator can be used with or without arguments
     assert (args and not kwargs) or (not args and kwargs)
     if args:
-        application_method, = args
-        application = application_wrapper()(application_method)
-        return application.wrap(recurrent_wrapper)
+        application_function, = args
+        return application(recurrent_wrapper(application_function))
     else:
-        def wrapper(application_method):
-            application = application_wrapper(**kwargs)(application_method)
-            return application.wrap(recurrent_wrapper)
-        return wrapper
+        def wrap_application(application_function):
+            return application(**kwargs)(
+                recurrent_wrapper(application_function))
+        return wrap_application
 
 
-class Recurrent(BaseRecurrent, DefaultRNG):
+class Recurrent(BaseRecurrent, Initializable):
     """Simple recurrent layer with optional activation.
 
     Parameters
     ----------
     dim : int
         The dimension of the hidden state
-    weights_init : object
-        The :class:`utils.NdarrayInitialization` object to initialize the
-        weight matrix with.
     activation : Brick
         The brick to apply as activation.
 
@@ -222,13 +220,19 @@ class Recurrent(BaseRecurrent, DefaultRNG):
        * Carrying over hidden state between batches
        * Return k last hidden states
 
+    Notes
+    -----
+    See :class:`Initializable` for initialization parameters.
+
     """
     @lazy
-    def __init__(self, dim, weights_init, activation=None, **kwargs):
+    def __init__(self, dim, activation=None, **kwargs):
         super(Recurrent, self).__init__(**kwargs)
         if activation is None:
             activation = Identity()
-        update_instance(self, locals())
+        self.dim = dim
+        self.activation = activation
+
         self.children = [activation]
 
     @property
@@ -248,14 +252,14 @@ class Recurrent(BaseRecurrent, DefaultRNG):
     def _initialize(self):
         self.weights_init.initialize(self.W, self.rng)
 
-    @recurrent(sequences=['inp', 'mask'], states=['state'], outputs=['state'],
-               contexts=[])
-    def apply(self, inp=None, state=None, mask=None):
+    @recurrent(sequences=['input_', 'mask'], states=['state'],
+               outputs=['state'], contexts=[])
+    def apply(self, input_=None, state=None, mask=None):
         """Given data and mask, apply recurrent layer.
 
         Parameters
         ----------
-        inp : Theano variable
+        input_ : Theano variable
             The 2 dimensional input, in the shape (batch, features).
         state : Theano variable
             The 2 dimensional state, in the shape (batch, features).
@@ -274,7 +278,7 @@ class Recurrent(BaseRecurrent, DefaultRNG):
              Masks will become n + 1 dimensional as well then.
 
         """
-        next_state = inp + tensor.dot(state, self.W)
+        next_state = input_ + tensor.dot(state, self.W)
         next_state = self.activation.apply(next_state)
         if mask:
             next_state = (mask[:, None] * next_state +
@@ -282,8 +286,8 @@ class Recurrent(BaseRecurrent, DefaultRNG):
         return next_state
 
 
-class GatedRecurrent(BaseRecurrent, DefaultRNG):
-    """Gated recurrent neural network.
+class GatedRecurrent(BaseRecurrent, Initializable):
+    u"""Gated recurrent neural network.
 
     Gated recurrent neural network (GRNN) as introduced in [CvMG14]_. Every
     unit of a GRNN is equiped with update and reset gates that facilitate
@@ -299,32 +303,36 @@ class GatedRecurrent(BaseRecurrent, DefaultRNG):
         brick is used.
     dim : int
         The dimension of the hidden state.
-    weights_init : object
-        The :class:`utils.NdarrayInitialization` object to initialize the
-        weight matrix with.
     use_upgate_gate : bool
         If True the update gates are used.
     use_reset_gate : bool
         If True the reset gates are used.
 
+    Notes
+    -----
+    See :class:`Initializable` for initialization parameters.
 
     .. [CvMG14] Kyunghyun Cho, Bart van Merriënboer, Çağlar Gülçehre,
-        Dzmitry Bahdanau, Fethi Bougares, Holger Schwenk, and Yoshua Bengio,
-        *Learning Phrase Representations using RNN Encoder-Decoder
+        Dzmitry Bahdanau, Fethi Bougares, Holger Schwenk, and Yoshua
+        Bengio, *Learning Phrase Representations using RNN Encoder-Decoder
         for Statistical Machine Translation*, EMNLP (2014), pp. 1724-1734.
-    """
 
+    """
     @lazy
-    def __init__(self, activation, gate_activation, dim, weights_init,
+    def __init__(self, activation, gate_activation, dim,
                  use_update_gate=True, use_reset_gate=True, **kwargs):
         super(GatedRecurrent, self).__init__(**kwargs)
+        self.dim = dim
+        self.use_update_gate = use_update_gate
+        self.use_reset_gate = use_reset_gate
 
         if not activation:
             activation = Identity()
         if not gate_activation:
             gate_activation = Sigmoid()
+        self.activation = activation
+        self.gate_activation = gate_activation
 
-        update_instance(self, locals())
         self.children = [activation, gate_activation]
 
     @property
@@ -342,8 +350,7 @@ class GatedRecurrent(BaseRecurrent, DefaultRNG):
     def get_dim(self, name):
         if name == 'mask':
             return 0
-        if name in (GatedRecurrent.apply.sequences
-                    + GatedRecurrent.apply.states):
+        if name in (self.apply.sequences + self.apply.states):
             return self.dim
         return super(GatedRecurrent, self).get_dim(name)
 
@@ -364,7 +371,7 @@ class GatedRecurrent(BaseRecurrent, DefaultRNG):
             self.weights_init.initialize(self.state_to_reset, self.rng)
 
     @recurrent(states=['states'], outputs=['states'], contexts=[])
-    def apply(self, inps, update_inps=None, reset_inps=None,
+    def apply(self, inputs, update_inputs=None, reset_inputs=None,
               states=None, mask=None):
         """Apply the gated recurrent transition.
 
@@ -373,14 +380,14 @@ class GatedRecurrent(BaseRecurrent, DefaultRNG):
         states : Theano variable
             The 2 dimensional matrix of current states in the shape
             (batch_size, features). Required for `one_step` usage.
-        inps : Theano matrix of floats
+        inputs : Theano matrix of floats
             The 2 dimensional matrix of inputs in the shape (batch_size,
             features)
-        update_inps : Theano variable
+        update_inputs : Theano variable
             The 2 dimensional matrix of inputs to the update gates in the
             shape (batch_size, features). None when the update gates are
             not used.
-        reset_inps : Theano variable
+        reset_inputs : Theano variable
             The 2 dimensional matrix of inputs to the reset gates in the
             shape (batch_size, features). None when the reset gates are not
             used.
@@ -394,8 +401,8 @@ class GatedRecurrent(BaseRecurrent, DefaultRNG):
             Next states of the network.
 
         """
-        if (self.use_update_gate != (update_inps is not None)) or \
-                (self.use_reset_gate != (reset_inps is not None)):
+        if (self.use_update_gate != (update_inputs is not None)) or \
+                (self.use_reset_gate != (reset_inputs is not None)):
             raise ValueError("Configuration and input mismatch: You should "
                              "provide inputs for gates if and only if the "
                              "gates are on.")
@@ -404,15 +411,15 @@ class GatedRecurrent(BaseRecurrent, DefaultRNG):
 
         if self.use_reset_gate:
             reset_values = self.gate_activation.apply(
-                states.dot(self.state_to_reset) + reset_inps)
+                states.dot(self.state_to_reset) + reset_inputs)
             states_reset = states * reset_values
 
         next_states = self.activation.apply(
-            states_reset.dot(self.state_to_state) + inps)
+            states_reset.dot(self.state_to_state) + inputs)
 
         if self.use_update_gate:
             update_values = self.gate_activation.apply(
-                states.dot(self.state_to_update) + update_inps)
+                states.dot(self.state_to_update) + update_inputs)
             next_states = (next_states * update_values
                            + states * (1 - update_values))
 
@@ -424,15 +431,15 @@ class GatedRecurrent(BaseRecurrent, DefaultRNG):
 
     @apply.property('sequences')
     def apply_inputs(self):
-        sequences = ['mask', 'inps']
+        sequences = ['mask', 'inputs']
         if self.use_update_gate:
-            sequences.append('update_inps')
+            sequences.append('update_inputs')
         if self.use_reset_gate:
-            sequences.append('reset_inps')
+            sequences.append('reset_inputs')
         return sequences
 
 
-class Bidirectional(Initializeable, DefaultRNG):
+class Bidirectional(Initializable):
     """Bidirectional network.
 
     A bidirectional network is a combination of forward and backward
@@ -444,20 +451,25 @@ class Bidirectional(Initializeable, DefaultRNG):
         A prototype brick from which the forward and backward bricks are
         cloned.
 
+    Notes
+    -----
+    See :class:`Initializable` for initialization parameters.
+
     """
-    _no_bias_initialization = True
+    has_bias = False
 
     @lazy
-    def __init__(self, prototype, weights_init, **kwargs):
+    def __init__(self, prototype, **kwargs):
         super(Bidirectional, self).__init__(**kwargs)
-        update_instance(self, locals())
-        self.children = [copy.deepcopy(prototype) for i in range(2)]
+        self.prototype = prototype
+
+        self.children = [copy.deepcopy(prototype) for _ in range(2)]
         self.children[0].name = 'forward'
         self.children[1].name = 'backward'
 
     @application
     def apply(self, *args, **kwargs):
-        """Applys forward and backward networks and concatenates outputs."""
+        """Applies forward and backward networks and concatenates outputs."""
         forward = self.children[0].apply(return_list=True, *args, **kwargs)
         backward = [x[::-1] for x in
                     self.children[1].apply(reverse=True, return_list=True,

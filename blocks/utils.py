@@ -1,11 +1,14 @@
 import sys
-from collections import OrderedDict
+from collections import OrderedDict, Sequence
 
 import numpy
 import six
 import theano
 from theano import tensor
 from theano import printing
+from theano.gof.graph import Constant
+from theano.tensor.shared_randomstreams import RandomStateSharedVariable
+from theano.tensor.sharedvar import SharedVariable
 
 
 def pack(arg):
@@ -42,8 +45,9 @@ def unpack(arg, singleton=False):
         will be cast to a list before returning. Any other variable
         will be returned as is.
     singleton : bool
-        If ``True``, `arg` is expected to be a singleton and an exception
-        is raised if this is not the case. ``False`` by default.
+        If ``True``, `arg` is expected to be a singleton (a list or tuple
+        with exactly one element) and an exception is raised if this is not
+        the case. ``False`` by default.
 
     Returns
     -------
@@ -90,7 +94,6 @@ def shared_floatx(value, name=None, borrow=False, dtype=None):
         A Theano shared variable with the requested value and `dtype`.
 
     """
-
     if dtype is None:
         dtype = theano.config.floatX
     return theano.shared(theano._asarray(value, dtype=dtype),
@@ -98,8 +101,33 @@ def shared_floatx(value, name=None, borrow=False, dtype=None):
                          borrow=borrow)
 
 
-def reraise_as(new_exc):
+def shared_like(expression, name=None):
+    """Construct a shared variable to hold the results of a theano expression.
+
+    Parameters
+    ----------
+    expression : theano variable
+        The expression whose dtype and ndim will be used to construct
+        the new shared variable.
+    name : string or None
+        The name of the shared variable. If None, the name is determined
+        based on expression's name.
+
     """
+    expression = tensor.as_tensor_variable(expression)
+    if name is None:
+        name = "shared_{}".format(expression.name)
+    return theano.shared(numpy.zeros((0,) * expression.ndim,
+                                     dtype=expression.dtype),
+                         name=name)
+
+
+def reraise_as(new_exc):
+    """Reraise an exception as a different type or with a message.
+
+    This function ensures that the original traceback is kept, making for
+    easier debugging.
+
     Parameters
     ----------
     new_exc : Exception isinstance
@@ -164,19 +192,20 @@ def reraise_as(new_exc):
 def check_theano_variable(variable, n_dim, dtype_prefix):
     """Check number of dimensions and dtype of a Theano variable.
 
-    If the input is not a Theano variable, it is converted to one. `None` input
-    is handled as a special case: no checks are done.
+    If the input is not a Theano variable, it is converted to one. `None`
+    input is handled as a special case: no checks are done.
 
     Parameters
     ----------
     variable : Theano variable or convertable to one
         A variable to check.
     n_dim : int
-        Expected number of dimensions or None. If None, no check is performed.
+        Expected number of dimensions or None. If None, no check is
+        performed.
     dtype : str
         Expected dtype prefix or None. If None, no check is performed.
-    """
 
+    """
     if variable is None:
         return
 
@@ -194,27 +223,67 @@ def check_theano_variable(variable, n_dim, dtype_prefix):
                              dtype_prefix, variable.dtype))
 
 
-def dict_subset(dikt, keys, pop=False, must_have=True):
+def named_copy(variable, new_name):
+    """Clones a variable and set a new name to the clone."""
+    result = variable.copy()
+    result.name = new_name
+    return result
+
+
+def is_graph_input(variable):
+    """Check if variable is a user-provided graph input.
+
+    To be considered an input the variable must have no owner, and not
+    be a constant or shared variable.
+
+    Parameters
+    ----------
+    variable : theano expression
+
+    Returns
+    -------
+    bool
+        ``True`` If the variable is a user-provided input to the graph.
+
+    """
+    return (not variable.owner and
+            not isinstance(variable, SharedVariable) and
+            not isinstance(variable, Constant))
+
+
+def is_shared_variable(variable):
+    """Check if a variable is a Theano shared variable.
+
+    Notes
+    -----
+    This function excludes random shared variables.
+
+    """
+    return (isinstance(variable, SharedVariable) and
+            not isinstance(variable, RandomStateSharedVariable))
+
+
+def dict_subset(dict_, keys, pop=False, must_have=True):
     """Return a subset of a dictionary corresponding to a set of keys.
 
     Parameters
     ----------
-    dikt : dict
+    dict_ : dict
         The dictionary.
     keys : iterable
         The keys of interest.
     pop : bool
-        If ``True``, the pairs corresponding to the keys of interest are popped
-        from the dictionary.
+        If ``True``, the pairs corresponding to the keys of interest are
+        popped from the dictionary.
     must_have : bool
-        If ``True``, a ValueError will be raised when trying to retrieve a key
-        not present in the dictionary.
+        If ``True``, a ValueError will be raised when trying to retrieve a
+        key not present in the dictionary.
 
     Returns
     -------
-    result : :class:`OrderedDict`
+    result : ``OrderedDict``
         An ordered dictionary of retrieved pairs. The order is the same as
-        in the `keys` argument.
+        in the ``keys`` argument.
 
     """
     not_found = object()
@@ -222,18 +291,18 @@ def dict_subset(dikt, keys, pop=False, must_have=True):
     def extract(k):
         if pop:
             if must_have:
-                return dikt.pop(k)
-            return dikt.pop(k, not_found)
+                return dict_.pop(k)
+            return dict_.pop(k, not_found)
         if must_have:
-            return dikt[k]
-        return dikt.get(k, not_found)
+            return dict_[k]
+        return dict_.get(k, not_found)
 
     result = [(key, extract(key)) for key in keys]
-    return OrderedDict([(k, v) for k, v in result if v != not_found])
+    return OrderedDict([(k, v) for k, v in result if v is not not_found])
 
 
 def dict_union(*dicts, **kwargs):
-    """Return union of a sequence of disjoint dictionaries.
+    r"""Return union of a sequence of disjoint dictionaries.
 
     Parameters
     ----------
@@ -241,7 +310,7 @@ def dict_union(*dicts, **kwargs):
         A set of dictionaries with no keys in common. If the first
         dictionary in the sequence is an instance of `OrderedDict`, the
         result will be OrderedDict.
-    **kwargs
+    \*\*kwargs
         Keywords and values to add to the resulting dictionary.
 
     Raises
@@ -266,13 +335,13 @@ def dict_union(*dicts, **kwargs):
 
 
 def repr_attrs(instance, *attrs):
-    """Prints a representation of an object with certain attributes.
+    r"""Prints a representation of an object with certain attributes.
 
     Parameters
     ----------
     instance : object
         The object of which to print the string representation
-    *attrs
+    \*attrs
         Names of attributes that should be printed.
 
     Examples
@@ -297,27 +366,8 @@ def repr_attrs(instance, *attrs):
     orig_repr_template += '>'
     try:
         return repr_template.format(instance, id(instance))
-    except:
+    except Exception:
         return orig_repr_template.format(instance, id(instance))
-
-
-def update_instance(self, kwargs, ignore=True):
-    """Set attributes of an instance from a dictionary.
-
-    Parameters
-    ----------
-    self : object
-        The instance on which to set the attributes and values given.
-    kwargs : dict
-        A dictionary with attributes and their values as keys and values.
-    ignore : bool
-        If ``True`` then ignore the keys ``self``, ``args`` and ``kwargs``.
-        Is ``True`` by default.
-
-    """
-    for key, value in kwargs.items():
-        if ignore and key not in ['self', 'args', 'kwargs', '__class__']:
-            setattr(self, key, value)
 
 
 def put_hook(variable, hook_fn):
@@ -349,3 +399,53 @@ def ipdb_breakpoint(x):
     """
     import ipdb
     ipdb.set_trace()
+
+
+class LambdaIterator(six.Iterator):
+    """An iterator that calls a function to fetch the next element.
+
+    The reason for having this is that generators are not serializable
+    in Python (even when using third-party libraries).
+
+    Parameters
+    ----------
+    next_function : callable
+        A function to call every time the next element is requested.
+
+    """
+    def __init__(self, next_function):
+        self.next_function = next_function
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        return self.next_function()
+
+
+class SequenceIterator(six.Iterator):
+    """A serializable iterator for list and tuple.
+
+    The reason for having this is that list iterators are not serializable
+    in Python (even when using third-party libraries).
+
+    Parameters
+    ----------
+    sequence : list or tuple
+        The sequence to iterate over.
+
+    """
+    def __init__(self, sequence):
+        assert isinstance(sequence, Sequence)
+        self.sequence = sequence
+        self._offset = 0
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self._offset == len(self.sequence):
+            raise StopIteration()
+        result = self.sequence[self._offset]
+        self._offset += 1
+        return result

@@ -14,7 +14,7 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 setup(
     name='blocks',
     version=blocks.__version__,
-    description='Toolbox for building machine learning models with Theano',
+    description='A Theano framework for building and training neural networks',
     long_description=long_description,
     url='https://github.com/bartvm/blocks',
     author='University of Montreal',
@@ -32,9 +32,11 @@ setup(
         'Programming Language :: Python :: 3.4',
     ],
     keywords='theano machine learning neural networks deep learning',
-    packages=find_packages(exclude=['docs', 'tests']),
-    install_requires=['numpy', 'scipy', 'theano', 'six'],
+    packages=find_packages(exclude=['examples', 'docs', 'tests']),
+    scripts=['bin/blocks-continue'],
+    install_requires=['dill', 'numpy', 'theano', 'six'],
     extras_require={
         'test': ['nose', 'nose2'],
     },
+    zip_safe=False
 )

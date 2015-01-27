@@ -1,13 +1,15 @@
 """Objects for encapsulating parameter initialization strategies."""
 from abc import ABCMeta, abstractmethod
+
 import numpy
+import six
 import theano
+from six import add_metaclass
 
 
+@add_metaclass(ABCMeta)
 class NdarrayInitialization(object):
     """Base class specifying the interface for ndarray initialization."""
-    __metaclass__ = ABCMeta
-
     @abstractmethod
     def generate(self, rng, shape):
         """Generate an initial set of parameters from a given distribution.
@@ -25,6 +27,7 @@ class NdarrayInitialization(object):
             An ndarray with values drawn from the distribution specified by
             this object, of shape `shape`, with dtype
             `theano.config.floatX`.
+
         """
 
     def initialize(self, var, rng, shape=None):
@@ -59,6 +62,7 @@ class Constant(NdarrayInitialization):
         The initialization value to use. Must be a scalar or an ndarray (or
         compatible object, such as a nested list) that has a shape that is
         broadcastable with any shape requested by `initialize`.
+
     """
     def __init__(self, constant):
         self._constant = numpy.asarray(constant)
@@ -78,6 +82,7 @@ class IsotropicGaussian(NdarrayInitialization):
         The mean of the Gaussian distribution. Defaults to 0
     std : float, optional
         The standard deviation of the Gaussian distribution. Defaults to 1.
+
     """
     def __init__(self, mean=0, std=1):
         self._mean = mean
@@ -159,3 +164,43 @@ class Orthogonal(NdarrayInitialization):
         # Correct that NumPy doesn't force diagonal of R to be non-negative
         Q = Q * numpy.sign(numpy.diag(R))
         return Q
+
+
+class Sparse(NdarrayInitialization):
+    """Initialize only a fraction of the weights, row-wise.
+
+    Parameters
+    ----------
+    num_init : int or float
+        If int, this is the number of weights to initialize per row. If
+        float, it's the fraction of the weights per row to initialize.
+    weights_init : :class:`NdarrayInitialization` instance
+        The initialization scheme to initialize the weights with.
+    sparse_init : :class:`NdarrayInitialization` instance, optional
+        What to set the non-initialized weights to (0. by default)
+
+    """
+    def __init__(self, num_init, weights_init, sparse_init=None):
+        self.num_init = num_init
+        self.weights_init = weights_init
+
+        if sparse_init is None:
+            sparse_init = Constant(0.)
+        self.sparse_init = sparse_init
+
+    def generate(self, rng, shape):
+        weights = self.sparse_init.generate(rng, shape)
+        if isinstance(self.num_init, six.integer_types):
+            if not self.num_init > 0:
+                raise ValueError
+            num_init = self.num_init
+        else:
+            if not 1 >= self.num_init > 0:
+                raise ValueError
+            num_init = int(self.num_init * shape[1])
+        values = self.weights_init.generate(rng, (shape[0], num_init))
+        for i in range(shape[0]):
+            random_indices = numpy.random.choice(shape[1], num_init,
+                                                 replace=False)
+            weights[i, random_indices] = values[i]
+        return weights

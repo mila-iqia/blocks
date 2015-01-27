@@ -4,7 +4,7 @@ from collections import OrderedDict
 
 import six
 
-from blocks.bricks import Brick
+from blocks.bricks.base import Brick
 from blocks.utils import dict_union
 
 logger = logging.getLogger(__name__)
@@ -17,18 +17,17 @@ class Path(object):
     and names of parameters. The latter can only be put in the end of the
     path. It is planned to support regular expressions in some way later.
 
-    Attributes
-    ----------
-    nodes : tuple
-        The tuple containing path nodes.
-
     Parameters
     ----------
     nodes : list or tuple of path nodes
         The nodes of the path.
 
-    """
+    Attributes
+    ----------
+    nodes : tuple
+        The tuple containing path nodes.
 
+    """
     separator = "/"
     param_separator = "."
     separator_re = re.compile("([{}{}])".format(separator, param_separator))
@@ -44,7 +43,8 @@ class Path(object):
             return Path.param_separator + self
 
     def __init__(self, nodes):
-        assert isinstance(nodes, (list, tuple))
+        if not isinstance(nodes, (list, tuple)):
+            raise ValueError
         self.nodes = tuple(nodes)
 
     def __str__(self):
@@ -76,7 +76,8 @@ class Path(object):
         elements = Path.separator_re.split(string)[1:]
         separators = elements[::2]
         parts = elements[1::2]
-        assert len(elements) == 2 * len(separators) == 2 * len(parts)
+        if not len(elements) == 2 * len(separators) == 2 * len(parts):
+            raise ValueError
 
         nodes = []
         for separator, part in zip(separators, parts):
@@ -100,7 +101,6 @@ class Selector(object):
         The bricks of the selection.
 
     """
-
     def __init__(self, bricks):
         if isinstance(bricks, Brick):
             bricks = [bricks]
@@ -123,7 +123,6 @@ class Selector(object):
 
         Returns
         -------
-
         Depending on the path given, one of the following:
 
         * A :class:`Selector` with desired bricks.
@@ -155,14 +154,15 @@ class Selector(object):
         Parameters
         ----------
         param_name : :class:`Path.ParamName`
-            If given, only parameters with the name `param_name` are returned.
+            If given, only parameters with the name `param_name` are
+            returned.
 
         Returns
         -------
         params : OrderedDict
-            A dictionary of (`path`, `param`) pairs, where `path` is the string
-            representation of the part to the parameter, `param` is the
-            parameter.
+            A dictionary of (`path`, `param`) pairs, where `path` is the
+            string representation of the part to the parameter, `param` is
+            the parameter.
 
         """
         def recursion(brick):

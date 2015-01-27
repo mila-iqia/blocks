@@ -1,7 +1,7 @@
 import numpy
 import logging
 
-from blocks.bricks import Brick
+from blocks.bricks.base import Brick
 from blocks.select import Selector
 
 logger = logging.getLogger(__name__)
@@ -22,7 +22,8 @@ def save_params(bricks, path):
     """
     if isinstance(bricks, Brick):
         bricks = Selector([bricks])
-    assert isinstance(bricks, Selector)
+    if not isinstance(bricks, Selector):
+        raise ValueError
 
     params = bricks.get_params()
     # numpy.savez is vulnerable to slashes in names
@@ -46,7 +47,8 @@ def load_params(bricks, path):
     """
     if isinstance(bricks, Brick):
         bricks = Selector([bricks])
-    assert isinstance(bricks, Selector)
+    if not isinstance(bricks, Selector):
+        raise ValueError
 
     param_values = {name.replace("-", "/"): value
                     for name, value in numpy.load(path).items()}
@@ -54,7 +56,8 @@ def load_params(bricks, path):
         selected = bricks.select(name)
         if len(selected) == 0:
             logger.error("Unknown parameter {}".format(name))
-        assert len(selected) == 1
+        if not len(selected) == 1:
+            raise ValueError
         selected = selected[0]
 
         assert selected.get_value(

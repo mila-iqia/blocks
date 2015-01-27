@@ -1,11 +1,10 @@
 import logging
 
 import numpy
-import theano
-from theano import tensor
 import pylearn2
 from pylearn2.testing.datasets import random_dense_design_matrix
 from pylearn2.training_algorithms.sgd import SGD
+from theano import tensor
 
 from blocks.bricks import Sigmoid, MLP
 from blocks.bricks.cost import SquaredError
@@ -13,7 +12,7 @@ from blocks.initialization import IsotropicGaussian, Constant
 from blocks.pylearn2 import Pylearn2Model, Pylearn2Cost, Pylearn2Train
 
 
-def test_pylearn2_trainin():
+def test_pylearn2_training():
     # Construct the model
     mlp = MLP(activations=[Sigmoid(), Sigmoid()], dims=[784, 100, 784],
               weights_init=IsotropicGaussian(), biases_init=Constant(0.01))
