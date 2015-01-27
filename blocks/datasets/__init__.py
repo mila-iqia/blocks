@@ -599,6 +599,30 @@ class DataStreamMapping(DataStreamWrapper):
         return data + image
 
 
+class DataStreamFilter(DataStreamWrapper):
+    """Filters samples that meet a predicate.
+
+    Parameters
+    ----------
+    data_stream : instance of :class:`DataStream`
+        The filtered data stream.
+    predicate : callable
+        Should return ``True`` for the samples to be kept.
+
+    """
+    def __init__(self, data_stream, predicate):
+        super(DataStreamFilter, self).__init__(data_stream)
+        self.predicate = predicate
+
+    def get_data(self, request=None):
+        if request is not None:
+            raise ValueError
+        while True:
+            data = next(self.child_epoch_iterator)
+            if self.predicate(data):
+                return data
+
+
 class CachedDataStream(DataStreamWrapper):
     """Cache examples when sequentially reading a dataset.
 
