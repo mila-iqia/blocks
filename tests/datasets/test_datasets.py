@@ -14,10 +14,8 @@ from blocks.datasets.schemes import (BatchSizeScheme, ConstantScheme,
 
 def test_dataset():
     data = [1, 2, 3]
-    data_doubled = [2, 4, 6]
-
     # The default stream requests an example at a time
-    stream = ContainerDataset([1, 2, 3]).get_default_stream()
+    stream = ContainerDataset(data).get_default_stream()
     epoch = stream.get_epoch_iterator()
     assert list(epoch) == list(zip(data))
 
@@ -28,10 +26,18 @@ def test_dataset():
     # Check whether the returning as a dictionary of sources works
     assert next(stream.get_epoch_iterator(as_dict=True)) == {"data": 1}
 
-    # Check whether basic stream wrappers work
-    wrapper = DataStreamMapping(
+
+def test_data_stream_mapping():
+    data = [1, 2, 3]
+    data_doubled = [2, 4, 6]
+    stream = ContainerDataset(data).get_default_stream()
+    wrapper1 = DataStreamMapping(
         stream, lambda d: (2 * d[0],))
-    assert list(wrapper.get_epoch_iterator()) == list(zip(data_doubled))
+    assert list(wrapper1.get_epoch_iterator()) == list(zip(data_doubled))
+    wrapper2 = DataStreamMapping(
+        stream, lambda d: (2 * d[0],), add_sources=("doubled",))
+    assert wrapper2.sources == ("data", "doubled")
+    assert list(wrapper2.get_epoch_iterator()) == list(zip(data, data_doubled))
 
 
 def test_sources_selection():
@@ -180,3 +186,11 @@ def test_padding_data_stream():
     assert (data[0, :, :] == 1).all()
     assert (data[1, :2, :] == 2).all()
     assert (mask == numpy.array([[1, 1, 1], [1, 1, 0]])).all()
+
+    # 2 sources
+    stream3 = PaddingDataStream(BatchDataStream(
+        ContainerDataset(dict(features=[[1], [2, 3], []],
+                              targets=[[4, 5, 6], [7]]))
+        .get_default_stream(),
+        ConstantScheme(2)))
+    assert len(next(stream3.get_epoch_iterator())) == 4

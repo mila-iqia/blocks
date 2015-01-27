@@ -3,6 +3,7 @@ import logging
 from abc import ABCMeta, abstractmethod
 
 from six import add_metaclass
+from theano import tensor
 
 from blocks.utils import shared_like
 
@@ -147,6 +148,7 @@ class TakeLast(AggregationScheme):
     def get_aggregator(self):
         self.storage = shared_like(self.variable)
         return Aggregator(aggregation_scheme=self,
-                          initialization_updates=[(self.storage, 0.0)],
+                          initialization_updates=[
+                              (self.storage, tensor.zeros_like(self.storage))],
                           accumulation_updates=[(self.storage, self.variable)],
                           readout_expression=self.storage)

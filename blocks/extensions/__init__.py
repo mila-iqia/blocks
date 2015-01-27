@@ -188,12 +188,17 @@ class SimpleExtension(TrainingExtension):
             be concatenated with the ones passed from the main loop
             (e.g. the batch in case of `after_epoch` callback).
 
+        Returns
+        -------
+            The extension object (allow chaining calls)
+
         """
         if not arguments:
             arguments = []
         if not predicate:
             predicate = lambda log: True
         self._conditions.append((callback_name, predicate, arguments))
+        return self
 
     def invoke_after_n_epochs(self, n_epochs):
         self.add_condition(

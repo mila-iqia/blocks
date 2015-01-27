@@ -88,7 +88,7 @@ Quickstart
 Construct your model.
 
     >>> mlp = MLP(activations=[Tanh(), Softmax()], dims=[784, 100, 10],
-    ...           weights_init=IsotropicGaussian(0, 0.01), biases_init=Constant(0))
+    ...           weights_init=IsotropicGaussian(0.01), biases_init=Constant(0))
     >>> mlp.initialize()
 
 Calculate your loss function.

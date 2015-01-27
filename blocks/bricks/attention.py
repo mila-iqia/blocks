@@ -138,7 +138,7 @@ class SequenceContentAttention(Initializable):
         unormalized_weights = tensor.exp(energies)
         if mask:
             unormalized_weights *= mask
-        weights = unormalized_weights/unormalized_weights.sum(axis=0)
+        weights = unormalized_weights / unormalized_weights.sum(axis=0)
         glimpses = (tensor.shape_padright(weights) * sequence).sum(axis=0)
         return glimpses, weights.dimshuffle(1, 0)
 

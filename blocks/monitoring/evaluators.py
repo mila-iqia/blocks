@@ -67,15 +67,24 @@ class AggregationBuffer(object):
             logger.debug('Expression to evaluate: %s', v.name)
             if not hasattr(v.tag, 'aggregation_scheme'):
                 if ComputationGraph([v]).inputs == []:
-                    logger.debug('Using _DataIndependent aggregation scheme'
+                    scheme = (TakeLast if self.use_take_last
+                              else _DataIndependent)
+                    logger.debug('Using %s aggregation scheme'
                                  ' for %s since it does not depend on'
-                                 ' the data', v.name)
-                    v.tag.aggregation_scheme = (TakeLast if self.use_take_last
-                                                else _DataIndependent)(v)
+                                 ' the data', scheme.__name__, v.name)
+                    v.tag.aggregation_scheme = scheme(v)
                 else:
-                    logger.debug('Using the default (average over minibatches)'
-                                 ' aggregation scheme for %s', v.name)
-                    v.tag.aggregation_scheme = Mean(v, 1.0)
+                    if v.ndim == 0:
+                        logger.debug('Using the default '
+                                     ' (average over minibatches)'
+                                     ' aggregation scheme for %s', v.name)
+                        v.tag.aggregation_scheme = Mean(v, 1.0)
+                    else:
+                        # TODO: support averaging for multi-dim variables
+                        logger.debug('Multidimensional variable:'
+                                     ' using the TakeLast'
+                                     ' aggregation scheme for %s', v.name)
+                        v.tag.aggregation_scheme = TakeLast(v)
 
             aggregator = v.tag.aggregation_scheme.get_aggregator()
             self.initialization_updates.extend(

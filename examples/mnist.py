@@ -24,7 +24,7 @@ from blocks.main_loop import MainLoop
 
 def main(save_to, num_epochs):
     mlp = MLP([Tanh(), Softmax()], [784, 100, 10],
-              weights_init=IsotropicGaussian(0, 0.01),
+              weights_init=IsotropicGaussian(0.01),
               biases_init=Constant(0))
     mlp.initialize()
     x = tensor.matrix('features')

@@ -566,15 +566,37 @@ class DataStreamWrapper(AbstractDataStream):
 
 
 class DataStreamMapping(DataStreamWrapper):
-    """Applies a mapping to the data of the wrapped data stream."""
-    def __init__(self, data_stream, mapping):
+    """Applies a mapping to the data of the wrapped data stream.
+
+    Parameters
+    ----------
+    data_stream : instance of :class:`DataStream`
+        The wrapped data stream.
+    mapping : callable
+        The mapping to be applied.
+    add_sources : tuple of str, optional
+        When given, the data produced by the mapping is added to original
+        data under source names `add_sources`.
+
+    """
+    def __init__(self, data_stream, mapping, add_sources=None):
         super(DataStreamMapping, self).__init__(data_stream)
         self.mapping = mapping
+        self.add_sources = add_sources
+
+    @property
+    def sources(self):
+        return self.data_stream.sources + (self.add_sources
+                                           if self.add_sources else ())
 
     def get_data(self, request=None):
         if request is not None:
             raise ValueError
-        return self.mapping(next(self.child_epoch_iterator))
+        data = next(self.child_epoch_iterator)
+        image = self.mapping(data)
+        if not self.add_sources:
+            return image
+        return data + image
 
 
 class CachedDataStream(DataStreamWrapper):
@@ -713,7 +735,8 @@ class PaddingDataStream(DataStreamWrapper):
             raise ValueError
         data = list(next(self.child_epoch_iterator))
         data_with_masks = []
-        for i, (source, source_data) in enumerate(zip(self.sources, data)):
+        for i, (source, source_data) in enumerate(
+                zip(self.data_stream.sources, data)):
             if source not in self.mask_sources:
                 data_with_masks.append(source_data)
                 continue

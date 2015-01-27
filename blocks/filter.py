@@ -1,4 +1,5 @@
 from inspect import isclass
+import re
 
 from blocks.bricks.base import ApplicationCall, Brick
 
@@ -43,12 +44,17 @@ class VariableFilter(object):
     roles : list of :class:`VariableRole` instances, optional
         Matches any variable which has one of the roles given.
     bricks : list of :class:`Brick` classes or instances, optional
-        Matches any variable whose brick is either the given brick, or
-        whose brick is of a given class.
+        Matches any variable whose brick is either one of the given
+        bricks, or whose brick is of given classes.
     each_role : bool, optional
         If ``True``, the variable needs to have all given roles.  If
         ``False``, a variable matching any of the roles given will be
         returned. ``False`` by default.
+    name : str, optional
+        A regular expression for the variable name. The Blocks name (i.e.
+        `x.tag.name`) is used.
+    application : :class:`Application` instance
+        Matches a variable that was produced by the application given.
 
     Notes
     -----
@@ -80,10 +86,13 @@ class VariableFilter(object):
     [b]
 
     """
-    def __init__(self, roles=None, bricks=None, each_role=False):
+    def __init__(self, roles=None, bricks=None, each_role=False, name=None,
+                 application=None):
         self.roles = roles
         self.bricks = bricks
         self.each_role = each_role
+        self.name = name
+        self.application = application
 
     def __call__(self, variables):
         """Filter the given variables.
@@ -120,4 +129,13 @@ class VariableFilter(object):
                         filtered_variables.append(var)
                         break
             variables = filtered_variables
+        if self.name:
+            variables = [var for var in variables
+                         if hasattr(var.tag, 'name')
+                         and re.match(self.name, var.tag.name)]
+        if self.application:
+            variables = [var for var in variables
+                         if get_application_call(var)
+                         and get_application_call(var).application
+                         == self.application]
         return variables

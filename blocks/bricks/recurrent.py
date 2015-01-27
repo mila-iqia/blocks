@@ -2,6 +2,7 @@
 import copy
 import inspect
 from collections import OrderedDict
+from functools import wraps
 
 import theano
 from theano import tensor
@@ -70,6 +71,7 @@ def recurrent(*args, **kwargs):
         arg_spec = inspect.getargspec(application_function)
         arg_names = arg_spec.args[1:]
 
+        @wraps(application_function)
         def recurrent_apply(brick, application, application_call,
                             *args, **kwargs):
             """Iterates a transition function.
