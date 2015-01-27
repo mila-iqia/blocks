@@ -23,9 +23,9 @@ def test_dataset_evaluators():
     data_stream = ContainerDataset(dict(X=data)).get_default_stream()
 
     values = validator.evaluate(data_stream)
-    assert values['V_squared'] == 4
+    assert values['test_brick_apply_V_squared'] == 4
     numpy.testing.assert_allclose(
-        values['mean_row_mean'], numpy.vstack(data).mean())
+        values['test_brick_apply_mean_row_mean'], numpy.vstack(data).mean())
     per_batch_mean = numpy.mean([batch.mean() for batch in data])
-    numpy.testing.assert_allclose(values['mean_batch_element'],
-                                  per_batch_mean)
+    numpy.testing.assert_allclose(
+        values['test_brick_apply_mean_batch_element'], per_batch_mean)

@@ -28,7 +28,7 @@ def test_gaussian():
     rng = numpy.random.RandomState(1)
 
     def check_gaussian(rng, mean, std, shape):
-        weights = IsotropicGaussian(mean, std).generate(rng, shape)
+        weights = IsotropicGaussian(std, mean).generate(rng, shape)
         assert weights.shape == shape
         assert weights.dtype == theano.config.floatX
         assert_allclose(weights.mean(), mean, atol=1e-2)

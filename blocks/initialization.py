@@ -78,13 +78,18 @@ class IsotropicGaussian(NdarrayInitialization):
 
     Parameters
     ----------
-    mean : float, optional
-        The mean of the Gaussian distribution. Defaults to 0
     std : float, optional
         The standard deviation of the Gaussian distribution. Defaults to 1.
+    mean : float, optional
+        The mean of the Gaussian distribution. Defaults to 0
+
+    Notes
+    -----
+    Be careful: the standard deviation goes first and the mean goes
+    second!
 
     """
-    def __init__(self, mean=0, std=1):
+    def __init__(self, std=1, mean=0):
         self._mean = mean
         self._std = std
 
