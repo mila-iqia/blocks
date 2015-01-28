@@ -160,7 +160,7 @@ class MainLoopStateManager(object):
 
     def save_log(self, main_loop):
         with open(self.path_to_log(), "wb") as destination:
-            dill.dump(main_loop, destination)
+            dill.dump(main_loop.log, destination)
 
     def save(self, main_loop):
         """Saves the main loop state to the root folder.
@@ -181,7 +181,7 @@ class MainLoopStateManager(object):
         with open(self.path_to_iteration_state(), "rb") as source:
             return dill.load(source)
 
-    def load_log(self, main_loop):
+    def load_log(self):
         with open(self.path_to_log(), "rb") as source:
             return dill.load(source)
 
@@ -193,7 +193,7 @@ class MainLoopStateManager(object):
     def load_to(self, main_loop):
         """Loads the state from the root folder into the main loop."""
         parameters, (data_stream, epoch_iterator), log = self.load()
-        inject_parameter_values(main_loop.model)
+        inject_parameter_values(main_loop.model, parameters)
         main_loop.data_stream = data_stream
         main_loop.epoch_iterator = epoch_iterator
         main_loop.log = log
