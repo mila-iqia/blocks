@@ -7,7 +7,7 @@ from theano import tensor
 
 from blocks.algorithms import GradientDescent, SteepestDescent
 from blocks.bricks import MLP, Tanh, Softmax, WEIGHTS
-from blocks.bricks.cost import CategoricalCrossEntropy, MisclassficationRate
+from blocks.bricks.cost import CategoricalCrossEntropy, MisclassificationRate
 from blocks.initialization import IsotropicGaussian, Constant
 from blocks.datasets import DataStream
 from blocks.datasets.mnist import MNIST
@@ -19,7 +19,7 @@ from blocks.extensions import FinishAfter, Timing, Printing
 from blocks.extensions.saveload import SerializeMainLoop
 from blocks.extensions.monitoring import (DataStreamMonitoring,
                                           TrainingDataMonitoring)
-from blocks.extensions import Plot
+from blocks.extensions.plot import Plot
 from blocks.main_loop import MainLoop
 
 
@@ -32,7 +32,7 @@ def main(save_to, num_epochs):
     y = tensor.lmatrix('targets')
     probs = mlp.apply(x)
     cost = CategoricalCrossEntropy().apply(y.flatten(), probs)
-    error_rate = MisclassficationRate().apply(y.flatten(), probs)
+    error_rate = MisclassificationRate().apply(y.flatten(), probs)
 
     cg = ComputationGraph([cost])
     W1, W2 = VariableFilter(roles=[WEIGHTS])(cg.variables)
@@ -64,7 +64,12 @@ def main(save_to, num_epochs):
                         prefix="train",
                         after_every_epoch=True),
                     SerializeMainLoop(save_to),
-                    Plot('MNIST example'),
+                    Plot(
+                        'MNIST example',
+                        monitors=[
+                            ['test_final_cost',
+                             'test_misclassificationrate_apply_error_rate'],
+                            ['train_total_gradient_norm']]),
                     Printing()])
     main_loop.run()
 

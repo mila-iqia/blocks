@@ -62,7 +62,7 @@ class CategoricalCrossEntropy(Cost):
         return cost
 
 
-class MisclassficationRate(Cost):
+class MisclassificationRate(Cost):
     @application(outputs=["error_rate"])
     def apply(self, y, y_hat):
         return (tensor.sum(tensor.neq(y, y_hat.argmax(axis=1)))
