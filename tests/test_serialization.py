@@ -54,7 +54,7 @@ def test_main_loop_state_manager():
 
         Notes
         -----
-        Corrupt the iteration state!
+        Corrupts the iteration state!
 
         """
         W1 = (main_loop1.model.linear_transformations[0]
@@ -77,7 +77,7 @@ def test_main_loop_state_manager():
     manager = MainLoopStateManager(folder)
     manager.save(main_loop1)
 
-    # Test loading from a save folder
+    # Test loading from the folder where `main_loop` is saved
     main_loop2 = sqrt_example(pkl_path, 1)
     manager.load_to(main_loop2)
     assert_equal(main_loop1, main_loop2)
