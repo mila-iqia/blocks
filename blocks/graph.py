@@ -133,6 +133,12 @@ class ComputationGraph(object):
 def add_role(var, role):
     r"""Add a role to a given Theano variable.
 
+    Parameters
+    ----------
+    var : Theano variable
+        The variable to assign the new role to.
+    role : :class:`VariableRole` instance
+
     Notes
     -----
     Some roles are subroles of others (e.g. :const:`WEIGHTS` is a subrole
@@ -140,12 +146,6 @@ def add_role(var, role):
     specific role has already been added. If you need to replace a role
     with a parent role (e.g. replace :const:`WEIGHTS` with
     :const:`PARAMETER`) you must do so manually.
-
-    Parameters
-    ----------
-    var : Theano variable
-        The variable to assign the new role to.
-    role : :class:`VariableRole` instance
 
     Examples
     --------

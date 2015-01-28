@@ -6,9 +6,9 @@ import six
 import theano
 from theano import tensor
 from theano import printing
-from theano.tensor.sharedvar import SharedVariable
-from theano.tensor.shared_randomstreams import RandomStateSharedVariable
 from theano.gof.graph import Constant
+from theano.tensor.shared_randomstreams import RandomStateSharedVariable
+from theano.tensor.sharedvar import SharedVariable
 
 
 def pack(arg):
@@ -252,7 +252,13 @@ def is_graph_input(variable):
 
 
 def is_shared_variable(variable):
-    """Check if a variable is a Theano shared variable."""
+    """Check if a variable is a Theano shared variable.
+
+    Notes
+    -----
+    This function excludes random shared variables.
+
+    """
     return (isinstance(variable, SharedVariable) and
             not isinstance(variable, RandomStateSharedVariable))
 
