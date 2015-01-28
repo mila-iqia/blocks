@@ -24,6 +24,7 @@ def test_save_load_parameter_values():
         assert old[0] == new[0]
         assert numpy.all(old[1] == new[1])
 
+
 def test_extract_parameter_values():
     mlp = MLP([Identity(), Identity()], [10, 20, 10])
     mlp.allocate()
@@ -34,6 +35,7 @@ def test_extract_parameter_values():
     assert isinstance(param_values['/mlp/linear_1.W'], numpy.ndarray)
     assert isinstance(param_values['/mlp/linear_1.b'], numpy.ndarray)
 
+
 def test_inject_parameter_values():
     mlp = MLP([Identity()], [10, 10])
     mlp.allocate()
@@ -42,6 +44,7 @@ def test_inject_parameter_values():
     inject_parameter_values(mlp, param_values)
     assert numpy.all(mlp.linear_transformations[0].params[0].get_value() == 2)
     assert numpy.all(mlp.linear_transformations[0].params[1].get_value() == 3)
+
 
 @temporary_files("__sqrt.pkl", "__sqrt_folder")
 @silence_printing
@@ -82,7 +85,7 @@ def test_main_loop_state_manager():
     # Reload because `main_loop2` is corrupted by `assert_equal`
     main_loop2 = sqrt_example(pkl_path, 1)
     manager.load_to(main_loop2)
-    # Continue for 33 iterations
+    # Continue until 33 iterations are done
     main_loop2.find_extension("FinishAfter").invoke_after_n_batches(33)
     main_loop2.run()
     assert main_loop2.log.status.iterations_done == 33
