@@ -19,6 +19,7 @@ from blocks.extensions import FinishAfter, Printing
 from blocks.extensions.saveload import SerializeMainLoop
 from blocks.extensions.monitoring import (DataStreamMonitoring,
                                           TrainingDataMonitoring)
+from blocks.extensions import Plot
 from blocks.main_loop import MainLoop
 
 
@@ -62,6 +63,7 @@ def main(save_to, num_epochs):
                         prefix="train",
                         after_every_epoch=True),
                     SerializeMainLoop(save_to),
+                    Plot('MNIST example'),
                     Printing()])
     main_loop.run()
 

@@ -1,6 +1,11 @@
 from __future__ import print_function
 
 from abc import ABCMeta, abstractmethod
+try:
+    from bokeh.plotting import figure, output_server, show, cursession
+    bokeh_available = True
+except ImportError:
+    bokeh_available = False
 
 from six import add_metaclass
 
@@ -300,3 +305,36 @@ class Printing(SimpleExtension):
                 log.status.iterations_done))
             self._print_attributes(log.current_row)
         print()
+
+
+class Plot(SimpleExtension):
+    def __init__(self, document, **kwargs):
+        if not bokeh_available:
+            raise ImportError
+        self.plots = {}
+        output_server(document)
+
+        self.p = figure(title=document)
+
+        kwargs.setdefault('after_every_epoch', True)
+        super(Plot, self).__init__(**kwargs)
+
+    def do(self, which_callback, *args):
+        log = self.main_loop.log
+        iteration = log.status.iterations_done
+        new = False
+        for key, value in log.current_row:
+            if key not in self.plots:
+                self.p.line([iteration], [value], legend=key,
+                            x_axis_label='iterations', y_axis_label='value',
+                            name=key)
+                renderer = self.p.select(dict(name=key))
+                self.plots[key] = renderer[0].data_source
+                new = True
+            else:
+                self.plots[key].data['x'].append(iteration)
+                self.plots[key].data['y'].append(value)
+                cursession().store_objects(self.plots[key])
+        if new:
+            show(self.p)
+            new = False
