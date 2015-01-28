@@ -344,7 +344,8 @@ class Timing(TrainingExtension):
 
 
     """
-    def __init__(self, clock_function=None):
+    def __init__(self, clock_function=None, **kwargs):
+        super(Timing, self).__init__(**kwargs)
         if not clock_function:
             clock_function = time.time
         self.clock_function = clock_function
