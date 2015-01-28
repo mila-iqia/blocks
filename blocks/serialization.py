@@ -105,7 +105,7 @@ def inject_parameter_values(bricks, param_values):
 
     params = bricks.get_params()
     for name in params.keys():
-        if name not in params:
+        if name not in param_values:
             logger.error("No value is provided for the parameter {}"
                          .format(name))
 
