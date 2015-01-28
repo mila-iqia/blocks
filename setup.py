@@ -37,6 +37,7 @@ setup(
     install_requires=['dill', 'numpy', 'theano', 'six'],
     extras_require={
         'test': ['nose', 'nose2'],
+        'plot': ['bokeh']
     },
     zip_safe=False
 )

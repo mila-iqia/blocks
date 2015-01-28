@@ -76,7 +76,7 @@ Quickstart
    >>> from theano import tensor
    >>> from blocks.algorithms import GradientDescent, SteepestDescent
    >>> from blocks.bricks import MLP, Tanh, Softmax
-   >>> from blocks.bricks.cost import CategoricalCrossEntropy, MisclassficationRate
+   >>> from blocks.bricks.cost import CategoricalCrossEntropy, MisclassificationRate
    >>> from blocks.initialization import IsotropicGaussian, Constant
    >>> from blocks.datasets import DataStream
    >>> from blocks.datasets.mnist import MNIST
@@ -97,7 +97,7 @@ Calculate your loss function.
     >>> y = tensor.lmatrix('targets')
     >>> y_hat = mlp.apply(x)
     >>> cost = CategoricalCrossEntropy().apply(y.flatten(), y_hat)
-    >>> error_rate = MisclassficationRate().apply(y.flatten(), y_hat)
+    >>> error_rate = MisclassificationRate().apply(y.flatten(), y_hat)
 
 Load your training data.
 
