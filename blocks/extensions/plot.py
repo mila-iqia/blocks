@@ -73,14 +73,6 @@ class Plot(SimpleExtension):
         start the server manually using the ``bokeh-server`` command. Also
         see the warning above.
 
-    Notes
-    -----
-    On deserialization (i.e. when resuming training), this extension will
-    attempt to start the server as well (if ``start_server`` was ``True``)
-    so that it can continue sending information to the plotting server.
-    However, if you didn't shut down the plotting server before resuming
-    training, it will most likely crash.
-
     """
     # Tableau 10 colors
     colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
