@@ -1,19 +1,21 @@
 import numpy
 import theano
 
+from examples.sqrt import main as sqrt_example
 from blocks.bricks import MLP, Identity
 from blocks.serialization import (
     load_parameter_values, save_parameter_values,
-    extract_parameter_values, inject_parameter_values)
-from tests import temporary_files
+    extract_parameter_values, inject_parameter_values,
+    MainLoopStateManager)
+from tests import temporary_files, silence_printing
 
 floatX = theano.config.floatX
 
 
-@temporary_files("tmp.npz")
+@temporary_files("__tmp.npz")
 def test_save_load_parameter_values():
     param_values = [("/a/b", numpy.zeros(3)), ("/a/c", numpy.ones(4))]
-    filename = "tmp.npz"
+    filename = "__tmp.npz"
     save_parameter_values(dict(param_values), filename)
     loaded_values = sorted(list(load_parameter_values(filename).items()),
                            key=lambda tuple_: tuple_[0])
@@ -40,3 +42,52 @@ def test_inject_parameter_values():
     inject_parameter_values(mlp, param_values)
     assert numpy.all(mlp.linear_transformations[0].params[0].get_value() == 2)
     assert numpy.all(mlp.linear_transformations[0].params[1].get_value() == 3)
+
+@temporary_files("__sqrt.pkl", "__sqrt_folder")
+@silence_printing
+def test_main_loop_state_manager():
+    def assert_equal(main_loop1, main_loop2, check_log=True):
+        """Check if two main loop objects are equal.
+
+        Notes
+        -----
+        Corrupt the iteration state!
+
+        """
+        W1 = (main_loop1.model.linear_transformations[0]
+                              .params[0].get_value())
+        W2 = (main_loop2.model.linear_transformations[0]
+                              .params[0].get_value())
+        assert numpy.all(W1 == W2)
+        if check_log:
+            assert sorted(list(main_loop1.log)) == sorted(list(main_loop2.log))
+        assert numpy.all(
+            next(main_loop1.epoch_iterator)["numbers"] ==
+            next(main_loop2.epoch_iterator)["numbers"])
+
+    pkl_path = '__sqrt.pkl'
+    folder = '__sqrt_folder'
+    main_loop1 = sqrt_example(pkl_path, 17)
+    assert main_loop1.log.status.epochs_done == 3
+    assert main_loop1.log.status.iterations_done == 17
+
+    manager = MainLoopStateManager(folder)
+    manager.save(main_loop1)
+
+    # Test loading from a save folder
+    main_loop2 = sqrt_example(pkl_path, 1)
+    manager.load_to(main_loop2)
+    assert_equal(main_loop1, main_loop2)
+
+    # Reload because `main_loop2` is corrupted by `assert_equal`
+    main_loop2 = sqrt_example(pkl_path, 1)
+    manager.load_to(main_loop2)
+    # Continue for 33 iterations
+    main_loop2.find_extension("FinishAfter").invoke_after_n_batches(33)
+    main_loop2.run()
+    assert main_loop2.log.status.iterations_done == 33
+
+    # Compare with a main loop after continuous 33 iterations
+    main_loop3 = sqrt_example(pkl_path, 33)
+    assert main_loop3.log.status.iterations_done == 33
+    assert_equal(main_loop2, main_loop3, check_log=False)

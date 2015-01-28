@@ -5,7 +5,7 @@ import dill
 import blocks
 from examples.mnist import main as mnist_test
 from examples.markov_chain.main import main as markov_chain_test
-from tests import temporary_files
+from tests import temporary_files, silence_printing
 
 
 def setup():
@@ -15,6 +15,7 @@ def setup():
 
 
 @temporary_files('mnist.pkl')
+@silence_printing
 def test_mnist():
     filename = 'mnist.pkl'
     mnist_test(filename, 1)
@@ -28,6 +29,7 @@ test_mnist.setup = setup
 
 
 @temporary_files('chain.pkl')
+@silence_printing
 def test_markov_chain():
     filename = 'chain.pkl'
     markov_chain_test("train", filename, None, 10)
