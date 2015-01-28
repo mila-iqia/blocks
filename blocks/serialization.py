@@ -124,8 +124,8 @@ class MainLoopStateManager(object):
     representation used is a folder with a few files containing
     model parameters, log and state of the data iteration.
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     folder : str
         The path to the root folder for the saved state.
 
