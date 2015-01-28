@@ -147,7 +147,7 @@ class Plot(SimpleExtension):
 
     def __getstate__(self):
         state = self.__dict__.copy()
-        del state['sub']
+        state.sub = None
         return state
 
     def __setstate(self, state):
