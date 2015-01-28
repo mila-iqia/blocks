@@ -15,7 +15,7 @@ from blocks.datasets.schemes import SequentialScheme
 from blocks.filter import VariableFilter
 from blocks.graph import ComputationGraph
 from blocks.monitoring import aggregation
-from blocks.extensions import FinishAfter, Printing
+from blocks.extensions import FinishAfter, Timing, Printing
 from blocks.extensions.saveload import SerializeMainLoop
 from blocks.extensions.monitoring import (DataStreamMonitoring,
                                           TrainingDataMonitoring)
@@ -49,7 +49,8 @@ def main(save_to, num_epochs):
                    iteration_scheme=SequentialScheme(
                        mnist_train.num_examples, 50)),
         algorithm,
-        extensions=[FinishAfter(after_n_epochs=num_epochs),
+        extensions=[Timing(),
+                    FinishAfter(after_n_epochs=num_epochs),
                     DataStreamMonitoring(
                         [cost, error_rate],
                         DataStream(mnist_test,

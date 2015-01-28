@@ -1,4 +1,5 @@
 from __future__ import print_function
+import time
 
 from abc import ABCMeta, abstractmethod
 
@@ -300,3 +301,43 @@ class Printing(SimpleExtension):
                 log.status.iterations_done))
             self._print_attributes(log.current_row)
         print()
+
+
+class Timing(TrainingExtension):
+    """Keeps track of CPU time used.
+
+    Parameters
+    ----------
+    clock_function : callable, optional
+        Return the current time. By default `time.clock()` ised,
+        which means that CPU time is tracked.
+
+    """
+    def __init__(self, clock_function=None):
+        if not clock_function:
+            clock_function = time.clock
+        self.clock_function = clock_function
+
+    def before_training(self):
+        self.started_at = self.clock_function()
+
+    def before_epoch(self):
+        self.epoch_started_at = self.clock_function()
+        if self.main_loop.log.status.epochs_done == 0:
+            self.main_loop.log.current_row.initialization_took = (
+                self.epoch_started_at - self.started_at)
+
+    def before_batch(self, batch):
+        self.batch_started_at = self.clock_function()
+
+    def after_batch(self, batch):
+        self.main_loop.log.current_row.iteration_took = (
+            self.clock_function() - self.batch_started_at)
+
+    def after_epoch(self):
+        self.main_loop.log.current_row.epoch_took = (
+            self.clock_function() - self.epoch_started_at)
+
+    def after_training(self):
+        self.main_loop.log.current_row.training_took = (
+            self.clock_function() - self.started_at)
