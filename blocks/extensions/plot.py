@@ -56,7 +56,7 @@ class Plot(SimpleExtension):
     document : str
         The name of the Bokeh document. Use a different name for each
         experiment if you are storing your plots.
-    monitors : list of lists of strings
+    channels : list of lists of strings
         The names of the monitor channels that you want to plot. The
         channels in a single sublist will be plotted together in a single
         figure, so use e.g. ``[['test_cost', 'train_cost'],
@@ -86,7 +86,7 @@ class Plot(SimpleExtension):
     colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
               '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
 
-    def __init__(self, document, monitors, open_browser=False,
+    def __init__(self, document, channels, open_browser=False,
                  start_server=False, **kwargs):
         if not bokeh_available:
             raise ImportError
@@ -98,10 +98,10 @@ class Plot(SimpleExtension):
         # Create figures for each group of channels
         self.p = []
         self.p_indices = {}
-        for i, monitor_set in enumerate(monitors):
+        for i, channel_set in enumerate(channels):
             self.p.append(figure(title='{} #{}'.format(document, i + 1)))
-            for monitor in monitor_set:
-                self.p_indices[monitor] = i
+            for channel in channel_set:
+                self.p_indices[channel] = i
         if open_browser:
             show()
 

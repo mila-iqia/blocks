@@ -66,7 +66,7 @@ def main(save_to, num_epochs):
                     SerializeMainLoop(save_to),
                     Plot(
                         'MNIST example',
-                        monitors=[
+                        channels=[
                             ['test_final_cost',
                              'test_misclassificationrate_apply_error_rate'],
                             ['train_total_gradient_norm']]),
