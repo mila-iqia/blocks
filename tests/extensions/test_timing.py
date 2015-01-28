@@ -1,6 +1,7 @@
 from blocks.extensions import Timing
 from blocks.log import TrainingLog
 
+
 def test_timing():
     class FakeMainLoop():
 

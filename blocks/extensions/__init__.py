@@ -330,17 +330,18 @@ class Timing(TrainingExtension):
     * `final_total_took`: total number of seconds spent on training
       including all extension calls except `after_training`.
 
+    Parameters
+    ----------
+    clock_function : callable, optional
+        Return the current time. By default `time.time` ised,
+        which means that user time is tracked.
+
     Notes
     -----
     When training is interrupted this extension saves intermediate
     time measurements to the training status, i.e. it should be robust
     to any training interruptions.
 
-    Parameters
-    ----------
-    clock_function : callable, optional
-        Return the current time. By default `time.time` ised,
-        which means that user time is tracked.
 
     """
     def __init__(self, clock_function=None):
@@ -390,8 +391,8 @@ class Timing(TrainingExtension):
         if self.log.status._epoch_started:
             epoch_ends = self.log.status._epoch_ends
             self.log.status._epoch_before_interrupted = (
-               self.clock_function() -
-               0 if not epoch_ends else self.log[epoch_ends[-1]].total_took)
+                self.clock_function() -
+                0 if not epoch_ends else self.log[epoch_ends[-1]].total_took)
 
     def on_resumption(self):
         self.started_at = self.clock_function()
