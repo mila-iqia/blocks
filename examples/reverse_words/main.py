@@ -12,7 +12,7 @@ import dill
 import numpy
 import theano
 from theano import tensor
-from theano.printing import pydotprint
+from theano.printing import pydotprint, debugprint
 
 from blocks.bricks import Tanh
 from blocks.bricks.lookup import LookupTable
@@ -85,8 +85,6 @@ def main(mode, save_path, pydot_path, num_batches):
                                 "training", [99], char2code,
                                 level="character", preprocess=str.lower)
                                .get_default_stream())))))
-        data = next(
-            data_stream.get_epoch_iterator(as_dict=True))
 
         # Build the model
         chars = tensor.lmatrix("features")
@@ -156,7 +154,9 @@ def main(mode, save_path, pydot_path, num_batches):
             aggregation.mean(batch_cost, batch_size * max_length),
             "character_log_likelihood")
         cg = ComputationGraph(cost)
-        pydotprint(cg.get_theano_function(), pydot_path, scan_graphs=True)
+        debugprint(cost)
+        # pydotprint(cg.get_theano_function(), pydot_path, scan_graphs=True)
+        return
         energies = unpack(
             VariableFilter(application=readout.readout, name="output")(
                 cg.variables),
