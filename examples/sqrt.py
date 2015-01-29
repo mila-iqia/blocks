@@ -1,5 +1,11 @@
 #!/usr/bin/env python
-"""Super-basic example, mainly for testing purposes."""
+"""Super-basic example, mainly for testing purposes.
+
+This script trains a tiny network to compute square root. It also
+serves as an example of using the poor man's serialization routines from
+'blocks/serialization.py'.
+
+"""
 
 import logging
 import math
@@ -17,7 +23,7 @@ from blocks.datasets import (ContainerDataset, BatchDataStream,
                              DataStreamMapping)
 from blocks.datasets.schemes import ConstantScheme
 from blocks.extensions import FinishAfter, Timing, Printing
-from blocks.extensions.saveload import SerializeMainLoop
+from blocks.extensions.saveload import LoadTrainingState, SaveTrainingState
 from blocks.extensions.monitoring import (TrainingDataMonitoring,
                                           DataStreamMonitoring)
 from blocks.main_loop import MainLoop
@@ -36,7 +42,7 @@ def get_data_stream(iterable):
     return BatchDataStream(data_stream, ConstantScheme(20))
 
 
-def main(save_to, num_batches):
+def main(save_to, num_batches, continue_=False):
     mlp = MLP([Tanh(), Identity()], [1, 10, 1],
               weights_init=IsotropicGaussian(0.01),
               biases_init=Constant(0))
@@ -51,13 +57,14 @@ def main(save_to, num_batches):
         get_data_stream(range(100)),
         GradientDescent(
             cost=cost, step_rule=SteepestDescent(learning_rate=0.001)),
-        extensions=[Timing(),
+        extensions=([LoadTrainingState(save_to)] if continue_ else []) +
+                    [Timing(),
                     FinishAfter(after_n_batches=num_batches),
                     DataStreamMonitoring(
                         [cost], get_data_stream(range(100, 200)),
                         prefix="test"),
                     TrainingDataMonitoring([cost], after_every_epoch=True),
-                    SerializeMainLoop(save_to),
+                    SaveTrainingState(save_to),
                     Printing()])
     main_loop.run()
     return main_loop
@@ -67,7 +74,7 @@ if __name__ == "__main__":
     parser = ArgumentParser("An example of learning to take square root")
     parser.add_argument("--num-batches", type=int, default=1000,
                         help="Number of training batches to do.")
-    parser.add_argument("save_to", default="sqrt.pkl", nargs="?",
+    parser.add_argument("save_to", default="sqrt", nargs="?",
                         help=("Destination to save the state of the training "
                               "process."))
     args = parser.parse_args()

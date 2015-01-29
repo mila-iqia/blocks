@@ -46,7 +46,7 @@ def test_inject_parameter_values():
     assert numpy.all(mlp.linear_transformations[0].params[1].get_value() == 3)
 
 
-@temporary_files("__sqrt.pkl", "__sqrt_folder")
+@temporary_files("__sqrt_folder", "__sqrt_folder2")
 @silence_printing
 def test_main_loop_state_manager():
     def assert_equal(main_loop1, main_loop2, check_log=True):
@@ -68,22 +68,21 @@ def test_main_loop_state_manager():
             next(main_loop1.epoch_iterator)["numbers"] ==
             next(main_loop2.epoch_iterator)["numbers"])
 
-    pkl_path = '__sqrt.pkl'
     folder = '__sqrt_folder'
-    main_loop1 = sqrt_example(pkl_path, 17)
+    folder2 = folder + '2'
+
+    main_loop1 = sqrt_example(folder, 17)
     assert main_loop1.log.status.epochs_done == 3
     assert main_loop1.log.status.iterations_done == 17
 
-    manager = MainLoopStateManager(folder)
-    manager.save(main_loop1)
-
     # Test loading from the folder where `main_loop` is saved
-    main_loop2 = sqrt_example(pkl_path, 1)
+    main_loop2 = sqrt_example(folder2, 1)
+    manager = MainLoopStateManager(folder)
     manager.load_to(main_loop2)
     assert_equal(main_loop1, main_loop2)
 
     # Reload because `main_loop2` is corrupted by `assert_equal`
-    main_loop2 = sqrt_example(pkl_path, 1)
+    main_loop2 = sqrt_example(folder2, 1)
     manager.load_to(main_loop2)
     # Continue until 33 iterations are done
     main_loop2.find_extension("FinishAfter").invoke_after_n_batches(33)
@@ -91,6 +90,6 @@ def test_main_loop_state_manager():
     assert main_loop2.log.status.iterations_done == 33
 
     # Compare with a main loop after continuous 33 iterations
-    main_loop3 = sqrt_example(pkl_path, 33)
+    main_loop3 = sqrt_example(folder, 33)
     assert main_loop3.log.status.iterations_done == 33
     assert_equal(main_loop2, main_loop3, check_log=False)
