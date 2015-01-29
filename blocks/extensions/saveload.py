@@ -1,10 +1,11 @@
 """Extensions for saving and loading the state of a training process."""
+import os.path
 import dill
 import logging
 import traceback
 
 from blocks.extensions import SimpleExtension, TrainingExtension
-from blocks.serialization import MainLoopStateManager
+from blocks.dump import MainLoopDumpManager
 
 logger = logging.getLogger(__name__)
 
@@ -53,8 +54,8 @@ class SerializeMainLoop(SimpleExtension):
             self.main_loop.log.current_row[SAVING_DONE_TO] = None
 
 
-class LoadTrainingState(TrainingExtension):
-    """Loads training state from a dump.
+class LoadFromDump(TrainingExtension):
+    """Loads a dump into the main loop.
 
     Parameters
     ----------
@@ -62,10 +63,14 @@ class LoadTrainingState(TrainingExtension):
         The path to the folder with dump.
 
     """
-    def __init__(self, state_path):
-        self.manager = MainLoopStateManager(state_path)
+    def __init__(self, state_path, **kwargs):
+        super(LoadFromDump, self).__init__(**kwargs)
+        self.manager = MainLoopDumpManager(state_path)
 
     def before_training(self):
+        if not os.path.exists(self.manager.folder):
+            logger.info("No dump found")
+            return
         logger.info("Loading the state from {} into the main loop"
                     .format(self.manager.folder))
         try:
@@ -76,8 +81,8 @@ class LoadTrainingState(TrainingExtension):
                          .format(traceback.format_exc()))
 
 
-class SaveTrainingState(SimpleExtension):
-    """Dumps the training state.
+class Dump(SimpleExtension):
+    """Dumps the state of the main loop.
 
     Parameters
     ----------
@@ -88,13 +93,13 @@ class SaveTrainingState(SimpleExtension):
     """
     def __init__(self, state_path, **kwargs):
         kwargs.setdefault("after_training", True)
-        super(SaveTrainingState, self).__init__(**kwargs)
-        self.manager = MainLoopStateManager(state_path)
+        super(Dump, self).__init__(**kwargs)
+        self.manager = MainLoopDumpManager(state_path)
 
     def do(self, callback_name, **kwargs):
         try:
             self.main_loop.log.current_row[SAVING_DONE_TO] = (
                 self.manager.folder)
-            self.manager.save(self.main_loop)
+            self.manager.dump(self.main_loop)
         except:
             self.main_loop.log.current_row[SAVING_DONE_TO] = None

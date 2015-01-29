@@ -2,8 +2,7 @@
 """Super-basic example, mainly for testing purposes.
 
 This script trains a tiny network to compute square root. It also
-serves as an example of using the poor man's serialization routines from
-'blocks/serialization.py'.
+serves as an example of using dumping.
 
 """
 import logging
@@ -22,7 +21,7 @@ from blocks.datasets import (ContainerDataset, BatchDataStream,
                              DataStreamMapping)
 from blocks.datasets.schemes import ConstantScheme
 from blocks.extensions import FinishAfter, Timing, Printing
-from blocks.extensions.saveload import LoadTrainingState, SaveTrainingState
+from blocks.extensions.saveload import LoadFromDump, Dump
 from blocks.extensions.monitoring import (TrainingDataMonitoring,
                                           DataStreamMonitoring)
 from blocks.main_loop import MainLoop
@@ -56,14 +55,14 @@ def main(save_to, num_batches, continue_=False):
         get_data_stream(range(100)),
         GradientDescent(
             cost=cost, step_rule=SteepestDescent(learning_rate=0.001)),
-        extensions=([LoadTrainingState(save_to)] if continue_ else []) +
+        extensions=([LoadFromDump(save_to)] if continue_ else []) +
         [Timing(),
             FinishAfter(after_n_batches=num_batches),
             DataStreamMonitoring(
                 [cost], get_data_stream(range(100, 200)),
                 prefix="test"),
             TrainingDataMonitoring([cost], after_every_epoch=True),
-            SaveTrainingState(save_to),
+            Dump(save_to),
             Printing()])
     main_loop.run()
     return main_loop
