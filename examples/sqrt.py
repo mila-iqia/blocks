@@ -6,7 +6,6 @@ serves as an example of using the poor man's serialization routines from
 'blocks/serialization.py'.
 
 """
-
 import logging
 import math
 import numpy
