@@ -30,7 +30,7 @@ from blocks.datasets.schemes import ConstantScheme
 from blocks.algorithms import GradientDescent, SteepestDescent
 from blocks.initialization import Orthogonal, IsotropicGaussian, Constant
 from blocks.monitoring import aggregation
-from blocks.extensions import FinishAfter, Printing
+from blocks.extensions import FinishAfter, Printing, Timing
 from blocks.extensions.saveload import SerializeMainLoop
 from blocks.extensions.monitoring import TrainingDataMonitoring
 from blocks.main_loop import MainLoop
@@ -140,7 +140,6 @@ def main(mode, save_path, pydot_path, num_batches):
         batch_size = named_copy(chars.shape[1], "batch_size")
         batch_cost = generator.cost(
             targets, targets_mask,
-            #attended=lookup.lookup(chars),
             attended=encoder.apply(
                 **fork.apply(lookup.lookup(chars), return_dict=True)),
             attended_mask=chars_mask).sum()
@@ -154,9 +153,6 @@ def main(mode, save_path, pydot_path, num_batches):
             aggregation.mean(batch_cost, batch_size * max_length),
             "character_log_likelihood")
         cg = ComputationGraph(cost)
-        debugprint(cost)
-        # pydotprint(cg.get_theano_function(), pydot_path, scan_graphs=True)
-        return
         energies = unpack(
             VariableFilter(application=readout.readout, name="output")(
                 cg.variables),
@@ -192,7 +188,8 @@ def main(mode, save_path, pydot_path, num_batches):
             model=generator,
             data_stream=data_stream,
             algorithm=algorithm,
-            extensions=[TrainingDataMonitoring(observables, after_every_batch=True),
+            extensions=[Timing(),
+                        TrainingDataMonitoring(observables, after_every_batch=True),
                         FinishAfter(after_n_batches=num_batches)
                         .add_condition(
                             "after_batch",
@@ -201,28 +198,7 @@ def main(mode, save_path, pydot_path, num_batches):
                         Printing(every_n_batches=1)])
         main_loop.run()
     elif mode == "sample":
-        main_loop = dill.load(open(save_path, "rb"))
-        generator = main_loop.model
-
-        sample = ComputationGraph(generator.generate(
-            n_steps=steps, batch_size=1, iterate=True)).get_theano_function()
-
-        states, outputs, costs = [data[:, 0] for data in sample()]
-
-        numpy.set_printoptions(precision=3, suppress=True)
-        print("Generation cost:\n{}".format(costs.sum()))
-
-        freqs = numpy.bincount(outputs).astype(floatX)
-        freqs /= freqs.sum()
-        print("Frequencies:\n {} vs {}".format(freqs,
-                                               MarkovChainDataset.equilibrium))
-
-        trans_freqs = numpy.zeros((num_states, num_states), dtype=floatX)
-        for a, b in zip(outputs, outputs[1:]):
-            trans_freqs[a, b] += 1
-        trans_freqs /= trans_freqs.sum(axis=1)[:, None]
-        print("Transition frequencies:\n{}\nvs\n{}".format(
-            trans_freqs, MarkovChainDataset.trans_prob))
+        raise NotImplementedError()
     else:
         assert False
 
