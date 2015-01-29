@@ -22,9 +22,10 @@ pull the latest version from GitHub.
 .. warning::
 
    Pip may try to update your versions of NumPy and SciPy if they are outdated.
-   To make sure this doesn't happenuse the ``--no-deps`` flag, and install
-   NumPy and SciPy using your system's package manager (e.g. ``apt-get`` or
-   ``yum``) or a Python distribution like Anaconda_.
+   However, pip's versions might not be linked to an optimized BLAS
+   implementation. To prevent this from happening use the ``--no-deps`` flag
+   and install NumPy and SciPy using your system's package manager (e.g.
+   ``apt-get`` or ``yum``) or a Python distribution like Anaconda_.
 
 Requirements
 ------------
