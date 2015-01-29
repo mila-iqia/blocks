@@ -3,8 +3,10 @@
 
 import logging
 import math
+import numpy
 from argparse import ArgumentParser
 
+import theano
 from theano import tensor
 
 from blocks.algorithms import GradientDescent, SteepestDescent
@@ -20,12 +22,17 @@ from blocks.extensions.monitoring import (TrainingDataMonitoring,
                                           DataStreamMonitoring)
 from blocks.main_loop import MainLoop
 
+floatX = theano.config.floatX
+
 
 def get_data_stream(iterable):
     dataset = ContainerDataset({'numbers': iterable})
     data_stream = DataStreamMapping(dataset.get_default_stream(),
                                     lambda data: (math.sqrt(data[0]),),
                                     add_sources=('roots',))
+    data_stream = DataStreamMapping(
+        data_stream,
+        lambda data: tuple((numpy.asarray(d, dtype=floatX) for d in data)))
     return BatchDataStream(data_stream, ConstantScheme(20))
 
 
