@@ -16,7 +16,7 @@ def save_parameter_values(param_values, path):
     """Compactly save parameter values.
 
     This is a thin wrapper over `numpy.savez`. It deals with
-    `numpu`'s vulnerability to slashes in file names.
+    `numpy`'s vulnerability to slashes in file names.
 
     Parameters
     ----------

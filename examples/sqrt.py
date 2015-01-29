@@ -58,14 +58,14 @@ def main(save_to, num_batches, continue_=False):
         GradientDescent(
             cost=cost, step_rule=SteepestDescent(learning_rate=0.001)),
         extensions=([LoadTrainingState(save_to)] if continue_ else []) +
-                    [Timing(),
-                    FinishAfter(after_n_batches=num_batches),
-                    DataStreamMonitoring(
-                        [cost], get_data_stream(range(100, 200)),
-                        prefix="test"),
-                    TrainingDataMonitoring([cost], after_every_epoch=True),
-                    SaveTrainingState(save_to),
-                    Printing()])
+        [Timing(),
+            FinishAfter(after_n_batches=num_batches),
+            DataStreamMonitoring(
+                [cost], get_data_stream(range(100, 200)),
+                prefix="test"),
+            TrainingDataMonitoring([cost], after_every_epoch=True),
+            SaveTrainingState(save_to),
+            Printing()])
     main_loop.run()
     return main_loop
 

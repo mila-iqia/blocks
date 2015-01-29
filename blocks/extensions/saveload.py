@@ -54,6 +54,14 @@ class SerializeMainLoop(SimpleExtension):
 
 
 class LoadTrainingState(TrainingExtension):
+    """Loads training state from a dump.
+
+    Parameters
+    ----------
+    state_path : str
+        The path to the folder with dump.
+
+    """
     def __init__(self, state_path):
         self.manager = MainLoopStateManager(state_path)
 
@@ -69,6 +77,15 @@ class LoadTrainingState(TrainingExtension):
 
 
 class SaveTrainingState(SimpleExtension):
+    """Dumps the training state.
+
+    Parameters
+    ----------
+    state_path : str
+        The folder to dump the state to. Will be created it does not
+        exist.
+
+    """
     def __init__(self, state_path, **kwargs):
         kwargs.setdefault("after_training", True)
         super(SaveTrainingState, self).__init__(**kwargs)
