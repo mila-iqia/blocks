@@ -31,7 +31,8 @@ from blocks.algorithms import GradientDescent, SteepestDescent
 from blocks.initialization import Orthogonal, IsotropicGaussian, Constant
 from blocks.monitoring import aggregation
 from blocks.extensions import FinishAfter, Printing, Timing
-from blocks.extensions.saveload import SerializeMainLoop
+from blocks.extensions.saveload import (
+    SerializeMainLoop, LoadTrainingState)
 from blocks.extensions.monitoring import TrainingDataMonitoring
 from blocks.main_loop import MainLoop
 from blocks.select import Selector
@@ -39,7 +40,7 @@ from blocks.filter import VariableFilter
 from blocks.utils import named_copy, unpack
 from examples.reverse_words import Transition
 
-sys.setrecursionlimit(10000)
+sys.setrecursionlimit(100000)
 floatX = theano.config.floatX
 logger = logging.getLogger(__name__)
 
@@ -189,6 +190,7 @@ def main(mode, save_path, pydot_path, num_batches):
             data_stream=data_stream,
             algorithm=algorithm,
             extensions=[Timing(),
+                        LoadTrainingState("reverse"),
                         TrainingDataMonitoring(observables, after_every_batch=True),
                         FinishAfter(after_n_batches=num_batches)
                         .add_condition(
