@@ -63,10 +63,11 @@ class AggregationBuffer(object):
         self.accumulation_updates = []
         self.readout_expressions = OrderedDict()
 
+        cg = ComputationGraph(self.expressions)
         for v in self.expressions:
             logger.debug('Expression to evaluate: %s', v.name)
             if not hasattr(v.tag, 'aggregation_scheme'):
-                if ComputationGraph([v]).inputs == []:
+                if not cg.has_inputs(v):
                     scheme = (TakeLast if self.use_take_last
                               else _DataIndependent)
                     logger.debug('Using %s aggregation scheme'
@@ -102,6 +103,7 @@ class AggregationBuffer(object):
             be out-sourced to `ComputationGraph` to deal with it.
 
         """
+        logger.debug("Compiling initialization and readout functions")
         if self.initialization_updates:
             self._initialize_fun = theano.function(
                 [], [], updates=self.initialization_updates)
@@ -110,6 +112,7 @@ class AggregationBuffer(object):
 
         self._readout_fun = theano.function(
             [], list(self.readout_expressions.values()))
+        logger.debug("Initialization and readout functions compiled")
 
     def initialize_aggregators(self):
         """Initialize the aggregators."""
