@@ -8,11 +8,8 @@ import pprint
 import sys
 import math
 
-import dill
-import numpy
 import theano
 from theano import tensor
-from theano.printing import pydotprint, debugprint
 
 from blocks.bricks import Tanh
 from blocks.bricks.lookup import LookupTable
@@ -31,8 +28,7 @@ from blocks.algorithms import GradientDescent, SteepestDescent
 from blocks.initialization import Orthogonal, IsotropicGaussian, Constant
 from blocks.monitoring import aggregation
 from blocks.extensions import FinishAfter, Printing, Timing
-from blocks.extensions.saveload import (
-    SerializeMainLoop, LoadTrainingState)
+from blocks.extensions.saveload import SerializeMainLoop
 from blocks.extensions.monitoring import TrainingDataMonitoring
 from blocks.main_loop import MainLoop
 from blocks.select import Selector
@@ -45,7 +41,7 @@ floatX = theano.config.floatX
 logger = logging.getLogger(__name__)
 
 
-def main(mode, save_path, pydot_path, num_batches):
+def main(mode, save_path, num_batches):
     if mode == "train":
         # Experiment configuration
         chars = ([chr(ord('a') + i) for i in range(26)] +
@@ -190,7 +186,6 @@ def main(mode, save_path, pydot_path, num_batches):
             data_stream=data_stream,
             algorithm=algorithm,
             extensions=[Timing(),
-                        LoadTrainingState("reverse"),
                         TrainingDataMonitoring(observables, after_every_batch=True),
                         FinishAfter(after_n_batches=num_batches)
                         .add_condition(
@@ -218,9 +213,6 @@ if __name__ == "__main__":
     parser.add_argument(
         "save_path", default="chain",
         help="The path to save the training process.")
-    parser.add_argument(
-        "--pydot-path", default=None,
-        help="Path to save a visualized computation graph.")
     parser.add_argument(
         "--num-batches", default=1000, type=int,
         help="Train on this many batches.")
