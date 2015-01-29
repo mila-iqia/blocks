@@ -157,7 +157,7 @@ class ComputationGraph(object):
                                                          value_holders)])
 
     def has_inputs(self, variable):
-        if not variable in self._has_inputs:
+        if variable not in self._has_inputs:
             self._has_inputs[variable] = False
             if is_graph_input(variable):
                 self._has_inputs[variable] = True
