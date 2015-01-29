@@ -15,6 +15,7 @@ def setup():
     logger = logging.getLogger(blocks.__name__)
     logger.setLevel(logging.ERROR)
 
+
 @temporary_files('__sqrt')
 @silence_printing
 def test_sqrt():
@@ -22,6 +23,7 @@ def test_sqrt():
     sqrt_test(filename, 7)
     main_loop = sqrt_test(filename, 14, continue_=True)
     assert main_loop.log[7][SAVING_DONE_TO] == filename
+
 
 @temporary_files('mnist.pkl')
 @silence_printing
