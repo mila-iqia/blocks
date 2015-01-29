@@ -83,11 +83,13 @@ class TrainingDataMonitoring(SimpleExtension):
 
     """
     def __init__(self, expressions, prefix=None, **kwargs):
+        logger.info("Initialize monitoring on training data")
         kwargs.setdefault("before_training", True)
         super(TrainingDataMonitoring, self).__init__(**kwargs)
         self._buffer = AggregationBuffer(expressions, use_take_last=True)
         self._last_time_called = -1
         self.prefix = prefix
+        logger.info("Monitoring on training data initialized")
 
     def do(self, callback_name, *args):
         """Initializes the buffer or commits the values to the log.
