@@ -162,8 +162,10 @@ class MainLoopDumpManager(object):
 
     def path_to_log(self):
         # The extension is omitted for the log because advanced
-        # log classes might have a better format for storing on the
-        # then pickled file. Currenly log is just pickled though.
+        # log classes might have a better format for storing on the disk
+        # then pickled file. Or alternatively, log will be dump as pure
+        # text file of (time, key, value) triples. Currenly log is just
+        # pickled though.
         return "{}/{}".format(self.folder, "log")
 
     def dump_parameters(self, main_loop):
