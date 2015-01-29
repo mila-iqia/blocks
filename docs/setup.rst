@@ -1,31 +1,32 @@
 Installation
 ============
-The easiest way to install Blocks using the Python package manager ``pip``.
-Blocks isn't listed yet on the Python Package Index (PyPI), so you will have to
-grab it directly from GitHub.
+The easiest way to install Blocks using the Python package manager pip.  Blocks
+isn't listed yet on the Python Package Index (PyPI), so you will have to grab
+it directly from GitHub.
 
 .. code-block:: bash
 
    pip install --upgrade git+git://github.com/bartvm/blocks.git#egg=blocks --user
 
 If you want to make sure that you can run the tests and/or use the plotting
-integration with Bokeh_, install the extra requirements with.
+integration with Bokeh_, install the extra requirements as well.
 
 .. code-block:: bash
 
    pip install --upgrade git+git://github.com/bartvm/blocks.git#egg=blocks[plot,test] --user
 
 If you have administrative rights, remove ``--user`` to install the package
-system-wide. If you want to update Blocks, simply repeat the command above to
-pull the latest version from GitHub.
+system-wide. If you want to update Blocks, simply repeat one of the commands
+above to pull the latest version from GitHub.
 
 .. warning::
 
    Pip may try to update your versions of NumPy and SciPy if they are outdated.
    However, pip's versions might not be linked to an optimized BLAS
    implementation. To prevent this from happening use the ``--no-deps`` flag
-   and install NumPy and SciPy using your system's package manager (e.g.
-   ``apt-get`` or ``yum``) or a Python distribution like Anaconda_.
+   when installing Blocks and install the dependencies manually, making sure
+   that you install NumPy and SciPy using your system's package manager (e.g.
+   ``apt-get`` or ``yum``), or use a Python distribution like Anaconda_.
 
 Requirements
 ------------
