@@ -47,7 +47,8 @@ class SerializeMainLoop(SimpleExtension):
         try:
             self.main_loop.log.current_row[SAVING_DONE_TO] = self.path
             with open(self.path, "wb") as destination:
-                dill.dump(self.main_loop, destination, fmode=dill.CONTENTS_FMODE)
+                dill.dump(self.main_loop, destination,
+                          fmode=dill.CONTENTS_FMODE)
         except:
             self.main_loop.log.current_row[SAVING_DONE_TO] = None
 
@@ -75,7 +76,8 @@ class SaveTrainingState(SimpleExtension):
 
     def do(self, callback_name, **kwargs):
         try:
-            self.main_loop.log.current_row[SAVING_DONE_TO] = self.manager.folder
+            self.main_loop.log.current_row[SAVING_DONE_TO] = (
+                self.manager.folder)
             self.manager.save(self.main_loop)
         except:
             self.main_loop.log.current_row[SAVING_DONE_TO] = None
