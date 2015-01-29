@@ -63,6 +63,12 @@ class TrainingLogRow(object):
     def __getattr__(self, key):
         return self.log.fetch_record(self.time, key)
 
+    def __getitem__(self, key):
+        return getattr(self, key)
+
+    def __setitem__(self, key, value):
+        setattr(self, key, value)
+
     def __setattr__(self, key, value):
         if key in ['log', 'time']:
             return super(TrainingLogRow, self).__setattr__(key, value)
