@@ -57,6 +57,7 @@ class ComputationGraph(object):
             outputs = [outputs]
         self.outputs = outputs
         self._get_variables()
+        self._has_inputs = {}
 
     @property
     def inputs(self):
@@ -154,6 +155,17 @@ class ComputationGraph(object):
         return OrderedDict([(var, value_holder.get_value(borrow=True))
                             for var, value_holder in zip(role_variables,
                                                          value_holders)])
+
+    def has_inputs(self, variable):
+        if variable not in self._has_inputs:
+            self._has_inputs[variable] = False
+            if is_graph_input(variable):
+                self._has_inputs[variable] = True
+            elif getattr(variable, 'owner', None):
+                for dependancy in variable.owner.inputs:
+                    if self.has_inputs(dependancy):
+                        self._has_inputs[variable] = True
+        return self._has_inputs[variable]
 
 
 def add_role(var, role):
