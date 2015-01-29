@@ -1,30 +1,18 @@
 """Extensions for saving and loading the state of a training process."""
 import dill
+import logging
+import traceback
 
-from blocks.extensions import SimpleExtension
+from blocks.extensions import SimpleExtension, TrainingExtension
+from blocks.serialization import MainLoopStateManager
 
+logger = logging.getLogger(__name__)
 
-class SaveLoadBase(SimpleExtension):
-    """The base class for save-load extensions.
-
-    Contains the logic that can be shared by different save-load
-    extensions.
-
-    """
-    def log_saving_done(self, destination):
-        """Makes a record in the log that saving has been done.
-
-        Parameters
-        ----------
-        destination : str
-            The destination where the state of the training process was
-            saved.
-
-        """
-        self.main_loop.log.current_row.saving_done_to = destination
+LOADED_FROM = "loaded_from"
+SAVING_DONE_TO = "saving_done_to"
 
 
-class SerializeMainLoop(SaveLoadBase):
+class SerializeMainLoop(SimpleExtension):
     """Saves a pickled version of the main loop to the disk.
 
     The pickled main loop can be later reloaded and training can be
@@ -56,6 +44,38 @@ class SerializeMainLoop(SaveLoadBase):
 
     def do(self, callback_name, *args):
         """Pickle the main loop object to the disk."""
-        with open(self.path, "wb") as destination:
-            dill.dump(self.main_loop, destination, fmode=dill.CONTENTS_FMODE)
-        self.log_saving_done(self.path)
+        try:
+            self.main_loop.log.current_row[SAVING_DONE_TO] = self.path
+            with open(self.path, "wb") as destination:
+                dill.dump(self.main_loop, destination, fmode=dill.CONTENTS_FMODE)
+        except:
+            self.main_loop.log.current_row[SAVING_DONE_TO] = None
+
+
+class LoadTrainingState(TrainingExtension):
+    def __init__(self, state_path):
+        self.manager = MainLoopStateManager(state_path)
+
+    def before_training(self):
+        logger.info("Loading the state from {} into the main loop"
+                    .format(self.manager.folder))
+        try:
+            self.manager.load_to(self.main_loop)
+            self.main_loop.log.current_row[LOADED_FROM] = self.manager.folder
+        except:
+            logger.error("Failed to load the state:\n{}"
+                         .format(traceback.format_exc()))
+
+
+class SaveTrainingState(SimpleExtension):
+    def __init__(self, state_path, **kwargs):
+        kwargs.setdefault("after_training", True)
+        super(SaveTrainingState, self).__init__(**kwargs)
+        self.manager = MainLoopStateManager(state_path)
+
+    def do(self, callback_name, **kwargs):
+        try:
+            self.main_loop.log.current_row[SAVING_DONE_TO] = self.manager.folder
+            self.manager.save(self.main_loop)
+        except:
+            self.main_loop.log.current_row[SAVING_DONE_TO] = None

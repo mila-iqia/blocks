@@ -1,8 +1,11 @@
 """The event-based main loop of Blocks."""
 import signal
+import logging
 
 from blocks.log import TrainingLog
 from blocks.utils import unpack
+
+logger = logging.getLogger(__name__)
 
 
 class MainLoop(object):
@@ -76,6 +79,7 @@ class MainLoop(object):
         self.original_handler = signal.signal(
             signal.SIGINT, self._handle_keyboard_interrupt)
         try:
+            logger.info("Entered the main loop")
             if not self.status._training_started:
                 for extension in self.extensions:
                     extension.main_loop = self
@@ -83,7 +87,10 @@ class MainLoop(object):
                 self._run_extensions('before_training')
                 self.algorithm.initialize()
                 self.status._training_started = True
-            else:
+            # We can not write "else:" here because extension
+            # called "before_training" could have changed the status
+            # of the main loop.
+            if self.log.status.iterations_done > 0:
                 self._run_extensions('on_resumption')
             while self._run_epoch():
                 pass
