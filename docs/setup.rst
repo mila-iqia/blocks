@@ -36,11 +36,17 @@ Blocks' requirements are
 * PyYAML_, to parse the configuration file
 * six_, to support both Python 2 and 3 with a single codebase
 
+There are also some optional requirements
+
+* nose2_, to run the test suite
+* Bokeh_, for live plotting of your training
+
 We develop using the bleeding-edge version of Theano, so be sure to follow the
 `relevant installation instructions`_ to make sure that your Theano version is
 up to date.
 
 .. _Anaconda: https://store.continuum.io/cshop/anaconda/
+.. _nose2: https://nose2.readthedocs.org/en/latest/
 .. _PyYAML: http://pyyaml.org/wiki/PyYAML
 .. _Bokeh: http://bokeh.pydata.org/
 .. _dill: https://github.com/uqfoundation/dill
