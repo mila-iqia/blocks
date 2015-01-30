@@ -4,8 +4,10 @@ from numpy.testing import assert_allclose
 from theano import tensor
 from theano.tensor.shared_randomstreams import RandomStreams
 
+from blocks.bricks import MLP, Identity
 from blocks.bricks.base import Brick
 from blocks.graph import apply_noise, ComputationGraph
+from blocks.initialization import Constant
 from tests.bricks.test_bricks import TestBrick
 
 floatX = theano.config.floatX
@@ -61,3 +63,14 @@ def test_apply_noise():
     noised_cg = apply_noise(cg, [y], 1, rng)
     assert_allclose(noised_cg.outputs[0].eval({x: 1., y: 1.}),
                     2 + RandomStreams(1).normal().eval())
+
+
+def test_snapshot():
+    x = tensor.matrix('x')
+    linear = MLP([Identity(), Identity()], [10, 10, 10],
+                  weights_init=Constant(1), biases_init=Constant(2))
+    linear.initialize()
+    y = linear.apply(x)
+    cg = ComputationGraph(y)
+    snapshot = cg.get_snapshot(dict(x=numpy.zeros((1, 10), dtype=floatX)))
+    assert len(snapshot) == 14
