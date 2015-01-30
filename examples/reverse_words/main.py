@@ -20,5 +20,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--num-batches", default=1000, type=int,
         help="Train on this many batches.")
+    parser.add_argument(
+        "--from-dump", default=None,
+        help="Path to the dump to be loaded")
     args = parser.parse_args()
     main(**vars(args))

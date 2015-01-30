@@ -23,7 +23,7 @@ from blocks.algorithms import GradientDescent, SteepestDescent
 from blocks.initialization import Orthogonal, IsotropicGaussian, Constant
 from blocks.monitoring import aggregation
 from blocks.extensions import FinishAfter, Printing, Timing
-from blocks.extensions.saveload import SerializeMainLoop
+from blocks.extensions.saveload import SerializeMainLoop, LoadFromDump
 from blocks.extensions.monitoring import TrainingDataMonitoring
 from blocks.main_loop import MainLoop
 from blocks.select import Selector
@@ -58,7 +58,7 @@ class Transition(GatedRecurrent):
         return super(Transition, self).get_dim(name)
 
 
-def main(mode, save_path, num_batches):
+def main(mode, save_path, num_batches, from_dump):
     if mode == "train":
         # Experiment configuration
         chars = ([chr(ord('a') + i) for i in range(26)] +
@@ -156,8 +156,6 @@ def main(mode, save_path, num_batches):
                     fork.apply(lookup.lookup(chars), return_dict=True),
                     mask=chars_mask)),
             attended_mask=chars_mask).sum()
-        from theano.printing import debugprint
-        debugprint(batch_cost)
         batch_size = named_copy(chars.shape[1], "batch_size")
         cost = aggregation.mean(batch_cost,  batch_size)
         cost.name = "sequence_log_likelihood"
@@ -200,17 +198,18 @@ def main(mode, save_path, num_batches):
                 algorithm.gradients[param].norm(2), name + "_grad_norm"))
 
         main_loop = MainLoop(
-            model=generator,
+            model=bricks,
             data_stream=data_stream,
             algorithm=algorithm,
-            extensions=[Timing(),
-                        TrainingDataMonitoring(observables, after_every_batch=True),
-                        FinishAfter(after_n_batches=num_batches)
-                        .add_condition(
-                            "after_batch",
-                            lambda log: math.isnan(log.current_row.total_gradient_norm)),
-                        SerializeMainLoop(save_path, every_n_batches=500),
-                        Printing(every_n_batches=1)])
+            extensions=([LoadFromDump(from_dump)] if from_dump else []) +
+                [Timing(),
+                    TrainingDataMonitoring(observables, after_every_batch=True),
+                    FinishAfter(after_n_batches=num_batches)
+                    .add_condition(
+                        "after_batch",
+                        lambda log: math.isnan(log.current_row.total_gradient_norm)),
+                    SerializeMainLoop(save_path, every_n_batches=500),
+                    Printing(every_n_batches=1)])
         main_loop.run()
     elif mode == "sample":
         raise NotImplementedError()
