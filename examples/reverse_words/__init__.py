@@ -138,12 +138,10 @@ def main(mode, save_path, num_batches):
         generator.push_initialization_config()
         transition.weights_init = Orthogonal()
         generator.initialize()
+        bricks = [encoder, fork, lookup, generator]
 
         # Give an idea of what's going on.
-        params = Selector(generator).get_params()
-        params.update(Selector(fork).get_params())
-        params.update(Selector(encoder).get_params())
-        params.update(Selector(lookup).get_params())
+        params = Selector(bricks).get_params()
         logger.info("Parameters:\n" +
                     pprint.pformat(
                         [(key, value.get_value().shape) for key, value
@@ -151,12 +149,12 @@ def main(mode, save_path, num_batches):
                         width=120))
 
         # Build the cost computation graph.
-        batch_size = named_copy(chars.shape[1], "batch_size")
         batch_cost = generator.cost(
             targets, targets_mask,
             attended=encoder.apply(
                 **fork.apply(lookup.lookup(chars), return_dict=True)),
             attended_mask=chars_mask).sum()
+        batch_size = named_copy(chars.shape[1], "batch_size")
         cost = aggregation.mean(batch_cost,  batch_size)
         cost.name = "sequence_log_likelihood"
         logger.info("Cost graph is built")
@@ -186,8 +184,7 @@ def main(mode, save_path, num_batches):
 
         # Define the training algorithm.
         algorithm = GradientDescent(
-            cost=cost, params=list(params.values()),
-            step_rule=SteepestDescent(0.001))
+            cost=cost, step_rule=SteepestDescent(0.001))
 
         observables = [
             cost, min_energy, max_energy, algorithm.total_gradient_norm,
