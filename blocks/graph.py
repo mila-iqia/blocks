@@ -157,6 +157,14 @@ class ComputationGraph(object):
                                                          value_holders)])
 
     def has_inputs(self, variable):
+        """Check if a variable depends on input variables.
+
+        Returns
+        -------
+        ``True`` if the given variable depends on input variables,
+        ``False`` otherwise.
+
+        """
         if variable not in self._has_inputs:
             self._has_inputs[variable] = False
             if is_graph_input(variable):
