@@ -57,6 +57,9 @@ class ComputationGraph(object):
         self._get_variables()
         self._has_inputs = {}
 
+    def __iter__(self):
+        return iter(self.variables)
+
     @property
     def inputs(self):
         """Inputs to the graph, excluding constants and shared variables."""
