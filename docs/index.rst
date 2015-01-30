@@ -1,5 +1,5 @@
-Welcome to Blocks's documentation!
-==================================
+Welcome to Blocks' documentation!
+=================================
 Blocks is a framework that helps you build and manage neural network models on
 using Theano.
 
