@@ -85,8 +85,8 @@ class ComputationGraph(object):
 
         # Sort apply nodes topologically, get variables and remove duplicates
         inputs = graph.inputs(self.outputs)
-        sorted_apply_nodes = sort_apply_nodes([inputs], self.outputs,
-                                              [dependence])
+        sorted_apply_nodes = graph.io_toposort(inputs, self.outputs)
+
         seen = set()
         main_vars = [var for var in list(chain(
             *[apply_node.inputs for apply_node in sorted_apply_nodes]))
