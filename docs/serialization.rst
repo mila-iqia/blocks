@@ -16,9 +16,17 @@ two serialization methods.
 Pickling the training loop
 --------------------------
 
-Blocks can pickle the entire :class:`main loop <blocks.main_loop.MainLoop>`,
-effectively serializing the exact state of the model as well as training.
-Techncially there are some difficulties with this approach:
+.. warning::
+
+   Due to the complexity of serializing a Python objects as large as the main
+   loop, pickling will sometimes fail because it exceeds the default maximum
+   recursion depth set in Python. Please make sure that you always have backup
+   of your pickled main loop before resuming training.
+
+The first approach used is to pickle the entire :class:`main loop
+<blocks.main_loop.MainLoop>`, effectively serializing the exact state of the
+model as well as training.  Techncially there are some difficulties with this
+approach:
 
 * Some Python objects cannot be pickled e.g. file handles, generators,
   dynamically generated classes, nested classes, etc.
@@ -28,7 +36,7 @@ Techncially there are some difficulties with this approach:
 
 Blocks addresses these problems by using a pickling extension called Dill,
 avoiding certain data structures such as generators and nested classes (see the
-:doc:`developer guidelines <developer_guidelines>`), and by overriding the
+:ref:`developer guidelines <serialization_guidelines>`), and by overriding the
 pickling behavior of datasets.
 
 However, in general you should not rely on this serialization approach for the
@@ -39,9 +47,6 @@ long term saving of your models. Problems that remain are
   changed, loading your training progress will fail.
 * The unpickling of Theano objects can be problematic, especially when
   transferring from GPU to CPU or vice versa.
-* Due to the complexity of serializing a Python objects as large as the main
-  loop, pickling will sometimes fail because it exceeds the default maximum
-  recursion depth set in Python.
 * It is not possible on Python 2 to unpickle objects that were pickled in Python
   3.
 

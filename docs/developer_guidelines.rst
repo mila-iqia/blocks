@@ -135,6 +135,8 @@ Not doing so `clobbers the original traceback`_, making it impossible to use
 
 .. _clobbers the original traceback: http://www.ianbicking.org/blog/2007/09/re-raising-exceptions.html
 
+.. _serialization_guidelines:
+
 Serialization
 ~~~~~~~~~~~~~
 To ensure the reproducibility of scientific experiments Blocks tries to make
