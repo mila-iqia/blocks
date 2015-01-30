@@ -26,8 +26,8 @@ In-depth
 
    configuration
    serialization
-   developer_guidelines
    api/index.rst
+   developer_guidelines
 
 .. warning::
    Blocks is a new project which is still under development. As such, certain
