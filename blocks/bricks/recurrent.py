@@ -105,20 +105,9 @@ def recurrent(*args, **kwargs):
             # Push everything to kwargs
             for arg, arg_name in zip(args, arg_names):
                 kwargs[arg_name] = arg
-            # Separate kwargs that aren't sequence, context or state variables
+            # Separate sequences, states and contexts
             scan_arguments = (application.sequences + application.states +
                               application.contexts)
-            rest_kwargs = {key: value for key, value in kwargs.items()
-                           if key not in scan_arguments}
-            for value in rest_kwargs.values():
-                if (isinstance(value, Variable) and not
-                        is_shared_variable(value)):
-                    warnings.warn(
-                        'Your function uses a non-shared variable other then'
-                        ' those given by scan explicitly. That can'
-                        ' significantly slow down `tensor.grad` call.'
-                        ' Did you forget to declare it in `contexts`?')
-
             # Check what is given and what is not
             def only_given(arg_names):
                 return OrderedDict((arg_name, kwargs[arg_name])
@@ -139,6 +128,18 @@ def recurrent(*args, **kwargs):
                 # TODO Raise error if n_steps and batch_size not found?
                 n_steps = kwargs.pop('n_steps')
                 batch_size = kwargs.pop('batch_size')
+
+            # Handle the rest kwargs
+            rest_kwargs = {key: value for key, value in kwargs.items()
+                           if key not in scan_arguments}
+            for value in rest_kwargs.values():
+                if (isinstance(value, Variable) and not
+                        is_shared_variable(value)):
+                    warnings.warn(
+                        'Your function uses a non-shared variable other then'
+                        ' those given by scan explicitly. That can'
+                        ' significantly slow down `tensor.grad` call.'
+                        ' Did you forget to declare it in `contexts`?')
 
             # Ensure that all initial states are available.
             for state_name in application.states:
