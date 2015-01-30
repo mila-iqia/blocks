@@ -28,7 +28,7 @@ from blocks.extensions.monitoring import TrainingDataMonitoring
 from blocks.main_loop import MainLoop
 from blocks.select import Selector
 from blocks.filter import VariableFilter
-from blocks.utils import named_copy, unpack
+from blocks.utils import named_copy, unpack, dict_union
 
 sys.setrecursionlimit(100000)
 floatX = theano.config.floatX
@@ -152,8 +152,12 @@ def main(mode, save_path, num_batches):
         batch_cost = generator.cost(
             targets, targets_mask,
             attended=encoder.apply(
-                **fork.apply(lookup.lookup(chars), return_dict=True)),
+                **dict_union(
+                    fork.apply(lookup.lookup(chars), return_dict=True),
+                    mask=chars_mask)),
             attended_mask=chars_mask).sum()
+        from theano.printing import debugprint
+        debugprint(batch_cost)
         batch_size = named_copy(chars.shape[1], "batch_size")
         cost = aggregation.mean(batch_cost,  batch_size)
         cost.name = "sequence_log_likelihood"
