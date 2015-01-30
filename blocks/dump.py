@@ -154,12 +154,15 @@ class MainLoopDumpManager(object):
     def __init__(self, folder):
         self.folder = folder
 
+    @property
     def path_to_parameters(self):
         return "{}/{}".format(self.folder, "params.npz")
 
+    @property
     def path_to_iteration_state(self):
         return "{}/{}".format(self.folder, "iteration_state.pkl")
 
+    @property
     def path_to_log(self):
         # The extension is omitted for the log because advanced
         # log classes might have a better format for storing on the disk
@@ -170,15 +173,15 @@ class MainLoopDumpManager(object):
 
     def dump_parameters(self, main_loop):
         save_parameter_values(extract_parameter_values(main_loop.model),
-                              self.path_to_parameters())
+                              self.path_to_parameters)
 
     def dump_iteration_state(self, main_loop):
         iteration_state = (main_loop.data_stream, main_loop.epoch_iterator)
-        with open(self.path_to_iteration_state(), "wb") as destination:
+        with open(self.path_to_iteration_state, "wb") as destination:
             dill.dump(iteration_state, destination)
 
     def dump_log(self, main_loop):
-        with open(self.path_to_log(), "wb") as destination:
+        with open(self.path_to_log, "wb") as destination:
             dill.dump(main_loop.log, destination)
 
     def dump(self, main_loop):
@@ -196,14 +199,14 @@ class MainLoopDumpManager(object):
         self.dump_log(main_loop)
 
     def load_parameters(self):
-        return load_parameter_values(self.path_to_parameters())
+        return load_parameter_values(self.path_to_parameters)
 
     def load_iteration_state(self):
-        with open(self.path_to_iteration_state(), "rb") as source:
+        with open(self.path_to_iteration_state, "rb") as source:
             return dill.load(source)
 
     def load_log(self):
-        with open(self.path_to_log(), "rb") as source:
+        with open(self.path_to_log, "rb") as source:
             return dill.load(source)
 
     def load(self):

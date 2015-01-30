@@ -2,15 +2,15 @@
 import os.path
 import dill
 import logging
-import traceback
 
 from blocks.extensions import SimpleExtension, TrainingExtension
 from blocks.dump import MainLoopDumpManager
+from blocks.utils import reraise_as
 
 logger = logging.getLogger(__name__)
 
 LOADED_FROM = "loaded_from"
-SAVING_DONE_TO = "saving_done_to"
+SAVED_TO = "saved_to"
 
 
 class SerializeMainLoop(SimpleExtension):
@@ -18,6 +18,9 @@ class SerializeMainLoop(SimpleExtension):
 
     The pickled main loop can be later reloaded and training can be
     resumed.
+
+    Makes a `SAVED_TO` record in the log with the serialization destination
+    in the case of success and ``None`` in the case of failure.
 
     Parameters
     ----------
@@ -46,21 +49,27 @@ class SerializeMainLoop(SimpleExtension):
     def do(self, callback_name, *args):
         """Pickle the main loop object to the disk."""
         try:
-            self.main_loop.log.current_row[SAVING_DONE_TO] = self.path
+            self.main_loop.log.current_row[SAVED_TO] = self.path
             with open(self.path, "wb") as destination:
                 dill.dump(self.main_loop, destination,
                           fmode=dill.CONTENTS_FMODE)
         except:
-            self.main_loop.log.current_row[SAVING_DONE_TO] = None
+            self.main_loop.log.current_row[SAVED_TO] = None
 
 
 class LoadFromDump(TrainingExtension):
     """Loads a dump into the main loop.
 
+    Makes a `LOADED_FROM` record in the log with the dump path.
+
     Parameters
     ----------
     state_path : str
         The path to the folder with dump.
+
+    Notes
+    -----
+    Requires the model to be a Brick or a list of Bricks.
 
     """
     def __init__(self, state_path, **kwargs):
@@ -77,18 +86,24 @@ class LoadFromDump(TrainingExtension):
             self.manager.load_to(self.main_loop)
             self.main_loop.log.current_row[LOADED_FROM] = self.manager.folder
         except:
-            logger.error("Failed to load the state:\n{}"
-                         .format(traceback.format_exc()))
+            reraise_as("Failed to load the state")
 
 
 class Dump(SimpleExtension):
     """Dumps the state of the main loop.
+
+    Makes a `SAVED_TO` record in the log with the dumping destination
+    in the case of success and ``None`` in the case of failure.
 
     Parameters
     ----------
     state_path : str
         The folder to dump the state to. Will be created it does not
         exist.
+
+    Notes
+    -----
+    Requires the model to be a Brick or a list of Bricks.
 
     """
     def __init__(self, state_path, **kwargs):
@@ -98,8 +113,8 @@ class Dump(SimpleExtension):
 
     def do(self, callback_name, **kwargs):
         try:
-            self.main_loop.log.current_row[SAVING_DONE_TO] = (
+            self.main_loop.log.current_row[SAVED_TO] = (
                 self.manager.folder)
             self.manager.dump(self.main_loop)
         except:
-            self.main_loop.log.current_row[SAVING_DONE_TO] = None
+            self.main_loop.log.current_row[SAVED_TO] = None
