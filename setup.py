@@ -37,7 +37,8 @@ setup(
     install_requires=['dill', 'numpy', 'theano', 'six', 'pyyaml'],
     extras_require={
         'test': ['nose', 'nose2'],
-        'plot': ['bokeh']
+        'plot': ['bokeh'],
+        'docs': ['sphinx', 'sphinxcontrib-napoleon', 'sphinx-rtd-theme']
     },
     zip_safe=False
 )
