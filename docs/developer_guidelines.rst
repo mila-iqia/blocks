@@ -221,7 +221,7 @@ core parts of your committed code. In the ideal case, all of your code should be
 unit tested.
 
 If you are fixing a bug, please be sure to add a unit test to make sure that the
-bug does not get re-intrduced later on.
+bug does not get re-introduced later on.
 
 The test suite can be executed locally using nose2_ [#]_.
 
