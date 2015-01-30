@@ -1,5 +1,6 @@
 Installation
 ============
+
 The easiest way to install Blocks using the Python package manager pip.  Blocks
 isn't listed yet on the Python Package Index (PyPI), so you will have to grab
 it directly from GitHub.
@@ -8,12 +9,12 @@ it directly from GitHub.
 
    pip install --upgrade git+git://github.com/bartvm/blocks.git#egg=blocks --user
 
-If you want to make sure that you can run the tests and/or use the plotting
-integration with Bokeh_, install the extra requirements as well.
+If you want to make sure that you can use the plotting integration with Bokeh_,
+install that extra requirements as well.
 
 .. code-block:: bash
 
-   pip install --upgrade git+git://github.com/bartvm/blocks.git#egg=blocks[plot,test] --user
+   pip install --upgrade git+git://github.com/bartvm/blocks.git#egg=blocks[plot] --user
 
 If you have administrative rights, remove ``--user`` to install the package
 system-wide. If you want to update Blocks, simply repeat one of the commands
@@ -37,10 +38,8 @@ Blocks' requirements are
 * PyYAML_, to parse the configuration file
 * six_, to support both Python 2 and 3 with a single codebase
 
-There are also some optional requirements
-
-* nose2_, to run the test suite
-* Bokeh_, for live plotting of your training
+Bokeh_ is an optional requirement for if you want to use live plotting of your
+training progress.
 
 We develop using the bleeding-edge version of Theano, so be sure to follow the
 `relevant installation instructions`_ to make sure that your Theano version is
@@ -54,3 +53,31 @@ up to date.
 .. _Theano: http://deeplearning.net/software/theano/
 .. _six: http://pythonhosted.org/six/
 .. _relevant installation instructions: http://deeplearning.net/software/theano/install.html#bleeding-edge-install-instructions
+
+Development
+-----------
+
+If you want to work on Blocks' development, your first step is to `fork Blocks
+on GitHub`_. You will now want to install your fork of Blocks in editable mode.
+To install in your home directory, use the following command, replacing ``user``
+with your own GitHub user name:
+
+.. code-block:: bash
+
+   pip install --upgrade -e git+git://github.com/user/blocks.git#egg=blocks[test,docs] --src=$HOME
+
+As with the usual installation, you can use ``--user`` or ``--no-deps`` if you
+need to. You can now make changes in the ``blocks`` directory created by pip,
+push to your repository and make a pull request.
+
+.. _fork Blocks on GitHub: https://github.com/bartvm/blocks/fork
+
+Documentation
+~~~~~~~~~~~~~
+
+If you want to build a local copy of the documentation, run the following
+command from within the Blocks directory.
+
+.. code-block:: bash
+
+   sphinx-build -b html docs docs/_build/html
