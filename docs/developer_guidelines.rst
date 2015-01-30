@@ -117,7 +117,7 @@ Python 2 and 3
 ~~~~~~~~~~~~~~
 Blocks aims to be both Python 2 and Python 3 compliant using a single code-base,
 without using 2to3_. There are many online resources which discuss the writing
-compatible code. For a quick overview see `the cheatsheet from Python
+of compatible code. For a quick overview see `the cheatsheet from Python
 Charmers`_. For non-trivial cases, we use the six_ compatibility library.
 
 Documentation should be written to be Python 3 compliant.
