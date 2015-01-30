@@ -156,7 +156,7 @@ class SequenceContentAttention(Initializable):
         else:
             raise ValueError("Unknown glimpse name {}".format(name))
 
-    @application
+    @application(inputs=['sequence'], outputs=['preprocessed_sequence'])
     def preprocess(self, sequence):
         """Preprocess a sequence for computing attention weights.
 

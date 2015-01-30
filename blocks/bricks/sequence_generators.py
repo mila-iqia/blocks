@@ -682,9 +682,14 @@ class AttentionTransition(AbstractAttentionTransition, Initializable):
             **dict_union(sequences, states, current_glimpses, kwargs))
         return current_states + list(current_glimpses.values())
 
-    @do_apply.delegate
-    def do_apply_delegate(self):
-        return self.transition.apply
+    @do_apply.property('sequences')
+    def do_apply_sequences(self):
+        return self.transition.apply.sequences
+
+    @do_apply.property('contexts')
+    def do_apply_contexts(self):
+        return self.transition.apply.contexts + [
+            self.preprocessed_attended_name]
 
     @do_apply.property('states')
     def do_apply_states(self):
@@ -714,6 +719,10 @@ class AttentionTransition(AbstractAttentionTransition, Initializable):
         # TODO: Nice interface for this trick?
         return self.do_apply.__get__(self, None)
 
+    @apply.property('contexts')
+    def apply_contexts(self):
+        return self.transition.apply.contexts
+
     @application
     def initial_state(self, state_name, batch_size, **kwargs):
         if state_name in self.glimpse_names:
@@ -724,6 +733,9 @@ class AttentionTransition(AbstractAttentionTransition, Initializable):
     def get_dim(self, name):
         if name in self.glimpse_names:
             return self.attention.get_dim(name)
+        if name == self.preprocessed_attended_name:
+            (original_name,) = self.attention.preprocess.outputs
+            return self.attention.get_dim(original_name)
         return self.transition.get_dim(name)
 
 
