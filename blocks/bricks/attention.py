@@ -10,7 +10,8 @@ of the agent* or simply *states*.
 """
 from theano import tensor
 
-from blocks.bricks import MLP, Identity, Initializable
+from blocks.bricks import (MLP, Identity, Initializable, Sequence,
+                           Feedforward, Tanh)
 from blocks.bricks.base import lazy, application
 from blocks.bricks.parallel import Parallel
 
@@ -82,7 +83,7 @@ class SequenceContentAttention(Initializable):
         if not sequence_transformer:
             sequence_transformer = MLP([Identity()], name="seq_trans")
         if not energy_computer:
-            energy_computer = MLP([Identity()], name="energy_comp")
+            energy_computer = EnergyComputer(name="energy_comp")
         self.sequence_transformer = sequence_transformer
         self.energy_computer = energy_computer
 
@@ -95,8 +96,8 @@ class SequenceContentAttention(Initializable):
                                                for name in self.state_names}
         self.sequence_transformer.dims[0] = self.sequence_dim
         self.sequence_transformer.dims[-1] = self.match_dim
-        self.energy_computer.dims[0] = self.match_dim
-        self.energy_computer.dims[-1] = 1
+        self.energy_computer.input_dim = self.match_dim
+        self.energy_computer.output_dim = 1
 
     @application(outputs=['glimpses', 'weights'])
     def take_look(self, sequence, preprocessed_sequence=None, mask=None,
@@ -174,3 +175,26 @@ class SequenceContentAttention(Initializable):
         if name in ['mask', 'weights']:
             return 0
         return super(SequenceContentAttention, self).get_dim(name)
+
+
+class EnergyComputer(Sequence, Initializable, Feedforward):
+    @lazy
+    def __init__(self, **kwargs):
+        super(EnergyComputer, self).__init__(
+            [Tanh().apply, MLP([Identity()]).apply], **kwargs)
+
+    @property
+    def input_dim(self):
+        return self.children[1].input_dim
+
+    @input_dim.setter
+    def input_dim(self, value):
+        self.children[1].input_dim = value
+
+    @property
+    def output_dim(self):
+        return self.children[1].output_dim
+
+    @output_dim.setter
+    def output_dim(self, value):
+        self.children[1].output_dim = value

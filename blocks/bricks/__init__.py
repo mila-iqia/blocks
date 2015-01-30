@@ -1,6 +1,7 @@
 """The interface of bricks and some simple implementations."""
 import logging
 from itertools import chain
+from abc import abstractproperty
 
 import numpy
 from six import add_metaclass
@@ -130,7 +131,58 @@ class Initializable(Brick):
                     child.biases_init = self.biases_init
 
 
-class Linear(Initializable):
+class Feedforward(Brick):
+    """Declares an interface for bricks with one input and one output.
+
+    Many bricks have just one input and just one output (activations,
+    :class:`Linear`, :class:`MLP`). To make such bricks interchangable
+    in most contexts they should share an interface for configuring
+    their input and output dimensions. This brick provides such an
+    interface.
+
+    """
+
+    @abstractproperty
+    def input_dim():
+        """The input dimension of the brick."""
+        pass
+
+    @abstractproperty
+    def output_dim():
+        """The output dimension of the brick."""
+        pass
+
+
+def override_with_attribute(property_, attribute=None):
+    """Make a property behave like an attribute.
+
+    Parameters
+    ----------
+    property_ : property
+        The property to be overriden.
+    attribute : str, optional
+        The attribute to store the actual value. If ``None``,
+        the property's name prepended with an underscore is used.
+
+    """
+
+    if not attribute:
+        attribute = "_" + property_.fget.__name__
+
+    def getter(self):
+        return getattr(self, attribute)
+
+    def setter(self, value):
+        setattr(self, attribute, value)
+
+    def deleter(self):
+        delattr(self, attribute)
+
+    overrider = property(getter, setter, deleter)
+    return overrider
+
+
+class Linear(Initializable, Feedforward):
     r"""A linear transformation with optional bias.
 
     Linear brick which applies a linear (affine) transformation by
@@ -153,6 +205,9 @@ class Linear(Initializable):
     .. math:: f(\mathbf{x}) = \mathbf{W}\mathbf{x} + \mathbf{b}
 
     """
+    input_dim = override_with_attribute(Feedforward.input_dim)
+    output_dim = override_with_attribute(Feedforward.output_dim)
+
     @lazy
     def __init__(self, input_dim, output_dim, **kwargs):
         super(Linear, self).__init__(**kwargs)
@@ -411,7 +466,7 @@ class Sequence(Brick):
         return output
 
 
-class MLP(Sequence, Initializable):
+class MLP(Sequence, Initializable, Feedforward):
     """A simple multi-layer perceptron.
 
     Parameters
@@ -456,6 +511,23 @@ class MLP(Sequence, Initializable):
             dims = [None] * (len(activations) + 1)
         self.dims = dims
         super(MLP, self).__init__(application_methods, **kwargs)
+
+
+    @property
+    def input_dim(self):
+        return self.dims[0]
+
+    @input_dim.setter
+    def input_dim(self, value):
+        self.dims[0] = value
+
+    @property
+    def output_dim(self):
+        return self.dims[-1]
+
+    @output_dim.setter
+    def output_dim(self, value):
+        self.dims[-1] = value
 
     def _push_allocation_config(self):
         if not len(self.dims) - 1 == len(self.linear_transformations):
