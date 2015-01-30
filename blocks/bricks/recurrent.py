@@ -108,6 +108,7 @@ def recurrent(*args, **kwargs):
             # Separate sequences, states and contexts
             scan_arguments = (application.sequences + application.states +
                               application.contexts)
+
             # Check what is given and what is not
             def only_given(arg_names):
                 return OrderedDict((arg_name, kwargs[arg_name])

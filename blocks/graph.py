@@ -6,14 +6,12 @@ from itertools import chain
 import theano
 from theano import Variable
 from theano.gof import graph
-from theano.gof.sched import make_dependence_cmp, sort_apply_nodes
 from theano.sandbox.rng_mrg import MRG_RandomStreams
 
 from blocks.utils import (is_graph_input, is_shared_variable, dict_union,
                           shared_like)
 
 logger = logging.getLogger(__name__)
-dependence = make_dependence_cmp()
 
 
 class ComputationGraph(object):

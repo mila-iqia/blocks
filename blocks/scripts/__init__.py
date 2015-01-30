@@ -4,6 +4,7 @@ import dill
 
 from blocks.dump import MainLoopDumpManager
 
+
 def continue_training(path, rec_limit=None):
     if rec_limit:
         sys.setrecursionlimit(rec_limit)

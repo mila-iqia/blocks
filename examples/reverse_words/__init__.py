@@ -98,7 +98,7 @@ def main(mode, save_path, num_batches, from_dump):
                             data_stream=OneBillionWord(
                                 "training", [99], char2code,
                                 level="character", preprocess=str.lower)
-                               .get_default_stream())))))
+                            .get_default_stream())))))
 
         # Build the model
         chars = tensor.lmatrix("features")
@@ -202,14 +202,15 @@ def main(mode, save_path, num_batches, from_dump):
             data_stream=data_stream,
             algorithm=algorithm,
             extensions=([LoadFromDump(from_dump)] if from_dump else []) +
-                [Timing(),
-                    TrainingDataMonitoring(observables, after_every_batch=True),
-                    FinishAfter(after_n_batches=num_batches)
-                    .add_condition(
-                        "after_batch",
-                        lambda log: math.isnan(log.current_row.total_gradient_norm)),
-                    SerializeMainLoop(save_path, every_n_batches=500),
-                    Printing(every_n_batches=1)])
+            [Timing(),
+                TrainingDataMonitoring(observables, after_every_batch=True),
+                FinishAfter(after_n_batches=num_batches)
+                .add_condition(
+                    "after_batch",
+                    lambda log:
+                        math.isnan(log.current_row.total_gradient_norm)),
+                SerializeMainLoop(save_path, every_n_batches=500),
+                Printing(every_n_batches=1)])
         main_loop.run()
     elif mode == "sample":
         raise NotImplementedError()
