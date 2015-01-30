@@ -55,15 +55,9 @@ API Reference
 -------------
 .. toctree::
    :maxdepth: 1
+   :glob:
 
-   bricks
-   initialization
-   datasets
-   utils
-   graph
-   log
-   main_loop
-   select
+   api/*
 
 .. _quickstart:
 
