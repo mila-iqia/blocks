@@ -1,5 +1,6 @@
 Installation
 ============
+
 The easiest way to install Blocks using the Python package manager pip.  Blocks
 isn't listed yet on the Python Package Index (PyPI), so you will have to grab
 it directly from GitHub.
@@ -55,6 +56,7 @@ up to date.
 
 Development
 -----------
+
 If you want to work on Blocks' development, your first step is to `fork Blocks
 on GitHub`_. You will now want to install your fork of Blocks in editable mode.
 To install in your home directory, use the following command, replacing ``user``
@@ -69,3 +71,13 @@ need to. You can now make changes in the ``blocks`` directory created by pip,
 push to your repository and make a pull request.
 
 .. _fork Blocks on GitHub: https://github.com/bartvm/blocks/fork
+
+Documentation
+~~~~~~~~~~~~~
+
+If you want to build a local copy of the documentation, run the following
+command from within the Blocks directory.
+
+.. code-block:: bash
+
+   sphinx-build -b html docs docs/_build/html
