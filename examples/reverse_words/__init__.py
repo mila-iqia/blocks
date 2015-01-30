@@ -188,7 +188,6 @@ def main(mode, save_path, num_batches):
         algorithm = GradientDescent(
             cost=cost, params=list(params.values()),
             step_rule=SteepestDescent(0.001))
-        return
 
         observables = [
             cost, min_energy, max_energy, algorithm.total_gradient_norm,
