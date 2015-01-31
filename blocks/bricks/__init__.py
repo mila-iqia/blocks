@@ -93,10 +93,11 @@ class Initializable(Brick):
 
     """
     has_biases = True
+    global_rng = numpy.random.RandomState(config.default_seed)
 
     @lazy
-    def __init__(self, weights_init, biases_init=None, use_bias=True, rng=None,
-                 **kwargs):
+    def __init__(self, weights_init, biases_init=None, use_bias=True,
+                 seed=None, **kwargs):
         super(Initializable, self).__init__(**kwargs)
         self.weights_init = weights_init
         if self.has_biases:
@@ -104,14 +105,27 @@ class Initializable(Brick):
         elif biases_init is not None or not use_bias:
             raise ValueError("This brick does not support biases config")
         self.use_bias = use_bias
-        self.rng = rng
+        self.seed = seed
+
+    @property
+    def seed(self):
+        if getattr(self, '_seed', None) is not None:
+            return self._seed
+        else:
+            self._seed = self.global_rng.randint(
+                numpy.iinfo(numpy.int32).max)
+            return self._seed
+
+    @seed.setter
+    def seed(self, value):
+        self._seed = value
 
     @property
     def rng(self):
         if getattr(self, '_rng', None) is not None:
             return self._rng
         else:
-            return numpy.random.RandomState(config.default_seed)
+            return numpy.random.RandomState(self.seed)
 
     @rng.setter
     def rng(self, rng):

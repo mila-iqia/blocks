@@ -43,7 +43,7 @@ def get_data_stream(iterable):
 def main(save_to, num_batches, continue_=False):
     mlp = MLP([Tanh(), Identity()], [1, 10, 1],
               weights_init=IsotropicGaussian(0.01),
-              biases_init=Constant(0))
+              biases_init=Constant(0), seed=1)
     mlp.initialize()
     x = tensor.vector('numbers')
     y = tensor.vector('roots')
