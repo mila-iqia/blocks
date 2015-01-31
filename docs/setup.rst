@@ -64,7 +64,7 @@ with your own GitHub user name:
 
 .. code-block:: bash
 
-   pip install --upgrade -e git+git://github.com/user/blocks.git#egg=blocks[test,docs] --src=$HOME
+   $ pip install --upgrade -e git+git://github.com/user/blocks.git#egg=blocks[test,docs] --src=$HOME
 
 As with the usual installation, you can use ``--user`` or ``--no-deps`` if you
 need to. You can now make changes in the ``blocks`` directory created by pip,
