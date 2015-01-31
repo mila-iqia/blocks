@@ -39,14 +39,6 @@ class Parameters(MutableSequence):
         return self._params[key]
 
     def _annotate(self, value):
-        """Annotates the variable.
-
-        Raises
-        ------
-        ValueError
-            If the parameter isn't a shared variable or ``None``.
-
-        """
         if isinstance(value, Variable):
             add_role(value, PARAMETER)
             add_annotation(value, self.brick)
