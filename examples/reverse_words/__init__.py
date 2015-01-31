@@ -112,13 +112,13 @@ def main(mode, save_path, num_batches, from_dump):
         encoder.initialize()
         fork = Fork([name for name in encoder.prototype.apply.sequences
                      if name != 'mask'],
-                    weights_init=IsotropicGaussian(0.01),
+                    weights_init=IsotropicGaussian(0.1),
                     biases_init=Constant(0))
         fork.input_dim = dimension
         fork.fork_dims = {name: dimension for name in fork.fork_names}
         fork.initialize()
         lookup = LookupTable(readout_dimension, dimension,
-                             weights_init=IsotropicGaussian(0.01))
+                             weights_init=IsotropicGaussian(0.1))
         lookup.initialize()
         transition = Transition(
             activation=Tanh(),
@@ -133,7 +133,7 @@ def main(mode, save_path, num_batches, from_dump):
             name="readout")
         generator = SequenceGenerator(
             readout=readout, transition=transition, attention=attention,
-            weights_init=IsotropicGaussian(0.01), biases_init=Constant(0),
+            weights_init=IsotropicGaussian(0.1), biases_init=Constant(0),
             name="generator")
         generator.push_initialization_config()
         transition.weights_init = Orthogonal()
