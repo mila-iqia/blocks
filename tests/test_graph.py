@@ -68,7 +68,7 @@ def test_apply_noise():
 def test_snapshot():
     x = tensor.matrix('x')
     linear = MLP([Identity(), Identity()], [10, 10, 10],
-                  weights_init=Constant(1), biases_init=Constant(2))
+                 weights_init=Constant(1), biases_init=Constant(2))
     linear.initialize()
     y = linear.apply(x)
     cg = ComputationGraph(y)

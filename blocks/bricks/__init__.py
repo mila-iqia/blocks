@@ -169,7 +169,6 @@ class Feedforward(Brick):
     interface.
 
     """
-
     @abstractproperty
     def input_dim():
         """The input dimension of the brick."""
@@ -193,7 +192,6 @@ def override_with_attribute(property_, attribute=None):
         the property's name prepended with an underscore is used.
 
     """
-
     if not attribute:
         attribute = "_" + property_.fget.__name__
 
@@ -539,7 +537,6 @@ class MLP(Sequence, Initializable, Feedforward):
             dims = [None] * (len(activations) + 1)
         self.dims = dims
         super(MLP, self).__init__(application_methods, **kwargs)
-
 
     @property
     def input_dim(self):
