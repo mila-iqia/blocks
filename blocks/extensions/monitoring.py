@@ -27,7 +27,7 @@ class DataStreamMonitoring(SimpleExtension):
         The expressions to monitor. The variable names are used as
         expression names.
     data_stream : instance of :class:`DataStream`
-        The data stream to monitor on. A data epoch is requsted
+        The data stream to monitor on. A data epoch is requested
         each time monitoring is done.
     prefix : str, optional
         A prefix to add to expression names when adding records to the

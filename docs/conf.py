@@ -43,8 +43,14 @@ extensions = [
     'sphinxcontrib.napoleon',
     'sphinx.ext.todo',
     'sphinx.ext.mathjax',
-    'sphinx.ext.graphviz'
+    'sphinx.ext.graphviz',
+    'sphinx.ext.intersphinx'
 ]
+
+intersphinx_mapping = {
+    'python': ('http://docs.python.org/3.2', None),
+    'theano': ('http://theano.readthedocs.org/en/latest/', None)
+}
 
 graphviz_dot_args = ['-Gbgcolor=#fcfcfc']  # To match the RTD theme
 

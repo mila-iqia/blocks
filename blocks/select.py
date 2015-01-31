@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 class Path(object):
     """Encapsulates a path in a hierarchy of bricks.
 
-    Currently the only allowed elements of pathes are names of the bricks
+    Currently the only allowed elements of paths are names of the bricks
     and names of parameters. The latter can only be put in the end of the
     path. It is planned to support regular expressions in some way later.
 

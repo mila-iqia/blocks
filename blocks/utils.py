@@ -80,7 +80,7 @@ def shared_floatx(value, name=None, borrow=False, dtype=None):
     value : array_like
         The value to associate with the Theano shared.
     name : str, optional
-        The name for the shared varaible. Defaults to `None`.
+        The name for the shared variable. Defaults to `None`.
     borrow : bool, optional
         If set to True, the given `value` will not be copied if possible.
         This can save memory and speed. Defaults to False.
@@ -197,7 +197,7 @@ def check_theano_variable(variable, n_dim, dtype_prefix):
 
     Parameters
     ----------
-    variable : Theano variable or convertable to one
+    variable : Theano variable or convertible to one
         A variable to check.
     n_dim : int
         Expected number of dimensions or None. If None, no check is

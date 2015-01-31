@@ -20,7 +20,7 @@ class SequenceContentAttention(Initializable):
 
     This is the attention mechanism used in [BCB]_. The idea in a nutshell:
 
-    1. The states and the sequence are transformed indepently,
+    1. The states and the sequence are transformed independently,
 
     2. The transformed states are summed with every transformed sequence
        element to obtain *match vectors*,
@@ -36,7 +36,7 @@ class SequenceContentAttention(Initializable):
 
     This linear combinations from 5 and the attention weights from 4 form
     the set of glimpses produced by this attention mechanism. The former
-    will be refered to as *glimpses* in method documentation.
+    will be referred to as *glimpses* in method documentation.
 
     Parameters
     ----------

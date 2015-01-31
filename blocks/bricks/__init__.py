@@ -340,12 +340,12 @@ class ActivationDocumentation(_Brick):
             """Elementwise application of {0} function.""".format(name.lower())
         if 'apply' in classdict:
             classdict['apply'].__doc__ = \
-                """Apply the {0} function elementwise.
+                """Apply the {0} function element-wise.
 
                 Parameters
                 ----------
                 input_ : Theano variable
-                    Theano variable to apply {0} to, elementwise.
+                    Theano variable to apply {0} to, element-wise.
 
                 Returns
                 -------
@@ -359,7 +359,7 @@ class ActivationDocumentation(_Brick):
 
 @add_metaclass(ActivationDocumentation)
 class Activation(Brick):
-    """A base class for simple, elementwise activation functions.
+    """A base class for simple, element-wise activation functions.
 
     This base class ensures that activation functions are automatically
     documented using the :class:`ActivationDocumentation` metaclass.

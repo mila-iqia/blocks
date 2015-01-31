@@ -128,7 +128,7 @@ class Dataset(object):
         request : object, optional
             If supported, the request for a particular part of the data
             e.g. the number of examples to return, or the indices of a
-            particular minimbatch of examples.
+            particular minibatch of examples.
 
         .. todo::
 
@@ -182,6 +182,7 @@ class Dataset(object):
                       if s in self.sources])
 
 
+@add_metaclass(ABCMeta)
 class InMemoryDataset(Dataset):
     """Datasets who hold all of their data in memory.
 
@@ -280,7 +281,7 @@ def lazy_properties(*lazy_properties):
 
     Notes
     -----
-    The pickling behaviour of the dataset is only overridden if the dataset
+    The pickling behavior of the dataset is only overridden if the dataset
     does not have a ``__getstate__`` method implemented.
 
     Examples
@@ -697,7 +698,7 @@ class PaddingDataStream(DataStreamWrapper):
     """Adds padding to variable-length sequences.
 
     When your batches consist of variable-length sequences, use this class
-    to equalize lengthes by adding zero-padding. To distinguish between
+    to equalize lengths by adding zero-padding. To distinguish between
     data and padding masks can be produced. For each data source that is
     masked, a new source will be added. This source will have the name of
     the original source with the suffix ``_mask`` (e.g. ``features_mask``).
@@ -742,8 +743,8 @@ class PaddingDataStream(DataStreamWrapper):
                 continue
 
             shapes = [numpy.asarray(sample).shape for sample in source_data]
-            lengthes = [shape[0] for shape in shapes]
-            max_sequence_length = max(lengthes)
+            lengths = [shape[0] for shape in shapes]
+            max_sequence_length = max(lengths)
             rest_shape = shapes[0][1:]
             if not all([shape[1:] == rest_shape for shape in shapes]):
                 raise ValueError("All dimensions except length must be equal")
@@ -758,7 +759,7 @@ class PaddingDataStream(DataStreamWrapper):
 
             mask = numpy.zeros((len(source_data), max_sequence_length),
                                dtype=theano.config.floatX)
-            for i, sequence_length in enumerate(lengthes):
+            for i, sequence_length in enumerate(lengths):
                 mask[i, :sequence_length] = 1
             data_with_masks.append(mask)
         return tuple(data_with_masks)

@@ -292,7 +292,7 @@ class GatedRecurrent(BaseRecurrent, Initializable):
     u"""Gated recurrent neural network.
 
     Gated recurrent neural network (GRNN) as introduced in [CvMG14]_. Every
-    unit of a GRNN is equiped with update and reset gates that facilitate
+    unit of a GRNN is equipped with update and reset gates that facilitate
     better gradient propagation.
 
     Parameters

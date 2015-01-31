@@ -120,8 +120,8 @@ def read_mnist_images(filename, dtype=None):
 
     Notes
     -----
-    If the dtype provided was boolean, the resulting array will
-    be boolean with `True` if the corresponding pixel had a value
+    If the dtype provided was Boolean, the resulting array will
+    be Boolean with `True` if the corresponding pixel had a value
     greater than or equal to 128, `False` otherwise.
 
     If the dtype provided was a float dtype, the values will be mapped to
@@ -138,7 +138,7 @@ def read_mnist_images(filename, dtype=None):
         dtype = numpy.dtype(dtype)
 
         if dtype.kind == 'b':
-            # If the user wants booleans, threshold at half the range.
+            # If the user wants Booleans, threshold at half the range.
             array = array >= 128
         elif dtype.kind == 'f':
             # Otherwise, just convert.

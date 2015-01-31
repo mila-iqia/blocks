@@ -63,7 +63,7 @@ class VariableFilter(object):
     were created in the process of applying a brick will be filtered out.
 
     Note that technically speaking, bricks are able to have non-shared
-    variables as parameters. For example, we can use the tranpose of
+    variables as parameters. For example, we can use the transpose of
     another weight matrix as the parameter of a particular brick. This
     means that in some unusual cases, filtering by the :const:`PARAMETER`
     role alone will not be enough to retrieve all trainable parameters in

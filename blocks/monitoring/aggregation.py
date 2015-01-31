@@ -16,7 +16,7 @@ class AggregationScheme(object):
 
     An AggregationScheme allocates :class:`VariableAggregator`s
     that can incrementally compute the value of a Theano variable on a
-    full datset by aggregating partial results computed on multiple
+    full dataset by aggregating partial results computed on multiple
     batches.
 
     The AggregationScheme should be attached via the tag
@@ -49,7 +49,7 @@ class Aggregator(object):
     * monitor a penalty
 
     The Aggregator maintains a set of Theano sharer values called
-    accumulators and specifies how they shoud be initialized, and
+    accumulators and specifies how they should be initialized, and
     updated with incremental calculations. Finally, it
     provides a Theano expression that reads the accumulators
     and computes the final value.

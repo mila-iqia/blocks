@@ -86,7 +86,7 @@ class Fork(Parallel):
     input_dim : int
         The input dimension. Required for allocation.
     output_dims : dict of (output_name, int) pairs
-        The dimesions of the outputs. Required for allocation.
+        The dimensions of the outputs. Required for allocation.
 
     Notes
     -----

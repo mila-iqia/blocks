@@ -99,7 +99,7 @@ class DifferentiableCostMinimizer(TrainingAlgorithm):
 
         Returns
         -------
-            list of Theano variables
+        list of Theano variables
 
         """
         return self._cost_computation_graph.inputs
@@ -145,17 +145,17 @@ class GradientDescent(DifferentiableCostMinimizer):
     Parameters
     ----------
     step_rule : instance of :class:`StepRule`, optional
-        An object incapsulating most of the algorithm's logic. Its
-        `compute_step` method is called to get a Theano expression
-        for the actual step to take for each parameter. Note, that
-        the step rule might have a state, e.g. to remember a weighed
-        sum of gradients from previous steps like it is done in
-        gradient descent with momentum. If ``None``, an instance of
-        :class:`SteepestDescent` is created.
+        An object encapsulating most of the algorithm's logic. Its
+        `compute_step` method is called to get a Theano expression for the
+        actual step to take for each parameter. Note, that the step rule
+        might have a state, e.g. to remember a weighted sum of gradients
+        from previous steps like it is done in gradient descent with
+        momentum. If ``None``, an instance of :class:`SteepestDescent` is
+        created.
     gradients : dict, optional
-        A dictionary mapping a parameter to an expression for
-        the cost's gradient with respect to the parameter. If ``None``,
-        the gradient are taken automatically using `theano.tensor.grad`.
+        A dictionary mapping a parameter to an expression for the cost's
+        gradient with respect to the parameter. If ``None``, the gradient
+        are taken automatically using :func:`theano.gradient.grad`.
 
     Attributes
     ----------

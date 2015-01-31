@@ -12,7 +12,7 @@ class TrainingExtension(object):
     An extension is a set of callbacks sharing a joint context that are
     invoked at certain stages of the training procedure. This callbacks
     typically add a certain functionality to the training procedure,
-    e.g. running validation on auxiliarry datasets or early stopping.
+    e.g. running validation on auxiliary datasets or early stopping.
 
     Parameters
     ----------
@@ -333,7 +333,7 @@ class Timing(TrainingExtension):
     Parameters
     ----------
     clock_function : callable, optional
-        Return the current time. By default `time.time` ised,
+        Return the current time. By default `time.time` is used,
         which means that user time is tracked.
 
     Notes

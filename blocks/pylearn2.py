@@ -216,12 +216,12 @@ class DefaultExtension(pylearn2.train_extensions.TrainExtension):
     """This extension helps Pylearn2LearningRule do its job.
 
     The job of this extensions is to help the Pylearn2LearningRule in its
-    monitoring duties. Due to impossibility of reseting the accumulators of
-    monitored values, the gradient computation function simply adds values
-    from new batches to the accumulators. At the end of each epoch the
-    accumulator's value from the previous epoch should be subtracted and
-    the difference should be divided over the number of batches to get an
-    average for the last epoch. This is done in the `on_monitor` method.
+    monitoring duties. Due to impossibility of resetting the accumulators
+    of monitored values, the gradient computation function simply adds
+    values from new batches to the accumulators. At the end of each epoch
+    the accumulator's value from the previous epoch should be subtracted
+    and the difference should be divided over the number of batches to get
+    an average for the last epoch. This is done in the `on_monitor` method.
 
     """
     def setup(self, model, dataset, algoritm):
@@ -282,7 +282,7 @@ class Pylearn2Train(pylearn2.train.Train):
             *args, **kwargs)
 
     def setup(self):
-        """Make monitor persistency the default behaviour."""
+        """Make monitor persistency the default behavior."""
         if hasattr(self.model, 'monitor'):
             # Cheat on monitor._sanity_check
             # TODO: raise a discussion about it

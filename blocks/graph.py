@@ -277,13 +277,14 @@ def apply_noise(graph, variables, level, seed=None):
     ----------
     graph : instance of :class:`ComputationGraph`
         The computation graph.
-    varibles : Theano variables
+    variables : Theano variables
         Variables to add noise to.
     level : float
         Noise level.
-    rng : Theano random stream, optional
-        The random stream to use. By default an RNG with seed equal to 1 is
-        used.
+    seed : int, optional
+        The seed with which
+        :class:`~theano.sandbox.rng_mrg.MRG_RandomStreams` is initialized,
+        is set to 1 by default.
 
     """
     if not seed:

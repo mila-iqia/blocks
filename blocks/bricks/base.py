@@ -194,14 +194,14 @@ class Application(object):
         return self.bound_applications[instance]
 
     def __getattr__(self, name):
-        # Mimic behaviour of properties
+        # Mimic behavior of properties
         if 'properties' in self.__dict__ and name in self.properties:
             return property(create_unbound_method(self.properties[name],
                                                   self.brick))
         raise AttributeError
 
     def __setattr__(self, name, value):
-        # Mimic behaviour of read-only properties
+        # Mimic behavior of read-only properties
         if 'properties' in self.__dict__ and name in self.properties:
             raise AttributeError("can't set attribute")
         super(Application, self).__setattr__(name, value)
@@ -427,7 +427,7 @@ class Brick(Annotation):
         ``True`` by default. When bricks are lazy, not all configuration
         needs to be provided to the constructor, allowing it to be set in
         another way after construction. Many parts of the library rely on
-        this behaviour. However, it does require a separate call to
+        this behavior. However, it does require a separate call to
         :meth:`initialize`. If set to ``False`` on the other hand, bricks
         will be ready to run after construction.
     print_shapes : bool
@@ -714,7 +714,7 @@ class Brick(Annotation):
         Parameters
         ----------
         names : list of str
-            The dictinonary of variable names.
+            The dictionary of variable names.
 
         Returns
         -------
