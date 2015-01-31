@@ -17,23 +17,8 @@ logger = logging.getLogger(__name__)
 class Plot(SimpleExtension):
     """Live plotting of monitoring channels.
 
-    This extension uses Bokeh server to give you access to live updated
-    plots of the monitoring values you specify. The best thing to do is to
-    start the Bokeh server manually by running the command:
-
-    .. code-block:: bash
-
-       bokeh-server
-
-    This should make your plots accesible at ``http://localhost:5006``. If
-    you want to look at your plots over the internet or a network, use
-
-    .. code-block:: bash
-
-       bokeh-server --ip 0.0.0.0
-
-    By default the Bokeh server stores your plots, so you won't lose them
-    if you stop and restart the server.
+    In most cases it is preferable to start the Bokeh plotting server
+    manually, so that your plots are stored permanently.
 
     Alternatively, you can set the ``start_server`` argument of this
     extension to ``True``, to automatically start a server when training

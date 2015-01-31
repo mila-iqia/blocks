@@ -1,5 +1,5 @@
 import sys
-from collections import OrderedDict, Sequence
+from collections import OrderedDict
 
 import numpy
 import six
@@ -436,7 +436,6 @@ class SequenceIterator(six.Iterator):
 
     """
     def __init__(self, sequence):
-        assert isinstance(sequence, Sequence)
         self.sequence = sequence
         self._offset = 0
 

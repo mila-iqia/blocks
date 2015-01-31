@@ -18,6 +18,7 @@ Tutorials
    tutorial
    bricks_overview
    cg
+   plotting
 
 In-depth
 --------
