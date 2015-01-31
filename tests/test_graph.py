@@ -2,7 +2,7 @@ import numpy
 import theano
 from numpy.testing import assert_allclose
 from theano import tensor
-from theano.tensor.shared_randomstreams import RandomStreams
+from theano.sandbox.rng_mrg import MRG_RandomStreams
 
 from blocks.bricks.base import Brick
 from blocks.graph import apply_noise, ComputationGraph
@@ -57,7 +57,7 @@ def test_apply_noise():
     z = x + y
 
     cg = ComputationGraph([z])
-    rng = RandomStreams(1)
-    noised_cg = apply_noise(cg, [y], 1, rng)
-    assert_allclose(noised_cg.outputs[0].eval({x: 1., y: 1.}),
-                    2 + RandomStreams(1).normal().eval())
+    noised_cg = apply_noise(cg, [y], 1, 1)
+    assert_allclose(
+        noised_cg.outputs[0].eval({x: 1., y: 1.}),
+        2 + MRG_RandomStreams(1).normal(tuple()).eval())

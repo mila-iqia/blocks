@@ -136,7 +136,7 @@ will want to initialize these parameters by sampling them from a particular
 probability distribution. Bricks can do this for you.
 
 >>> from blocks.initialization import IsotropicGaussian, Constant
->>> input_to_hidden.weights_init = hidden_to_output.weights_init = IsotropicGaussian(std=0.01)
+>>> input_to_hidden.weights_init = hidden_to_output.weights_init = IsotropicGaussian(0.01)
 >>> input_to_hidden.biases_init = hidden_to_output.biases_init = Constant(0)
 >>> input_to_hidden.initialize()
 >>> hidden_to_output.initialize()
