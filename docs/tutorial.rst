@@ -129,11 +129,11 @@ have used the :class:`~blocks.bricks.MLP` class instead.
 
 Initializing the parameters
 ---------------------------
-When we constructed the :class:`Linear` bricks to build our model, they
-automatically initialized Theano shared variables to store their parameters in.
-All of these parameters were set to 0. Before we start training our network, we
-will want to initialize these parameters by sampling them from a particular
-probability distribution. Bricks can do this for you.
+When we constructed the :class:`~blocks.bricks.Linear` bricks to build our
+model, they automatically initialized Theano shared variables to store their
+parameters in.  All of these parameters were set to 0. Before we start training
+our network, we will want to initialize these parameters by sampling them from
+a particular probability distribution. Bricks can do this for you.
 
 >>> from blocks.initialization import IsotropicGaussian, Constant
 >>> input_to_hidden.weights_init = hidden_to_output.weights_init = IsotropicGaussian(0.01)
@@ -184,7 +184,7 @@ separate validation. Let's create a new data stream for that.
 
 In order to monitor our performance on this data stream during training, we need
 to use one of Blocks' extensions. In particular, we need to use the
-:class:`DataStreamMonitoring` extension.
+:class:`~blocks.extensions.monitoring.DataStreamMonitoring` extension.
 
 >>> from blocks.extensions.monitoring import DataStreamMonitoring
 >>> monitor = DataStreamMonitoring(

@@ -120,6 +120,12 @@ class Dataset(object):
     def get_data(self, state=None, request=None):
         """Request data from the dataset.
 
+        .. todo::
+
+           A way for the dataset to communicate which kind of requests it
+           accepts, and a way to communicate what kind of request is being
+           sent when supporting multiple.
+
         Parameters
         ----------
         state : object, optional
@@ -129,12 +135,6 @@ class Dataset(object):
             If supported, the request for a particular part of the data
             e.g. the number of examples to return, or the indices of a
             particular minibatch of examples.
-
-        .. todo::
-
-           A way for the dataset to communicate which kind of requests it
-           accepts, and a way to communicate what kind of request is being
-           sent when supporting multiple.
 
         Returns
         -------
@@ -341,6 +341,10 @@ def lazy_properties(*lazy_properties):
 class ContainerDataset(Dataset):
     """Equips a Python container with the dataset interface.
 
+    .. todo::
+
+        Multiple containers, returning batches.
+
     Parameters
     ----------
     container : iterable
@@ -351,10 +355,6 @@ class ContainerDataset(Dataset):
         source names. Note, that only if the container is an OrderedDict
         the order of elements in the returned tuples is determined. If the
         iterable is not a dictionary, the source ``'data'`` will be used.
-
-    .. todo::
-
-        Multiple containers, returning batches.
 
     """
     default_scheme = None

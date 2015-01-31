@@ -205,13 +205,6 @@ def recurrent(*args, **kwargs):
 class Recurrent(BaseRecurrent, Initializable):
     """Simple recurrent layer with optional activation.
 
-    Parameters
-    ----------
-    dim : int
-        The dimension of the hidden state
-    activation : Brick
-        The brick to apply as activation.
-
     .. todo::
 
        Implement deep transitions (by using other bricks). Currently, this
@@ -221,6 +214,13 @@ class Recurrent(BaseRecurrent, Initializable):
 
        * Carrying over hidden state between batches
        * Return k last hidden states
+
+    Parameters
+    ----------
+    dim : int
+        The dimension of the hidden state
+    activation : Brick
+        The brick to apply as activation.
 
     Notes
     -----

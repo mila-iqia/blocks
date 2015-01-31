@@ -63,14 +63,14 @@ class Path(object):
     def parse(string):
         """Constructs a path from its string representation.
 
+        .. todo::
+
+            More error checking.
+
         Parameters
         ----------
         string : str
             String representation of the path.
-
-        .. todo::
-
-            More error checking.
 
         """
         elements = Path.separator_re.split(string)[1:]
@@ -109,17 +109,17 @@ class Selector(object):
     def select(self, path):
         """Select a subset of current selection matching the path given.
 
-        Parameters
-        ----------
-        path : :class:`Path` or str
-            The path for the desired selection. If a string is given
-            it is parsed into a path.
-
         .. warning::
 
             Current implementation is very inefficient (theoretical
             complexity is :math:`O(n^3)`, where :math:`n` is the number
             of bricks in the hierarchy). It can be sped up easily.
+
+        Parameters
+        ----------
+        path : :class:`Path` or str
+            The path for the desired selection. If a string is given
+            it is parsed into a path.
 
         Returns
         -------

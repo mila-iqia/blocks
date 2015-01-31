@@ -61,7 +61,7 @@ class DifferentiableCostMinimizer(TrainingAlgorithm):
 
     Attributes
     ----------
-    updates : list of (shared variable, Theano expression) tuples
+    updates : list of :class:`~tensor.TensorSharedVariable` updates
         Updates to be done for every batch. It is required that the
         updates are done using the old values of optimized parameters.
     cost : :class:`~tensor.TensorVariable`
@@ -71,19 +71,19 @@ class DifferentiableCostMinimizer(TrainingAlgorithm):
 
     Notes
     -----
-        Changing `updates` attribute or calling `add_updates` after
-        the `initialize` method is called will have no effect.
+    Changing `updates` attribute or calling `add_updates` after
+    the `initialize` method is called will have no effect.
 
     .. todo::
 
-        Some shared variables are not parameters (e.g. those created by
-        random streams).
+       Some shared variables are not parameters (e.g. those created by
+       random streams).
 
     .. todo::
 
-        Due to a rather premature status of the :class:`ComputationGraph`
-        class the parameter used only inside scans are not fetched
-        currently.
+       Due to a rather premature status of the :class:`ComputationGraph`
+       class the parameter used only inside scans are not fetched
+       currently.
 
     """
     def __init__(self, cost, params=None):
@@ -99,7 +99,8 @@ class DifferentiableCostMinimizer(TrainingAlgorithm):
 
         Returns
         -------
-        list of :class:`~tensor.TensorVariable`
+        inputs : list of :class:`~tensor.TensorVariable`
+            Inputs to this graph.
 
         """
         return self._cost_computation_graph.inputs
@@ -119,7 +120,7 @@ class DifferentiableCostMinimizer(TrainingAlgorithm):
 
         Parameters
         ----------
-        updates : list of tuples or :class:`OrderedDict`
+        updates : list of tuples or :class:`~collections.OrderedDict`
             The updates to add.
 
         """

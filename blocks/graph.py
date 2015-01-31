@@ -31,8 +31,7 @@ class ComputationGraph(object):
 
     Parameters
     ----------
-    outputs : :class:`~tensor.TensorVariable` or list of \
-            :class:`~tensor.TensorVariable`
+    outputs : (list of) :class:`~tensor.TensorVariable`
         The output(s) of the computation graph.
 
     Attributes
@@ -51,8 +50,7 @@ class ComputationGraph(object):
         Any variable that is not part of :attr:`inputs` or :attr:`outputs`.
     variables : list of :class:`~tensor.TensorVariable`
         All variables (including auxiliary) in the managed graph.
-    updates : list of (:class:`~tensor.TensorSharedVariable`, \
-            :class:`~tensor.TensorVariable`) pairs
+    updates : :class:`~tensor.TensorSharedVariable` updates
         All the updates found attached to the annotations.
 
     """
