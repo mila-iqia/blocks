@@ -21,7 +21,7 @@ class MNIST(InMemoryDataset):
     in machine learning and consists of 60,000 training images and 10,000
     testing images. The images are grayscale and 28 x 28 pixels large.
 
-    .. [LBBH] Yann LeCun, Léon Bottou, Yoshu Bengio, and Patrick Haffner,
+    .. [LBBH] Yann LeCun, Léon Bottou, Yoshua Bengio, and Patrick Haffner,
        *Gradient-based learning applied to document recognition*,
        Proceedings of the IEEE, November 1998, 86(11):2278-2324.
 

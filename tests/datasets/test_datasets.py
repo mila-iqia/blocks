@@ -91,7 +91,7 @@ def test_data_driven_epochs():
     for i, epoch in zip(range(2), stream.iterate_epochs()):
         assert list(epoch) == epochs[i]
 
-    # test scheme reseting between epochs
+    # test scheme resetting between epochs
     class TestScheme(BatchSizeScheme):
 
         def get_request_iterator(self):

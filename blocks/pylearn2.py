@@ -224,7 +224,7 @@ class DefaultExtension(pylearn2.train_extensions.TrainExtension):
     an average for the last epoch. This is done in the `on_monitor` method.
 
     """
-    def setup(self, model, dataset, algoritm):
+    def setup(self, model, dataset, algorithm):
         self._last_batches_seen = model.monitor.get_batches_seen()
         self._last_values = dict()
 
