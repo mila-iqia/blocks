@@ -99,7 +99,7 @@ class DifferentiableCostMinimizer(TrainingAlgorithm):
 
         Returns
         -------
-        list of Theano variables
+        list of :class:`~tensor.TensorVariable`
 
         """
         return self._cost_computation_graph.inputs

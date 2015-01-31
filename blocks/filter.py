@@ -99,7 +99,7 @@ class VariableFilter(object):
 
         Parameters
         ----------
-        variables : list of Theano variables
+        variables : list of :class:`~tensor.TensorVariable`
 
         """
         if self.roles:

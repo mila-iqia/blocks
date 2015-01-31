@@ -19,7 +19,7 @@ dependence = make_dependence_cmp()
 
 
 class ComputationGraph(object):
-    """Encapsulates a managed Theano computation graph.
+    r"""Encapsulates a managed Theano computation graph.
 
     This implies that it not only contains the variables required to
     compute the given outputs, but also all the auxiliary variables and
@@ -31,26 +31,28 @@ class ComputationGraph(object):
 
     Parameters
     ----------
-    outputs : :class:`~tensor.TensorVariable` or list of Theano variables
+    outputs : :class:`~tensor.TensorVariable` or list of \
+            :class:`~tensor.TensorVariable`
         The output(s) of the computation graph.
 
     Attributes
     ----------
-    inputs : list of Theano variables
+    inputs : list of :class:`~tensor.TensorVariable`
         The inputs of the computation graph. This does not include shared
         variables and constants.
     shared_variables : list of Theano shared variables
         All the shared variables in the graph.
-    outputs : list of Theano variables
+    outputs : list of :class:`~tensor.TensorVariable`
         The outputs of the computations graph (as passed to the
         constructor).
-    auxiliary_variables : list of Theano variables
+    auxiliary_variables : list of :class:`~tensor.TensorVariable`
         All variables which have the :attr:`Variable.AUXILIARY` role.
-    intermediary_variables : list of Theano variables
+    intermediary_variables : list of :class:`~tensor.TensorVariable`
         Any variable that is not part of :attr:`inputs` or :attr:`outputs`.
-    variables : list of Theano variables
+    variables : list of :class:`~tensor.TensorVariable`
         All variables (including auxiliary) in the managed graph.
-    updates : list of (:class:`~tensor.TensorVariable`, Theano expression) pairs
+    updates : list of (:class:`~tensor.TensorSharedVariable`, \
+            :class:`~tensor.TensorVariable`) pairs
         All the updates found attached to the annotations.
 
     """
@@ -277,7 +279,7 @@ def apply_noise(graph, variables, level, seed=None):
     ----------
     graph : instance of :class:`ComputationGraph`
         The computation graph.
-    variables : Theano variables
+    variables : :class:`~tensor.TensorVariable`
         Variables to add noise to.
     level : float
         Noise level.

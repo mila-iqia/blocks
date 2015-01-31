@@ -126,7 +126,7 @@ class Selector(object):
         Depending on the path given, one of the following:
 
         * A :class:`Selector` with desired bricks.
-        * A list of shared Theano variables.
+        * A list of shared :class:`~tensor.TensorVariable`.
 
         """
         if isinstance(path, six.string_types):

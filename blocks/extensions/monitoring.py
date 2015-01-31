@@ -23,7 +23,7 @@ class DataStreamMonitoring(SimpleExtension):
 
     Parameters
     ----------
-    expressions : list of Theano variables
+    expressions : list of :class:`~tensor.TensorVariable`
         The expressions to monitor. The variable names are used as
         expression names.
     data_stream : instance of :class:`DataStream`
@@ -66,7 +66,7 @@ class TrainingDataMonitoring(SimpleExtension):
 
     Parameters
     ----------
-    expressions : list of Theano variables
+    expressions : list of :class:`~tensor.TensorVariable`
         The expressions to monitor. The variable names are used as
         expression names.
     prefix : str, optional

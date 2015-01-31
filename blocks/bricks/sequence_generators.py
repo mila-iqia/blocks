@@ -599,7 +599,7 @@ class AttentionTransition(AbstractAttentionTransition, Initializable):
 
         Returns
         -------
-        glimpses : list of Theano variables
+        glimpses : list of :class:`~tensor.TensorVariable`
             Current step glimpses.
 
         """
@@ -625,7 +625,7 @@ class AttentionTransition(AbstractAttentionTransition, Initializable):
 
         Returns
         -------
-        current_states : list of Theano variables
+        current_states : list of :class:`~tensor.TensorVariable`
             Current states computed by `self.transition`.
 
         """
@@ -658,7 +658,7 @@ class AttentionTransition(AbstractAttentionTransition, Initializable):
 
         Returns
         -------
-        outputs : list of Theano variables
+        outputs : list of :class:`~tensor.TensorVariable`
             The current step states and glimpses.
 
         """
