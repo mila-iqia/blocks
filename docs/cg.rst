@@ -7,7 +7,7 @@ When you apply a brick to a Theano variable, it automatically *annotates* this
 Theano variable, in two ways:
 
 * It defines the *role* this variable plays in the computation graph e.g. it will
-  label weights matrics and biases as parameters, keep track of which variables
+  label weights matrices and biases as parameters, keep track of which variables
   where the in- and outputs of your bricks, and more.
 * It constructs *auxiliary variables*. These are variables which are not an
   output of your brick, but might still be of interest. For example, if you are

@@ -116,7 +116,7 @@ non-linear transformation.
 
 As such, bricks can have *children*. Parent bricks are able to configure their
 children, to e.g. make sure their configurations are compatible, or have
-sensible defaults for a particular usecase.
+sensible defaults for a particular use case.
 
     >>> from blocks.bricks import MLP, Sigmoid
     >>> mlp = MLP(activations=[Sigmoid(name='sigmoid_0'),

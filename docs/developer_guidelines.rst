@@ -11,7 +11,7 @@ Formatting guidelines
 Blocks follows the `PEP8 style guide`_ closely, so please make sure you are
 familiar with it. Our `Travis CI buildbot`_ runs flake8_ as part of every build,
 which checks for PEP8 compliance (using the pep8_ tool) and for some common
-coding erros using pyflakes_. You might want to install and run flake8_ on your
+coding errors using pyflakes_. You might want to install and run flake8_ on your
 code before submitting a PR to make sure that your build doesn't fail because of
 e.g. a bit of extra whitespace.
 
@@ -27,7 +27,7 @@ Blocks:
 
 * Do not rename imports i.e. do not use ``import theano.tensor as T`` or
   ``import numpy as np``.
-* Direct imports, ``import ...``, preceed ``from ... import ...`` statements.
+* Direct imports, ``import ...``, precede ``from ... import ...`` statements.
 * Imports are otherwise listed alphabetically.
 * Don't recycle variable names (i.e. don't use the same variable name to refer
   to different things in a particular part of code), especially when they are
