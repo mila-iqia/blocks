@@ -5,6 +5,20 @@ The data pipeline is an important part of training neural networks. Blocks
 provides an abstraction to datasets which is complicated at first sight, but
 can be very powerful.
 
+.. digraph:: datasets
+   :caption: A simplified overview of the interactions between the different parts of the data-handling classes in Blocks. Dashed lines are optional.
+
+   Dataset -> DataStream [label=" Argument to"];
+   DataStream -> Dataset [label=" Gets data from"];
+   DataStream -> DataIterator [label=" Returns"];
+   IterationScheme -> DataStream [style=dashed, label=" Argument to"];
+   DataStream -> IterationScheme [style=dashed, label=" Gets request iterator"];
+   IterationScheme -> RequestIterator [label=" Returns"];
+   RequestIterator -> DataIterator [style=dashed, label=" Argument to"];
+   DataIterator -> DataStream [label=" Gets data from"];
+   DataStream -> DataStream [style=dashed, label=" Gets data from (wrapper)"];
+   { rank=same; RequestIterator, DataIterator }
+
 Datasets
   Datasets provide an interface to the data we are trying to acces. This data
   is usually stored on disk, but can also be created on the fly (e.g. drawn
@@ -49,16 +63,3 @@ Data iterator
   uses a request iterator and returns data at each step (requesting it from the
   data stream). A single iteration over a data iterator represents a single
   epoch.
-
-.. digraph:: datasets
-   :caption: A simplified overview of the interactions between the different parts of the data-handling classes in Blocks. Dashed lines are optional.
-
-   Dataset -> DataStream [label=" Argument to"];
-   DataStream -> Dataset [label=" Gets data from"];
-   DataStream -> DataIterator [label=" Returns"];
-   IterationScheme -> DataStream [style=dashed, label=" Argument to"];
-   DataStream -> IterationScheme [style=dashed, label=" Gets request iterator"];
-   IterationScheme -> RequestIterator [label=" Returns"];
-   RequestIterator -> DataIterator [style=dashed, label=" Argument to"];
-   DataIterator -> DataStream [label=" Gets data from"];
-   DataStream -> DataStream [style=dashed, label=" Gets data from (wrapper)"];
