@@ -47,7 +47,7 @@ To apply weight decay, we only need the weights matrices. These have been tagged
 with the ``WEIGHTS`` role. So let's create a filter that finds these for us.
 
     >>> from blocks.filter import VariableFilter
-    >>> from blocks.bricks import WEIGHTS
+    >>> from blocks.roles import WEIGHTS
     >>> print(VariableFilter(roles=[WEIGHTS])(cg.variables))
     [W, W, W]
 
@@ -61,9 +61,9 @@ layer in particular. To do that, we can filter the variables by the bricks that
 created them.
 
     >>> second_layer = mlp.linear_transformations[1]
-    >>> from blocks.graph import PARAMETER
-    >>> filter = VariableFilter(roles=[PARAMETER], bricks=[second_layer])
-    >>> print(filter(cg.variables))
+    >>> from blocks.roles import PARAMETER
+    >>> var_filter = VariableFilter(roles=[PARAMETER], bricks=[second_layer])
+    >>> print(var_filter(cg.variables))
     [b, W]
 
 .. note::

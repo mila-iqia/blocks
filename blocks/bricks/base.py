@@ -8,8 +8,8 @@ from six import add_metaclass
 from theano import tensor
 from theano.gof import Variable
 
-from blocks.graph import (add_annotation, add_role, Annotation, INPUT, OUTPUT,
-                          PARAMETER)
+from blocks.graph import add_annotation, Annotation
+from blocks.roles import add_role, PARAMETER, INPUT, OUTPUT
 from blocks.utils import pack, repr_attrs, reraise_as, unpack
 
 
