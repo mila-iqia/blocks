@@ -9,22 +9,10 @@ from theano.sandbox.rng_mrg import MRG_RandomStreams
 
 from blocks import config
 from blocks.bricks.base import application, _Brick, Brick, lazy
-from blocks.graph import add_role, ParameterRole
+from blocks.roles import add_role, WEIGHTS, BIASES
 from blocks.utils import pack, shared_floatx_zeros
 
 logger = logging.getLogger(__name__)
-
-
-class WeightsRole(ParameterRole):
-    pass
-
-WEIGHTS = WeightsRole()
-
-
-class BiasesRole(ParameterRole):
-    pass
-
-BIASES = BiasesRole()
 
 
 class Random(Brick):
