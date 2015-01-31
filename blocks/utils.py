@@ -86,11 +86,11 @@ def shared_floatx(value, name=None, borrow=False, dtype=None):
         This can save memory and speed. Defaults to False.
     dtype : str, optional
         The `dtype` of the shared variable. Default value is
-        `theano.config.floatX`.
+        :attr:`config.floatX`.
 
     Returns
     -------
-    theano.compile.SharedVariable
+    :class:`tensor.TensorSharedVariable`
         A Theano shared variable with the requested value and `dtype`.
 
     """

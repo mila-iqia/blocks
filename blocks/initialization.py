@@ -26,7 +26,7 @@ class NdarrayInitialization(object):
         ndarray
             An ndarray with values drawn from the distribution specified by
             this object, of shape `shape`, with dtype
-            `theano.config.floatX`.
+            :attr:`config.floatX`.
 
         """
 

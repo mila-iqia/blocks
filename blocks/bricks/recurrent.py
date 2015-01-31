@@ -89,7 +89,7 @@ def recurrent(*args, **kwargs):
 
             .. todo::
 
-                * Handle `updates` returned by the `theano.scan`
+                * Handle `updates` returned by the :func:`theano.scan`
                     routine.
                 * ``kwargs`` has a random order; check if this is a
                     problem.
