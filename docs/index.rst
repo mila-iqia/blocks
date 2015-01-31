@@ -25,6 +25,7 @@ In-depth
    :maxdepth: 1
 
    configuration
+   datasets
    serialization
    api/index.rst
    developer_guidelines
