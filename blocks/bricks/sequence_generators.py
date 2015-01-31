@@ -131,7 +131,7 @@ class BaseSequenceGenerator(Initializable):
 
         Parameters
         ----------
-        outputs : Theano variable
+        outputs : :class:`~tensor.TensorVariable`
             The 3(2) dimensional tensor containing output sequences.
             The dimension 0 must stand for time, the dimension 1 for the
             position on the batch.
@@ -184,7 +184,7 @@ class BaseSequenceGenerator(Initializable):
 
         Parameters
         ----------
-        outputs : Theano variable
+        outputs : :class:`~tensor.TensorVariable`
             The outputs from the previous step.
 
         Notes

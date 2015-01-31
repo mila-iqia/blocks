@@ -197,7 +197,7 @@ def check_theano_variable(variable, n_dim, dtype_prefix):
 
     Parameters
     ----------
-    variable : Theano variable or convertible to one
+    variable : :class:`~tensor.TensorVariable` or convertible to one
         A variable to check.
     n_dim : int
         Expected number of dimensions or None. If None, no check is
@@ -378,7 +378,7 @@ def put_hook(variable, hook_fn):
 
     Parameters
     ----------
-    variable : Theano variable
+    variable : :class:`~tensor.TensorVariable`
         The variable to put a hook on.
     hook_fn : function
         The hook function. Should take a single argument: the variable's

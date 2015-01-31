@@ -200,12 +200,12 @@ class Linear(Initializable):
 
         Parameters
         ----------
-        input_ : Theano variable
+        input_ : :class:`~tensor.TensorVariable`
             The input on which to apply the transformation
 
         Returns
         -------
-        output : Theano variable
+        output : :class:`~tensor.TensorVariable`
             The transformed input plus optional bias
 
         """
@@ -251,12 +251,12 @@ class Maxout(Brick):
 
         Parameters
         ----------
-        input_ : Theano variable
+        input_ : :class:`~tensor.TensorVariable`
             The input on which to apply the transformation
 
         Returns
         -------
-        output : Theano variable
+        output : :class:`~tensor.TensorVariable`
             The transformed input
 
         """
@@ -313,12 +313,12 @@ class LinearMaxout(Initializable):
 
         Parameters
         ----------
-        input_ : Theano variable
+        input_ : :class:`~tensor.TensorVariable`
             The input on which to apply the transformations
 
         Returns
         -------
-        output : Theano variable
+        output : :class:`~tensor.TensorVariable`
             The transformed input
 
         """
@@ -344,12 +344,12 @@ class ActivationDocumentation(_Brick):
 
                 Parameters
                 ----------
-                input_ : Theano variable
+                input_ : :class:`~tensor.TensorVariable`
                     Theano variable to apply {0} to, element-wise.
 
                 Returns
                 -------
-                output : Theano variable
+                output : :class:`~tensor.TensorVariable`
                     The input with the activation function applied.
 
                 """.format(name.lower())

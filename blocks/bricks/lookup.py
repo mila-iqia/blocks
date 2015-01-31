@@ -45,12 +45,12 @@ class LookupTable(Initializable):
 
         Parameters
         ----------
-        indices : Theano variable
+        indices : :class:`~tensor.TensorVariable`
             The indices of interest. The dtype must be integer.
 
         Returns
         -------
-        output : Theano variable
+        output : :class:`~tensor.TensorVariable`
             Representations for the indices of the query. Has :math:`k+1`
             dimensions, where :math:`k` is the number of dimensions of the
             `indices` parameter. The last dimension stands for the

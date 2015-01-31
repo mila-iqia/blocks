@@ -31,7 +31,7 @@ class ComputationGraph(object):
 
     Parameters
     ----------
-    outputs : Theano variable or list of Theano variables
+    outputs : :class:`~tensor.TensorVariable` or list of Theano variables
         The output(s) of the computation graph.
 
     Attributes
@@ -50,7 +50,7 @@ class ComputationGraph(object):
         Any variable that is not part of :attr:`inputs` or :attr:`outputs`.
     variables : list of Theano variables
         All variables (including auxiliary) in the managed graph.
-    updates : list of (Theano variable, Theano expression) pairs
+    updates : list of (:class:`~tensor.TensorVariable`, Theano expression) pairs
         All the updates found attached to the annotations.
 
     """
@@ -220,7 +220,7 @@ class Annotation(object):
 
         Parameters
         ----------
-        expression : Theano variable
+        expression : :class:`~tensor.TensorVariable`
             The expression of the variable you want to add.
         roles : list of :class:`VariableRole` instances, optional
             The roles of this variable. The :const:`AUXILIARY`

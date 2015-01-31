@@ -261,11 +261,11 @@ class Recurrent(BaseRecurrent, Initializable):
 
         Parameters
         ----------
-        input_ : Theano variable
+        input_ : :class:`~tensor.TensorVariable`
             The 2 dimensional input, in the shape (batch, features).
-        state : Theano variable
+        state : :class:`~tensor.TensorVariable`
             The 2 dimensional state, in the shape (batch, features).
-        mask : Theano variable
+        mask : :class:`~tensor.TensorVariable`
             A 1D binary array in the shape (batch,) which is 1 if
             there is data available, 0 if not. Assumed to be 1-s
             only if not given.
@@ -379,27 +379,27 @@ class GatedRecurrent(BaseRecurrent, Initializable):
 
         Parameters
         ----------
-        states : Theano variable
+        states : :class:`~tensor.TensorVariable`
             The 2 dimensional matrix of current states in the shape
             (batch_size, features). Required for `one_step` usage.
         inputs : Theano matrix of floats
             The 2 dimensional matrix of inputs in the shape (batch_size,
             features)
-        update_inputs : Theano variable
+        update_inputs : :class:`~tensor.TensorVariable`
             The 2 dimensional matrix of inputs to the update gates in the
             shape (batch_size, features). None when the update gates are
             not used.
-        reset_inputs : Theano variable
+        reset_inputs : :class:`~tensor.TensorVariable`
             The 2 dimensional matrix of inputs to the reset gates in the
             shape (batch_size, features). None when the reset gates are not
             used.
-        mask : Theano variable
+        mask : :class:`~tensor.TensorVariable`
             A 1D binary array in the shape (batch,) which is 1 if there is
             data available, 0 if not. Assumed to be 1-s only if not given.
 
         Returns
         -------
-        output : Theano variable
+        output : :class:`~tensor.TensorVariable`
             Next states of the network.
 
         """

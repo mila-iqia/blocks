@@ -25,7 +25,7 @@ class AggregationScheme(object):
 
     Parameters
     ----------
-    expression: Theano variable
+    expression: :class:`~tensor.TensorVariable`
         expression that computes the desired value on a single batch.
 
     """
@@ -65,7 +65,7 @@ class Aggregator(object):
     accumulation_updates : list of Theano updates
         Updates that specify how a new batch of data gets processed
         by this Aggregator. *Can refer to model inputs.*
-    readout_expression : Theano variable
+    readout_expression : :class:`~tensor.TensorVariable`
         Theano variable that computes the final value based on accumulated
         partial results. *readout_expression must only consist of shared
         variables and constants.*
@@ -93,9 +93,9 @@ class Mean(AggregationScheme):
 
     Parameters
     ----------
-    numerator : Theano variable
+    numerator : :class:`~tensor.TensorVariable`
         Theano expression for the numerator e.g. the likelihood
-    denominator : Theano variable
+    denominator : :class:`~tensor.TensorVariable`
         Theano expression for the denominator e.g. the batch size
 
     """

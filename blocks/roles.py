@@ -3,7 +3,7 @@ def add_role(var, role):
 
     Parameters
     ----------
-    var : Theano variable
+    var : :class:`~tensor.TensorVariable`
         The variable to assign the new role to.
     role : :class:`VariableRole` instance
 

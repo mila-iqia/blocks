@@ -105,12 +105,12 @@ class SequenceContentAttention(Initializable):
 
         Parameters
         ----------
-        sequence : Theano variable
+        sequence : :class:`~tensor.TensorVariable`
             The sequence, time is the 1-st dimension.
-        preprocessed_sequence : Theano variable
+        preprocessed_sequence : :class:`~tensor.TensorVariable`
             The preprocessed sequence. If ``None``, is computed by calling
             :meth:`preprocess`.
-        mask : Theano variable
+        mask : :class:`~tensor.TensorVariable`
             A 0/1 mask specifying available data. 0 means that the
             corresponding sequence element is fake.
         \*\*states
@@ -162,7 +162,7 @@ class SequenceContentAttention(Initializable):
 
         Parameters
         ----------
-        sequence : Theano variable
+        sequence : :class:`~tensor.TensorVariable`
             The sequence, time is the 1-st dimension.
 
         """

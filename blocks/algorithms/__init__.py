@@ -53,7 +53,7 @@ class DifferentiableCostMinimizer(TrainingAlgorithm):
 
     Parameters
     ----------
-    cost : Theano variable
+    cost : :class:`~tensor.TensorVariable`
         The objective to be minimized.
     params : list of Theano shared variables, optional
         The parameters to be tuned. If ``None``, all shared variables of
@@ -64,7 +64,7 @@ class DifferentiableCostMinimizer(TrainingAlgorithm):
     updates : list of (shared variable, Theano expression) tuples
         Updates to be done for every batch. It is required that the
         updates are done using the old values of optimized parameters.
-    cost : Theano variable
+    cost : :class:`~tensor.TensorVariable`
         The objective to be minimized.
     params : list of Theano shared variables
         The parameters to be tuned.
@@ -210,7 +210,7 @@ class StepRule(object):
         ----------
         param : Theano shared variable
             The parameter.
-        grad_wr_param : Theano variable
+        grad_wr_param : :class:`~tensor.TensorVariable`
             The expression for the gradient of the cost with respect to
             the parameter.
 

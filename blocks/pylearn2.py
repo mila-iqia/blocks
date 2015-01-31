@@ -73,7 +73,7 @@ class Pylearn2Cost(pylearn2.costs.cost.Cost):
 
     Parameters
     ----------
-    cost : Theano variable
+    cost : :class:`~tensor.TensorVariable`
         The Theano variable corresponding to the end of the cost
         computation graph.
 
@@ -132,7 +132,7 @@ class Pylearn2LearningRule(pylearn2.training_algorithms
     ----------
     learning_rule : :class:`LearningRule`
         A PyLearn2 learning rule to wrap.
-    monitor_values : dict of (name, Theano variable) pairs
+    monitor_values : dict of (name, :class:`~tensor.TensorVariable`) pairs
         The values to monitor and their names.
     updates : OrderedDict
         Custom updates to perform when computing gradients.
@@ -161,7 +161,7 @@ class Pylearn2LearningRule(pylearn2.training_algorithms
         ----------
         name : str
             The name of the value to be monitored.
-        value : Theano variable
+        value : :class:`~tensor.TensorVariable`
             The value to be monitored.
 
         """
