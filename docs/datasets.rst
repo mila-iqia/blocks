@@ -51,14 +51,14 @@ Data iterator
   epoch.
 
 .. digraph:: datasets
-   :caption: A simplified overview of the interactions between the different parts of the data-handling classes in Blocks.
+   :caption: A simplified overview of the interactions between the different parts of the data-handling classes in Blocks. Dashed lines are optional.
 
    Dataset -> DataStream [label=" Argument to"];
    DataStream -> Dataset [label=" Gets data from"];
    DataStream -> DataIterator [label=" Returns"];
-   IterationScheme -> DataStream [label=" Argument to"];
-   DataStream -> IterationScheme [label=" Gets request iterator"];
+   IterationScheme -> DataStream [style=dashed, label=" Argument to"];
+   DataStream -> IterationScheme [style=dashed, label=" Gets request iterator"];
    IterationScheme -> RequestIterator [label=" Returns"];
-   RequestIterator -> DataIterator [label=" Argument to"];
+   RequestIterator -> DataIterator [style=dashed, label=" Argument to"];
    DataIterator -> DataStream [label=" Gets data from"];
-   DataStream -> DataStream [label=" Gets data from (wrapper)"];
+   DataStream -> DataStream [style=dashed, label=" Gets data from (wrapper)"];
