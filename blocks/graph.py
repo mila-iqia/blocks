@@ -40,7 +40,7 @@ class ComputationGraph(object):
     inputs : list of :class:`~tensor.TensorVariable`
         The inputs of the computation graph. This does not include shared
         variables and constants.
-    shared_variables : list of Theano shared variables
+    shared_variables : list of :class:`~tensor.TensorSharedVariable`
         All the shared variables in the graph.
     outputs : list of :class:`~tensor.TensorVariable`
         The outputs of the computations graph (as passed to the

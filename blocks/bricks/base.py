@@ -433,7 +433,7 @@ class Brick(Annotation):
     print_shapes : bool
         ``False`` by default. If ``True`` it logs the shapes of all the
         input and output variables, which can be useful for debugging.
-    params : list of Theano shared variables and ``None``
+    params : list of :class:`~tensor.TensorSharedVariable` and ``None``
         After calling the :meth:`allocate` method this attribute will be
         populated with the shared variables storing this brick's
         parameters. Allows for ``None`` so that parameters can always be

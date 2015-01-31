@@ -125,8 +125,8 @@ class Selector(object):
         -------
         Depending on the path given, one of the following:
 
-        * A :class:`Selector` with desired bricks.
-        * A list of shared :class:`~tensor.TensorVariable`.
+        * :class:`Selector` with desired bricks.
+        * list of :class:`~tensor.SharedTensorVariable`.
 
         """
         if isinstance(path, six.string_types):

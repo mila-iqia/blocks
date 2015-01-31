@@ -55,7 +55,7 @@ class DifferentiableCostMinimizer(TrainingAlgorithm):
     ----------
     cost : :class:`~tensor.TensorVariable`
         The objective to be minimized.
-    params : list of Theano shared variables, optional
+    params : list of :class:`~tensor.TensorSharedVariable`, optional
         The parameters to be tuned. If ``None``, all shared variables of
         `cost` computation graph will be considered parameters.
 
@@ -66,7 +66,7 @@ class DifferentiableCostMinimizer(TrainingAlgorithm):
         updates are done using the old values of optimized parameters.
     cost : :class:`~tensor.TensorVariable`
         The objective to be minimized.
-    params : list of Theano shared variables
+    params : list of :class:`~tensor.TensorSharedVariable`
         The parameters to be tuned.
 
     Notes
