@@ -8,6 +8,7 @@ from theano import Variable
 from theano.gof import graph
 from theano.sandbox.rng_mrg import MRG_RandomStreams
 
+from blocks import config
 from blocks.utils import (is_graph_input, is_shared_variable, dict_union,
                           shared_like)
 
@@ -322,7 +323,7 @@ class Annotation(object):
         self.auxiliary_variables.append(expression)
 
 
-def apply_noise(graph, variables, level, rng=None):
+def apply_noise(graph, variables, level, seed=None):
     """Add Gaussian noise to certain variable of a computation graph.
 
     Parameters
@@ -338,8 +339,9 @@ def apply_noise(graph, variables, level, rng=None):
         used.
 
     """
-    if not rng:
-        rng = MRG_RandomStreams(1)
+    if not seed:
+        seed = config.default_seed
+    rng = MRG_RandomStreams(seed)
     replace = {}
     for variable in variables:
         replace[variable] = (variable +

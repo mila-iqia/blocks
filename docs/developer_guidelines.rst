@@ -117,7 +117,7 @@ Python 2 and 3
 ~~~~~~~~~~~~~~
 Blocks aims to be both Python 2 and Python 3 compliant using a single code-base,
 without using 2to3_. There are many online resources which discuss the writing
-compatible code. For a quick overview see `the cheatsheet from Python
+of compatible code. For a quick overview see `the cheatsheet from Python
 Charmers`_. For non-trivial cases, we use the six_ compatibility library.
 
 Documentation should be written to be Python 3 compliant.
@@ -134,6 +134,8 @@ Not doing so `clobbers the original traceback`_, making it impossible to use
 ``pdb`` to debug the problems.
 
 .. _clobbers the original traceback: http://www.ianbicking.org/blog/2007/09/re-raising-exceptions.html
+
+.. _serialization_guidelines:
 
 Serialization
 ~~~~~~~~~~~~~
@@ -221,7 +223,7 @@ core parts of your committed code. In the ideal case, all of your code should be
 unit tested.
 
 If you are fixing a bug, please be sure to add a unit test to make sure that the
-bug does not get re-intrduced later on.
+bug does not get re-introduced later on.
 
 The test suite can be executed locally using nose2_ [#]_.
 

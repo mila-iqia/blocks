@@ -36,30 +36,22 @@ class Parameters(MutableSequence):
         return repr(self._params)
 
     def __getitem__(self, key):
-        return self._params.__getitem__(key)
+        return self._params[key]
 
     def _annotate(self, value):
-        """Annotates the variable.
-
-        Raises
-        ------
-        ValueError
-            If the parameter isn't a shared variable or ``None``.
-
-        """
         if isinstance(value, Variable):
             add_role(value, PARAMETER)
             add_annotation(value, self.brick)
 
     def __setitem__(self, key, value):
         self._annotate(value)
-        self._params.__setitem__(key, value)
+        self._params[key] = value
 
     def __delitem__(self, key):
-        self._params.__delitem__(key)
+        del self._params[key]
 
     def __len__(self):
-        return self._params.__len__()
+        return len(self._params)
 
     def insert(self, index, value):
         self._annotate(value)
