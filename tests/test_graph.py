@@ -60,4 +60,4 @@ def test_apply_noise():
     noised_cg = apply_noise(cg, [y], 1, 1)
     assert_allclose(
         noised_cg.outputs[0].eval({x: 1., y: 1.}),
-        2 + MRG_RandomStreams(1).normal(y.shape).eval({y: 1.}))
+        2 + MRG_RandomStreams(1).normal(tuple()).eval())

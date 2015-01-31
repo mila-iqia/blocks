@@ -36,9 +36,24 @@ class Random(Brick):
         A ``MRG_RandomStreams`` instance.
 
     """
-    def __init__(self, theano_rng=None, **kwargs):
+    seed_rng = numpy.random.RandomState(config.default_seed)
+
+    def __init__(self, theano_seed=None, **kwargs):
         super(Random, self).__init__(**kwargs)
-        self.theano_rng = theano_rng
+        self.theano_seed = theano_seed
+
+    @property
+    def theano_seed(self):
+        if getattr(self, '_theano_seed', None) is not None:
+            return self._theano_seed
+        else:
+            self._theano_seed = self.seed_rng.randint(
+                numpy.iinfo(numpy.int32).max)
+            return self._theano_seed
+
+    @theano_seed.setter
+    def theano_seed(self, value):
+        self._theano_seed = value
 
     @property
     def theano_rng(self):
@@ -50,8 +65,7 @@ class Random(Brick):
         if getattr(self, '_theano_rng', None) is not None:
             return self._theano_rng
         else:
-            return MRG_RandomStreams(
-                config.default_seed)
+            return MRG_RandomStreams(self.theano_seed)
 
     @theano_rng.setter
     def theano_rng(self, theano_rng):
@@ -93,7 +107,7 @@ class Initializable(Brick):
 
     """
     has_biases = True
-    global_rng = numpy.random.RandomState(config.default_seed)
+    seed_rng = numpy.random.RandomState(config.default_seed)
 
     @lazy
     def __init__(self, weights_init, biases_init=None, use_bias=True,
@@ -112,7 +126,7 @@ class Initializable(Brick):
         if getattr(self, '_seed', None) is not None:
             return self._seed
         else:
-            self._seed = self.global_rng.randint(
+            self._seed = self.seed_rng.randint(
                 numpy.iinfo(numpy.int32).max)
             return self._seed
 
