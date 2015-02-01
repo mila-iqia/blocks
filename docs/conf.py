@@ -48,8 +48,9 @@ extensions = [
 ]
 
 intersphinx_mapping = {
-    'python': ('http://docs.python.org/3.2', None),
-    'theano': ('http://theano.readthedocs.org/en/latest/', None)
+    'theano': ('http://theano.readthedocs.org/en/latest/', None),
+    'numpy': ('http://docs.scipy.org/doc/numpy/', None),
+    'python': ('http://docs.python.org/3.2', None)
 }
 
 graphviz_dot_args = ['-Gbgcolor=#fcfcfc']  # To match the RTD theme

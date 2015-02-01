@@ -20,9 +20,10 @@ Which could be overwritten by using environment variables:
    $ BLOCKS_DATA_PATH=/home/users/other_datasets python
 
 If a setting is not configured and does not provide a default, a
-:class:`ConfigurationError` is raised when it is accessed.
+:class:`~.ConfigurationError` is raised when it is
+accessed.
 
-Configuration values can be accessed as attributes of ``blocks.config``.
+Configuration values can be accessed as attributes of :const:`blocks.config`.
 
     >>> from blocks import config
     >>> print(config.data_path) # doctest: +SKIP

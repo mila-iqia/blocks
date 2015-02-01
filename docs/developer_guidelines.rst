@@ -128,7 +128,7 @@ Documentation should be written to be Python 3 compliant.
 
 Reraising exceptions
 ~~~~~~~~~~~~~~~~~~~~
-When catching exceptions, use the :func:`~blocks.utils.reraise_as` function to
+When catching exceptions, use the :func:`~.utils.reraise_as` function to
 reraise the exception (optionally with a new message or as a different type).
 Not doing so `clobbers the original traceback`_, making it impossible to use
 ``pdb`` to debug the problems.

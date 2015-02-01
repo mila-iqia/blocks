@@ -200,7 +200,7 @@ class NGramStream(CachedDataStream):
     ----------
     ngram_order : int
         The order of the n-grams to output e.g. 3 for trigrams.
-    data_stream : :class:`DataStream` instance
+    data_stream : :class:`.DataStream` instance
         The data stream providing sentences. Each example is assumed to be
         a list of integers.
     target_source : str, optional
@@ -209,7 +209,7 @@ class NGramStream(CachedDataStream):
 
     Notes
     -----
-    This class inherits from :class:`CachedDataStream` because it makes use
+    This class inherits from :class:`.CachedDataStream` because it makes use
     of a cache to store the sentences from the wrapped data stream in.
 
     """

@@ -14,13 +14,12 @@ logger = logging.getLogger(__name__)
 class AggregationScheme(object):
     """Specify how incrementally evaluate a Theano variable on a dataset.
 
-    An AggregationScheme allocates :class:`VariableAggregator`s
-    that can incrementally compute the value of a Theano variable on a
-    full dataset by aggregating partial results computed on multiple
-    batches.
+    An AggregationScheme allocates :class:`Aggregator`s that can
+    incrementally compute the value of a Theano variable on a full dataset
+    by aggregating partial results computed on multiple batches.
 
     The AggregationScheme should be attached via the tag
-    `aggregation_scheme` to a Theano variable which computes the desired
+    ``aggregation_scheme`` to a Theano variable which computes the desired
     value on a single batch.
 
     Parameters

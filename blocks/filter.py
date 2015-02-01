@@ -41,9 +41,9 @@ class VariableFilter(object):
 
     Parameters
     ----------
-    roles : list of :class:`VariableRole` instances, optional
+    roles : list of :class:`.VariableRole` instances, optional
         Matches any variable which has one of the roles given.
-    bricks : list of :class:`Brick` classes or instances, optional
+    bricks : list of :class:`.Brick` classes or instances, optional
         Matches any variable whose brick is either one of the given
         bricks, or whose brick is of given classes.
     each_role : bool, optional
@@ -53,7 +53,7 @@ class VariableFilter(object):
     name : str, optional
         A regular expression for the variable name. The Blocks name (i.e.
         `x.tag.name`) is used.
-    application : :class:`Application` instance
+    application : :class:`.Application` instance
         Matches a variable that was produced by the application given.
 
     Notes

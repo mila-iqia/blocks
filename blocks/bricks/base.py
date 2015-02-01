@@ -185,7 +185,7 @@ class Application(object):
         return f
 
     def __get__(self, instance, owner):
-        """Instantiate :class:`BoundedApplication` for each :class:`Brick`."""
+        """Instantiate :class:`BoundApplication` for each :class:`Brick`."""
         if instance is None:
             return self
         elif instance not in self.bound_applications:

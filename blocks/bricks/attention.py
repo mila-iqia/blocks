@@ -46,19 +46,19 @@ class SequenceContentAttention(Initializable):
         The dimension of the sequence elements.
     match_dim : int
         The dimension of the match vector.
-    state_transformer : :class:`Brick`
+    state_transformer : :class:`.Brick`
         A prototype for state transformations. If ``None``, the default
-        transformation from :class:`Parallel` is used.
-    sequence_transformer : :class:`Brick`
+        transformation from :class:`.Parallel` is used.
+    sequence_transformer : :class:`.Brick`
         The transformation to be applied to the sequence. If ``None`` an
         affine transformation is used.
-    energy_computer : :class:`Brick`
+    energy_computer : :class:`.Brick`
         Computes energy from the match vector. If ``None``, an affine
         transformations is used.
 
     Notes
     -----
-    See :class:`Initializable` for initialization parameters.
+    See :class:`.Initializable` for initialization parameters.
 
     .. [BCB] Dzmitry Bahdanau, Kyunghyun Cho and Yoshua Bengio. Neural
        Machine Translation by Jointly Learning to Align and Translate.

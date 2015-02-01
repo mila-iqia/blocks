@@ -24,9 +24,8 @@ Pickling the training loop
    of your pickled main loop before resuming training.
 
 The first approach used is to pickle the entire :class:`main loop
-<blocks.main_loop.MainLoop>`, effectively serializing the exact state of the
-model as well as training.  Techncially there are some difficulties with this
-approach:
+<.MainLoop>`, effectively serializing the exact state of the model as well
+as training. Techncially there are some difficulties with this approach:
 
 * Some Python objects cannot be pickled e.g. file handles, generators,
   dynamically generated classes, nested classes, etc.

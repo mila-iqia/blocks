@@ -26,10 +26,9 @@ Datasets
   largely *stateless*. Multiple data streams can be iterating over the same
   dataset simultaneously, so the dataset couldn't have a single state to store
   e.g. its location in a file. Instead, the dataset provides a set of methods
-  (:meth:`~blocks.datasets.Dataset.open`,
-  :meth:`~blocks.datasets.Dataset.close`,
-  :meth:`~blocks.datasets.Dataset.get_data`, etc.) that interact with a
-  particular state, which is managed by a data stream.
+  (:meth:`~.datasets.Dataset.open`, :meth:`~.datasets.Dataset.close`,
+  :meth:`~.datasets.Dataset.get_data`, etc.) that interact with a particular
+  state, which is managed by a data stream.
 
 Data stream
   A data stream uses the interface of a dataset to e.g. iterate over the data.

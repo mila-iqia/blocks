@@ -24,7 +24,7 @@ class TrainingExtension(object):
 
     Attributes
     ----------
-    main_loop : :class:`MainLoop`
+    main_loop : :class:`.MainLoop`
         The main loop to which the extension belongs.
     name : str
         The name of the extension.
@@ -221,14 +221,14 @@ class SimpleExtension(TrainingExtension):
 
     @abstractmethod
     def do(self, which_callback, *args):
-        """Does the job of the training extension.
+        r"""Does the job of the training extension.
 
         Parameters
         ----------
         which_callback : str
             The name of the callback in the context of which :meth:`do` is
             run.
-        *args : tuple
+        \*args : tuple
             The arguments from the main loop concatenated with additional
             arguments from user.
 

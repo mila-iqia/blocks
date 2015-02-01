@@ -172,13 +172,13 @@ class Annotation(object):
 
     In Blocks annotations are automatically attached to variables created
     using bricks. One form of annotation is that many variables are
-    assigned a role (see :class:`VariableRole`). A second form of
+    assigned a role (see :class:`.VariableRole`). A second form of
     annotation comes in the form of attaching a :class:`Annotation`
     instance to the variable's ``tag`` attribute, with auxiliary variables
     and/or updates.
 
     For example, we might be interested in the mean activation of certain
-    application of a :class:`Linear` brick. The variable representing the
+    application of a :class:`.Linear` brick. The variable representing the
     mean activation is attached as an auxiliary variable to the annotations
     of the input and output variables of this brick. Using the
     :class:`ComputationGraph` class (the
@@ -222,7 +222,7 @@ class Annotation(object):
         ----------
         expression : :class:`~tensor.TensorVariable`
             The expression of the variable you want to add.
-        roles : list of :class:`VariableRole` instances, optional
+        roles : list of :class:`.VariableRole` instances, optional
             The roles of this variable. The :const:`AUXILIARY`
             role will automatically be added. Other options are
             :const:`COST`, :const:`WEIGHTS`, etc.

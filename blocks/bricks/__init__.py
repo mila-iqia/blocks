@@ -90,9 +90,8 @@ class Initializable(Brick):
     has_biases : bool
         ``False`` if the brick does not support biases, and only has
         :attr:`weights_init`.  For an example of this, see
-        :class:`~blocks.bricks.recurrent.Bidirectional`. If this is ``False``,
-        the brick does not support the arguments ``biases_init`` or
-        ``use_bias``.
+        :class:`.Bidirectional`. If this is ``False``, the brick does not
+        support the arguments ``biases_init`` or ``use_bias``.
 
     """
     has_biases = True

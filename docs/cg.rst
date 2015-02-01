@@ -17,7 +17,7 @@ Theano variable, in two ways:
 Using annotations
 -----------------
 
-The :class:`ComputationGraph` class provides an interface to this annotated
+The :class:`.ComputationGraph` class provides an interface to this annotated
 graph. For example, let's say we want to train an autoencoder using weight decay
 on some of the layers.
 
@@ -44,16 +44,17 @@ We will find that there are many variables in this graph.
     [TensorConstant{0}, b, W_norm, b_norm, features, TensorConstant{1.0}, ...]
 
 To apply weight decay, we only need the weights matrices. These have been tagged
-with the ``WEIGHTS`` role. So let's create a filter that finds these for us.
+with the :const:`.WEIGHTS` role. So let's create a filter that finds these for us.
 
     >>> from blocks.filter import VariableFilter
     >>> from blocks.roles import WEIGHTS
     >>> print(VariableFilter(roles=[WEIGHTS])(cg.variables))
     [W, W, W]
 
-Note that the variables in ``cg.variables`` are ordered according to the
-*topological order* of their apply nodes. This means that for a feedforward
-network the parameters will be returned in the order of our layers.
+Note that the variables in :attr:`cg.variables
+<.ComputationGraph.variables>` are ordered according to the *topological
+order* of their apply nodes. This means that for a feedforward network the
+parameters will be returned in the order of our layers.
 
 But let's imagine for a second that we are actually dealing with a far more
 complicated network, and we want to apply weight decay to the parameters of one

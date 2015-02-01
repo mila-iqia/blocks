@@ -84,12 +84,12 @@ class BaseSequenceGenerator(Initializable):
         The readout component of the sequence generator.
     transition : instance of :class:`AbstractAttentionTransition`
         The transition component of the sequence generator.
-    fork : :class:`Brick`
+    fork : :class:`.Brick`
         The brick to compute the transition's inputs from the feedback.
 
     Notes
     -----
-    See :class:`Initializable` for initialization parameters.
+    See :class:`.Initializable` for initialization parameters.
 
     """
     @lazy
@@ -374,7 +374,7 @@ class LinearReadout(Readout, Initializable):
 
     Notes
     -----
-    See :class:`Initializable` for initialization parameters.
+    See :class:`.Initializable` for initialization parameters.
 
     """
     @lazy
@@ -530,9 +530,9 @@ class AttentionTransition(AbstractAttentionTransition, Initializable):
 
     Parameters
     ----------
-    transition : :class:`Brick`
+    transition : :class:`.Brick`
         The recurrent transition.
-    attention : :class:`Brick`
+    attention : :class:`.Brick`
         The attention mechanism.
     attended_name : str
         The name of the attended context. If ``None``, the first context is
@@ -782,11 +782,11 @@ class SequenceGenerator(BaseSequenceGenerator):
     ----------
     readout : instance of :class:`AbstractReadout`
         The readout component for the sequence generator.
-    transition : instance of :class:`BaseRecurrent`
+    transition : instance of :class:`.BaseRecurrent`
         The recurrent transition to be used in the sequence generator.
         Will be combined with `attention`, if that one is given.
-    attention : :class:`Brick`
-        The attention mechanism to be added to `transition`. Can be
+    attention : :class:`.Brick`
+        The attention mechanism to be added to ``transition``. Can be
         ``None``, in which case no attention mechanism is used.
 
     Notes

@@ -224,7 +224,7 @@ class Recurrent(BaseRecurrent, Initializable):
 
     Notes
     -----
-    See :class:`Initializable` for initialization parameters.
+    See :class:`.Initializable` for initialization parameters.
 
     """
     @lazy
@@ -312,7 +312,7 @@ class GatedRecurrent(BaseRecurrent, Initializable):
 
     Notes
     -----
-    See :class:`Initializable` for initialization parameters.
+    See :class:`.Initializable` for initialization parameters.
 
     .. [CvMG14] Kyunghyun Cho, Bart van Merriënboer, Çağlar Gülçehre,
         Dzmitry Bahdanau, Fethi Bougares, Holger Schwenk, and Yoshua
@@ -455,7 +455,7 @@ class Bidirectional(Initializable):
 
     Notes
     -----
-    See :class:`Initializable` for initialization parameters.
+    See :class:`.Initializable` for initialization parameters.
 
     """
     has_bias = False

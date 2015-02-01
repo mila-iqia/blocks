@@ -32,9 +32,9 @@ bias vector with values drawn from a particular distribution.
     >>> y = linear.apply(x)
 
 So what happened here? We constructed a brick called
-:class:`~blocks.bricks.Linear` with a particular configuration: the input
+:class:`.Linear` with a particular configuration: the input
 dimension (20) and output dimension (10).  The moment we called
-:meth:`~blocks.bricks.Linear.apply`, the brick automatically constructed the
+:meth:`.Linear.apply`, the brick automatically constructed the
 `shared Theano variables`_ needed to store its parameters. In the lifecycle of
 a brick we refer to this as *allocation*.
 
@@ -43,8 +43,8 @@ a brick we refer to this as *allocation*.
     >>> linear.params[1].get_value() # doctest: +SKIP
     array([ 0.,  0.,  0.,  0.,  0.])
 
-By default, all our parameters are set to 0. To initialize them, simply call the
-:meth:`~blocks.bricks.Brick.initialize` method. This is the last step in the
+By default, all our parameters are set to 0. To initialize them, simply
+call the :meth:`.Brick.initialize` method. This is the last step in the
 brick lifecycle: *initialization*.
 
     >>> linear.initialize()
@@ -64,12 +64,13 @@ of Blocks, such as variable annotation.)
 Lazy initialization
 -------------------
 
-In the example above we configured the :class:`~blocks.bricks.Linear` brick
-during initialization. We specified input and output dimensions, and specified
-the way in which weight matrices should be initialized. But consider the
-following case, which is quite common: We want to take the output of one model,
-and feed it as an input to another model, but the output and input dimension
-don't match, so we will need to add a linear transformation in the middle.
+In the example above we configured the :class:`.Linear` brick during
+initialization. We specified input and output dimensions, and specified the
+way in which weight matrices should be initialized. But consider the
+following case, which is quite common: We want to take the output of one
+model, and feed it as an input to another model, but the output and input
+dimension don't match, so we will need to add a linear transformation in
+the middle.
 
 To support this use case, bricks allow for *lazy initialization*, which is
 turned on by default. This means that you can create a brick without configuring
@@ -128,12 +129,12 @@ sensible defaults for a particular use case.
     >>> mlp.children[0].input_dim
     16
 
-We can see that the :class:`~blocks.bricks.MLP` brick automatically constructed
-two child bricks to perform the linear transformations. When we applied the MLP
-to ``x``, it automatically configured the input and output dimensions of its
-children. Likewise, when we call :meth:`~blocks.bricks.Brick.initialize`, it
-automatically pushed the weight matrix and biases initialization configuration
-to its children.
+We can see that the :class:`.MLP` brick automatically constructed two child
+bricks to perform the linear transformations. When we applied the MLP to
+``x``, it automatically configured the input and output dimensions of its
+children. Likewise, when we call :meth:`.Brick.initialize`, it
+automatically pushed the weight matrix and biases initialization
+configuration to its children.
 
     >>> mlp.initialize()
     >>> mlp.children[1].params[0].get_value() # doctest: +SKIP
@@ -154,13 +155,12 @@ brick:
 
 When dealing with children, the life cycle actually becomes a bit more
 complicated. (The full life cycle is documented as part of the
-:class:`~blocks.bricks.Brick` class.) Before allocating or initializing
-parameters, the parent brick will call its
-:meth:`~blocks.bricks.Brick.push_allocation_config` and
-:meth:`~blocks.bricks.Brick.push_initialization_config` methods, which
-configure the children. If you want to override the child configuration, you
-will need to call these methods manually, after which you can override the child
-bricks' configuration.
+:class:`.Brick` class.) Before allocating or initializing parameters, the
+parent brick will call its :meth:`.Brick.push_allocation_config` and
+:meth:`.Brick.push_initialization_config` methods, which configure the
+children. If you want to override the child configuration, you will need to
+call these methods manually, after which you can override the child bricks'
+configuration.
 
     >>> mlp = MLP(activations=[Sigmoid(name='sigmoid_0'),
     ...           Sigmoid(name='sigmoid_1')], dims=[16, 8, 4],
@@ -175,4 +175,3 @@ bricks' configuration.
            [ 0.01,  0.01,  0.01,  0.01,  0.01,  0.01,  0.01,  0.01]])
 
 .. _machine translation models: http://arxiv.org/abs/1409.0473
-.. _here: :class:`blocks.bricks.Brick`

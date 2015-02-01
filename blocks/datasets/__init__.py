@@ -33,7 +33,7 @@ class Dataset(object):
         'targets')`` for MNIST (regardless of which data the data stream
         actually requests). Any implementation of a dataset should set this
         attribute on the class (or at least before calling ``super``).
-    default_iteration_scheme : :class:`IterationScheme`, optional
+    default_iteration_scheme : :class:`.IterationScheme`, optional
         The default iteration scheme that will be used by
         :meth:`get_default_stream` to create a data stream without needing
         to specify what iteration scheme to use.
@@ -393,7 +393,7 @@ class AbstractDataStream(object):
 
     Parameters
     ----------
-    iteration_scheme : :class:`IterationScheme`, optional
+    iteration_scheme : :class:`.IterationScheme`, optional
         The iteration scheme to use when retrieving data. Note that not all
         datasets support the same iteration schemes, some datasets require
         one, and others don't support any. In case when the data stream
@@ -403,7 +403,7 @@ class AbstractDataStream(object):
 
     Attributes
     ----------
-    iteration_scheme : :class:`IterationScheme`
+    iteration_scheme : :class:`.IterationScheme`
         The iteration scheme used to retrieve data. Can be ``None`` when
         not used.
     sources : tuple of strings
@@ -609,7 +609,7 @@ class CachedDataStream(DataStreamWrapper):
 
     Parameters
     ----------
-    iteration_scheme : :class:`IterationScheme`
+    iteration_scheme : :class:`.IterationScheme`
         Note that this iteration scheme must return batch sizes (integers),
         which must necessarily be smaller than the child data stream i.e.
         the batches returned must be smaller than the cache size.
@@ -658,7 +658,7 @@ class BatchDataStream(DataStreamWrapper):
     ----------
     data_stream : :class:`AbstractDataStream` instance
         The data stream to wrap.
-    iteration_scheme : :class:`BatchSizeScheme` instance
+    iteration_scheme : :class:`.BatchSizeScheme` instance
         The iteration scheme to use; should return integers representing
         the size of the batch to return.
     strict : bool, optional

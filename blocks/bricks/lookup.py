@@ -17,7 +17,7 @@ class LookupTable(Initializable):
 
     Notes
     -----
-    See :class:`Initializable` for initialization parameters.
+    See :class:`.Initializable` for initialization parameters.
 
     """
     has_bias = False

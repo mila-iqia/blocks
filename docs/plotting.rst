@@ -2,7 +2,7 @@ Live plotting
 =============
 
 Plots often give a clearer image of your training progress than textual logs.
-This is why Blocks has a :class:`~blocks.extensions.plot.Plot` extension which
+This is why Blocks has a :class:`.Plot` extension which
 allows you to plot the entries from the log that you are interested in.
 
 We use Bokeh_, an interactive visualization library, to perform the plotting.
@@ -27,9 +27,9 @@ using
 
    $ bokeh-server --ip 0.0.0.0
 
-Now that your plotting server is up and running, start your main loop and pass
-the :class:`~blocks.extensions.plot.Plot` extension. Consider this example of
-fitting the function :math:`f(x) = x^a` to :math:`f(x) = x^2`.
+Now that your plotting server is up and running, start your main loop and
+pass the :class:`.Plot` extension. Consider this example of fitting the
+function :math:`f(x) = x^a` to :math:`f(x) = x^2`.
 
 >>> import theano
 >>> a = theano.shared(3.)

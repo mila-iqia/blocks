@@ -191,7 +191,7 @@ class DatasetEvaluator(object):
 
         Parameters
         ----------
-        data_stream : instance of :class:`DataStream`
+        data_stream : instance of :class:`.DataStream`
             The data stream. Only the first epoch of data is used.
 
         Returns
