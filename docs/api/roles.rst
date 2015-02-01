@@ -1,8 +1,6 @@
 Variable roles
 ==============
 
-.. automodule:: blocks.roles
-
 .. autofunction:: add_role
 
 Roles
