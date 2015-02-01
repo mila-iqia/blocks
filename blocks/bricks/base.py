@@ -879,7 +879,9 @@ def application(*args, **kwargs):
         raise ValueError
     if args:
         application_function, = args
-        return Application(application_function)
+        application = Application(application_function)
+        update_wrapper(application, application_function)
+        return application
     else:
         def wrap_application(application_function):
             application = Application(application_function)
