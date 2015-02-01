@@ -97,7 +97,7 @@ class Selector(object):
 
     Parameters
     ----------
-    bricks : list of Bricks
+    bricks : list of :class:`.Brick`
         The bricks of the selection.
 
     """

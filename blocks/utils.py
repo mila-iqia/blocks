@@ -238,7 +238,7 @@ def is_graph_input(variable):
 
     Parameters
     ----------
-    variable : theano expression
+    variable : :class:`~tensor.TensorVariable`
 
     Returns
     -------
@@ -431,7 +431,7 @@ class SequenceIterator(six.Iterator):
 
     Parameters
     ----------
-    sequence : list or tuple
+    sequence : :obj:`list` or :obj:`tuple`
         The sequence to iterate over.
 
     """

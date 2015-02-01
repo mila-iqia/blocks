@@ -113,7 +113,7 @@ def read_mnist_images(filename, dtype=None):
 
     Returns
     -------
-    images : ndarray, shape (n_images, n_rows, n_cols)
+    images : :class:`~numpy.ndarray`, shape (n_images, n_rows, n_cols)
         An image array, with individual examples indexed along the
         first axis and the image dimensions along the second and
         third axis.
@@ -159,7 +159,7 @@ def read_mnist_labels(filename):
 
     Returns
     -------
-    labels : ndarray, shape (nlabels,)
+    labels : :class:`~numpy.ndarray`, shape (nlabels,)
         A one-dimensional unsigned byte array containing the
         labels as integers.
 

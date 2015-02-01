@@ -182,9 +182,10 @@ class Annotation(object):
     mean activation is attached as an auxiliary variable to the annotations
     of the input and output variables of this brick. Using the
     :class:`ComputationGraph` class (the
-    :meth:`ComputationGraph.get_variables` method in particular) we can
-    retrieve these Theano variables to pass on to the monitor, use as a
-    regularizer, etc.
+    :attr:`~ComputationGraph.variables`,
+    :attr:`~ComputationGraph.auxiliary_variables`, etc.  attributes in
+    particular) we can retrieve these Theano variables to pass on to the
+    monitor, use as a regularizer, etc.
 
     In most cases, annotations are added on a brick level (e.g. each brick
     will assign the weight norm of its weights as an auxiliary value) or on
