@@ -45,7 +45,7 @@ class ComputationGraph(object):
         The outputs of the computations graph (as passed to the
         constructor).
     auxiliary_variables : list of :class:`~tensor.TensorVariable`
-        All variables which have the :attr:`Variable.AUXILIARY` role.
+        All variables which have the :const:`.AUXILIARY` role.
     intermediary_variables : list of :class:`~tensor.TensorVariable`
         Any variable that is not part of :attr:`inputs` or :attr:`outputs`.
     variables : list of :class:`~tensor.TensorVariable`

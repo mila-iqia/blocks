@@ -59,6 +59,7 @@ NOT_SET = object()
 
 
 class ConfigurationError(Exception):
+    """Error raised when a configuration value is requested but not set."""
     pass
 
 

@@ -41,6 +41,8 @@ class Random(Brick):
 
     @theano_seed.setter
     def theano_seed(self, value):
+        if hasattr(self, '_theano_seed'):
+            raise AttributeError("seed already set")
         self._theano_seed = value
 
     @property
@@ -119,6 +121,8 @@ class Initializable(Brick):
 
     @seed.setter
     def seed(self, value):
+        if hasattr(self, '_seed'):
+            raise AttributeError("seed already set")
         self._seed = value
 
     @property
@@ -405,7 +409,7 @@ class Sequence(Brick):
 
     Parameters
     ----------
-    application_methods : list of application methods to apply
+    application_methods : list of :class:`.BoundApplication` to apply
 
     """
     def __init__(self, application_methods, **kwargs):

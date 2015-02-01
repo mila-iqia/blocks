@@ -202,7 +202,7 @@ def check_theano_variable(variable, n_dim, dtype_prefix):
     n_dim : int
         Expected number of dimensions or None. If None, no check is
         performed.
-    dtype : :str
+    dtype : str
         Expected dtype prefix or None. If None, no check is performed.
 
     """

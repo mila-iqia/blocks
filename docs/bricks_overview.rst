@@ -31,12 +31,11 @@ bias vector with values drawn from a particular distribution.
     ...                 biases_init=Constant(0.01))
     >>> y = linear.apply(x)
 
-So what happened here? We constructed a brick called
-:class:`.Linear` with a particular configuration: the input
-dimension (20) and output dimension (10).  The moment we called
-:meth:`.Linear.apply`, the brick automatically constructed the
-`shared Theano variables`_ needed to store its parameters. In the lifecycle of
-a brick we refer to this as *allocation*.
+So what happened here? We constructed a brick called :class:`.Linear` with a
+particular configuration: the input dimension (20) and output dimension (10).
+The moment we called :attr:`.Linear.apply`, the brick automatically constructed
+the `shared Theano variables`_ needed to store its parameters. In the lifecycle
+of a brick we refer to this as *allocation*.
 
     >>> linear.params
     [W, b]

@@ -285,11 +285,30 @@ texinfo_documents = [
 # If true, do not generate a @detailmenu in the "Top" node's menu.
 #texinfo_no_detailmenu = False
 
+import inspect
+from blocks.bricks.base import Application
 from sphinx.ext.autodoc import cut_lines
 
 def skip_abc(app, what, name, obj, skip, options):
     return skip or name.startswith('_abc')
 
+def fix_apply(app, what, name, obj, options, signature, return_annotation):
+    if isinstance(obj, Application):
+        args, varargs, keywords, defaults = inspect.getargspec(obj.application)
+        positional_args = args[1:] if not defaults else args[:-len(defaults)]
+        keyword_args = [] if not defaults else args[-len(defaults):]
+        signature = '(' + ', '.join(positional_args)
+        if defaults:
+            signature += ', '.join('{}={}'.format(arg, default) for arg, default
+                                   in zip(keyword_args, defaults))
+        if varargs:
+            signature += ', *' + varargs
+        if keywords:
+            signature += ', **' + keywords
+        signature += ')'
+    return signature, return_annotation
+
 def setup(app):
-    app.connect('autodoc-skip-member', skip_abc)
     app.connect('autodoc-process-docstring', cut_lines(2, what=['module']))
+    app.connect('autodoc-skip-member', skip_abc)
+    app.connect('autodoc-process-signature', fix_apply)
