@@ -165,47 +165,24 @@ class Feedforward(Brick):
     Many bricks have just one input and just one output (activations,
     :class:`Linear`, :class:`MLP`). To make such bricks interchangable
     in most contexts they should share an interface for configuring
-    their input and output dimensions. This brick provides such an
+    their input and output dimensions. This brick declares such an
     interface.
 
-    """
-    @abstractproperty
-    def input_dim():
-        """The input dimension of the brick."""
-        pass
-
-    @abstractproperty
-    def output_dim():
-        """The output dimension of the brick."""
-        pass
-
-
-def override_with_attribute(property_, attribute=None):
-    """Make a property behave like an attribute.
-
-    Parameters
+    Attributes
     ----------
-    property_ : property
-        The property to be overriden.
-    attribute : str, optional
-        The attribute to store the actual value. If ``None``,
-        the property's name prepended with an underscore is used.
+    input_dim : int
+        The input dimension of the brick.
+    output_dim : int
+        The output dimension of the brick.
 
     """
-    if not attribute:
-        attribute = "_" + property_.fget.__name__
-
-    def getter(self):
-        return getattr(self, attribute)
-
-    def setter(self, value):
-        setattr(self, attribute, value)
-
-    def deleter(self):
-        delattr(self, attribute)
-
-    overrider = property(getter, setter, deleter)
-    return overrider
+    def __getattr__(self, name):
+        message = ("'{}' object does not have an attribute '{}'"
+                   .format(self.__class__.__name__, name))
+        if name in ('input_dim', 'output_dim'):
+            message += (" (which is a part of 'Feedforward' interface it claims"
+                        " to support)")
+        raise AttributeError(message)
 
 
 class Linear(Initializable, Feedforward):
@@ -231,9 +208,6 @@ class Linear(Initializable, Feedforward):
     .. math:: f(\mathbf{x}) = \mathbf{W}\mathbf{x} + \mathbf{b}
 
     """
-    input_dim = override_with_attribute(Feedforward.input_dim)
-    output_dim = override_with_attribute(Feedforward.output_dim)
-
     @lazy
     def __init__(self, input_dim, output_dim, **kwargs):
         super(Linear, self).__init__(**kwargs)

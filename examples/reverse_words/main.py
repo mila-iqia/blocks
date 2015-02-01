@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Learm to reverse words of natural text."""
+"""Learn to reverse the words in a text."""
 import logging
 import argparse
 from examples.reverse_words import main

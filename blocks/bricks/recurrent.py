@@ -137,7 +137,7 @@ def recurrent(*args, **kwargs):
                 if (isinstance(value, Variable) and not
                         is_shared_variable(value)):
                     warnings.warn(
-                        'Your function uses a non-shared variable other then'
+                        'Your function uses a non-shared variable other than'
                         ' those given by scan explicitly. That can'
                         ' significantly slow down `tensor.grad` call.'
                         ' Did you forget to declare it in `contexts`?')

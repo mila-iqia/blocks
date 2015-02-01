@@ -78,7 +78,7 @@ def extract_parameter_values(bricks):
 
     Parameters
     ----------
-    bricks : Brick or Selector
+    bricks : Brick or list of bricks or Selector
         The top bricks.
 
     Returns
@@ -99,7 +99,7 @@ def inject_parameter_values(bricks, param_values):
 
     Parameters
     ----------
-    bricks : Brick or Selector
+    bricks : Brick or list of bricks or Selector
         The top bricks.
     param_values : dict of (parameter name, numpy array) pairs
         The parameter values.

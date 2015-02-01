@@ -4,7 +4,11 @@ from argparse import ArgumentParser
 from blocks.scripts import dump
 
 if __name__ == "__main__":
-    parser = ArgumentParser("Dumps your pickled main loop")
+    parser = ArgumentParser(
+        "Dumps your pickled main loop. Dumps are a cross-platform way of"
+        " sharing results of your experiments orthogonal to the standard"
+        " seriaziation approch. For more information, see documentation"
+        " of blocks/dump.py module.")
     parser.add_argument(
         "pickle_path", help="A path to a file with a pickled main loop")
     parser.add_argument(
