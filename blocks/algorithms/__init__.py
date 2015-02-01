@@ -209,7 +209,7 @@ class StepRule(object):
 
         Parameters
         ----------
-        param : Theano shared variable
+        param : :class:`~tensor.TensorSharedVariable`
             The parameter.
         grad_wr_param : :class:`~tensor.TensorVariable`
             The expression for the gradient of the cost with respect to
@@ -227,7 +227,7 @@ class StepRule(object):
 
         Returns
         -------
-            list of (Theano shared variable, Theano) expression tuples.
+        updates : :class:`~tensor.TensorSharedVariable` updates
 
         """
         return []

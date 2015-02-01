@@ -37,7 +37,7 @@ class Pylearn2Model(pylearn2.models.Model):
 
         Parameters
         ----------
-        brick : Brick
+        brick : :class:`.Brick`
             The brick to wrap.
 
         """

@@ -40,27 +40,27 @@ class BaseSequenceGenerator(Initializable):
 
     **Algorithm:**
 
-    0. The initial states are computed from the contexts. This includes
+    1. The initial states are computed from the contexts. This includes
        fake initial outputs given by the `initial_outputs` method of the
        readout, initial states and glimpses given by the `initial_state`
        method of the transition.
 
-    1. Given the contexts, the current state and the glimpses from the
+    2. Given the contexts, the current state and the glimpses from the
        previous step the attention mechanism hidden in the transition
        produces current step glimpses. This happens in the `take_look`
        method of the transition.
 
-    2. Using the contexts, the fed back output from the previous step, the
+    3. Using the contexts, the fed back output from the previous step, the
        current states and glimpses, the readout brick is used to generate
        the new output by calling its `readout` and `emit` methods.
 
-    3. The new output is fed back in the `feedback` method of the readout
+    4. The new output is fed back in the `feedback` method of the readout
        brick. This feedback, together with the contexts, the glimpses and
        the previous states is used to get the new states in the
        transition's `apply` method. Optionally the `fork` brick is used in
        between to compute the transition's inputs from the feedback.
 
-    4. Back to step 1 if desired sequence length is not yet reached.
+    5. Back to step 1 if desired sequence length is not yet reached.
 
     | A scheme of the algorithm described above follows.
 
@@ -135,7 +135,8 @@ class BaseSequenceGenerator(Initializable):
             The 3(2) dimensional tensor containing output sequences.
             The dimension 0 must stand for time, the dimension 1 for the
             position on the batch.
-        mask : The 0/1 matrix identifying fake outputs.
+        mask : :class:`~tensor.TensorVariable`
+            The binary matrix identifying fake outputs.
 
         Notes
         -----
@@ -543,7 +544,7 @@ class AttentionTransition(AbstractAttentionTransition, Initializable):
 
     Notes
     -----
-    See :class:`Initializable` for initialization parameters.
+    See :class:`.Initializable` for initialization parameters.
 
     Currently lazy-only.
 

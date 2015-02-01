@@ -74,15 +74,16 @@ class Initializable(Brick):
     ----------
     weights_init : object
         A `NdarrayInitialization` instance which will be used by to
-        initialize the weight matrix. Required by :meth:`initialize`.
+        initialize the weight matrix. Required by
+        :meth:`~.Brick.initialize`.
     biases_init : :obj:`object`, optional
         A `NdarrayInitialization` instance that will be used to initialize
-        the biases. Required by :meth:`initialize` when `use_bias` is
-        `True`. Only supported by bricks for which :attr:`has_biases` is
+        the biases. Required by :meth:`~.Brick.initialize` when `use_bias`
+        is `True`. Only supported by bricks for which :attr:`has_biases` is
         ``True``.
     use_bias : :obj:`bool`, optional
         Whether to use a bias. Defaults to `True`. Required by
-        :meth:`initialize`. Only supported by bricks for which
+        :meth:`~.Brick.initialize`. Only supported by bricks for which
         :attr:`has_biases` is ``True``.
     rng : :class:`numpy.random.RandomState`
 
@@ -158,9 +159,9 @@ class Linear(Initializable):
     Parameters
     ----------
     input_dim : int
-        The dimension of the input. Required by :meth:`allocate`.
+        The dimension of the input. Required by :meth:`~.Brick.allocate`.
     output_dim : int
-        The dimension of the output. Required by :meth:`allocate`.
+        The dimension of the output. Required by :meth:`~.Brick.allocate`.
 
     Notes
     -----
@@ -281,11 +282,12 @@ class LinearMaxout(Initializable):
     Parameters
     ----------
     input_dim : int
-        The dimension of the input. Required by :meth:`allocate`.
+        The dimension of the input. Required by :meth:`~.Brick.allocate`.
     output_dim : int
-        The dimension of the output. Required by :meth:`allocate`.
+        The dimension of the output. Required by :meth:`~.Brick.allocate`.
     num_pieces : int
-        The number of linear functions. Required by :meth:`allocate`.
+        The number of linear functions. Required by
+        :meth:`~.Brick.allocate`.
 
     Notes
     -----
@@ -441,7 +443,7 @@ class MLP(Sequence, Initializable):
         :meth:`__init__`.
     dims : list of ints
         A list of input dimensions, as well as the output dimension of the
-        last layer. Required for :meth:`allocate`.
+        last layer. Required for :meth:`~.Brick.allocate`.
 
     Notes
     -----

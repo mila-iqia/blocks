@@ -78,7 +78,7 @@ def extract_parameter_values(bricks):
 
     Parameters
     ----------
-    bricks : Brick or Selector
+    bricks : :class:`.Brick` or :class:`.Selector.
         The top bricks.
 
     Returns
@@ -99,9 +99,9 @@ def inject_parameter_values(bricks, param_values):
 
     Parameters
     ----------
-    bricks : Brick or Selector
+    bricks : :class:`.Brick` or :class:`.Selector.
         The top bricks.
-    param_values : dict of (parameter name, numpy array) pairs
+    param_values : dict of (parameter name, :class:`~numpy.ndarray`) pairs
         The parameter values.
 
     """

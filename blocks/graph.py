@@ -224,9 +224,9 @@ class Annotation(object):
         expression : :class:`~tensor.TensorVariable`
             The expression of the variable you want to add.
         roles : list of :class:`.VariableRole` instances, optional
-            The roles of this variable. The :const:`AUXILIARY`
+            The roles of this variable. The :const:`.AUXILIARY`
             role will automatically be added. Other options are
-            :const:`COST`, :const:`WEIGHTS`, etc.
+            :const:`.COST`, :const:`.WEIGHTS`, etc.
         name : str, optional
             The name of the expression; overrides the name of the variable
             if it already has one.

@@ -219,7 +219,7 @@ class Recurrent(BaseRecurrent, Initializable):
     ----------
     dim : int
         The dimension of the hidden state
-    activation : Brick
+    activation : :class:`.Brick`
         The brick to apply as activation.
 
     Notes
@@ -297,12 +297,12 @@ class GatedRecurrent(BaseRecurrent, Initializable):
 
     Parameters
     ----------
-    activation : Brick or None
-        The brick to apply as activation. If `None` an `Identity` brick is
-        used.
-    gated_activation : Brick or None
-        The brick to apply as activation for gates. If `None` a `Sigmoid`
-        brick is used.
+    activation : :class:`.Brick` or None
+        The brick to apply as activation. If ``None`` an
+        :class:`.bricks.Identity` brick is used.
+    gated_activation : :class:`.Brick` or None
+        The brick to apply as activation for gates. If ``None`` a
+        :class:`.Sigmoid` brick is used.
     dim : int
         The dimension of the hidden state.
     use_upgate_gate : bool
@@ -382,7 +382,7 @@ class GatedRecurrent(BaseRecurrent, Initializable):
         states : :class:`~tensor.TensorVariable`
             The 2 dimensional matrix of current states in the shape
             (batch_size, features). Required for `one_step` usage.
-        inputs : Theano matrix of floats
+        inputs : :class:`~tensor.TensorVariable`
             The 2 dimensional matrix of inputs in the shape (batch_size,
             features)
         update_inputs : :class:`~tensor.TensorVariable`
