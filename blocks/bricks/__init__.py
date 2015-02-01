@@ -150,7 +150,33 @@ class Initializable(Brick):
                     child.biases_init = self.biases_init
 
 
-class Linear(Initializable):
+class Feedforward(Brick):
+    """Declares an interface for bricks with one input and one output.
+
+    Many bricks have just one input and just one output (activations,
+    :class:`Linear`, :class:`MLP`). To make such bricks interchangable
+    in most contexts they should share an interface for configuring
+    their input and output dimensions. This brick declares such an
+    interface.
+
+    Attributes
+    ----------
+    input_dim : int
+        The input dimension of the brick.
+    output_dim : int
+        The output dimension of the brick.
+
+    """
+    def __getattr__(self, name):
+        message = ("'{}' object does not have an attribute '{}'"
+                   .format(self.__class__.__name__, name))
+        if name in ('input_dim', 'output_dim'):
+            message += (" (which is a part of 'Feedforward' interface it"
+                        " claims to support)")
+        raise AttributeError(message)
+
+
+class Linear(Initializable, Feedforward):
     r"""A linear transformation with optional bias.
 
     Linear brick which applies a linear (affine) transformation by
@@ -432,7 +458,7 @@ class Sequence(Brick):
         return output
 
 
-class MLP(Sequence, Initializable):
+class MLP(Sequence, Initializable, Feedforward):
     """A simple multi-layer perceptron.
 
     Parameters
@@ -477,6 +503,22 @@ class MLP(Sequence, Initializable):
             dims = [None] * (len(activations) + 1)
         self.dims = dims
         super(MLP, self).__init__(application_methods, **kwargs)
+
+    @property
+    def input_dim(self):
+        return self.dims[0]
+
+    @input_dim.setter
+    def input_dim(self, value):
+        self.dims[0] = value
+
+    @property
+    def output_dim(self):
+        return self.dims[-1]
+
+    @output_dim.setter
+    def output_dim(self, value):
+        self.dims[-1] = value
 
     def _push_allocation_config(self):
         if not len(self.dims) - 1 == len(self.linear_transformations):

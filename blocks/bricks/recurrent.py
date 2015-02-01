@@ -1,16 +1,18 @@
 # -*- coding: utf-8 -*-
 import copy
 import inspect
+import warnings
 from collections import OrderedDict
 from functools import wraps
 
 import theano
-from theano import tensor
+from theano import tensor, Variable
 
 from blocks.bricks import Initializable, Identity, Sigmoid
 from blocks.bricks.base import Application, application, Brick, lazy
 from blocks.initialization import NdarrayInitialization
-from blocks.utils import pack, shared_floatx_zeros, dict_union
+from blocks.utils import (pack, shared_floatx_zeros, dict_union,
+                          is_shared_variable)
 
 
 class BaseRecurrent(Brick):
@@ -103,11 +105,9 @@ def recurrent(*args, **kwargs):
             # Push everything to kwargs
             for arg, arg_name in zip(args, arg_names):
                 kwargs[arg_name] = arg
-            # Separate kwargs that aren't sequence, context or state variables
+            # Separate sequences, states and contexts
             scan_arguments = (application.sequences + application.states +
                               application.contexts)
-            rest_kwargs = {key: value for key, value in kwargs.items()
-                           if key not in scan_arguments}
 
             # Check what is given and what is not
             def only_given(arg_names):
@@ -129,6 +129,18 @@ def recurrent(*args, **kwargs):
                 # TODO Raise error if n_steps and batch_size not found?
                 n_steps = kwargs.pop('n_steps')
                 batch_size = kwargs.pop('batch_size')
+
+            # Handle the rest kwargs
+            rest_kwargs = {key: value for key, value in kwargs.items()
+                           if key not in scan_arguments}
+            for value in rest_kwargs.values():
+                if (isinstance(value, Variable) and not
+                        is_shared_variable(value)):
+                    warnings.warn(
+                        'Your function uses a non-shared variable other than'
+                        ' those given by scan explicitly. That can'
+                        ' significantly slow down `tensor.grad` call.'
+                        ' Did you forget to declare it in `contexts`?')
 
             # Ensure that all initial states are available.
             for state_name in application.states:

@@ -78,7 +78,7 @@ def extract_parameter_values(bricks):
 
     Parameters
     ----------
-    bricks : :class:`.Brick` or :class:`.Selector.
+    bricks : :class:`.Brick` or :class:`.Selector or list of :class:`Brick`
         The top bricks.
 
     Returns
@@ -89,7 +89,7 @@ def extract_parameter_values(bricks):
     if isinstance(bricks, Brick):
         bricks = Selector([bricks])
     if not isinstance(bricks, Selector):
-        raise ValueError
+        bricks = Selector(bricks)
     return OrderedDict([(name, variable.get_value(borrow=True))
                         for name, variable in bricks.get_params().items()])
 
@@ -99,7 +99,7 @@ def inject_parameter_values(bricks, param_values):
 
     Parameters
     ----------
-    bricks : :class:`.Brick` or :class:`.Selector.
+    bricks : :class:`.Brick` or :class:`.Selector or list of :class:`Brick`
         The top bricks.
     param_values : dict of (parameter name, :class:`~numpy.ndarray`) pairs
         The parameter values.
@@ -108,7 +108,7 @@ def inject_parameter_values(bricks, param_values):
     if isinstance(bricks, Brick):
         bricks = Selector([bricks])
     if not isinstance(bricks, Selector):
-        raise ValueError
+        bricks = Selector(bricks)
 
     for name, value in param_values.items():
         selected = bricks.select(name)
