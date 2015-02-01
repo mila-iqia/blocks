@@ -165,8 +165,9 @@ class ComputationGraph(object):
 
         Returns
         -------
-        ``True`` if the given variable depends on input variables,
-        ``False`` otherwise.
+        bool
+            ``True`` if the given variable depends on input variables,
+            ``False`` otherwise.
 
         """
         if variable not in self._has_inputs:

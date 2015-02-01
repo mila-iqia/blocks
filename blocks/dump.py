@@ -78,7 +78,7 @@ def extract_parameter_values(bricks):
 
     Parameters
     ----------
-    bricks : :class:`.Brick` or :class:`.Selector or list of :class:`Brick`
+    bricks : (list of) :class:`.Brick`, or :class:`.Selector`
         The top bricks.
 
     Returns
