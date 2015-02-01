@@ -89,7 +89,7 @@ def recurrent(*args, **kwargs):
 
             .. todo::
 
-                * Handle `updates` returned by the `theano.scan`
+                * Handle `updates` returned by the :func:`theano.scan`
                     routine.
                 * ``kwargs`` has a random order; check if this is a
                     problem.
@@ -205,13 +205,6 @@ def recurrent(*args, **kwargs):
 class Recurrent(BaseRecurrent, Initializable):
     """Simple recurrent layer with optional activation.
 
-    Parameters
-    ----------
-    dim : int
-        The dimension of the hidden state
-    activation : Brick
-        The brick to apply as activation.
-
     .. todo::
 
        Implement deep transitions (by using other bricks). Currently, this
@@ -222,9 +215,16 @@ class Recurrent(BaseRecurrent, Initializable):
        * Carrying over hidden state between batches
        * Return k last hidden states
 
+    Parameters
+    ----------
+    dim : int
+        The dimension of the hidden state
+    activation : :class:`.Brick`
+        The brick to apply as activation.
+
     Notes
     -----
-    See :class:`Initializable` for initialization parameters.
+    See :class:`.Initializable` for initialization parameters.
 
     """
     @lazy
@@ -261,11 +261,11 @@ class Recurrent(BaseRecurrent, Initializable):
 
         Parameters
         ----------
-        input_ : Theano variable
+        input_ : :class:`~tensor.TensorVariable`
             The 2 dimensional input, in the shape (batch, features).
-        state : Theano variable
+        state : :class:`~tensor.TensorVariable`
             The 2 dimensional state, in the shape (batch, features).
-        mask : Theano variable
+        mask : :class:`~tensor.TensorVariable`
             A 1D binary array in the shape (batch,) which is 1 if
             there is data available, 0 if not. Assumed to be 1-s
             only if not given.
@@ -292,17 +292,17 @@ class GatedRecurrent(BaseRecurrent, Initializable):
     u"""Gated recurrent neural network.
 
     Gated recurrent neural network (GRNN) as introduced in [CvMG14]_. Every
-    unit of a GRNN is equiped with update and reset gates that facilitate
+    unit of a GRNN is equipped with update and reset gates that facilitate
     better gradient propagation.
 
     Parameters
     ----------
-    activation : Brick or None
-        The brick to apply as activation. If `None` an `Identity` brick is
-        used.
-    gated_activation : Brick or None
-        The brick to apply as activation for gates. If `None` a `Sigmoid`
-        brick is used.
+    activation : :class:`.Brick` or None
+        The brick to apply as activation. If ``None`` an
+        :class:`.bricks.Identity` brick is used.
+    gated_activation : :class:`.Brick` or None
+        The brick to apply as activation for gates. If ``None`` a
+        :class:`.Sigmoid` brick is used.
     dim : int
         The dimension of the hidden state.
     use_upgate_gate : bool
@@ -312,7 +312,7 @@ class GatedRecurrent(BaseRecurrent, Initializable):
 
     Notes
     -----
-    See :class:`Initializable` for initialization parameters.
+    See :class:`.Initializable` for initialization parameters.
 
     .. [CvMG14] Kyunghyun Cho, Bart van Merriënboer, Çağlar Gülçehre,
         Dzmitry Bahdanau, Fethi Bougares, Holger Schwenk, and Yoshua
@@ -379,27 +379,27 @@ class GatedRecurrent(BaseRecurrent, Initializable):
 
         Parameters
         ----------
-        states : Theano variable
+        states : :class:`~tensor.TensorVariable`
             The 2 dimensional matrix of current states in the shape
             (batch_size, features). Required for `one_step` usage.
-        inputs : Theano matrix of floats
+        inputs : :class:`~tensor.TensorVariable`
             The 2 dimensional matrix of inputs in the shape (batch_size,
             features)
-        update_inputs : Theano variable
+        update_inputs : :class:`~tensor.TensorVariable`
             The 2 dimensional matrix of inputs to the update gates in the
             shape (batch_size, features). None when the update gates are
             not used.
-        reset_inputs : Theano variable
+        reset_inputs : :class:`~tensor.TensorVariable`
             The 2 dimensional matrix of inputs to the reset gates in the
             shape (batch_size, features). None when the reset gates are not
             used.
-        mask : Theano variable
+        mask : :class:`~tensor.TensorVariable`
             A 1D binary array in the shape (batch,) which is 1 if there is
             data available, 0 if not. Assumed to be 1-s only if not given.
 
         Returns
         -------
-        output : Theano variable
+        output : :class:`~tensor.TensorVariable`
             Next states of the network.
 
         """
@@ -455,7 +455,7 @@ class Bidirectional(Initializable):
 
     Notes
     -----
-    See :class:`Initializable` for initialization parameters.
+    See :class:`.Initializable` for initialization parameters.
 
     """
     has_bias = False

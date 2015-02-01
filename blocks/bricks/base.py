@@ -1,6 +1,7 @@
 import inspect
 from abc import ABCMeta
 from collections import OrderedDict, MutableSequence
+from functools import update_wrapper
 from types import MethodType
 
 import six
@@ -14,7 +15,13 @@ from blocks.utils import pack, repr_attrs, reraise_as, unpack
 
 
 def create_unbound_method(func, cls):
-    """See https://bitbucket.org/gutworth/six/pull-request/64."""
+    """Create an unbounded method from a function and a class.
+
+    Notes
+    -----
+    See https://bitbucket.org/gutworth/six/pull-request/64.
+
+    """
     if six.PY2:
         return MethodType(func, None, cls)
     if six.PY3:
@@ -68,20 +75,20 @@ class Application(object):
 
     Attributes
     ----------
-    application : function
+    application : callable
         The original (unbounded) application function defined on the
         :class:`Brick`.
-    delegate_function : function
+    delegate_function : callable
         A function that takes a :class:`Brick` instance as an argument and
-        returns a :class:`BoundedApplication` object to which attribute
+        returns a :class:`BoundApplication` object to which attribute
         requests should be routed.
-    properties : dict (str, function)
+    properties : :obj:`dict` (:obj:`str`, :obj:`callable`)
         A dictionary of property getters that should be called when an
         attribute with the given name is requested.
-    instances : dict (brick instance, bound application instance)
+    instances : :obj:`dict` (:class:`Brick`, :class:`BoundApplication`)
         A record of bound application instances created by the descriptor
         protocol.
-    call_stack : list of brick instances
+    call_stack : :obj:`list` of :class:`Brick`
         The call stack of brick application methods. Used to check whether
         the current call was made by a parent brick.
 
@@ -185,7 +192,7 @@ class Application(object):
         return f
 
     def __get__(self, instance, owner):
-        """Instantiate :class:`BoundedApplication` for each :class:`Brick`."""
+        """Instantiate :class:`BoundApplication` for each :class:`Brick`."""
         if instance is None:
             return self
         elif instance not in self.bound_applications:
@@ -194,14 +201,14 @@ class Application(object):
         return self.bound_applications[instance]
 
     def __getattr__(self, name):
-        # Mimic behaviour of properties
+        # Mimic behavior of properties
         if 'properties' in self.__dict__ and name in self.properties:
             return property(create_unbound_method(self.properties[name],
                                                   self.brick))
         raise AttributeError
 
     def __setattr__(self, name, value):
-        # Mimic behaviour of read-only properties
+        # Mimic behavior of read-only properties
         if 'properties' in self.__dict__ and name in self.properties:
             raise AttributeError("can't set attribute")
         super(Application, self).__setattr__(name, value)
@@ -427,13 +434,13 @@ class Brick(Annotation):
         ``True`` by default. When bricks are lazy, not all configuration
         needs to be provided to the constructor, allowing it to be set in
         another way after construction. Many parts of the library rely on
-        this behaviour. However, it does require a separate call to
+        this behavior. However, it does require a separate call to
         :meth:`initialize`. If set to ``False`` on the other hand, bricks
         will be ready to run after construction.
     print_shapes : bool
         ``False`` by default. If ``True`` it logs the shapes of all the
         input and output variables, which can be useful for debugging.
-    params : list of Theano shared variables and ``None``
+    params : list of :class:`~tensor.TensorSharedVariable` and ``None``
         After calling the :meth:`allocate` method this attribute will be
         populated with the shared variables storing this brick's
         parameters. Allows for ``None`` so that parameters can always be
@@ -471,7 +478,7 @@ class Brick(Annotation):
 
     A brick can have any number of methods which apply the brick on Theano
     variables. These methods should be decorated with the
-    :meth:`apply_method` decorator.
+    :func:`application` decorator.
 
     If a brick has children, they must be listed in the :attr:`children`
     attribute. Moreover, if the brick wants to control the configuration of
@@ -714,7 +721,7 @@ class Brick(Annotation):
         Parameters
         ----------
         names : list of str
-            The dictinonary of variable names.
+            The dictionary of variable names.
 
         Returns
         -------
@@ -795,7 +802,7 @@ class ApplicationCall(Annotation):
     application method and can be accessed by specifying an
     application_call argument.
 
-    Also see :class:`Annotation`.
+    Also see :class:`.Annotation`.
 
     Parameters
     ----------
@@ -842,7 +849,7 @@ def application(*args, **kwargs):
     \*args, optional
         The application method to wrap.
     \*\*kwargs, optional
-        See :meth:`signature`
+        Attributes to attach to this application.
 
     Notes
     -----
@@ -872,10 +879,13 @@ def application(*args, **kwargs):
         raise ValueError
     if args:
         application_function, = args
-        return Application(application_function)
+        application = Application(application_function)
+        update_wrapper(application, application_function)
+        return application
     else:
         def wrap_application(application_function):
             application = Application(application_function)
+            update_wrapper(application, application_function)
             for key, value in kwargs.items():
                 setattr(application, key, value)
             return application

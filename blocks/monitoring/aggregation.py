@@ -14,18 +14,17 @@ logger = logging.getLogger(__name__)
 class AggregationScheme(object):
     """Specify how incrementally evaluate a Theano variable on a dataset.
 
-    An AggregationScheme allocates :class:`VariableAggregator`s
-    that can incrementally compute the value of a Theano variable on a
-    full datset by aggregating partial results computed on multiple
-    batches.
+    An AggregationScheme allocates :class:`Aggregator`s that can
+    incrementally compute the value of a Theano variable on a full dataset
+    by aggregating partial results computed on multiple batches.
 
     The AggregationScheme should be attached via the tag
-    `aggregation_scheme` to a Theano variable which computes the desired
+    ``aggregation_scheme`` to a Theano variable which computes the desired
     value on a single batch.
 
     Parameters
     ----------
-    expression: Theano variable
+    expression: :class:`~tensor.TensorVariable`
         expression that computes the desired value on a single batch.
 
     """
@@ -49,7 +48,7 @@ class Aggregator(object):
     * monitor a penalty
 
     The Aggregator maintains a set of Theano sharer values called
-    accumulators and specifies how they shoud be initialized, and
+    accumulators and specifies how they should be initialized, and
     updated with incremental calculations. Finally, it
     provides a Theano expression that reads the accumulators
     and computes the final value.
@@ -65,7 +64,7 @@ class Aggregator(object):
     accumulation_updates : list of Theano updates
         Updates that specify how a new batch of data gets processed
         by this Aggregator. *Can refer to model inputs.*
-    readout_expression : Theano variable
+    readout_expression : :class:`~tensor.TensorVariable`
         Theano variable that computes the final value based on accumulated
         partial results. *readout_expression must only consist of shared
         variables and constants.*
@@ -93,9 +92,9 @@ class Mean(AggregationScheme):
 
     Parameters
     ----------
-    numerator : Theano variable
+    numerator : :class:`~tensor.TensorVariable`
         Theano expression for the numerator e.g. the likelihood
-    denominator : Theano variable
+    denominator : :class:`~tensor.TensorVariable`
         Theano expression for the denominator e.g. the batch size
 
     """

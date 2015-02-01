@@ -41,9 +41,9 @@ class VariableFilter(object):
 
     Parameters
     ----------
-    roles : list of :class:`VariableRole` instances, optional
+    roles : list of :class:`.VariableRole` instances, optional
         Matches any variable which has one of the roles given.
-    bricks : list of :class:`Brick` classes or instances, optional
+    bricks : list of :class:`.Brick` classes or instances, optional
         Matches any variable whose brick is either one of the given
         bricks, or whose brick is of given classes.
     each_role : bool, optional
@@ -53,7 +53,7 @@ class VariableFilter(object):
     name : str, optional
         A regular expression for the variable name. The Blocks name (i.e.
         `x.tag.name`) is used.
-    application : :class:`Application` instance
+    application : :class:`.Application` instance
         Matches a variable that was produced by the application given.
 
     Notes
@@ -63,7 +63,7 @@ class VariableFilter(object):
     were created in the process of applying a brick will be filtered out.
 
     Note that technically speaking, bricks are able to have non-shared
-    variables as parameters. For example, we can use the tranpose of
+    variables as parameters. For example, we can use the transpose of
     another weight matrix as the parameter of a particular brick. This
     means that in some unusual cases, filtering by the :const:`PARAMETER`
     role alone will not be enough to retrieve all trainable parameters in
@@ -99,7 +99,7 @@ class VariableFilter(object):
 
         Parameters
         ----------
-        variables : list of Theano variables
+        variables : list of :class:`~tensor.TensorVariable`
 
         """
         if self.roles:

@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 class Path(object):
     """Encapsulates a path in a hierarchy of bricks.
 
-    Currently the only allowed elements of pathes are names of the bricks
+    Currently the only allowed elements of paths are names of the bricks
     and names of parameters. The latter can only be put in the end of the
     path. It is planned to support regular expressions in some way later.
 
@@ -63,14 +63,14 @@ class Path(object):
     def parse(string):
         """Constructs a path from its string representation.
 
+        .. todo::
+
+            More error checking.
+
         Parameters
         ----------
         string : str
             String representation of the path.
-
-        .. todo::
-
-            More error checking.
 
         """
         elements = Path.separator_re.split(string)[1:]
@@ -97,7 +97,7 @@ class Selector(object):
 
     Parameters
     ----------
-    bricks : list of Bricks
+    bricks : list of :class:`.Brick`
         The bricks of the selection.
 
     """
@@ -109,24 +109,24 @@ class Selector(object):
     def select(self, path):
         """Select a subset of current selection matching the path given.
 
-        Parameters
-        ----------
-        path : :class:`Path` or str
-            The path for the desired selection. If a string is given
-            it is parsed into a path.
-
         .. warning::
 
             Current implementation is very inefficient (theoretical
             complexity is :math:`O(n^3)`, where :math:`n` is the number
             of bricks in the hierarchy). It can be sped up easily.
 
+        Parameters
+        ----------
+        path : :class:`Path` or str
+            The path for the desired selection. If a string is given
+            it is parsed into a path.
+
         Returns
         -------
         Depending on the path given, one of the following:
 
-        * A :class:`Selector` with desired bricks.
-        * A list of shared Theano variables.
+        * :class:`Selector` with desired bricks.
+        * list of :class:`~tensor.SharedTensorVariable`.
 
         """
         if isinstance(path, six.string_types):

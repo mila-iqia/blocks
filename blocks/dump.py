@@ -78,7 +78,7 @@ def extract_parameter_values(bricks):
 
     Parameters
     ----------
-    bricks : Brick or Selector
+    bricks : :class:`.Brick` or :class:`.Selector.
         The top bricks.
 
     Returns
@@ -99,9 +99,9 @@ def inject_parameter_values(bricks, param_values):
 
     Parameters
     ----------
-    bricks : Brick or Selector
+    bricks : :class:`.Brick` or :class:`.Selector.
         The top bricks.
-    param_values : dict of (parameter name, numpy array) pairs
+    param_values : dict of (parameter name, :class:`~numpy.ndarray`) pairs
         The parameter values.
 
     """
@@ -134,7 +134,7 @@ class MainLoopDumpManager(object):
 
     This class provides saving and loading logic that circumvents
     serialization of the most problematic parts: the model (which is
-    typically a brick hierarchy) and the training algorihm (which
+    typically a brick hierarchy) and the training algorithm (which
     typically has Theano functions as attributes). The on-disk
     representation used is a folder with a few files containing
     model parameters, log and state of the data iteration.

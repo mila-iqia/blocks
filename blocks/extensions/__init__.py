@@ -12,7 +12,7 @@ class TrainingExtension(object):
     An extension is a set of callbacks sharing a joint context that are
     invoked at certain stages of the training procedure. This callbacks
     typically add a certain functionality to the training procedure,
-    e.g. running validation on auxiliarry datasets or early stopping.
+    e.g. running validation on auxiliary datasets or early stopping.
 
     Parameters
     ----------
@@ -24,7 +24,7 @@ class TrainingExtension(object):
 
     Attributes
     ----------
-    main_loop : :class:`MainLoop`
+    main_loop : :class:`.MainLoop`
         The main loop to which the extension belongs.
     name : str
         The name of the extension.
@@ -221,14 +221,14 @@ class SimpleExtension(TrainingExtension):
 
     @abstractmethod
     def do(self, which_callback, *args):
-        """Does the job of the training extension.
+        r"""Does the job of the training extension.
 
         Parameters
         ----------
         which_callback : str
             The name of the callback in the context of which :meth:`do` is
             run.
-        *args : tuple
+        \*args : tuple
             The arguments from the main loop concatenated with additional
             arguments from user.
 
@@ -333,7 +333,7 @@ class Timing(TrainingExtension):
     Parameters
     ----------
     clock_function : callable, optional
-        Return the current time. By default `time.time` ised,
+        Return the current time. By default `time.time` is used,
         which means that user time is tracked.
 
     Notes

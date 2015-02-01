@@ -20,7 +20,7 @@ class SequenceContentAttention(Initializable):
 
     This is the attention mechanism used in [BCB]_. The idea in a nutshell:
 
-    1. The states and the sequence are transformed indepently,
+    1. The states and the sequence are transformed independently,
 
     2. The transformed states are summed with every transformed sequence
        element to obtain *match vectors*,
@@ -36,7 +36,7 @@ class SequenceContentAttention(Initializable):
 
     This linear combinations from 5 and the attention weights from 4 form
     the set of glimpses produced by this attention mechanism. The former
-    will be refered to as *glimpses* in method documentation.
+    will be referred to as *glimpses* in method documentation.
 
     Parameters
     ----------
@@ -46,19 +46,19 @@ class SequenceContentAttention(Initializable):
         The dimension of the sequence elements.
     match_dim : int
         The dimension of the match vector.
-    state_transformer : :class:`Brick`
+    state_transformer : :class:`.Brick`
         A prototype for state transformations. If ``None``, the default
-        transformation from :class:`Parallel` is used.
-    sequence_transformer : :class:`Brick`
+        transformation from :class:`.Parallel` is used.
+    sequence_transformer : :class:`.Brick`
         The transformation to be applied to the sequence. If ``None`` an
         affine transformation is used.
-    energy_computer : :class:`Brick`
+    energy_computer : :class:`.Brick`
         Computes energy from the match vector. If ``None``, an affine
         transformations is used.
 
     Notes
     -----
-    See :class:`Initializable` for initialization parameters.
+    See :class:`.Initializable` for initialization parameters.
 
     .. [BCB] Dzmitry Bahdanau, Kyunghyun Cho and Yoshua Bengio. Neural
        Machine Translation by Jointly Learning to Align and Translate.
@@ -105,12 +105,12 @@ class SequenceContentAttention(Initializable):
 
         Parameters
         ----------
-        sequence : Theano variable
+        sequence : :class:`~tensor.TensorVariable`
             The sequence, time is the 1-st dimension.
-        preprocessed_sequence : Theano variable
+        preprocessed_sequence : :class:`~tensor.TensorVariable`
             The preprocessed sequence. If ``None``, is computed by calling
             :meth:`preprocess`.
-        mask : Theano variable
+        mask : :class:`~tensor.TensorVariable`
             A 0/1 mask specifying available data. 0 means that the
             corresponding sequence element is fake.
         \*\*states
@@ -162,7 +162,7 @@ class SequenceContentAttention(Initializable):
 
         Parameters
         ----------
-        sequence : Theano variable
+        sequence : :class:`~tensor.TensorVariable`
             The sequence, time is the 1-st dimension.
 
         """

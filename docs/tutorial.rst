@@ -122,18 +122,18 @@ Where we set :math:`\lambda_1 = \lambda_2 = 0.005`. And that's it! We now have
 the final objective function we want to optimize.
 
 But creating a simple MLP this way is rather cumbersome. In practice, we would
-have used the :class:`~blocks.bricks.MLP` class instead.
+have used the :class:`.MLP` class instead.
 
 >>> from blocks.bricks import MLP
 >>> mlp = MLP(activations=[Rectifier(), Softmax()], dims=[784, 100, 10]).apply(x)
 
 Initializing the parameters
 ---------------------------
-When we constructed the :class:`Linear` bricks to build our model, they
-automatically initialized Theano shared variables to store their parameters in.
-All of these parameters were set to 0. Before we start training our network, we
-will want to initialize these parameters by sampling them from a particular
-probability distribution. Bricks can do this for you.
+When we constructed the :class:`.Linear` bricks to build our
+model, they automatically initialized Theano shared variables to store their
+parameters in.  All of these parameters were set to 0. Before we start training
+our network, we will want to initialize these parameters by sampling them from
+a particular probability distribution. Bricks can do this for you.
 
 >>> from blocks.initialization import IsotropicGaussian, Constant
 >>> input_to_hidden.weights_init = hidden_to_output.weights_init = IsotropicGaussian(0.01)
@@ -184,13 +184,13 @@ separate validation. Let's create a new data stream for that.
 
 In order to monitor our performance on this data stream during training, we need
 to use one of Blocks' extensions. In particular, we need to use the
-:class:`DataStreamMonitoring` extension.
+:class:`.DataStreamMonitoring` extension.
 
 >>> from blocks.extensions.monitoring import DataStreamMonitoring
 >>> monitor = DataStreamMonitoring(
 ...     expressions=[cost], data_stream=data_stream_test, prefix="test")
 
-We can use the :class:`~blocks.main_loop.MainLoop` to combine all the different
+We can use the :class:`.MainLoop` to combine all the different
 bits and pieces now. We use two more extensions to make our training stop after
 a single epoch and to make sure that our progress is printed.
 

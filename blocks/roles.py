@@ -3,9 +3,9 @@ def add_role(var, role):
 
     Parameters
     ----------
-    var : Theano variable
+    var : :class:`~tensor.TensorVariable`
         The variable to assign the new role to.
-    role : :class:`VariableRole` instance
+    role : :class:`.VariableRole` instance
 
     Notes
     -----
@@ -32,47 +32,55 @@ def add_role(var, role):
 
 
 class VariableRole(object):
-    def __str__(self):
+    """Base class for all variable roles."""
+    def __repr__(self):
         return self.__class__.__name__[:-4].upper()
 
 
 class InputRole(VariableRole):
     pass
 
+#: The input of a :class:`.Brick`
 INPUT = InputRole()
 
 
 class OutputRole(VariableRole):
     pass
 
+#: The output of a :class:`.Brick`
 OUTPUT = OutputRole
 
 
 class CostRole(VariableRole):
     pass
 
+#: A scalar cost that can be used to train or regularize
 COST = CostRole()
 
 
 class ParameterRole(VariableRole):
     pass
 
+#: A parameter of the model
 PARAMETER = ParameterRole()
 
 
 class AuxiliaryRole(VariableRole):
     pass
 
+#: Variables added to the graph as annotations
 AUXILIARY = AuxiliaryRole()
 
 
 class WeightsRole(ParameterRole):
     pass
 
+#: The weight matrices of linear transformations
 WEIGHTS = WeightsRole()
 
 
 class BiasesRole(ParameterRole):
     pass
 
+#: Biases of linear transformations
 BIASES = BiasesRole()
