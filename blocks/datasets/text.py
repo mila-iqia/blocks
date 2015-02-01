@@ -209,8 +209,8 @@ class NGramStream(CachedDataStream):
 
     Notes
     -----
-    This class inherits from :class:`.CachedDataStream` because it makes use
-    of a cache to store the sentences from the wrapped data stream in.
+    This class inherits from :class:`.CachedDataStream` because it makes
+    use of a cache to store the sentences from the wrapped data stream in.
 
     """
     def __init__(self, ngram_order, data_stream, target_source='targets',
