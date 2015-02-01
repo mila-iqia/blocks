@@ -50,7 +50,7 @@ extensions = [
 intersphinx_mapping = {
     'theano': ('http://theano.readthedocs.org/en/latest/', None),
     'numpy': ('http://docs.scipy.org/doc/numpy/', None),
-    'python': ('http://docs.python.org/3.2', None)
+    'python': ('http://docs.python.org/3.4', None)
 }
 
 graphviz_dot_args = ['-Gbgcolor=#fcfcfc']  # To match the RTD theme
