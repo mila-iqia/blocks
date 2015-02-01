@@ -23,11 +23,11 @@ class DataStreamMonitoring(SimpleExtension):
 
     Parameters
     ----------
-    expressions : list of Theano variables
+    expressions : list of :class:`~tensor.TensorVariable`
         The expressions to monitor. The variable names are used as
         expression names.
-    data_stream : instance of :class:`DataStream`
-        The data stream to monitor on. A data epoch is requsted
+    data_stream : instance of :class:`.DataStream`
+        The data stream to monitor on. A data epoch is requested
         each time monitoring is done.
     prefix : str, optional
         A prefix to add to expression names when adding records to the
@@ -66,7 +66,7 @@ class TrainingDataMonitoring(SimpleExtension):
 
     Parameters
     ----------
-    expressions : list of Theano variables
+    expressions : list of :class:`~tensor.TensorVariable`
         The expressions to monitor. The variable names are used as
         expression names.
     prefix : str, optional
@@ -79,7 +79,7 @@ class TrainingDataMonitoring(SimpleExtension):
     update.
 
     Requires the training algorithm to be an instance of
-    :class:`DifferentiableCostMinimizer`.
+    :class:`.DifferentiableCostMinimizer`.
 
     """
     def __init__(self, expressions, prefix=None, **kwargs):

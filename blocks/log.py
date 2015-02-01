@@ -146,7 +146,7 @@ class AbstractTrainingLog(object):
     def _add_record(self, time, key, value):
         """Adds a record to the log.
 
-        The implementation method to be overriden.
+        The implementation method to be overridden.
 
         """
         pass
@@ -168,7 +168,7 @@ class AbstractTrainingLog(object):
     def _fetch_record(self, time, key):
         """Fetches a record from the log.
 
-        The implementation method to be overriden.
+        The implementation method to be overridden.
 
         """
         pass

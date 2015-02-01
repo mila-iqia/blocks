@@ -37,7 +37,7 @@ class Pylearn2Model(pylearn2.models.Model):
 
         Parameters
         ----------
-        brick : Brick
+        brick : :class:`.Brick`
             The brick to wrap.
 
         """
@@ -73,7 +73,7 @@ class Pylearn2Cost(pylearn2.costs.cost.Cost):
 
     Parameters
     ----------
-    cost : Theano variable
+    cost : :class:`~tensor.TensorVariable`
         The Theano variable corresponding to the end of the cost
         computation graph.
 
@@ -132,7 +132,7 @@ class Pylearn2LearningRule(pylearn2.training_algorithms
     ----------
     learning_rule : :class:`LearningRule`
         A PyLearn2 learning rule to wrap.
-    monitor_values : dict of (name, Theano variable) pairs
+    monitor_values : dict of (name, :class:`~tensor.TensorVariable`) pairs
         The values to monitor and their names.
     updates : OrderedDict
         Custom updates to perform when computing gradients.
@@ -161,7 +161,7 @@ class Pylearn2LearningRule(pylearn2.training_algorithms
         ----------
         name : str
             The name of the value to be monitored.
-        value : Theano variable
+        value : :class:`~tensor.TensorVariable`
             The value to be monitored.
 
         """
@@ -216,15 +216,15 @@ class DefaultExtension(pylearn2.train_extensions.TrainExtension):
     """This extension helps Pylearn2LearningRule do its job.
 
     The job of this extensions is to help the Pylearn2LearningRule in its
-    monitoring duties. Due to impossibility of reseting the accumulators of
-    monitored values, the gradient computation function simply adds values
-    from new batches to the accumulators. At the end of each epoch the
-    accumulator's value from the previous epoch should be subtracted and
-    the difference should be divided over the number of batches to get an
-    average for the last epoch. This is done in the `on_monitor` method.
+    monitoring duties. Due to impossibility of resetting the accumulators
+    of monitored values, the gradient computation function simply adds
+    values from new batches to the accumulators. At the end of each epoch
+    the accumulator's value from the previous epoch should be subtracted
+    and the difference should be divided over the number of batches to get
+    an average for the last epoch. This is done in the `on_monitor` method.
 
     """
-    def setup(self, model, dataset, algoritm):
+    def setup(self, model, dataset, algorithm):
         self._last_batches_seen = model.monitor.get_batches_seen()
         self._last_values = dict()
 
@@ -282,7 +282,7 @@ class Pylearn2Train(pylearn2.train.Train):
             *args, **kwargs)
 
     def setup(self):
-        """Make monitor persistency the default behaviour."""
+        """Make monitor persistency the default behavior."""
         if hasattr(self.model, 'monitor'):
             # Cheat on monitor._sanity_check
             # TODO: raise a discussion about it

@@ -5,6 +5,20 @@ The data pipeline is an important part of training neural networks. Blocks
 provides an abstraction to datasets which is complicated at first sight, but
 can be very powerful.
 
+.. digraph:: datasets
+   :caption: A simplified overview of the interactions between the different parts of the data-handling classes in Blocks. Dashed lines are optional.
+
+   Dataset -> DataStream [label=" Argument to"];
+   DataStream -> Dataset [label=" Gets data from"];
+   DataStream -> DataIterator [label=" Returns"];
+   IterationScheme -> DataStream [style=dashed, label=" Argument to"];
+   DataStream -> IterationScheme [style=dashed, label=" Gets request iterator"];
+   IterationScheme -> RequestIterator [label=" Returns"];
+   RequestIterator -> DataIterator [style=dashed, label=" Argument to"];
+   DataIterator -> DataStream [label=" Gets data from"];
+   DataStream -> DataStream [style=dashed, label=" Gets data from (wrapper)"];
+   { rank=same; RequestIterator, DataIterator }
+
 Datasets
   Datasets provide an interface to the data we are trying to acces. This data
   is usually stored on disk, but can also be created on the fly (e.g. drawn
@@ -12,10 +26,9 @@ Datasets
   largely *stateless*. Multiple data streams can be iterating over the same
   dataset simultaneously, so the dataset couldn't have a single state to store
   e.g. its location in a file. Instead, the dataset provides a set of methods
-  (:meth:`~blocks.datasets.Dataset.open`,
-  :meth:`~blocks.datasets.Dataset.close`,
-  :meth:`~blocks.datasets.Dataset.get_data`, etc.) that interact with a
-  particular state, which is managed by a data stream.
+  (:meth:`~.datasets.Dataset.open`, :meth:`~.datasets.Dataset.close`,
+  :meth:`~.datasets.Dataset.get_data`, etc.) that interact with a particular
+  state, which is managed by a data stream.
 
 Data stream
   A data stream uses the interface of a dataset to e.g. iterate over the data.
@@ -49,16 +62,3 @@ Data iterator
   uses a request iterator and returns data at each step (requesting it from the
   data stream). A single iteration over a data iterator represents a single
   epoch.
-
-.. digraph:: datasets
-   :caption: A simplified overview of the interactions between the different parts of the data-handling classes in Blocks.
-
-   Dataset -> DataStream [label=" Argument to"];
-   DataStream -> Dataset [label=" Gets data from"];
-   DataStream -> DataIterator [label=" Returns"];
-   IterationScheme -> DataStream [label=" Argument to"];
-   DataStream -> IterationScheme [label=" Gets request iterator"];
-   IterationScheme -> RequestIterator [label=" Returns"];
-   RequestIterator -> DataIterator [label=" Argument to"];
-   DataIterator -> DataStream [label=" Gets data from"];
-   DataStream -> DataStream [label=" Gets data from (wrapper)"];

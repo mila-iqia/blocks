@@ -193,14 +193,14 @@ class NGramStream(CachedDataStream):
     (e.g. bigrams, trigrams, etc.) are extracted and returned. It also
     creates a ``targets`` data source. For each example, the target is the
     word immediately following that n-gram. It is normally used for
-    language modelling, where we try to predict the next word from the
+    language modeling, where we try to predict the next word from the
     previous n words.
 
     Parameters
     ----------
     ngram_order : int
         The order of the n-grams to output e.g. 3 for trigrams.
-    data_stream : :class:`DataStream` instance
+    data_stream : :class:`.DataStream` instance
         The data stream providing sentences. Each example is assumed to be
         a list of integers.
     target_source : str, optional
@@ -209,8 +209,8 @@ class NGramStream(CachedDataStream):
 
     Notes
     -----
-    This class inherits from :class:`CachedDataStream` because it makes use
-    of a cache to store the sentences from the wrapped data stream in.
+    This class inherits from :class:`.CachedDataStream` because it makes
+    use of a cache to store the sentences from the wrapped data stream in.
 
     """
     def __init__(self, ngram_order, data_stream, target_source='targets',

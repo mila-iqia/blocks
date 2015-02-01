@@ -53,37 +53,37 @@ class DifferentiableCostMinimizer(TrainingAlgorithm):
 
     Parameters
     ----------
-    cost : Theano variable
+    cost : :class:`~tensor.TensorVariable`
         The objective to be minimized.
-    params : list of Theano shared variables, optional
+    params : list of :class:`~tensor.TensorSharedVariable`, optional
         The parameters to be tuned. If ``None``, all shared variables of
         `cost` computation graph will be considered parameters.
 
     Attributes
     ----------
-    updates : list of (shared variable, Theano expression) tuples
+    updates : list of :class:`~tensor.TensorSharedVariable` updates
         Updates to be done for every batch. It is required that the
         updates are done using the old values of optimized parameters.
-    cost : Theano variable
+    cost : :class:`~tensor.TensorVariable`
         The objective to be minimized.
-    params : list of Theano shared variables
+    params : list of :class:`~tensor.TensorSharedVariable`
         The parameters to be tuned.
 
     Notes
     -----
-        Changing `updates` attribute or calling `add_updates` after
-        the `initialize` method is called will have no effect.
+    Changing `updates` attribute or calling `add_updates` after
+    the `initialize` method is called will have no effect.
 
     .. todo::
 
-        Some shared variables are not parameters (e.g. those created by
-        random streams).
+       Some shared variables are not parameters (e.g. those created by
+       random streams).
 
     .. todo::
 
-        Due to a rather premature status of the :class:`ComputationGraph`
-        class the parameter used only inside scans are not fetched
-        currently.
+       Due to a rather premature status of the :class:`ComputationGraph`
+       class the parameter used only inside scans are not fetched
+       currently.
 
     """
     def __init__(self, cost, params=None):
@@ -99,7 +99,8 @@ class DifferentiableCostMinimizer(TrainingAlgorithm):
 
         Returns
         -------
-            list of Theano variables
+        inputs : list of :class:`~tensor.TensorVariable`
+            Inputs to this graph.
 
         """
         return self._cost_computation_graph.inputs
@@ -119,7 +120,7 @@ class DifferentiableCostMinimizer(TrainingAlgorithm):
 
         Parameters
         ----------
-        updates : list of tuples or :class:`OrderedDict`
+        updates : list of tuples or :class:`~collections.OrderedDict`
             The updates to add.
 
         """
@@ -145,17 +146,17 @@ class GradientDescent(DifferentiableCostMinimizer):
     Parameters
     ----------
     step_rule : instance of :class:`StepRule`, optional
-        An object incapsulating most of the algorithm's logic. Its
-        `compute_step` method is called to get a Theano expression
-        for the actual step to take for each parameter. Note, that
-        the step rule might have a state, e.g. to remember a weighed
-        sum of gradients from previous steps like it is done in
-        gradient descent with momentum. If ``None``, an instance of
-        :class:`SteepestDescent` is created.
+        An object encapsulating most of the algorithm's logic. Its
+        `compute_step` method is called to get a Theano expression for the
+        actual step to take for each parameter. Note, that the step rule
+        might have a state, e.g. to remember a weighted sum of gradients
+        from previous steps like it is done in gradient descent with
+        momentum. If ``None``, an instance of :class:`SteepestDescent` is
+        created.
     gradients : dict, optional
-        A dictionary mapping a parameter to an expression for
-        the cost's gradient with respect to the parameter. If ``None``,
-        the gradient are taken automatically using `theano.tensor.grad`.
+        A dictionary mapping a parameter to an expression for the cost's
+        gradient with respect to the parameter. If ``None``, the gradient
+        are taken automatically using :func:`theano.gradient.grad`.
 
     Attributes
     ----------
@@ -208,9 +209,9 @@ class StepRule(object):
 
         Parameters
         ----------
-        param : Theano shared variable
+        param : :class:`~tensor.TensorSharedVariable`
             The parameter.
-        grad_wr_param : Theano variable
+        grad_wr_param : :class:`~tensor.TensorVariable`
             The expression for the gradient of the cost with respect to
             the parameter.
 
@@ -226,7 +227,7 @@ class StepRule(object):
 
         Returns
         -------
-            list of (Theano shared variable, Theano) expression tuples.
+        updates : :class:`~tensor.TensorSharedVariable` updates
 
         """
         return []

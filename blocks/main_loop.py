@@ -37,13 +37,13 @@ class MainLoop(object):
     model : object
         The model object. It is entirely transparent for the main loop
         but may be used by extensions.
-    data_stream : instance of :class:`DataStream`.
+    data_stream : instance of :class:`.DataStream`.
         The data stream.
     algorithm : object
         The training algorithm.
-    log : instance of :class:`TrainingLog`
-        The log. When not given, a :class:`TrainingLog` is created.
-    extensions : list of :class:`TrainingExtension` instances
+    log : instance of :class:`.TrainingLog`
+        The log. When not given, a :class:`.TrainingLog` is created.
+    extensions : list of :class:`.TrainingExtension` instances
         The training extensions. Will be called in the same order as given
         here.
 

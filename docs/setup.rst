@@ -7,14 +7,14 @@ it directly from GitHub.
 
 .. code-block:: bash
 
-   pip install --upgrade git+git://github.com/bartvm/blocks.git#egg=blocks --user
+   $ pip install --upgrade git+git://github.com/bartvm/blocks.git#egg=blocks --user
 
 If you want to make sure that you can use the plotting integration with Bokeh_,
 install that extra requirements as well.
 
 .. code-block:: bash
 
-   pip install --upgrade git+git://github.com/bartvm/blocks.git#egg=blocks[plot] --user
+   $ pip install --upgrade git+git://github.com/bartvm/blocks.git#egg=blocks[plot] --user
 
 If you have administrative rights, remove ``--user`` to install the package
 system-wide. If you want to update Blocks, simply repeat one of the commands
@@ -64,7 +64,7 @@ with your own GitHub user name:
 
 .. code-block:: bash
 
-   pip install --upgrade -e git+git://github.com/user/blocks.git#egg=blocks[test,docs] --src=$HOME
+   $ pip install --upgrade -e git+git://github.com/user/blocks.git#egg=blocks[test,docs] --src=$HOME
 
 As with the usual installation, you can use ``--user`` or ``--no-deps`` if you
 need to. You can now make changes in the ``blocks`` directory created by pip,
@@ -80,4 +80,4 @@ command from within the Blocks directory.
 
 .. code-block:: bash
 
-   sphinx-build -b html docs docs/_build/html
+   $ sphinx-build -b html docs docs/_build/html

@@ -33,7 +33,7 @@ class Dataset(object):
         'targets')`` for MNIST (regardless of which data the data stream
         actually requests). Any implementation of a dataset should set this
         attribute on the class (or at least before calling ``super``).
-    default_iteration_scheme : :class:`IterationScheme`, optional
+    default_iteration_scheme : :class:`.IterationScheme`, optional
         The default iteration scheme that will be used by
         :meth:`get_default_stream` to create a data stream without needing
         to specify what iteration scheme to use.
@@ -120,6 +120,12 @@ class Dataset(object):
     def get_data(self, state=None, request=None):
         """Request data from the dataset.
 
+        .. todo::
+
+           A way for the dataset to communicate which kind of requests it
+           accepts, and a way to communicate what kind of request is being
+           sent when supporting multiple.
+
         Parameters
         ----------
         state : object, optional
@@ -128,13 +134,7 @@ class Dataset(object):
         request : object, optional
             If supported, the request for a particular part of the data
             e.g. the number of examples to return, or the indices of a
-            particular minimbatch of examples.
-
-        .. todo::
-
-           A way for the dataset to communicate which kind of requests it
-           accepts, and a way to communicate what kind of request is being
-           sent when supporting multiple.
+            particular minibatch of examples.
 
         Returns
         -------
@@ -182,6 +182,7 @@ class Dataset(object):
                       if s in self.sources])
 
 
+@add_metaclass(ABCMeta)
 class InMemoryDataset(Dataset):
     """Datasets who hold all of their data in memory.
 
@@ -280,7 +281,7 @@ def lazy_properties(*lazy_properties):
 
     Notes
     -----
-    The pickling behaviour of the dataset is only overridden if the dataset
+    The pickling behavior of the dataset is only overridden if the dataset
     does not have a ``__getstate__`` method implemented.
 
     Examples
@@ -340,6 +341,10 @@ def lazy_properties(*lazy_properties):
 class ContainerDataset(Dataset):
     """Equips a Python container with the dataset interface.
 
+    .. todo::
+
+        Multiple containers, returning batches.
+
     Parameters
     ----------
     container : iterable
@@ -350,10 +355,6 @@ class ContainerDataset(Dataset):
         source names. Note, that only if the container is an OrderedDict
         the order of elements in the returned tuples is determined. If the
         iterable is not a dictionary, the source ``'data'`` will be used.
-
-    .. todo::
-
-        Multiple containers, returning batches.
 
     """
     default_scheme = None
@@ -392,7 +393,7 @@ class AbstractDataStream(object):
 
     Parameters
     ----------
-    iteration_scheme : :class:`IterationScheme`, optional
+    iteration_scheme : :class:`.IterationScheme`, optional
         The iteration scheme to use when retrieving data. Note that not all
         datasets support the same iteration schemes, some datasets require
         one, and others don't support any. In case when the data stream
@@ -402,7 +403,7 @@ class AbstractDataStream(object):
 
     Attributes
     ----------
-    iteration_scheme : :class:`IterationScheme`
+    iteration_scheme : :class:`.IterationScheme`
         The iteration scheme used to retrieve data. Can be ``None`` when
         not used.
     sources : tuple of strings
@@ -632,7 +633,7 @@ class CachedDataStream(DataStreamWrapper):
 
     Parameters
     ----------
-    iteration_scheme : :class:`IterationScheme`
+    iteration_scheme : :class:`.IterationScheme`
         Note that this iteration scheme must return batch sizes (integers),
         which must necessarily be smaller than the child data stream i.e.
         the batches returned must be smaller than the cache size.
@@ -681,7 +682,7 @@ class BatchDataStream(DataStreamWrapper):
     ----------
     data_stream : :class:`AbstractDataStream` instance
         The data stream to wrap.
-    iteration_scheme : :class:`BatchSizeScheme` instance
+    iteration_scheme : :class:`.BatchSizeScheme` instance
         The iteration scheme to use; should return integers representing
         the size of the batch to return.
     strict : bool, optional
@@ -721,7 +722,7 @@ class PaddingDataStream(DataStreamWrapper):
     """Adds padding to variable-length sequences.
 
     When your batches consist of variable-length sequences, use this class
-    to equalize lengthes by adding zero-padding. To distinguish between
+    to equalize lengths by adding zero-padding. To distinguish between
     data and padding masks can be produced. For each data source that is
     masked, a new source will be added. This source will have the name of
     the original source with the suffix ``_mask`` (e.g. ``features_mask``).
@@ -766,8 +767,8 @@ class PaddingDataStream(DataStreamWrapper):
                 continue
 
             shapes = [numpy.asarray(sample).shape for sample in source_data]
-            lengthes = [shape[0] for shape in shapes]
-            max_sequence_length = max(lengthes)
+            lengths = [shape[0] for shape in shapes]
+            max_sequence_length = max(lengths)
             rest_shape = shapes[0][1:]
             if not all([shape[1:] == rest_shape for shape in shapes]):
                 raise ValueError("All dimensions except length must be equal")
@@ -782,7 +783,7 @@ class PaddingDataStream(DataStreamWrapper):
 
             mask = numpy.zeros((len(source_data), max_sequence_length),
                                dtype=theano.config.floatX)
-            for i, sequence_length in enumerate(lengthes):
+            for i, sequence_length in enumerate(lengths):
                 mask[i, :sequence_length] = 1
             data_with_masks.append(mask)
         return tuple(data_with_masks)
