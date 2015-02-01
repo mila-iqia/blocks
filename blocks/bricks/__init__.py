@@ -1,7 +1,6 @@
 """The interface of bricks and some simple implementations."""
 import logging
 from itertools import chain
-from abc import abstractproperty
 
 import numpy
 from six import add_metaclass
@@ -172,8 +171,8 @@ class Feedforward(Brick):
         message = ("'{}' object does not have an attribute '{}'"
                    .format(self.__class__.__name__, name))
         if name in ('input_dim', 'output_dim'):
-            message += (" (which is a part of 'Feedforward' interface it claims"
-                        " to support)")
+            message += (" (which is a part of 'Feedforward' interface it"
+                        " claims to support)")
         raise AttributeError(message)
 
 
