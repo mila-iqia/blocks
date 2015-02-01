@@ -12,6 +12,8 @@ logger = logging.getLogger()
 def _add_records(log, prefix, record_tuples):
     """Helper function to add monitoring records to the log."""
     for name, value in record_tuples:
+        if not name:
+            raise ValueError("monitor variable without name")
         prefixed_name = prefix + PREFIX_SEPARATOR + name if prefix else name
         setattr(log.current_row, prefixed_name, value)
 
