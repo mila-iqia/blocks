@@ -6,7 +6,6 @@ from itertools import chain
 import theano
 from theano import Variable
 from theano.gof import graph
-from theano.gof.sched import make_dependence_cmp, sort_apply_nodes
 from theano.sandbox.rng_mrg import MRG_RandomStreams
 
 from blocks import config
@@ -15,7 +14,6 @@ from blocks.utils import (is_graph_input, is_shared_variable, dict_union,
                           shared_like)
 
 logger = logging.getLogger(__name__)
-dependence = make_dependence_cmp()
 
 
 class ComputationGraph(object):
@@ -59,6 +57,10 @@ class ComputationGraph(object):
             outputs = [outputs]
         self.outputs = outputs
         self._get_variables()
+        self._has_inputs = {}
+
+    def __iter__(self):
+        return iter(self.variables)
 
     @property
     def inputs(self):
@@ -86,8 +88,8 @@ class ComputationGraph(object):
 
         # Sort apply nodes topologically, get variables and remove duplicates
         inputs = graph.inputs(self.outputs)
-        sorted_apply_nodes = sort_apply_nodes([inputs], self.outputs,
-                                              [dependence])
+        sorted_apply_nodes = graph.io_toposort(inputs, self.outputs)
+
         seen = set()
         main_vars = [var for var in list(chain(
             *[apply_node.inputs for apply_node in sorted_apply_nodes]))
@@ -149,13 +151,33 @@ class ComputationGraph(object):
 
         """
         role_variables = [var for var in self.variables
-                          if hasattr(var.tag, "roles")]
+                          if hasattr(var.tag, "roles")
+                          and not is_shared_variable(var)]
         value_holders = [shared_like(var) for var in role_variables]
         function = self.get_theano_function(zip(value_holders, role_variables))
         function(*(data[input_.name] for input_ in self.inputs))
         return OrderedDict([(var, value_holder.get_value(borrow=True))
                             for var, value_holder in zip(role_variables,
                                                          value_holders)])
+
+    def has_inputs(self, variable):
+        """Check if a variable depends on input variables.
+
+        Returns
+        -------
+        ``True`` if the given variable depends on input variables,
+        ``False`` otherwise.
+
+        """
+        if variable not in self._has_inputs:
+            self._has_inputs[variable] = False
+            if is_graph_input(variable):
+                self._has_inputs[variable] = True
+            elif getattr(variable, 'owner', None):
+                for dependancy in variable.owner.inputs:
+                    if self.has_inputs(dependancy):
+                        self._has_inputs[variable] = True
+        return self._has_inputs[variable]
 
 
 def add_annotation(var, annotation):
