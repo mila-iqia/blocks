@@ -1,5 +1,5 @@
-Developer guidelines
-====================
+Development
+===========
 
 We want to encourage everyone to contribute to the development of Blocks. To
 ensure the codebase is of high quality, we ask all new developers to have a
@@ -11,7 +11,7 @@ Formatting guidelines
 Blocks follows the `PEP8 style guide`_ closely, so please make sure you are
 familiar with it. Our `Travis CI buildbot`_ runs flake8_ as part of every build,
 which checks for PEP8 compliance (using the pep8_ tool) and for some common
-coding erros using pyflakes_. You might want to install and run flake8_ on your
+coding errors using pyflakes_. You might want to install and run flake8_ on your
 code before submitting a PR to make sure that your build doesn't fail because of
 e.g. a bit of extra whitespace.
 
@@ -27,7 +27,7 @@ Blocks:
 
 * Do not rename imports i.e. do not use ``import theano.tensor as T`` or
   ``import numpy as np``.
-* Direct imports, ``import ...``, preceed ``from ... import ...`` statements.
+* Direct imports, ``import ...``, precede ``from ... import ...`` statements.
 * Imports are otherwise listed alphabetically.
 * Don't recycle variable names (i.e. don't use the same variable name to refer
   to different things in a particular part of code), especially when they are
@@ -117,7 +117,7 @@ Python 2 and 3
 ~~~~~~~~~~~~~~
 Blocks aims to be both Python 2 and Python 3 compliant using a single code-base,
 without using 2to3_. There are many online resources which discuss the writing
-compatible code. For a quick overview see `the cheatsheet from Python
+of compatible code. For a quick overview see `the cheatsheet from Python
 Charmers`_. For non-trivial cases, we use the six_ compatibility library.
 
 Documentation should be written to be Python 3 compliant.
@@ -128,12 +128,14 @@ Documentation should be written to be Python 3 compliant.
 
 Reraising exceptions
 ~~~~~~~~~~~~~~~~~~~~
-When catching exceptions, use the :func:`~blocks.utils.reraise_as` function to
+When catching exceptions, use the :func:`~.utils.reraise_as` function to
 reraise the exception (optionally with a new message or as a different type).
 Not doing so `clobbers the original traceback`_, making it impossible to use
 ``pdb`` to debug the problems.
 
 .. _clobbers the original traceback: http://www.ianbicking.org/blog/2007/09/re-raising-exceptions.html
+
+.. _serialization_guidelines:
 
 Serialization
 ~~~~~~~~~~~~~
@@ -221,7 +223,7 @@ core parts of your committed code. In the ideal case, all of your code should be
 unit tested.
 
 If you are fixing a bug, please be sure to add a unit test to make sure that the
-bug does not get re-intrduced later on.
+bug does not get re-introduced later on.
 
 The test suite can be executed locally using nose2_ [#]_.
 
@@ -232,3 +234,13 @@ The test suite can be executed locally using nose2_ [#]_.
 .. _nose2: https://readthedocs.org/projects/nose2/
 .. _nose: http://nose.readthedocs.org/en/latest/
 
+Internal API
+------------
+The :doc:`development API reference <internal_api>` contains documentation on
+the internal classes that Blocks uses. If you are not planning on contributing
+to Blocks, have a look at the :doc:`user API reference </api/index>` instead.
+
+.. toctree::
+   :hidden:
+
+   internal_api

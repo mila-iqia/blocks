@@ -20,9 +20,9 @@ class AggregationBuffer(object):
 
     Parameters
     ----------
-    expressions : list
-        If a list of Theano variables. The variable names are used as
-        expression names. All the variables names must be different.
+    expressions : list of :class:`~tensor.TensorVariable`
+        The variable names are used as expression names. All the variables
+        names must be different.
     use_take_last : bool
         When ``True``, the :class:`TakeLast` aggregation scheme is used
         instead of :class:`_DataIndependent` for those expressions that
@@ -36,7 +36,7 @@ class AggregationBuffer(object):
         Accumulation updates of the aggregators.
     readout_expressions : dict
         Maps an aggregated variable into a readout expression.
-    input : list of Theano variables
+    input : list of :class:`~tensor.TensorVariable`
         The list of inputs needed for accumulation.
     input_names : list of str
         The name of the inputs needed for accumulation.
@@ -67,15 +67,24 @@ class AggregationBuffer(object):
             logger.debug('Expression to evaluate: %s', v.name)
             if not hasattr(v.tag, 'aggregation_scheme'):
                 if ComputationGraph([v]).inputs == []:
-                    logger.debug('Using _DataIndependent aggregation scheme'
+                    scheme = (TakeLast if self.use_take_last
+                              else _DataIndependent)
+                    logger.debug('Using %s aggregation scheme'
                                  ' for %s since it does not depend on'
-                                 ' the data', v.name)
-                    v.tag.aggregation_scheme = (TakeLast if self.use_take_last
-                                                else _DataIndependent)(v)
+                                 ' the data', scheme.__name__, v.name)
+                    v.tag.aggregation_scheme = scheme(v)
                 else:
-                    logger.debug('Using the default (average over minibatches)'
-                                 ' aggregation scheme for %s', v.name)
-                    v.tag.aggregation_scheme = Mean(v, 1.0)
+                    if v.ndim == 0:
+                        logger.debug('Using the default '
+                                     ' (average over minibatches)'
+                                     ' aggregation scheme for %s', v.name)
+                        v.tag.aggregation_scheme = Mean(v, 1.0)
+                    else:
+                        # TODO: support averaging for multi-dim variables
+                        logger.debug('Multidimensional variable:'
+                                     ' using the TakeLast'
+                                     ' aggregation scheme for %s', v.name)
+                        v.tag.aggregation_scheme = TakeLast(v)
 
             aggregator = v.tag.aggregation_scheme.get_aggregator()
             self.initialization_updates.extend(
@@ -136,8 +145,9 @@ class DatasetEvaluator(object):
     Parameters
     ----------
     expressions : dict or list
-        If a list of Theano variables. The variable names are used as
-        expression names. All the variables names must be different.
+        If a list of :class:`~tensor.TensorVariable`. The variable names
+        are used as expression names. All the variables names must be
+        different.
 
         Each variable can be tagged with an :class:`AggregationScheme` that
         specifies how the value can be computed for a data set by
@@ -181,7 +191,7 @@ class DatasetEvaluator(object):
 
         Parameters
         ----------
-        data_stream : instance of :class:`DataStream`
+        data_stream : instance of :class:`.DataStream`
             The data stream. Only the first epoch of data is used.
 
         Returns

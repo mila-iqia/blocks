@@ -40,31 +40,31 @@ class BaseSequenceGenerator(Initializable):
 
     **Algorithm:**
 
-    0. The initial states are computed from the contexts. This includes
+    1. The initial states are computed from the contexts. This includes
        fake initial outputs given by the `initial_outputs` method of the
        readout, initial states and glimpses given by the `initial_state`
        method of the transition.
 
-    1. Given the contexts, the current state and the glimpses from the
+    2. Given the contexts, the current state and the glimpses from the
        previous step the attention mechanism hidden in the transition
        produces current step glimpses. This happens in the `take_look`
        method of the transition.
 
-    2. Using the contexts, the fed back output from the previous step, the
+    3. Using the contexts, the fed back output from the previous step, the
        current states and glimpses, the readout brick is used to generate
        the new output by calling its `readout` and `emit` methods.
 
-    3. The new output is fed back in the `feedback` method of the readout
+    4. The new output is fed back in the `feedback` method of the readout
        brick. This feedback, together with the contexts, the glimpses and
        the previous states is used to get the new states in the
        transition's `apply` method. Optionally the `fork` brick is used in
        between to compute the transition's inputs from the feedback.
 
-    4. Back to step 1 if desired sequence length is not yet reached.
+    5. Back to step 1 if desired sequence length is not yet reached.
 
     | A scheme of the algorithm described above follows.
 
-    .. image:: _static/sequence_generator_scheme.png
+    .. image:: /_static/sequence_generator_scheme.png
             :height: 500px
             :width: 500px
 
@@ -84,12 +84,12 @@ class BaseSequenceGenerator(Initializable):
         The readout component of the sequence generator.
     transition : instance of :class:`AbstractAttentionTransition`
         The transition component of the sequence generator.
-    fork : :class:`Brick`
+    fork : :class:`.Brick`
         The brick to compute the transition's inputs from the feedback.
 
     Notes
     -----
-    See :class:`Initializable` for initialization parameters.
+    See :class:`.Initializable` for initialization parameters.
 
     """
     @lazy
@@ -126,16 +126,17 @@ class BaseSequenceGenerator(Initializable):
             for name in self.fork.apply.outputs}
 
     @application
-    def cost(self, outputs, mask=None, **kwargs):
+    def cost(self, application_call, outputs, mask=None, **kwargs):
         """Returns generation costs for output sequences.
 
         Parameters
         ----------
-        outputs : Theano variable
+        outputs : :class:`~tensor.TensorVariable`
             The 3(2) dimensional tensor containing output sequences.
             The dimension 0 must stand for time, the dimension 1 for the
             position on the batch.
-        mask : The 0/1 matrix identifying fake outputs.
+        mask : :class:`~tensor.TensorVariable`
+            The binary matrix identifying fake outputs.
 
         Notes
         -----
@@ -171,11 +172,11 @@ class BaseSequenceGenerator(Initializable):
             feedback=feedback, **dict_union(states, glimpses, contexts))
         costs = self.readout.cost(readouts, outputs)
 
+        for name, variable in glimpses.items():
+            application_call.add_auxiliary_variable(
+                variable.copy(), name=name)
+
         # In case the user needs some glimpses or states or smth else
-        also_return = kwargs.get("also_return")
-        if also_return:
-            others = {name: results[name] for name in also_return}
-            return (costs, others)
         return costs
 
     @recurrent
@@ -184,7 +185,7 @@ class BaseSequenceGenerator(Initializable):
 
         Parameters
         ----------
-        outputs : Theano variable
+        outputs : :class:`~tensor.TensorVariable`
             The outputs from the previous step.
 
         Notes
@@ -374,7 +375,7 @@ class LinearReadout(Readout, Initializable):
 
     Notes
     -----
-    See :class:`Initializable` for initialization parameters.
+    See :class:`.Initializable` for initialization parameters.
 
     """
     @lazy
@@ -530,9 +531,9 @@ class AttentionTransition(AbstractAttentionTransition, Initializable):
 
     Parameters
     ----------
-    transition : :class:`Brick`
+    transition : :class:`.Brick`
         The recurrent transition.
-    attention : :class:`Brick`
+    attention : :class:`.Brick`
         The attention mechanism.
     attended_name : str
         The name of the attended context. If ``None``, the first context is
@@ -543,7 +544,7 @@ class AttentionTransition(AbstractAttentionTransition, Initializable):
 
     Notes
     -----
-    See :class:`Initializable` for initialization parameters.
+    See :class:`.Initializable` for initialization parameters.
 
     Currently lazy-only.
 
@@ -599,7 +600,7 @@ class AttentionTransition(AbstractAttentionTransition, Initializable):
 
         Returns
         -------
-        glimpses : list of Theano variables
+        glimpses : list of :class:`~tensor.TensorVariable`
             Current step glimpses.
 
         """
@@ -625,7 +626,7 @@ class AttentionTransition(AbstractAttentionTransition, Initializable):
 
         Returns
         -------
-        current_states : list of Theano variables
+        current_states : list of :class:`~tensor.TensorVariable`
             Current states computed by `self.transition`.
 
         """
@@ -658,7 +659,7 @@ class AttentionTransition(AbstractAttentionTransition, Initializable):
 
         Returns
         -------
-        outputs : list of Theano variables
+        outputs : list of :class:`~tensor.TensorVariable`
             The current step states and glimpses.
 
         """
@@ -782,11 +783,11 @@ class SequenceGenerator(BaseSequenceGenerator):
     ----------
     readout : instance of :class:`AbstractReadout`
         The readout component for the sequence generator.
-    transition : instance of :class:`BaseRecurrent`
+    transition : instance of :class:`.BaseRecurrent`
         The recurrent transition to be used in the sequence generator.
         Will be combined with `attention`, if that one is given.
-    attention : :class:`Brick`
-        The attention mechanism to be added to `transition`. Can be
+    attention : :class:`.Brick`
+        The attention mechanism to be added to ``transition``. Can be
         ``None``, in which case no attention mechanism is used.
 
     Notes

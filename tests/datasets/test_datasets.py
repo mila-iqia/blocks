@@ -2,9 +2,11 @@ from collections import OrderedDict
 
 import numpy
 from six.moves import zip
+from nose.tools import assert_raises
 
-from blocks.datasets import (CachedDataStream, ContainerDataset, DataStream,
-                             DataStreamMapping)
+from blocks.datasets import (
+    CachedDataStream, ContainerDataset, DataStream,
+    DataStreamMapping, BatchDataStream, PaddingDataStream)
 from blocks.datasets.mnist import MNIST
 from blocks.datasets.schemes import (BatchSizeScheme, ConstantScheme,
                                      SequentialScheme)
@@ -12,10 +14,8 @@ from blocks.datasets.schemes import (BatchSizeScheme, ConstantScheme,
 
 def test_dataset():
     data = [1, 2, 3]
-    data_doubled = [2, 4, 6]
-
     # The default stream requests an example at a time
-    stream = ContainerDataset([1, 2, 3]).get_default_stream()
+    stream = ContainerDataset(data).get_default_stream()
     epoch = stream.get_epoch_iterator()
     assert list(epoch) == list(zip(data))
 
@@ -26,10 +26,18 @@ def test_dataset():
     # Check whether the returning as a dictionary of sources works
     assert next(stream.get_epoch_iterator(as_dict=True)) == {"data": 1}
 
-    # Check whether basic stream wrappers work
-    wrapper = DataStreamMapping(
+
+def test_data_stream_mapping():
+    data = [1, 2, 3]
+    data_doubled = [2, 4, 6]
+    stream = ContainerDataset(data).get_default_stream()
+    wrapper1 = DataStreamMapping(
         stream, lambda d: (2 * d[0],))
-    assert list(wrapper.get_epoch_iterator()) == list(zip(data_doubled))
+    assert list(wrapper1.get_epoch_iterator()) == list(zip(data_doubled))
+    wrapper2 = DataStreamMapping(
+        stream, lambda d: (2 * d[0],), add_sources=("doubled",))
+    assert wrapper2.sources == ("data", "doubled")
+    assert list(wrapper2.get_epoch_iterator()) == list(zip(data, data_doubled))
 
 
 def test_sources_selection():
@@ -83,7 +91,7 @@ def test_data_driven_epochs():
     for i, epoch in zip(range(2), stream.iterate_epochs()):
         assert list(epoch) == epochs[i]
 
-    # test scheme reseting between epochs
+    # test scheme resetting between epochs
     class TestScheme(BatchSizeScheme):
 
         def get_request_iterator(self):
@@ -125,3 +133,64 @@ def test_cache():
             assert numpy.all(mnist.features[i * 7:(i + 1) * 7] ==
                              features)
         assert i == 2
+
+
+def test_batch_data_stream():
+    stream = ContainerDataset([1, 2, 3, 4, 5]).get_default_stream()
+    batches = list(BatchDataStream(stream, ConstantScheme(2))
+                   .get_epoch_iterator())
+    expected = [(numpy.array([1, 2]),),
+                (numpy.array([3, 4]),),
+                (numpy.array([5]),)]
+    assert len(batches) == len(expected)
+    for b, e in zip(batches, expected):
+        assert (b[0] == e[0]).all()
+
+    # Check the `strict` flag
+    def try_strict():
+        list(BatchDataStream(stream, ConstantScheme(2), strict=True)
+             .get_epoch_iterator())
+    assert_raises(ValueError, try_strict)
+    stream2 = ContainerDataset([1, 2, 3, 4, 5, 6]).get_default_stream()
+    assert len(list(BatchDataStream(stream2, ConstantScheme(2), strict=True)
+                    .get_epoch_iterator())) == 3
+
+
+def test_padding_data_stream():
+    # 1-D sequences
+    stream = BatchDataStream(
+        ContainerDataset([[1], [2, 3], [], [4, 5, 6], [7]])
+        .get_default_stream(),
+        ConstantScheme(2))
+    mask_stream = PaddingDataStream(stream)
+    assert mask_stream.sources == ("data", "data_mask")
+    it = mask_stream.get_epoch_iterator()
+    data, mask = next(it)
+    assert (data == numpy.array([[1, 0], [2, 3]])).all()
+    assert (mask == numpy.array([[1, 0], [1, 1]])).all()
+    data, mask = next(it)
+    assert (data == numpy.array([[0, 0, 0], [4, 5, 6]])).all()
+    assert (mask == numpy.array([[0, 0, 0], [1, 1, 1]])).all()
+    data, mask = next(it)
+    assert (data == numpy.array([[7]])).all()
+    assert (mask == numpy.array([[1]])).all()
+
+    # 2D sequences
+    stream2 = BatchDataStream(
+        ContainerDataset([numpy.ones((3, 4)), 2 * numpy.ones((2, 4))])
+        .get_default_stream(),
+        ConstantScheme(2))
+    it = PaddingDataStream(stream2).get_epoch_iterator()
+    data, mask = next(it)
+    assert data.shape == (2, 3, 4)
+    assert (data[0, :, :] == 1).all()
+    assert (data[1, :2, :] == 2).all()
+    assert (mask == numpy.array([[1, 1, 1], [1, 1, 0]])).all()
+
+    # 2 sources
+    stream3 = PaddingDataStream(BatchDataStream(
+        ContainerDataset(dict(features=[[1], [2, 3], []],
+                              targets=[[4, 5, 6], [7]]))
+        .get_default_stream(),
+        ConstantScheme(2)))
+    assert len(next(stream3.get_epoch_iterator())) == 4

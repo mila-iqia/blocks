@@ -28,14 +28,30 @@ sys.path.insert(0, os.path.abspath('..'))
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
+
+# on_rtd is whether we are on readthedocs.org
+on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
+
+if not on_rtd:  # only import and set the theme if we're building docs locally
+    import sphinx_rtd_theme
+    html_theme = 'sphinx_rtd_theme'
+    html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
+
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.doctest',
     'sphinxcontrib.napoleon',
     'sphinx.ext.todo',
     'sphinx.ext.mathjax',
-    'sphinx.ext.graphviz'
+    'sphinx.ext.graphviz',
+    'sphinx.ext.intersphinx'
 ]
+
+intersphinx_mapping = {
+    'theano': ('http://theano.readthedocs.org/en/latest/', None),
+    'numpy': ('http://docs.scipy.org/doc/numpy/', None),
+    'python': ('http://docs.python.org/3.4', None)
+}
 
 graphviz_dot_args = ['-Gbgcolor=#fcfcfc']  # To match the RTD theme
 
@@ -110,7 +126,7 @@ pygments_style = 'sphinx'
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = 'default'
+#html_theme = 'default'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -268,3 +284,34 @@ texinfo_documents = [
 
 # If true, do not generate a @detailmenu in the "Top" node's menu.
 #texinfo_no_detailmenu = False
+
+import inspect
+from blocks.bricks.base import Application
+from sphinx.ext.autodoc import cut_lines
+
+def skip_abc(app, what, name, obj, skip, options):
+    return skip or name.startswith('_abc')
+
+def fix_apply(app, what, name, obj, options, signature, return_annotation):
+    if isinstance(obj, Application):
+        args, varargs, keywords, defaults = inspect.getargspec(obj.application)
+        positional_args = args[1:] if not defaults else args[:-len(defaults)]
+        keyword_args = [] if not defaults else args[-len(defaults):]
+        signature = '(' + ', '.join(positional_args)
+        if defaults:
+            signature += ', '.join('{}={}'.format(arg, default) for arg, default
+                                   in zip(keyword_args, defaults))
+        if varargs:
+            signature += ', *' + varargs
+        if keywords:
+            signature += ', **' + keywords
+        signature += ')'
+    for key, attr in getattr(obj, '__dict__', {}).items():
+        if key.startswith('_abc'):
+            delattr(obj, key)
+    return signature, return_annotation
+
+def setup(app):
+    app.connect('autodoc-process-docstring', cut_lines(2, what=['module']))
+    app.connect('autodoc-skip-member', skip_abc)
+    app.connect('autodoc-process-signature', fix_apply)

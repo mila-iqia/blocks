@@ -21,7 +21,7 @@ class MNIST(InMemoryDataset):
     in machine learning and consists of 60,000 training images and 10,000
     testing images. The images are grayscale and 28 x 28 pixels large.
 
-    .. [LBBH] Yann LeCun, Léon Bottou, Yoshu Bengio, and Patrick Haffner,
+    .. [LBBH] Yann LeCun, Léon Bottou, Yoshua Bengio, and Patrick Haffner,
        *Gradient-based learning applied to document recognition*,
        Proceedings of the IEEE, November 1998, 86(11):2278-2324.
 
@@ -113,15 +113,15 @@ def read_mnist_images(filename, dtype=None):
 
     Returns
     -------
-    images : ndarray, shape (n_images, n_rows, n_cols)
+    images : :class:`~numpy.ndarray`, shape (n_images, n_rows, n_cols)
         An image array, with individual examples indexed along the
         first axis and the image dimensions along the second and
         third axis.
 
     Notes
     -----
-    If the dtype provided was boolean, the resulting array will
-    be boolean with `True` if the corresponding pixel had a value
+    If the dtype provided was Boolean, the resulting array will
+    be Boolean with `True` if the corresponding pixel had a value
     greater than or equal to 128, `False` otherwise.
 
     If the dtype provided was a float dtype, the values will be mapped to
@@ -138,7 +138,7 @@ def read_mnist_images(filename, dtype=None):
         dtype = numpy.dtype(dtype)
 
         if dtype.kind == 'b':
-            # If the user wants booleans, threshold at half the range.
+            # If the user wants Booleans, threshold at half the range.
             array = array >= 128
         elif dtype.kind == 'f':
             # Otherwise, just convert.
@@ -159,7 +159,7 @@ def read_mnist_labels(filename):
 
     Returns
     -------
-    labels : ndarray, shape (nlabels,)
+    labels : :class:`~numpy.ndarray`, shape (nlabels,)
         A one-dimensional unsigned byte array containing the
         labels as integers.
 

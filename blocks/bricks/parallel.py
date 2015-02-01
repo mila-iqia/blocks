@@ -23,13 +23,13 @@ class Parallel(Initializable):
     output_dims : dict
         Dictonary of output dimensions, keys are channel names, values are
         dimensions.
-    prototype : :class:`Brick`
+    prototype : :class:`.Brick`
         A transformation prototype. A copy will be created for every
         channel.  If ``None``, a linear transformation is used.
 
     Notes
     -----
-    See :class:`Initializable` for initialization parameters.
+    See :class:`.Initializable` for initialization parameters.
 
     """
     @lazy
@@ -77,7 +77,7 @@ class Fork(Parallel):
     ----------
     fork_names : list of str
         Names of the channels to fork.
-    prototype : instance of :class:`Brick`
+    prototype : instance of :class:`.Brick`
         A prototype for the input-to-fork transformations. A copy will be
         created for every output channel.
 
@@ -86,7 +86,7 @@ class Fork(Parallel):
     input_dim : int
         The input dimension. Required for allocation.
     output_dims : dict of (output_name, int) pairs
-        The dimesions of the outputs. Required for allocation.
+        The dimensions of the outputs. Required for allocation.
 
     Notes
     -----

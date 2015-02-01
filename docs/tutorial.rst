@@ -21,32 +21,33 @@ The Model
 We will train a simple MLP with a single hidden layer that uses the rectifier_
 activation function. Our output layer will consist of a softmax_ function with
 10 units; one for each class. Mathematically speaking, our model is parametrized
-by the weight matrices :math:`\mathbf{W}_h` and :math:`\mathbf{W}_y`, and bias
-vectors :math:`\mathbf{b}_h` and :math:`\mathbf{b}_y`. The rectifier activation
+by the parameters :math:`\mathbf{\theta}`, defined as the weight matrices
+:math:`\mathbf{W}^{(1)}` and :math:`\mathbf{W}^{(2)}`, and bias vectors
+:math:`\mathbf{b}^{(1)}` and :math:`\mathbf{b}^{(2)}`. The rectifier activation
 function is defined as
 
 .. math:: \mathrm{ReLU}(\mathbf{x})_i = \max(0, \mathbf{x}_i)
 
 and our softmax output function is defined
 
-.. math:: \mathrm{softmax}(\mathbf{x})_i = \frac{e^{\mathbf{x}_i}}{\sum_{j=1}^n \mathbf{x}_j}
+.. math:: \mathrm{softmax}(\mathbf{x})_i = \frac{e^{\mathbf{x}_i}}{\sum_{j=1}^n e^{\mathbf{x}_j}}
 
 Hence, our complete model is
 
-.. math:: f(\mathbf{x}) = \mathrm{softmax}(\mathbf{W}_y\mathrm{ReLU}(\mathbf{W}_h\mathbf{x} + \mathbf{b}_h) + \mathbf{b}_y)
+.. math:: f(\mathbf{x}; \mathbf{\theta}) = \mathrm{softmax}(\mathbf{W}^{(2)}\mathrm{ReLU}(\mathbf{W}^{(1)}\mathbf{x} + \mathbf{b}^{(1)}) + \mathbf{b}^{(2)})
 
-Since the output of a softmax represents a categorical probability distribution
-we can consider :math:`f(\mathbf{x}) = \hat p(\mathbf{y} \mid \mathbf{x})`,
-where :math:`\mathbf{x}` is the 784-dimensional (28 × 28) input, and
-:math:`\mathbf{y}` the probability distribution of it belonging to classes
-:math:`i = 0,\dots,9`. We can train the parameters of our model by minimizing
-the negative log-likelihood i.e.  the categorical cross-entropy between our
-model's output and the target distribution. That is, we minimize the sum of
+Since the output of a softmax sums to 1, we can interpret it as a categorical
+probability distribution: :math:`f(\mathbf{x})_c = \hat p(y = c \mid
+\mathbf{x})`, where :math:`\mathbf{x}` is the 784-dimensional (28 × 28) input
+and :math:`c \in \{0, ..., 9\}` one of the 10 classes. We can train the
+parameters of our model by minimizing the negative log-likelihood i.e. the
+cross-entropy between our model's output and the target distribution. This
+means we will minimize the sum of
 
-.. math:: - \log \sum_{i=0}^{10} p(\mathbf{y} = i) \hat p(\mathbf{y} = i \mid \mathbf{x})
+.. math:: l(\mathbf{f}(\mathbf{x}), y) = -\sum_{c=0}^9 \mathbf{1}_{(y=c)} \log f(\mathbf{x})_c = -\log f(\mathbf{x})_y
 
-over all examples. We do so by using `stochastic gradient descent`_ (SGD) on
-mini-batches.
+(where :math:`\mathbf{1}` is the indicator function) over all examples. We use
+`stochastic gradient descent`_ (SGD) on mini-batches for this.
 
 .. _model_building:
 
@@ -69,8 +70,8 @@ because the name needs to match the name of the data source we want to train on.
 MNIST defines two data sources: ``'features'`` and ``'targets'``.
 
 For the sake of this tutorial, we will go through building an MLP the long way.
-For a much quicker way, skip right to the end of this section. We begin with
-applying the linear transformations and activations.
+For a much quicker way, skip right to the end of the next section. We begin
+with applying the linear transformations and activations.
 
 >>> from blocks.bricks import Linear, Rectifier, Softmax
 >>> input_to_hidden = Linear(name='input_to_hidden', input_dim=784, output_dim=100)
@@ -78,11 +79,14 @@ applying the linear transformations and activations.
 >>> hidden_to_output = Linear(name='hidden_to_output', input_dim=100, output_dim=10)
 >>> y_hat = Softmax().apply(hidden_to_output.apply(h))
 
-Blocks' uses "bricks" to build models. Bricks are parametrized Theano ops. What
-this means is that we start by initializing them with certain parameters e.g.
-``input_dim``. After initialization we can apply our bricks on Theano variables
-to build the model we want.
+Blocks' uses "bricks" to build models. Bricks are parametrized Theano
+operations. What this means is that we start by initializing bricks with
+certain parameters e.g. ``input_dim``. After initialization we can apply our
+bricks on Theano variables to build the model we want. We'll talk more about
+bricks in the next tutorial, :doc:`bricks_overview`.
 
+Loss function and regularization
+--------------------------------
 Now that we have built our model, let's define the cost to minimize. For this,
 we will need the Theano variable representing the target labels.
 
@@ -90,11 +94,58 @@ we will need the Theano variable representing the target labels.
 >>> from blocks.bricks.cost import CategoricalCrossEntropy
 >>> cost = CategoricalCrossEntropy().apply(y.flatten(), y_hat)
 
-That's it! But creating a simple MLP this way is rather cumbersome. In practice,
-we would have simply used the :class:`~blocks.bricks.MLP` class.
+To make sure that our network doesn't overfit we can use regularization, that
+is, we will penalize the complexity of the model. We will use
+:math:`L2`-regularization, also known as *weight decay*. So our final objective
+function is:
+
+.. math:: l(\mathbf{f}(\mathbf{x}), y) = -\log f(\mathbf{x})_y + \lambda_1\|\mathbf{W}^{(1)}\|^2 + \lambda_2\|\mathbf{W}^{(2)}\|^2
+
+To get the weights from our model, we will use Blocks' annotation futures (read
+more about them in the :doc:`cg` tutorial).
+
+>>> from blocks.bricks import WEIGHTS
+>>> from blocks.graph import ComputationGraph
+>>> from blocks.filter import VariableFilter
+>>> cg = ComputationGraph(cost)
+>>> W1, W2 = VariableFilter(roles=[WEIGHTS])(cg.variables)
+>>> cost = cost + 0.005 * (W1 ** 2).sum() + 0.005 * (W2 ** 2).sum()
+>>> cost.name = 'cost_with_regularization'
+
+.. note::
+
+   Note that we explicitly gave our variable a name. We do this so that when we
+   monitor the performance of our model, the progress monitor will know what
+   name to report in the logs.
+
+Where we set :math:`\lambda_1 = \lambda_2 = 0.005`. And that's it! We now have
+the final objective function we want to optimize.
+
+But creating a simple MLP this way is rather cumbersome. In practice, we would
+have used the :class:`.MLP` class instead.
 
 >>> from blocks.bricks import MLP
 >>> mlp = MLP(activations=[Rectifier(), Softmax()], dims=[784, 100, 10]).apply(x)
+
+Initializing the parameters
+---------------------------
+When we constructed the :class:`.Linear` bricks to build our
+model, they automatically initialized Theano shared variables to store their
+parameters in.  All of these parameters were set to 0. Before we start training
+our network, we will want to initialize these parameters by sampling them from
+a particular probability distribution. Bricks can do this for you.
+
+>>> from blocks.initialization import IsotropicGaussian, Constant
+>>> input_to_hidden.weights_init = hidden_to_output.weights_init = IsotropicGaussian(0.01)
+>>> input_to_hidden.biases_init = hidden_to_output.biases_init = Constant(0)
+>>> input_to_hidden.initialize()
+>>> hidden_to_output.initialize()
+
+We have now initialized our weight matrices with entries drawn from a normal
+distribution with a standard deviation of 0.01.
+
+>>> W1.get_value() # doctest: +SKIP
+        array([[ 0.01624345, -0.00611756, -0.00528172, ...,  0.00043597, ...
 
 Training your model
 -------------------
@@ -124,39 +175,63 @@ As our algorithm we will use straightforward SGD with a fixed learning rate.
 >>> from blocks.algorithms import GradientDescent, SteepestDescent
 >>> algorithm = GradientDescent(cost=cost, step_rule=SteepestDescent(learning_rate=0.1))
 
-That's all we need! We can use the :class:`~blocks.main_loop.MainLoop` to
-combine all the different pieces. Let's train our model for a single epoch and
-print the progress to see how it works.
+During training we will want to monitor the performance of our model on
+separate validation. Let's create a new data stream for that.
+
+>>> mnist_test = MNIST("test")
+>>> data_stream_test = DataStream(mnist_test, iteration_scheme=SequentialScheme(
+...     num_examples=mnist_test.num_examples, batch_size=1024))
+
+In order to monitor our performance on this data stream during training, we need
+to use one of Blocks' extensions. In particular, we need to use the
+:class:`.DataStreamMonitoring` extension.
+
+>>> from blocks.extensions.monitoring import DataStreamMonitoring
+>>> monitor = DataStreamMonitoring(
+...     expressions=[cost], data_stream=data_stream_test, prefix="test")
+
+We can use the :class:`.MainLoop` to combine all the different
+bits and pieces now. We use two more extensions to make our training stop after
+a single epoch and to make sure that our progress is printed.
 
 >>> from blocks.main_loop import MainLoop
 >>> from blocks.extensions import FinishAfter, Printing
 >>> main_loop = MainLoop(model=mlp, data_stream=data_stream, algorithm=algorithm,
-...                      extensions=[FinishAfter(after_n_epochs=1), Printing()])
+...                      extensions=[monitor, FinishAfter(after_n_epochs=1), Printing()])
 >>> main_loop.run() # doctest: +SKIP
+<BLANKLINE>
 -------------------------------------------------------------------------------
 BEFORE FIRST EPOCH
 -------------------------------------------------------------------------------
 Training status:
-     iterations_done: 0
      epochs_done: 0
+     iterations_done: 0
 Log records from the iteration 0:
+     test_cost_with_regularization: 2.34244632721
+<BLANKLINE>
+<BLANKLINE>
 -------------------------------------------------------------------------------
 AFTER ANOTHER EPOCH
 -------------------------------------------------------------------------------
 Training status:
-     iterations_done: 235
      epochs_done: 1
+     iterations_done: 235
 Log records from the iteration 235:
+     test_cost_with_regularization: 0.664899230003
      training_finish_requested: True
+<BLANKLINE>
+<BLANKLINE>
 -------------------------------------------------------------------------------
 TRAINING HAS BEEN FINISHED:
 -------------------------------------------------------------------------------
 Training status:
-     iterations_done: 235
      epochs_done: 1
+     iterations_done: 235
 Log records from the iteration 235:
+     test_cost_with_regularization: 0.664899230003
      training_finish_requested: True
      training_finished: True
+<BLANKLINE>
 
 .. _multilayer perceptron: https://en.wikipedia.org/wiki/Multilayer_perceptron
 .. _MNIST handwritten digit database: http://yann.lecun.com/exdb/mnist/

@@ -3,6 +3,7 @@ Bricks
 
 .. automodule:: blocks.bricks
     :members:
+    :exclude-members: Activation, ActivationDocumentation
     :undoc-members:
     :show-inheritance:
 

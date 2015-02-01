@@ -67,7 +67,7 @@ class TestGatedRecurrent(unittest.TestCase):
         self.reset_only = GatedRecurrent(
             dim=3, weights_init=IsotropicGaussian(),
             activation=Tanh(), gate_activation=Tanh(),
-            use_update_gate=False, rng=numpy.random.RandomState(1))
+            use_update_gate=False, seed=1)
         self.reset_only.initialize()
 
     def test_one_step(self):
@@ -125,9 +125,10 @@ class TestBidirectional(unittest.TestCase):
     def setUp(self):
         self.bidir = Bidirectional(weights_init=Orthogonal(),
                                    prototype=Recurrent(
-                                       dim=3, activation=Tanh()))
+                                       dim=3, activation=Tanh()),
+                                   seed=1)
         self.simple = Recurrent(dim=3, weights_init=Orthogonal(),
-                                activation=Tanh())
+                                activation=Tanh(), seed=1)
         self.bidir.initialize()
         self.simple.initialize()
         self.x_val = 0.1 * numpy.asarray(

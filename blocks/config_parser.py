@@ -16,12 +16,14 @@ Which could be overwritten by using environment variables:
 
 .. code-block:: bash
 
-   BLOCKS_DATA_PATH=/home/users/other_datasets python
+   $ BLOCKS_DATA_PATH=/home/users/other_datasets python
 
 If a setting is not configured and does not provide a default, a
-:class:`ConfigurationError` is raised when it is accessed.
+:class:`~.ConfigurationError` is raised when it is
+accessed.
 
-Configuration values can be accessed as attributes of ``blocks.config``.
+Configuration values can be accessed as attributes of
+:const:`blocks.config`.
 
     >>> from blocks import config
     >>> print(config.data_path) # doctest: +SKIP
@@ -33,6 +35,13 @@ The following configurations are supported:
 
    The path where dataset files are stored. Can also be set using the
    environment variable ``BLOCKS_DATA_PATH``.
+
+.. option:: default_seed
+
+   The seed used when initializing random number generators (RNGs) such as
+   NumPy :class:`~numpy.random.RandomState` objects as well as Theano's
+   :class:`~theano.sandbox.rng_mrg.MRG_RandomStreams` objects. Must be an
+   integer. By default this is set to 1.
 
 .. _YAML: http://yaml.org/
 .. _environment variables:
@@ -50,6 +59,7 @@ NOT_SET = object()
 
 
 class ConfigurationError(Exception):
+    """Error raised when a configuration value is requested but not set."""
     pass
 
 
