@@ -29,7 +29,7 @@ In-depth
    datasets
    serialization
    api/index.rst
-   developer_guidelines
+   development/index.rst
 
 .. warning::
    Blocks is a new project which is still under development. As such, certain

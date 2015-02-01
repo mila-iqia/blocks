@@ -1,5 +1,5 @@
-Developer guidelines
-====================
+Development
+===========
 
 We want to encourage everyone to contribute to the development of Blocks. To
 ensure the codebase is of high quality, we ask all new developers to have a
@@ -234,3 +234,13 @@ The test suite can be executed locally using nose2_ [#]_.
 .. _nose2: https://readthedocs.org/projects/nose2/
 .. _nose: http://nose.readthedocs.org/en/latest/
 
+Internal API
+------------
+The :doc:`development API reference <internal_api>` contains documentation on
+the internal classes that Blocks uses. If you are not planning on contributing
+to Blocks, have a look at the :doc:`user API reference </api/index>` instead.
+
+.. toctree::
+   :hidden:
+
+   internal_api

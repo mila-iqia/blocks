@@ -284,3 +284,12 @@ texinfo_documents = [
 
 # If true, do not generate a @detailmenu in the "Top" node's menu.
 #texinfo_no_detailmenu = False
+
+from sphinx.ext.autodoc import cut_lines
+
+def skip_abc(app, what, name, obj, skip, options):
+    return skip or name.startswith('_abc')
+
+def setup(app):
+    app.connect('autodoc-skip-member', skip_abc)
+    app.connect('autodoc-process-docstring', cut_lines(2, what=['module']))
