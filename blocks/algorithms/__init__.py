@@ -1,7 +1,8 @@
 """Training algorithms."""
+import logging
+import itertools
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
-import logging
 
 import theano
 from six import add_metaclass
@@ -296,11 +297,38 @@ class GradientClipping(StepRule):
 
     """
     def __init__(self, threshold=None):
-        self.threshold = theano.shared(threshold)
+        if threshold:
+            self.threshold = theano.shared(threshold)
 
     def compute_steps(self, gradients):
+        if not hasattr(self, 'threshold'):
+            return gradients
         norm = L2_norm(gradients.values())
         multiplier = tensor.switch(norm < self.threshold,
                                    1, self.threshold / norm)
         return dict((param, gradient * multiplier)
                     for param, gradient in gradients.items())
+
+
+class CompositeRule(StepRule):
+    """Chains several step rules.
+
+    Parameters
+    ----------
+    components : list of :class:`StepRule`
+        The learning rules to be chained. The rules will be applied in the
+        order as given.
+
+    """
+    def __init__(self, components):
+        self.components = components
+
+    def compute_steps(self, gradients):
+        result = gradients
+        for rule in self.components:
+            result = rule.compute_steps(result)
+        return result
+
+    def additional_updates(self):
+        return list(itertools.chain(*(component.additional_updates()
+                                      for component in self.components)))
