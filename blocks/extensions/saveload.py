@@ -26,6 +26,8 @@ class SerializeMainLoop(SimpleExtension):
     ----------
     path : str
         The destination path for pickling.
+    model_alone : bool, optional
+        If ``True``, additionaly pickles the model into a separate file.
 
     Notes
     -----
@@ -41,10 +43,12 @@ class SerializeMainLoop(SimpleExtension):
 
 
     """
-    def __init__(self, path, **kwargs):
+    def __init__(self, path, model_alone=False, log_alone=False, **kwargs):
         kwargs.setdefault("after_training", True)
         super(SerializeMainLoop, self).__init__(**kwargs)
+
         self.path = path
+        self.model_alone = model_alone
 
     def do(self, callback_name, *args):
         """Pickle the main loop object to the disk."""
@@ -53,6 +57,12 @@ class SerializeMainLoop(SimpleExtension):
             with open(self.path, "wb") as destination:
                 dill.dump(self.main_loop, destination,
                           fmode=dill.CONTENTS_FMODE)
+            if self.model_alone:
+                path, ext = os.path.splitext(self.path)
+                with open(path + "_model" + ext, "wb") as destination:
+                    dill.dump(self.main_loop.model, destination,
+                              fmode=dill.CONTENTS_FMODE)
+
         except:
             self.main_loop.log.current_row[SAVED_TO] = None
 
