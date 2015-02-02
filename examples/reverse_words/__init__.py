@@ -19,7 +19,8 @@ from blocks.datasets import (
     DataStreamFilter)
 from blocks.datasets.text import OneBillionWord
 from blocks.datasets.schemes import ConstantScheme
-from blocks.algorithms import GradientDescent, SteepestDescent
+from blocks.algorithms import (GradientDescent, SteepestDescent,
+                               GradientClipping, CompositeRule)
 from blocks.initialization import Orthogonal, IsotropicGaussian, Constant
 from blocks.monitoring import aggregation
 from blocks.extensions import FinishAfter, Printing, Timing
@@ -176,21 +177,18 @@ def main(mode, save_path, num_batches, from_dump):
         (activations,) = VariableFilter(
             application=generator.transition.apply,
             name="states")(cg.variables)
-        (inputs,) = VariableFilter(
-            application=generator.transition.apply,
-            name="inputs")(cg.variables)
         (weights,) = VariableFilter(
             application=generator.cost, name="weights")(cg.variables)
-        (attended,) = VariableFilter(
-            application=generator.cost, name="attended$")(cg.variables)
 
         # Define the training algorithm.
         algorithm = GradientDescent(
-            cost=cost, step_rule=SteepestDescent(0.001))
+            cost=cost, step_rule=CompositeRule([GradientClipping(10.0),
+                                                SteepestDescent(0.001)]))
 
         observables = [
             cost, min_energy, max_energy, algorithm.total_gradient_norm,
-            batch_size, max_length, cost_per_character]
+            batch_size, max_length, cost_per_character,
+            algorithm.total_step_norm]
         for name, param in params.items():
             observables.append(named_copy(
                 param.norm(2), name + "_norm"))
@@ -209,7 +207,8 @@ def main(mode, save_path, num_batches, from_dump):
                     "after_batch",
                     lambda log:
                         math.isnan(log.current_row.total_gradient_norm)),
-                SerializeMainLoop(save_path, every_n_batches=500),
+                SerializeMainLoop(save_path, every_n_batches=500,
+                                  model_alone=True),
                 Printing(every_n_batches=1)])
         main_loop.run()
     elif mode == "sample":
