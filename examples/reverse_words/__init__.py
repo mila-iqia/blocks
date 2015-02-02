@@ -2,6 +2,8 @@ import logging
 import pprint
 import sys
 import math
+import dill
+import numpy
 
 import theano
 from theano import tensor
@@ -35,6 +37,30 @@ sys.setrecursionlimit(100000)
 floatX = theano.config.floatX
 logger = logging.getLogger(__name__)
 
+# Dictionaries
+all_chars = ([chr(ord('a') + i) for i in range(26)] +
+            [chr(ord('0') + i) for i in range(10)] +
+            [',', '.', '!', '?', '<UNK>'] +
+            [' ', '<S>', '</S>'])
+code2char = dict(enumerate(all_chars))
+char2code = {v: k for k, v in code2char.items()}
+
+
+def reverse_words(sample):
+    sentence = sample[0]
+    result = []
+    word_start = -1
+    for i, code in enumerate(sentence):
+        if code >= char2code[' ']:
+            if word_start >= 0:
+                result.extend(sentence[i - 1:word_start - 1:-1])
+                word_start = -1
+            result.append(code)
+        else:
+            if word_start == -1:
+                word_start = i
+    return (result,)
+
 
 class Transition(GatedRecurrent):
     def __init__(self, attended_dim, **kwargs):
@@ -62,30 +88,10 @@ class Transition(GatedRecurrent):
 def main(mode, save_path, num_batches, from_dump):
     if mode == "train":
         # Experiment configuration
-        chars = ([chr(ord('a') + i) for i in range(26)] +
-                 [chr(ord('0') + i) for i in range(10)] +
-                 [',', '.', '!', '?', '<UNK>'] +
-                 [' ', '<S>', '</S>'])
-        code2char = dict(enumerate(chars))
-        char2code = {v: k for k, v in code2char.items()}
         dimension = 100
-        readout_dimension = len(chars)
+        readout_dimension = len(char2code)
 
         # Data processing pipeline
-        def reverse_words(sample):
-            sentence = sample[0]
-            result = []
-            word_start = -1
-            for i, code in enumerate(sentence):
-                if code >= char2code[' ']:
-                    if word_start >= 1:
-                        result.extend(sentence[i:word_start - 1:-1])
-                        word_start = -1
-                else:
-                    if word_start == -1:
-                        word_start = i
-            return (result[1:],)
-
         data_stream = DataStreamMapping(
             mapping=lambda data: tuple(array.T for array in data),
             data_stream=PaddingDataStream(
@@ -211,7 +217,33 @@ def main(mode, save_path, num_batches, from_dump):
                                   model_alone=True),
                 Printing(every_n_batches=1)])
         main_loop.run()
-    elif mode == "sample":
-        raise NotImplementedError()
-    else:
-        assert False
+    elif mode == "test":
+        with open(save_path, "rb") as source:
+            encoder, fork, lookup, generator = dill.load(source)
+        logger.info("Model is loaded")
+        chars = tensor.lmatrix("features")
+        generated = generator.generate(
+            n_steps=20, batch_size=chars.shape[1],
+            attended=encoder.apply(
+                **dict_union(fork.apply(lookup.lookup(chars),
+                             return_dict=True))),
+            attended_mask=tensor.ones(chars.shape))
+        sample_function = ComputationGraph(generated).get_theano_function()
+        logging.info("Sampling function is compiled")
+        while True:
+            # Python 2-3 compatibility
+            try:
+                input = raw_input
+            except:
+                pass
+            line = input("Enter a sentence\n")
+            batch_size = int(input("Enter a number of samples\n"))
+            encoded_input = [char2code[char] for char in line.lower().strip()]
+            encoded_input = [char2code['<S>']] + encoded_input + [char2code['</S>']]
+            print "Encoder input:", encoded_input
+            print "Target:", reverse_words((encoded_input,))
+            states, samples, glimpses, weights, costs = sample_function(
+                numpy.repeat(numpy.array(encoded_input)[:, None],
+                             batch_size, axis=1))
+            for i in range(samples.shape[1]):
+                print("".join(code2char[code] for code in samples[:, i]))
