@@ -115,7 +115,7 @@ class Mean(AggregationScheme):
                                 initialization_updates=initialization_updates,
                                 accumulation_updates=accumulation_updates,
                                 readout_variable=(numerator_acc /
-                                                    denominator_acc))
+                                                  denominator_acc))
         return aggregator
 
 
