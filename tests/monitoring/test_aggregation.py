@@ -51,4 +51,4 @@ def test_param_monitor():
     accumulate = theano.function([X], updates=aggregator.accumulation_updates)
     accumulate(numpy.arange(4, dtype=theano.config.floatX).reshape(2, 2))
     accumulate(numpy.arange(4, 10, dtype=theano.config.floatX).reshape(3, 2))
-    assert_allclose(aggregator.readout_expression.eval(), 4.5)
+    assert_allclose(aggregator.readout_variable.eval(), 4.5)

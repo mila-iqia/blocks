@@ -10,7 +10,7 @@ from theano import tensor
 
 from blocks.graph import ComputationGraph
 from blocks.utils import named_copy, shared_floatx
-from blocks.snippets import L2_norm
+from blocks.theano_expressions import L2_norm
 
 logger = logging.getLogger(__name__)
 
@@ -188,6 +188,9 @@ class GradientDescent(DifferentiableCostMinimizer):
     def initialize(self):
         logger.info("Initializing the training algorithm")
         all_updates = self.updates
+        # Note: the gradients are computed in the same order in which
+        # the parameters were given. Keep it like that to ensure
+        # reproducibility.
         for param in self.params:
             all_updates.append((param, param + self.steps[param]))
         self._function = theano.function(self.inputs, [], updates=all_updates)
@@ -216,8 +219,7 @@ class StepRule(object):
         param : :class:`~tensor.TensorSharedVariable`
             The parameter.
         gradient : :class:`~tensor.TensorVariable`
-            The expression for the gradient of the cost with respect to
-            the parameter.
+            The gradient of the cost with respect to the parameter.
 
         Returns
         -------
@@ -234,7 +236,8 @@ class StepRule(object):
 
         Parameters
         ----------
-        gradients : dict of (:class:`~tensor.TensorSharedVariable`
+        gradients : :class:`~OrderedDict` of
+                    (:class:`~tensor.TensorSharedVariable`
                     :class:`~tensor.TensorVariable`) pairs
             A dictionary. The keys are the optimized parameters, the values
             are the expressions for the gradients of the cost with respect
@@ -242,12 +245,12 @@ class StepRule(object):
 
         Returns
         -------
-        A dictionary of the same form as `gradient`, with the proposed
-        steps as values.
+        An ordered dictionary of the same form as `gradient`, with the
+        proposed steps as values.
 
         """
-        return {param: self.compute_step(param, gradients[param])
-                for param in gradients}
+        return OrderedDict((param, self.compute_step(param, gradients[param]))
+                           for param in gradients)
 
     def additional_updates(self):
         """Return updates to be done in addition to parameter modification.
@@ -308,8 +311,9 @@ class GradientClipping(StepRule):
         norm = L2_norm(gradients.values())
         multiplier = tensor.switch(norm < self.threshold,
                                    1, self.threshold / norm)
-        return dict((param, gradient * multiplier)
-                    for param, gradient in gradients.items())
+        return OrderedDict(
+            (param, gradient * multiplier)
+            for param, gradient in gradients.items())
 
 
 class CompositeRule(StepRule):
