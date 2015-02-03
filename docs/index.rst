@@ -94,7 +94,7 @@ And train!
 ...         cost=cost, step_rule=SteepestDescent(learning_rate=0.1)),
 ...     extensions=[FinishAfter(after_n_epochs=5),
 ...                 DataStreamMonitoring(
-...                     expressions=[cost, error_rate],
+...                     variables=[cost, error_rate],
 ...                     data_stream=test_stream,
 ...                     prefix="test"),
 ...                 Printing()])

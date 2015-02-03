@@ -188,7 +188,7 @@ to use one of Blocks' extensions. In particular, we need to use the
 
 >>> from blocks.extensions.monitoring import DataStreamMonitoring
 >>> monitor = DataStreamMonitoring(
-...     expressions=[cost], data_stream=data_stream_test, prefix="test")
+...     variables=[cost], data_stream=data_stream_test, prefix="test")
 
 We can use the :class:`.MainLoop` to combine all the different
 bits and pieces now. We use two more extensions to make our training stop after

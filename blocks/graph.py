@@ -235,7 +235,7 @@ class Annotation(object):
         self.auxiliary_variables = []
         self.updates = OrderedDict()
 
-    def add_auxiliary_variable(self, expression, roles=None, name=None):
+    def add_auxiliary_variable(self, variable, roles=None, name=None):
         """Attach an auxiliary variable to the graph.
 
         Auxiliary variables are Theano variables that are not part of a
@@ -244,15 +244,15 @@ class Annotation(object):
 
         Parameters
         ----------
-        expression : :class:`~tensor.TensorVariable`
-            The expression of the variable you want to add.
+        variable : :class:`~tensor.TensorVariable`
+            The variable you want to add.
         roles : list of :class:`.VariableRole` instances, optional
             The roles of this variable. The :const:`.AUXILIARY`
             role will automatically be added. Other options are
             :const:`.COST`, :const:`.WEIGHTS`, etc.
         name : str, optional
-            The name of the expression; overrides the name of the variable
-            if it already has one.
+            Name to give to the variable. If the variable already has a
+            name it will be overwritten.
 
         Examples
         --------
@@ -283,15 +283,15 @@ class Annotation(object):
         {mean_x}
 
         """
-        add_annotation(expression, self)
+        add_annotation(variable, self)
         if name is not None:
-            expression.name = name
-            expression.tag.name = name
-        add_role(expression, AUXILIARY)
+            variable.name = name
+            variable.tag.name = name
+        add_role(variable, AUXILIARY)
         if roles is not None:
             for role in roles:
-                add_role(expression, role)
-        self.auxiliary_variables.append(expression)
+                add_role(variable, role)
+        self.auxiliary_variables.append(variable)
 
 
 def apply_noise(graph, variables, level, seed=None):
