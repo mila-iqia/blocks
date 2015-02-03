@@ -1,3 +1,4 @@
+from __future__ import print_function
 import logging
 import pprint
 import sys
@@ -241,9 +242,9 @@ def main(mode, save_path, num_batches, from_dump):
                              for char in line.lower().strip()]
             encoded_input = ([char2code['<S>']] + encoded_input +
                              [char2code['</S>']])
-            print "Encoder input:", encoded_input
+            print("Encoder input:", encoded_input)
             target = reverse_words((encoded_input,))[0]
-            print "Target: ", target
+            print("Target: ", target)
             states, samples, glimpses, weights, costs = sample_function(
                 numpy.repeat(numpy.array(encoded_input)[:, None],
                              batch_size, axis=1))
