@@ -186,6 +186,9 @@ class GradientDescent(DifferentiableCostMinimizer):
         logger.info("Initializing the training algorithm")
         all_updates = self.updates
         steps = self.step_rule.compute_steps(self.gradients)
+        # Note: the gradients are computed in the same order in which
+        # the parameters were given. Keep it like that to ensure
+        # reproducibility.
         for param in self.params:
             all_updates.append((param, param + steps[param]))
         self._function = theano.function(self.inputs, [], updates=all_updates)
