@@ -251,8 +251,8 @@ class Annotation(object):
             role will automatically be added. Other options are
             :const:`.COST`, :const:`.WEIGHTS`, etc.
         name : str, optional
-            The name of the variable; overrides the name of the variable
-            if it already has one.
+            Name to give to the variable. If the variable already has a
+            name it will be overwritten.
 
         Examples
         --------
