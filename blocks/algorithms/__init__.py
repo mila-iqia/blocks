@@ -1,14 +1,16 @@
 """Training algorithms."""
+import logging
+import itertools
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
-import logging
 
 import theano
 from six import add_metaclass
 from theano import tensor
 
 from blocks.graph import ComputationGraph
-from blocks.utils import named_copy
+from blocks.utils import named_copy, shared_floatx
+from blocks.theano_expressions import L2_norm
 
 logger = logging.getLogger(__name__)
 
@@ -140,15 +142,16 @@ class GradientDescent(DifferentiableCostMinimizer):
     .. code-block::  python
 
         for batch in data:
+            steps = step_rule.compute_steps(params, gradients_wr_params)
             for param in params:
-                param += step.compute(grad_wr_param_on_batch)
+                param += steps[param]
 
     Parameters
     ----------
     step_rule : instance of :class:`StepRule`, optional
         An object encapsulating most of the algorithm's logic. Its
-        `compute_step` method is called to get a Theano expression for the
-        actual step to take for each parameter. Note, that the step rule
+        `compute_steps` method is called to get Theano expression for
+        steps. Note, that the step rule
         might have a state, e.g. to remember a weighted sum of gradients
         from previous steps like it is done in gradient descent with
         momentum. If ``None``, an instance of :class:`SteepestDescent` is
@@ -176,18 +179,18 @@ class GradientDescent(DifferentiableCostMinimizer):
             logger.info("The cost gradient computation graph is built")
         self.step_rule = step_rule if step_rule else SteepestDescent()
 
-        self.total_gradient_norm = named_copy(
-            tensor.sqrt(sum((g ** 2).sum() for g in self.gradients.values())),
-            "total_gradient_norm")
+        self.total_gradient_norm = named_copy(L2_norm(self.gradients.values()),
+                                              "total_gradient_norm")
 
     def initialize(self):
         logger.info("Initializing the training algorithm")
         all_updates = self.updates
+        steps = self.step_rule.compute_steps(self.gradients)
+        # Note: the gradients are computed in the same order in which
+        # the parameters were given. Keep it like that to ensure
+        # reproducibility.
         for param in self.params:
-            all_updates.append((param,
-                                param + self.step_rule.compute_step(
-                                    param,
-                                    self.gradients[param])))
+            all_updates.append((param, param + steps[param]))
         self._function = theano.function(self.inputs, [], updates=all_updates)
         logger.info("The training algorithm is initialized")
 
@@ -202,16 +205,18 @@ class GradientDescent(DifferentiableCostMinimizer):
 
 @add_metaclass(ABCMeta)
 class StepRule(object):
-    """A rule to compute a step for a gradient descent algorithm."""
-    @abstractmethod
-    def compute_step(self, param, grad_wr_param):
+    """A rule to compute steps for a gradient descent algorithm."""
+    def compute_step(self, param, gradient):
         """Build a Theano expression for the step for a parameter.
+
+        This method is called by default implementation of
+        :meth:`compute_steps`, it relieves from writing a loop each time.
 
         Parameters
         ----------
         param : :class:`~tensor.TensorSharedVariable`
             The parameter.
-        grad_wr_param : :class:`~tensor.TensorVariable`
+        gradient : :class:`~tensor.TensorVariable`
             The gradient of the cost with respect to the parameter.
 
         Returns
@@ -220,6 +225,30 @@ class StepRule(object):
 
         """
         raise NotImplementedError
+
+    def compute_steps(self, gradients):
+        """Build a Theano expression for steps for all parameters.
+
+        Override this method if you want to process the gradient
+        with respect to all parameters as a whole, not parameter-wise.
+
+        Parameters
+        ----------
+        gradients : :class:`~OrderedDict` of
+                    (:class:`~tensor.TensorSharedVariable`
+                    :class:`~tensor.TensorVariable`) pairs
+            A dictionary. The keys are the optimized parameters, the values
+            are the expressions for the gradients of the cost with respect
+            to the parameters.
+
+        Returns
+        -------
+        An ordered dictionary of the same form as `gradient`, with the
+        proposed steps as values.
+
+        """
+        return OrderedDict((param, self.compute_step(param, gradients[param]))
+                           for param in gradients)
 
     def additional_updates(self):
         """Return updates to be done in addition to parameter modification.
@@ -243,12 +272,67 @@ class SteepestDescent(StepRule):
 
     Attributes
     ----------
-    learning_rate : float
-        The learning rate.
+    learning_rate : :class:`~tensor.TensorSharedVariable`
+        The shared variable storing the learning rate used.
 
     """
     def __init__(self, learning_rate=1.0):
-        self.learning_rate = learning_rate
+        self.learning_rate = shared_floatx(learning_rate)
 
-    def compute_step(self, param, grad_wr_param):
-        return -self.learning_rate * grad_wr_param
+    def compute_step(self, param, gradient):
+        return -self.learning_rate * gradient
+
+
+class GradientClipping(StepRule):
+    """Clips the total gradient to make it not exceed a threshold.
+
+    Parameters
+    ----------
+    threshold : float, optional
+        The maximum permitted L2 norm for the gradient. The gradient
+        will be rescaled to be not higher than this quanity.
+        If ``None``, no rescaling will be applied.
+
+    Attributes
+    ----------
+    threshold : :class:`.tensor.TensorSharedVariable`
+        The shared variable storing the clipping threshold used.
+
+    """
+    def __init__(self, threshold=None):
+        if threshold:
+            self.threshold = theano.shared(threshold)
+
+    def compute_steps(self, gradients):
+        if not hasattr(self, 'threshold'):
+            return gradients
+        norm = L2_norm(gradients.values())
+        multiplier = tensor.switch(norm < self.threshold,
+                                   1, self.threshold / norm)
+        return OrderedDict(
+            (param, gradient * multiplier)
+            for param, gradient in gradients.items())
+
+
+class CompositeRule(StepRule):
+    """Chains several step rules.
+
+    Parameters
+    ----------
+    components : list of :class:`StepRule`
+        The learning rules to be chained. The rules will be applied in the
+        order as given.
+
+    """
+    def __init__(self, components):
+        self.components = components
+
+    def compute_steps(self, gradients):
+        result = gradients
+        for rule in self.components:
+            result = rule.compute_steps(result)
+        return result
+
+    def additional_updates(self):
+        return list(itertools.chain(*(component.additional_updates()
+                                      for component in self.components)))
