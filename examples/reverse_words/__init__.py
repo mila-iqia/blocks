@@ -1,9 +1,13 @@
+from __future__ import print_function
 import logging
 import pprint
 import sys
 import math
+import dill
+import numpy
 
 import theano
+from six.moves import input
 from theano import tensor
 
 from blocks.bricks import Tanh, application
@@ -34,6 +38,30 @@ sys.setrecursionlimit(100000)
 floatX = theano.config.floatX
 logger = logging.getLogger(__name__)
 
+# Dictionaries
+all_chars = ([chr(ord('a') + i) for i in range(26)] +
+             [chr(ord('0') + i) for i in range(10)] +
+             [',', '.', '!', '?', '<UNK>'] +
+             [' ', '<S>', '</S>'])
+code2char = dict(enumerate(all_chars))
+char2code = {v: k for k, v in code2char.items()}
+
+
+def reverse_words(sample):
+    sentence = sample[0]
+    result = []
+    word_start = -1
+    for i, code in enumerate(sentence):
+        if code >= char2code[' ']:
+            if word_start >= 0:
+                result.extend(sentence[i - 1:word_start - 1:-1])
+                word_start = -1
+            result.append(code)
+        else:
+            if word_start == -1:
+                word_start = i
+    return (result,)
+
 
 class Transition(GatedRecurrent):
     def __init__(self, attended_dim, **kwargs):
@@ -61,30 +89,10 @@ class Transition(GatedRecurrent):
 def main(mode, save_path, num_batches, from_dump):
     if mode == "train":
         # Experiment configuration
-        chars = ([chr(ord('a') + i) for i in range(26)] +
-                 [chr(ord('0') + i) for i in range(10)] +
-                 [',', '.', '!', '?', '<UNK>'] +
-                 [' ', '<S>', '</S>'])
-        code2char = dict(enumerate(chars))
-        char2code = {v: k for k, v in code2char.items()}
         dimension = 100
-        readout_dimension = len(chars)
+        readout_dimension = len(char2code)
 
         # Data processing pipeline
-        def reverse_words(sample):
-            sentence = sample[0]
-            result = []
-            word_start = -1
-            for i, code in enumerate(sentence):
-                if code >= char2code[' ']:
-                    if word_start >= 1:
-                        result.extend(sentence[i:word_start - 1:-1])
-                        word_start = -1
-                else:
-                    if word_start == -1:
-                        word_start = i
-            return (result[1:],)
-
         data_stream = DataStreamMapping(
             mapping=lambda data: tuple(array.T for array in data),
             data_stream=PaddingDataStream(
@@ -212,7 +220,49 @@ def main(mode, save_path, num_batches, from_dump):
                 SerializeMainLoop(save_path, every_n_batches=500),
                 Printing(every_n_batches=1)])
         main_loop.run()
-    elif mode == "sample":
-        raise NotImplementedError()
-    else:
-        assert False
+    elif mode == "test":
+        with open(save_path, "rb") as source:
+            encoder, fork, lookup, generator = dill.load(source)
+        logger.info("Model is loaded")
+        chars = tensor.lmatrix("features")
+        generated = generator.generate(
+            n_steps=3 * chars.shape[0], batch_size=chars.shape[1],
+            attended=encoder.apply(
+                **dict_union(fork.apply(lookup.lookup(chars),
+                             return_dict=True))),
+            attended_mask=tensor.ones(chars.shape))
+        sample_function = ComputationGraph(generated).get_theano_function()
+        logging.info("Sampling function is compiled")
+
+        while True:
+            # Python 2-3 compatibility
+            line = input("Enter a sentence\n")
+            batch_size = int(input("Enter a number of samples\n"))
+            encoded_input = [char2code.get(char, char2code["<UNK>"])
+                             for char in line.lower().strip()]
+            encoded_input = ([char2code['<S>']] + encoded_input +
+                             [char2code['</S>']])
+            print("Encoder input:", encoded_input)
+            target = reverse_words((encoded_input,))[0]
+            print("Target: ", target)
+            states, samples, glimpses, weights, costs = sample_function(
+                numpy.repeat(numpy.array(encoded_input)[:, None],
+                             batch_size, axis=1))
+
+            messages = []
+            for i in range(samples.shape[1]):
+                sample = list(samples[:, i])
+                try:
+                    true_length = sample.index(char2code['</S>']) + 1
+                except ValueError:
+                    true_length = len(sample)
+                sample = sample[:true_length]
+                cost = costs[:true_length, i].sum()
+                message = "({})".format(cost)
+                message += "".join(code2char[code] for code in sample)
+                if sample == target:
+                    message += " CORRECT!"
+                messages.append((cost, message))
+            messages.sort(key=lambda tuple_: -tuple_[0])
+            for _, message in messages:
+                print(message)
