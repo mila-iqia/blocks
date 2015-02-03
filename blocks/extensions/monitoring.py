@@ -19,35 +19,35 @@ def _add_records(log, prefix, record_tuples):
 
 
 class DataStreamMonitoring(SimpleExtension):
-    """Monitors values of Theano expressions on a data stream.
+    """Monitors values of Theano variables on a data stream.
 
     By default monitoring is done before the first and after every epoch.
 
     Parameters
     ----------
-    expressions : list of :class:`~tensor.TensorVariable`
-        The expressions to monitor. The variable names are used as
-        expression names.
+    variables : list of :class:`~tensor.TensorVariable`
+        The variables to monitor. The variable names are used as record
+        names in the logs.
     data_stream : instance of :class:`.DataStream`
         The data stream to monitor on. A data epoch is requested
         each time monitoring is done.
     prefix : str, optional
-        A prefix to add to expression names when adding records to the
-        log. An underscore will be used to separate the prefix.
+        A prefix to add to the names when adding records to the log. An
+        underscore will be used to separate the prefix.
 
     """
     PREFIX_SEPARATOR = '_'
 
-    def __init__(self, expressions, data_stream, prefix=None, **kwargs):
+    def __init__(self, variables, data_stream, prefix=None, **kwargs):
         kwargs.setdefault("after_every_epoch", True)
         kwargs.setdefault("before_first_epoch", True)
         super(DataStreamMonitoring, self).__init__(**kwargs)
-        self._evaluator = DatasetEvaluator(expressions)
+        self._evaluator = DatasetEvaluator(variables)
         self.data_stream = data_stream
         self.prefix = prefix
 
     def do(self, callback_name, *args):
-        """Write the values of monitored expressions to the log."""
+        """Write the values of monitored variables to the log."""
         logger.info("Monitoring on auxiliary data started")
         value_dict = self._evaluator.evaluate(self.data_stream)
         _add_records(self.main_loop.log, self.prefix, value_dict.items())
@@ -55,7 +55,7 @@ class DataStreamMonitoring(SimpleExtension):
 
 
 class TrainingDataMonitoring(SimpleExtension):
-    """Monitors values of Theano expressions on training batches.
+    """Monitors values of Theano variables on training batches.
 
     Use this extension to monitor a quantity on every training batch
     cheaply. It integrates with the training algorithm in order to avoid
@@ -63,31 +63,31 @@ class TrainingDataMonitoring(SimpleExtension):
     training a network and you want to log the norm of the gradient on
     every batch, the backpropagation will only be done once.  By
     controlling the frequency with which the :meth:`do` method is called,
-    you can aggregate the monitored expressions, e.g. only log the gradient
+    you can aggregate the monitored variables, e.g. only log the gradient
     norm average over an epoch.
 
     Parameters
     ----------
-    expressions : list of :class:`~tensor.TensorVariable`
-        The expressions to monitor. The variable names are used as
-        expression names.
+    variables : list of :class:`~tensor.TensorVariable`
+        The variables to monitor. The variable names are used as record
+        names in the logs.
     prefix : str, optional
-        A prefix to add to expression names when adding records to the
+        A prefix to add to variable names when adding records to the
         log. An underscore will be used to separate the prefix.
 
     Notes
     -----
-    All the monitored expressions are evaluated _before_ the parameter
+    All the monitored variables are evaluated _before_ the parameter
     update.
 
     Requires the training algorithm to be an instance of
     :class:`.DifferentiableCostMinimizer`.
 
     """
-    def __init__(self, expressions, prefix=None, **kwargs):
+    def __init__(self, variables, prefix=None, **kwargs):
         kwargs.setdefault("before_training", True)
         super(TrainingDataMonitoring, self).__init__(**kwargs)
-        self._buffer = AggregationBuffer(expressions, use_take_last=True)
+        self._buffer = AggregationBuffer(variables, use_take_last=True)
         self._last_time_called = -1
         self.prefix = prefix
 
@@ -99,7 +99,7 @@ class TrainingDataMonitoring(SimpleExtension):
         aggregation buffer and instructs the training algorithm what
         additional computations should be carried at each step by adding
         corresponding updates to it. In all other cases it writes
-        aggregated values of the monitored expressions to the log.
+        aggregated values of the monitored variables to the log.
 
         """
         if callback_name == self.before_training.__name__:
