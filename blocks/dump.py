@@ -176,9 +176,8 @@ class MainLoopDumpManager(object):
                               self.path_to_parameters)
 
     def dump_iteration_state(self, main_loop):
-        iteration_state = (main_loop.data_stream, main_loop.epoch_iterator)
         with open(self.path_to_iteration_state, "wb") as destination:
-            dill.dump(iteration_state, destination)
+            dill.dump(main_loop.iteration_state, destination)
 
     def dump_log(self, main_loop):
         with open(self.path_to_log, "wb") as destination:
@@ -216,8 +215,7 @@ class MainLoopDumpManager(object):
 
     def load_to(self, main_loop):
         """Loads the dump from the root folder into the main loop."""
-        parameters, (data_stream, epoch_iterator), log = self.load()
+        parameters, iteration_state, log = self.load()
         inject_parameter_values(main_loop.model, parameters)
-        main_loop.data_stream = data_stream
-        main_loop.epoch_iterator = epoch_iterator
+        main_loop.iteration_state = iteration_state
         main_loop.log = log
