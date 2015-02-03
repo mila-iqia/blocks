@@ -7,7 +7,7 @@
 .. image:: https://readthedocs.org/projects/blocks/badge/?version=latest
    :target: https://blocks.readthedocs.org/
 
-.. image:: https://landscape.io/github/bartvm/blocks/master/landscape.svg?style=flate
+.. image:: https://landscape.io/github/bartvm/blocks/master/landscape.svg?style=flat
    :target: https://landscape.io/github/bartvm/blocks/master
 
 Blocks
