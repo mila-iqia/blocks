@@ -35,7 +35,8 @@ class AggregationBuffer(object):
     accumulation_updates : list of tuples
         Accumulation updates of the aggregators.
     readout_variables : dict
-        Maps an aggregated variable into a readout variable.
+        A dictionary of record names to :class:`~tensor.TensorVariable`
+        representing the aggregated values.
     input : list of :class:`~tensor.TensorVariable`
         The list of inputs needed for accumulation.
     input_names : list of str
@@ -146,10 +147,9 @@ class DatasetEvaluator(object):
 
     Parameters
     ----------
-    variables : dict or list
-        If a list of :class:`~tensor.TensorVariable` then the variable names
-        are used as record names in the logs, else the dictionary keys are
-        used. All the names must be different.
+    variables : list of :class:`~tensor.TensorVariable`
+        The variable names are used as record names in the logs. Hence, all
+        the names must be different.
 
         Each variable can be tagged with an :class:`AggregationScheme` that
         specifies how the value can be computed for a data set by

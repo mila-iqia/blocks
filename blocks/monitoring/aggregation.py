@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 @add_metaclass(ABCMeta)
 class AggregationScheme(object):
-    """Specify how incrementally evaluate a Theano expression on a dataset.
+    """How to incrementally evaluate a Theano variable over minibatches.
 
     An AggregationScheme allocates :class:`Aggregator`s that can
     incrementally compute the value of a Theano variable on a full dataset
