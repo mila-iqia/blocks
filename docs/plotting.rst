@@ -18,7 +18,7 @@ installation instructions <setup>`). To start the server type
 
    $ bokeh-server
 
-This will start a server that is acce on your computer at
+This will start a server that is accesible on your computer at
 ``http://localhost:5006``. If you want to make sure that you can access your
 plots across a network (or the internet), you can listen on all IP addresses
 using
