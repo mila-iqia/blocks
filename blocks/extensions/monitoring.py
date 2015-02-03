@@ -26,8 +26,8 @@ class DataStreamMonitoring(SimpleExtension):
     Parameters
     ----------
     variables : list of :class:`~tensor.TensorVariable`
-        The variables to monitor. The variable names are used as monitoring
-        channel names.
+        The variables to monitor. The variable names are used as record
+        names in the logs.
     data_stream : instance of :class:`.DataStream`
         The data stream to monitor on. A data epoch is requested
         each time monitoring is done.
@@ -69,8 +69,8 @@ class TrainingDataMonitoring(SimpleExtension):
     Parameters
     ----------
     variables : list of :class:`~tensor.TensorVariable`
-        The variables to monitor. The variable names are used as
-        variable names.
+        The variables to monitor. The variable names are used as record
+        names in the logs.
     prefix : str, optional
         A prefix to add to variable names when adding records to the
         log. An underscore will be used to separate the prefix.
