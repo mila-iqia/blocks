@@ -5,14 +5,18 @@ from theano import tensor
 def L2_norm(tensors):
     """Computes the total L2 norm of a set of tensors.
 
+    Converts all operands to :class:`~tensor.TensorVariable`
+    (see :fun:`~tensor.as_tensor_variable`).
+
     Parameters
     ----------
-    tensors : iterable of :class:`~theano.Variable`
+    tensors : iterable of :class:`~tensor.TensorVariable`
+              or convertable to it
         The tensors.
 
     """
     flattened = [tensor.as_tensor_variable(t).flatten() for t in tensors]
-    flattened = [(t if t.ndim > 0 else tensor.alloc(t, 1))
+    flattened = [(t if t.ndim > 0 else t.dimshuffle('x'))
                  for t in flattened]
     joined = tensor.join(0, *flattened)
     return tensor.sqrt(tensor.sqr(joined).sum())
