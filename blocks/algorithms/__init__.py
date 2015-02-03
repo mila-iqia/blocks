@@ -212,8 +212,7 @@ class StepRule(object):
         param : :class:`~tensor.TensorSharedVariable`
             The parameter.
         grad_wr_param : :class:`~tensor.TensorVariable`
-            The expression for the gradient of the cost with respect to
-            the parameter.
+            The gradient of the cost with respect to the parameter.
 
         Returns
         -------

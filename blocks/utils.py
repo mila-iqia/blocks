@@ -101,24 +101,24 @@ def shared_floatx(value, name=None, borrow=False, dtype=None):
                          borrow=borrow)
 
 
-def shared_like(expression, name=None):
-    """Construct a shared variable to hold the results of a theano expression.
+def shared_like(variable, name=None):
+    """Construct a shared variable to hold the value of a tensor variable.
 
     Parameters
     ----------
-    expression : :class:`~tensor.TensorVariable`
-        The expression whose dtype and ndim will be used to construct
+    variable : :class:`~tensor.TensorVariable`
+        The variable whose dtype and ndim will be used to construct
         the new shared variable.
     name : :obj:`str` or :obj:`None`
         The name of the shared variable. If None, the name is determined
-        based on expression's name.
+        based on variable's name.
 
     """
-    expression = tensor.as_tensor_variable(expression)
+    variable = tensor.as_tensor_variable(variable)
     if name is None:
-        name = "shared_{}".format(expression.name)
-    return theano.shared(numpy.zeros((0,) * expression.ndim,
-                                     dtype=expression.dtype),
+        name = "shared_{}".format(variable.name)
+    return theano.shared(numpy.zeros((0,) * variable.ndim,
+                                     dtype=variable.dtype),
                          name=name)
 
 
