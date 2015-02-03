@@ -1,3 +1,4 @@
+from __future__ import print_function
 import logging
 import pprint
 import sys
@@ -7,6 +8,7 @@ import numpy
 import os
 
 import theano
+from six.moves import input
 from theano import tensor
 
 from blocks.bricks import Tanh, application
@@ -41,9 +43,9 @@ logger = logging.getLogger(__name__)
 
 # Dictionaries
 all_chars = ([chr(ord('a') + i) for i in range(26)] +
-            [chr(ord('0') + i) for i in range(10)] +
-            [',', '.', '!', '?', '<UNK>'] +
-            [' ', '<S>', '</S>'])
+             [chr(ord('0') + i) for i in range(10)] +
+             [',', '.', '!', '?', '<UNK>'] +
+             [' ', '<S>', '</S>'])
 code2char = dict(enumerate(all_chars))
 char2code = {v: k for k, v in code2char.items()}
 
@@ -231,27 +233,43 @@ def main(mode, save_path, num_batches, from_dump):
         logger.info("Model is loaded")
         chars = tensor.lmatrix("features")
         generated = generator.generate(
-            n_steps=20, batch_size=chars.shape[1],
+            n_steps=3 * chars.shape[0], batch_size=chars.shape[1],
             attended=encoder.apply(
                 **dict_union(fork.apply(lookup.lookup(chars),
                              return_dict=True))),
             attended_mask=tensor.ones(chars.shape))
         sample_function = ComputationGraph(generated).get_theano_function()
         logging.info("Sampling function is compiled")
+
         while True:
             # Python 2-3 compatibility
-            try:
-                input = raw_input
-            except:
-                pass
             line = input("Enter a sentence\n")
             batch_size = int(input("Enter a number of samples\n"))
-            encoded_input = [char2code[char] for char in line.lower().strip()]
-            encoded_input = [char2code['<S>']] + encoded_input + [char2code['</S>']]
-            print "Encoder input:", encoded_input
-            print "Target:", reverse_words((encoded_input,))
+            encoded_input = [char2code.get(char, char2code["<UNK>"])
+                             for char in line.lower().strip()]
+            encoded_input = ([char2code['<S>']] + encoded_input +
+                             [char2code['</S>']])
+            print("Encoder input:", encoded_input)
+            target = reverse_words((encoded_input,))[0]
+            print("Target: ", target)
             states, samples, glimpses, weights, costs = sample_function(
                 numpy.repeat(numpy.array(encoded_input)[:, None],
                              batch_size, axis=1))
+
+            messages = []
             for i in range(samples.shape[1]):
-                print("".join(code2char[code] for code in samples[:, i]))
+                sample = list(samples[:, i])
+                try:
+                    true_length = sample.index(char2code['</S>']) + 1
+                except ValueError:
+                    true_length = len(sample)
+                sample = sample[:true_length]
+                cost = costs[:true_length, i].sum()
+                message = "({})".format(cost)
+                message += "".join(code2char[code] for code in sample)
+                if sample == target:
+                    message += " CORRECT!"
+                messages.append((cost, message))
+            messages.sort(key=lambda tuple_: -tuple_[0])
+            for _, message in messages:
+                print(message)
