@@ -6,6 +6,7 @@ import dill
 import numpy
 
 import theano
+from six.moves import input
 from theano import tensor
 
 from blocks.bricks import Tanh, application
@@ -38,9 +39,9 @@ logger = logging.getLogger(__name__)
 
 # Dictionaries
 all_chars = ([chr(ord('a') + i) for i in range(26)] +
-            [chr(ord('0') + i) for i in range(10)] +
-            [',', '.', '!', '?', '<UNK>'] +
-            [' ', '<S>', '</S>'])
+             [chr(ord('0') + i) for i in range(10)] +
+             [',', '.', '!', '?', '<UNK>'] +
+             [' ', '<S>', '</S>'])
 code2char = dict(enumerate(all_chars))
 char2code = {v: k for k, v in code2char.items()}
 
@@ -234,15 +235,12 @@ def main(mode, save_path, num_batches, from_dump):
 
         while True:
             # Python 2-3 compatibility
-            try:
-                input = raw_input
-            except:
-                pass
             line = input("Enter a sentence\n")
             batch_size = int(input("Enter a number of samples\n"))
             encoded_input = [char2code.get(char, char2code["<UNK>"])
                              for char in line.lower().strip()]
-            encoded_input = [char2code['<S>']] + encoded_input + [char2code['</S>']]
+            encoded_input = ([char2code['<S>']] + encoded_input +
+                             [char2code['</S>']])
             print "Encoder input:", encoded_input
             target = reverse_words((encoded_input,))[0]
             print "Target: ", target
