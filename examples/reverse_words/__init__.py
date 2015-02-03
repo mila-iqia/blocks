@@ -4,6 +4,7 @@ import sys
 import math
 import dill
 import numpy
+import os
 
 import theano
 from theano import tensor
@@ -28,6 +29,7 @@ from blocks.monitoring import aggregation
 from blocks.extensions import FinishAfter, Printing, Timing
 from blocks.extensions.saveload import SerializeMainLoop, LoadFromDump
 from blocks.extensions.monitoring import TrainingDataMonitoring
+from blocks.extensions.plot import Plot
 from blocks.main_loop import MainLoop
 from blocks.select import Selector
 from blocks.filter import VariableFilter
@@ -208,11 +210,17 @@ def main(mode, save_path, num_batches, from_dump):
             extensions=([LoadFromDump(from_dump)] if from_dump else []) +
             [Timing(),
                 TrainingDataMonitoring(observables, after_every_batch=True),
+                TrainingDataMonitoring(observables, prefix="average",
+                                       every_n_batches=10),
                 FinishAfter(after_n_batches=num_batches)
                 .add_condition(
                     "after_batch",
                     lambda log:
                         math.isnan(log.current_row.total_gradient_norm)),
+                Plot(os.path.basename(save_path),
+                     [["average_" + cost.name],
+                      ["average_" + cost_per_character.name]],
+                     every_n_batches=10),
                 SerializeMainLoop(save_path, every_n_batches=500,
                                   model_alone=True),
                 Printing(every_n_batches=1)])
