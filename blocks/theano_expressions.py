@@ -6,12 +6,11 @@ def L2_norm(tensors):
     """Computes the total L2 norm of a set of tensors.
 
     Converts all operands to :class:`~tensor.TensorVariable`
-    (see :fun:`~tensor.as_tensor_variable`).
+    (see :func:`~tensor.as_tensor_variable`).
 
     Parameters
     ----------
-    tensors : iterable of :class:`~tensor.TensorVariable`
-              or convertable to it
+    tensors : iterable of :class:`~tensor.TensorVariable` (or compatible)
         The tensors.
 
     """
