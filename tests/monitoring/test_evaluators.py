@@ -1,7 +1,6 @@
 import numpy
-
 import theano
-from nose.tools import assert_raises
+from numpy.testing import assert_raises
 
 from blocks.graph import ComputationGraph
 from blocks.monitoring.evaluators import DatasetEvaluator

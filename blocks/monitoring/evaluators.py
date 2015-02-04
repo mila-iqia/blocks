@@ -185,10 +185,10 @@ class DatasetEvaluator(object):
         try:
             batch = dict_subset(batch, self.buffer_.input_names)
         except KeyError:
-            reraise_as(Exception(
+            reraise_as(
                 "Not all data sources required for monitoring were"
                 " provided. The list of required data sources:"
-                " {}.".format(self.buffer_.input_names)))
+                " {}.".format(self.buffer_.input_names))
         if self._accumulate_fun is not None:
             self._accumulate_fun(**batch)
 
