@@ -224,7 +224,7 @@ def main(mode, save_path, num_batches, from_dump):
                       ["average_" + cost_per_character.name]],
                      every_n_batches=10),
                 SerializeMainLoop(save_path, every_n_batches=500,
-                                  model_alone=True),
+                                  save_separately=["model", "log"]),
                 Printing(every_n_batches=1)])
         main_loop.run()
     elif mode == "test":
