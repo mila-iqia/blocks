@@ -6,6 +6,7 @@ import theano
 from blocks.utils import dict_subset
 from blocks.monitoring.aggregation import _DataIndependent, Mean, TakeLast
 from blocks.graph import ComputationGraph
+from blocks.utils import reraise_as
 
 logger = logging.getLogger()
 
@@ -181,7 +182,13 @@ class DatasetEvaluator(object):
         self.buffer_.initialize_aggregators()
 
     def process_batch(self, batch):
-        batch = dict_subset(batch, self.buffer_.input_names)
+        try:
+            batch = dict_subset(batch, self.buffer_.input_names)
+        except KeyError:
+            reraise_as(
+                "Not all data sources required for monitoring were"
+                " provided. The list of required data sources:"
+                " {}.".format(self.buffer_.input_names))
         if self._accumulate_fun is not None:
             self._accumulate_fun(**batch)
 

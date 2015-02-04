@@ -1,6 +1,6 @@
 import numpy
-
 import theano
+from numpy.testing import assert_raises
 
 from blocks.graph import ComputationGraph
 from blocks.monitoring.evaluators import DatasetEvaluator
@@ -29,3 +29,8 @@ def test_dataset_evaluators():
     per_batch_mean = numpy.mean([batch.mean() for batch in data])
     numpy.testing.assert_allclose(
         values['test_brick_apply_mean_batch_element'], per_batch_mean)
+
+    with assert_raises(Exception) as ar:
+        data_stream = ContainerDataset(dict(X2=data)).get_default_stream()
+        validator.evaluate(data_stream)
+    assert "Not all data sources" in ar.exception.args[0]
