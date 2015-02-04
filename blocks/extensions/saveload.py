@@ -1,6 +1,5 @@
 """Extensions for saving and loading the state of a training process."""
 import os.path
-import dill
 import logging
 
 from blocks.extensions import SimpleExtension, TrainingExtension
