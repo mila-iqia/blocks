@@ -151,7 +151,7 @@ def main(mode, save_path, num_batches, from_dump):
         generator.initialize()
         bricks = [encoder, fork, lookup, generator]
 
-        # Give an idea of what's going on.
+        # Give an idea of what's going on
         params = Selector(bricks).get_params()
         logger.info("Parameters:\n" +
                     pprint.pformat(
@@ -159,7 +159,7 @@ def main(mode, save_path, num_batches, from_dump):
                          in params.items()],
                         width=120))
 
-        # Build the cost computation graph.
+        # Build the cost computation graph
         batch_cost = generator.cost(
             targets, targets_mask,
             attended=encoder.apply(
@@ -187,8 +187,7 @@ def main(mode, save_path, num_batches, from_dump):
         (activations,) = VariableFilter(
             application=generator.transition.apply,
             name="states")(cg.variables)
-        (weights,) = VariableFilter(
-            application=generator.cost, name="weights")(cg.variables)
+        mean_activation = named_copy(activations.mean(), "mean_activation")
 
         # Define the training algorithm.
         algorithm = GradientDescent(
@@ -196,9 +195,9 @@ def main(mode, save_path, num_batches, from_dump):
                                                 SteepestDescent(0.01)]))
 
         observables = [
-            cost, min_energy, max_energy, algorithm.total_gradient_norm,
+            cost, min_energy, max_energy, mean_activation,
             batch_size, max_length, cost_per_character,
-            algorithm.total_step_norm]
+            algorithm.total_step_norm, algorithm.total_gradient_norm]
         for name, param in params.items():
             observables.append(named_copy(
                 param.norm(2), name + "_norm"))
