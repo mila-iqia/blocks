@@ -1,11 +1,10 @@
 """Extensions for saving and loading the state of a training process."""
 import os.path
-import dill
 import logging
 
 from blocks.extensions import SimpleExtension, TrainingExtension
 from blocks.dump import MainLoopDumpManager
-from blocks.utils import reraise_as
+from blocks.utils import reraise_as, secure_dill_dump
 
 logger = logging.getLogger(__name__)
 
@@ -61,17 +60,14 @@ class SerializeMainLoop(SimpleExtension):
         """Pickle the main loop object to the disk."""
         try:
             self.main_loop.log.current_row[SAVED_TO] = self.path
-            with open(self.path, "wb") as destination:
-                dill.dump(self.main_loop, destination,
-                          fmode=dill.CONTENTS_FMODE)
+            secure_dill_dump(self.main_loop, self.path)
             for attribute in self.save_separately:
                 root, ext = os.path.splitext(self.path)
                 path = root + "_" + attribute + ext
-                with open(path, "wb") as destination:
-                    dill.dump(getattr(self.main_loop, attribute),
-                              destination, fmode=dill.CONTENTS_FMODE)
+                secure_dill_dump(getattr(self.main_loop, attribute), path)
         except:
             self.main_loop.log.current_row[SAVED_TO] = None
+            raise
 
 
 class LoadFromDump(TrainingExtension):
@@ -135,3 +131,4 @@ class Dump(SimpleExtension):
             self.manager.dump(self.main_loop)
         except:
             self.main_loop.log.current_row[SAVED_TO] = None
+            raise

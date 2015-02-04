@@ -1,9 +1,13 @@
 import sys
+import os
+import shutil
+import tempfile
 from collections import OrderedDict
 
 import numpy
 import six
 import theano
+import dill
 from theano import tensor
 from theano import printing
 from theano.gof.graph import Constant
@@ -448,3 +452,24 @@ class SequenceIterator(six.Iterator):
         result = self.sequence[self._offset]
         self._offset += 1
         return result
+
+
+def secure_dill_dump(object_, path):
+    """Robust serialization - does not corrupt your files when failed.
+
+    Parameters
+    ----------
+    object_ : object
+        The object to be saved to the disk.
+    path : str
+        The destination path.
+
+    """
+    try:
+        with tempfile.NamedTemporaryFile(delete=False) as temp:
+            dill.dump(object_, temp, fmode=dill.CONTENTS_FMODE)
+        shutil.move(temp.name, path)
+    except:
+        if "temp" in locals():
+            os.remove(temp.name)
+        raise
