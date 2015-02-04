@@ -1,6 +1,7 @@
 """The event-based main loop of Blocks."""
 import signal
 import logging
+import traceback
 
 from blocks.log import TrainingLog
 from blocks.utils import unpack
@@ -105,6 +106,10 @@ class MainLoop(object):
                 pass
         except TrainingFinish:
             self.log.current_row.training_finished = True
+        except Exception as e:
+            logger.error(traceback.format_exc(e))
+            logger.info("Still trying to finish gracefully")
+            # TODO: change the serialization destination here
         finally:
             self._run_extensions('after_training')
             signal.signal(signal.SIGINT, self.original_handler)
