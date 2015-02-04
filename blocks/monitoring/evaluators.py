@@ -189,8 +189,6 @@ class DatasetEvaluator(object):
                 "Not all data sources required for monitoring were"
                 " provided. The list of required data sources:"
                 " {}.".format(self.buffer_.input_names)))
-
-
         if self._accumulate_fun is not None:
             self._accumulate_fun(**batch)
 
