@@ -86,28 +86,36 @@ class ComputationGraph(object):
         """Collect variables, updates and auxiliary variables."""
         updates = OrderedDict()
 
-        # Sort apply nodes topologically, get variables and remove duplicates
-        inputs = graph.inputs(self.outputs)
-        sorted_apply_nodes = graph.io_toposort(inputs, self.outputs)
+        shared_outputs = [o for o in self.outputs if is_shared_variable(o)]
+        usual_outputs = [o for o in self.outputs if not is_shared_variable(o)]
+        variables = shared_outputs
 
-        seen = set()
-        main_vars = [var for var in list(chain(
-            *[apply_node.inputs for apply_node in sorted_apply_nodes]))
-            if not (var in seen or seen.add(var))] + self.outputs
+        if usual_outputs:
+            # Sort apply nodes topologically, get variables and remove
+            # duplicates
+            inputs = graph.inputs(self.outputs)
+            sorted_apply_nodes = graph.io_toposort(inputs, usual_outputs)
 
-        # While preserving order add auxiliary variables, and collect updates
-        seen = set()
-        seen_avs = set(main_vars)  # Intermediate variables could be auxiliary
-        variables = []
-        for var in main_vars:
-            variables.append(var)
-            for annotation in getattr(var.tag, 'annotations', []):
-                if annotation not in seen:
-                    seen.add(annotation)
-                    new_avs = [av for av in annotation.auxiliary_variables
-                               if not (av in seen_avs or seen_avs.add(av))]
-                    variables.extend(new_avs)
-                    updates = dict_union(updates, annotation.updates)
+            seen = set()
+            main_vars = [var for var in list(chain(
+                *[apply_node.inputs for apply_node in sorted_apply_nodes]))
+                if not (var in seen or seen.add(var))] + self.outputs
+
+            # While preserving order add auxiliary variables, and collect
+            # updates
+            seen = set()
+            # Intermediate variables could be auxiliary
+            seen_avs = set(main_vars)
+            variables = []
+            for var in main_vars:
+                variables.append(var)
+                for annotation in getattr(var.tag, 'annotations', []):
+                    if annotation not in seen:
+                        seen.add(annotation)
+                        new_avs = [av for av in annotation.auxiliary_variables
+                                if not (av in seen_avs or seen_avs.add(av))]
+                        variables.extend(new_avs)
+                        updates = dict_union(updates, annotation.updates)
 
         self.variables = variables
         self.updates = updates
