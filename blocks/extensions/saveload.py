@@ -26,6 +26,12 @@ class SerializeMainLoop(SimpleExtension):
     ----------
     path : str
         The destination path for pickling.
+    save_separately : list of str, optional
+        The list of the main loop's attributes to be pickled separately
+        to their own files. The pathes will be formed by adding
+        the attribute name preceeded by a underscore before the
+        `path` extension. The whole main loop will still be pickled
+        as usual.
 
     Notes
     -----
@@ -41,10 +47,15 @@ class SerializeMainLoop(SimpleExtension):
 
 
     """
-    def __init__(self, path, **kwargs):
+    def __init__(self, path, save_separately=None, **kwargs):
         kwargs.setdefault("after_training", True)
         super(SerializeMainLoop, self).__init__(**kwargs)
+
         self.path = path
+        self.save_separately = save_separately
+
+        if not self.save_separately:
+            self.save_separately = []
 
     def do(self, callback_name, *args):
         """Pickle the main loop object to the disk."""
@@ -53,6 +64,12 @@ class SerializeMainLoop(SimpleExtension):
             with open(self.path, "wb") as destination:
                 dill.dump(self.main_loop, destination,
                           fmode=dill.CONTENTS_FMODE)
+            for attribute in self.save_separately:
+                root, ext = os.path.splitext(self.path)
+                path = root + "_" + attribute + ext
+                with open(path, "wb") as destination:
+                    dill.dump(getattr(self.main_loop, attribute),
+                              destination, fmode=dill.CONTENTS_FMODE)
         except:
             self.main_loop.log.current_row[SAVED_TO] = None
 

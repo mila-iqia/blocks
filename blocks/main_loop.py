@@ -65,6 +65,15 @@ class MainLoop(object):
         self.status._epoch_started = False
 
     @property
+    def iteration_state(self):
+        """Quick access to the (data stream, epoch iterator) pair."""
+        return (self.data_stream, self.epoch_iterator)
+
+    @iteration_state.setter
+    def iteration_state(self, value):
+        (self.data_stream, self.epoch_iterator) = value
+
+    @property
     def status(self):
         """A shortcut for `self.log.status`."""
         return self.log.status
