@@ -52,6 +52,14 @@ def test_computation_graph():
     cg3 = ComputationGraph([z + W])
     assert set(cg3.shared_variables) == {W}
 
+    cg4 = ComputationGraph([W])
+    assert cg4.variables == [W]
+
+    w1 = W ** 2
+    cg5 = ComputationGraph([w1])
+    assert W in cg5.variables
+    assert w1 in cg5.variables
+
 
 def test_apply_noise():
     x = tensor.scalar()
