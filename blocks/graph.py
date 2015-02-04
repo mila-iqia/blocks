@@ -112,8 +112,9 @@ class ComputationGraph(object):
                 for annotation in getattr(var.tag, 'annotations', []):
                     if annotation not in seen:
                         seen.add(annotation)
-                        new_avs = [av for av in annotation.auxiliary_variables
-                                if not (av in seen_avs or seen_avs.add(av))]
+                        new_avs = [
+                            av for av in annotation.auxiliary_variables
+                            if not (av in seen_avs or seen_avs.add(av))]
                         variables.extend(new_avs)
                         updates = dict_union(updates, annotation.updates)
 
