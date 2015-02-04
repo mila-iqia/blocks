@@ -27,8 +27,8 @@ class SerializeMainLoop(SimpleExtension):
         The destination path for pickling.
     save_separately : list of str, optional
         The list of the main loop's attributes to be pickled separately
-        to their own files. The pathes will be formed by adding
-        the attribute name preceeded by a underscore before the
+        to their own files. The paths will be formed by adding
+        the attribute name preceded by an underscore before the
         `path` extension. The whole main loop will still be pickled
         as usual.
 

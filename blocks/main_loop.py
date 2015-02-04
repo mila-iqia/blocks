@@ -108,7 +108,9 @@ class MainLoop(object):
             self.log.current_row.training_finished = True
         except Exception as e:
             logger.error(traceback.format_exc(e))
-            logger.info("Still trying to finish gracefully")
+            logger.info(
+                "An error occurred during the training.\n"
+                "Attempting to run extensions before exiting...")
             # TODO: change the serialization destination here
         finally:
             self._run_extensions('after_training')
