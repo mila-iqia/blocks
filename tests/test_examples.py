@@ -32,7 +32,7 @@ def test_mnist():
     mnist_test(filename, 1)
     with open(filename, "rb") as source:
         main_loop = dill.load(source)
-    main_loop.find_extension("FinishAfter").invoke_after_n_epochs(2)
+    main_loop.find_extension("FinishAfter").set_conditions(after_n_epochs=2)
     main_loop.run()
     assert main_loop.log.status.epochs_done == 2
 
