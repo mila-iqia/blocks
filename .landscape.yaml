@@ -1,3 +1,0 @@
-ignore-paths: ['docs', 'examples']
-requirements:
-  - .landscape-requirements.txt
