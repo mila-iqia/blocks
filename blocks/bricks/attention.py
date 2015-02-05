@@ -77,7 +77,7 @@ class SequenceContentAttention(Initializable):
         self.match_dim = match_dim
         self.state_transformer = state_transformer
 
-        self.state_transformers = Parallel(channel_names=state_names,
+        self.state_transformers = Parallel(input_names=state_names,
                                            prototype=state_transformer,
                                            name="state_trans")
         if not sequence_transformer:

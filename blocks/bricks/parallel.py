@@ -6,26 +6,43 @@ are lazy-only, i.e. can not be initialized with a single constructor call.
 """
 import copy
 
-from blocks.bricks import MLP, Identity, Initializable
+from blocks.bricks import Initializable, Linear
 from blocks.bricks.base import lazy, application
 
 
 class Parallel(Initializable):
-    """Apply similar transformations to several channels.
+    """Apply similar transformations to several inputs.
+
+    Given a prototype brick, a :class:`Parallel` brick makes several
+    copies of it (each with its own parameters). At the application time
+    every copy is applied to the respective input.
+
+    >>> from theano import tensor
+    >>> from blocks.initialization import IsotropicGaussian
+    >>> x = tensor.matrix('x')
+    >>> y = tensor.matrix('y')
+    >>> parallel = Parallel(
+    ...     input_names=['x', 'y'],
+    ...     input_dims=dict(x=2, y=3), output_dims=dict(x=4, y=5),
+    ...     weights_init=IsotropicGaussian(0.01))
+    >>> parallel.initialize()
+    >>> new_x, new_y = parallel.apply(x=x, y=y)
+    >>> new_x, new_y
+    (parallel_apply_x, parallel_apply_y)
 
     Parameters
     ----------
-    channel_names : list of str
+    input_names : list of str
         Input names.
     input_dims : dict
-        Dictonary of input dimensions, keys are channel names, values are
+        Dictonary of input dimensions, keys are input names, values are
         dimensions.
     output_dims : dict
-        Dictonary of output dimensions, keys are channel names, values are
-        dimensions.
-    prototype : :class:`.Brick`
+        Dictionary of output dimensions, keys are input names, values are
+        dimensions of transformed inputs.
+    prototype : :class:`~blocks.bricks.Feedforward`
         A transformation prototype. A copy will be created for every
-        channel.  If ``None``, a linear transformation is used.
+        input.  If ``None``, a linear transformation without bias is used.
 
     Notes
     -----
@@ -33,41 +50,41 @@ class Parallel(Initializable):
 
     """
     @lazy
-    def __init__(self, channel_names, input_dims, output_dims,
+    def __init__(self, input_names, input_dims, output_dims,
                  prototype=None, **kwargs):
         super(Parallel, self).__init__(**kwargs)
-        self.channel_names = channel_names
+        if not prototype:
+            prototype = Linear(use_bias=False)
+
+        self.input_names = input_names
         self.input_dims = input_dims
         self.output_dims = output_dims
-
-        if not prototype:
-            prototype = MLP([Identity()], use_bias=False)
         self.prototype = prototype
 
         self.transforms = []
-        for name in channel_names:
+        for name in input_names:
             self.transforms.append(copy.deepcopy(self.prototype))
             self.transforms[-1].name = "transform_{}".format(name)
         self.children = self.transforms
 
     def _push_allocation_config(self):
-        for name, transform in zip(self.channel_names, self.transforms):
-            transform.dims[0] = self.input_dims[name]
-            transform.dims[-1] = self.output_dims[name]
+        for name, transform in zip(self.input_names, self.transforms):
+            transform.input_dim = self.input_dims[name]
+            transform.output_dim = self.output_dims[name]
 
     @application
     def apply(self, **kwargs):
         return [transform.apply(kwargs[name])
                 for name, transform
-                in zip(self.channel_names, self.transforms)]
+                in zip(self.input_names, self.transforms)]
 
     @apply.property('inputs')
     def apply_inputs(self):
-        return self.channel_names
+        return self.input_names
 
     @apply.property('outputs')
     def apply_outputs(self):
-        return self.channel_names
+        return self.input_names
 
 
 class Fork(Parallel):
