@@ -1,5 +1,5 @@
-.. image:: https://coveralls.io/repos/bartvm/blocks/badge.svg?branch=master
-   :target: https://coveralls.io/r/bartvm/blocks?branch=master
+.. image:: https://img.shields.io/scrutinizer/coverage/g/bartvm/blocks/master.svg
+   :target: https://scrutinizer-ci.com/g/bartvm/blocks/code-structure/master
 
 .. image:: https://travis-ci.org/bartvm/blocks.svg?branch=master
    :target: https://travis-ci.org/bartvm/blocks
@@ -7,8 +7,8 @@
 .. image:: https://readthedocs.org/projects/blocks/badge/?version=latest
    :target: https://blocks.readthedocs.org/
 
-.. image:: https://landscape.io/github/bartvm/blocks/master/landscape.svg?style=flat
-   :target: https://landscape.io/github/bartvm/blocks/master
+.. image:: https://img.shields.io/scrutinizer/g/master/blocks.svg
+   :target: https://scrutinizer-ci.com/g/bartvm/blocks/
 
 Blocks
 ======
