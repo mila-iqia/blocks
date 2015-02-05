@@ -607,6 +607,7 @@ class AttentionTransition(AbstractAttentionTransition, Initializable):
         return self.attention.take_look(
             kwargs[self.attended_name],
             kwargs.get(self.preprocessed_attended_name),
+            mask=kwargs.get("mask"),
             **dict_subset(kwargs,
                           self.state_names + self.previous_glimpses_needed))
 
