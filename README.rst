@@ -7,7 +7,7 @@
 .. image:: https://readthedocs.org/projects/blocks/badge/?version=latest
    :target: https://blocks.readthedocs.org/
 
-.. image:: https://img.shields.io/scrutinizer/g/master/blocks.svg
+.. image:: https://img.shields.io/scrutinizer/g/bartvm/blocks.svg
    :target: https://scrutinizer-ci.com/g/bartvm/blocks/
 
 Blocks
