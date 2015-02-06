@@ -27,10 +27,10 @@ class Parallel(Initializable):
     ...     weights_init=Constant(2))
     >>> parallel.initialize()
     >>> new_x, new_y = parallel.apply(x=x, y=y)
-    >>> new_x.eval({x: [[1, 1]]})
-    array([[ 4.,  4.,  4.,  4.]])
-    >>> new_y.eval({y: [[1, 1, 1]]})
-    array([[ 6.,  6.,  6.,  6.,  6.]])
+    >>> new_x.eval({x: [[1, 1]]}) # doctest: +ELLIPSIS
+    array([[ 4.,  4.,  4.,  4.]]...
+    >>> new_y.eval({y: [[1, 1, 1]]}) # doctest: +ELLIPSIS
+    array([[ 6.,  6.,  6.,  6.,  6.]]...
 
     Parameters
     ----------
