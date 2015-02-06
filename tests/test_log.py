@@ -1,4 +1,4 @@
-from blocks.log import TrainingLog, to_dataframe
+from blocks.log import TrainingLog
 
 
 def test_training_log():
@@ -21,7 +21,7 @@ def test_training_log():
 
     # test iteration
     assert len(list(log)) == 2
-    df = to_dataframe(log)
+    df = log.to_dataframe()
     assert list(sorted(df.columns)) == ["field", "flag"]
     assert df.flag[1] is False
     assert df.field[0] == 45

@@ -209,8 +209,14 @@ class AbstractTrainingLog(object):
             raise ValueError("time must be a positive integer")
 
     def to_dataframe(log):
-        """Convert to :class:`.DataFrame`."""
-        raise NotImplementedError
+        """Convert a log into a :class:`.DataFrame`."""
+        if not pandas_available:
+            raise ImportError("The pandas library is not found. You can"
+                              " install it with pip.")
+        return log._to_dataframe()
+
+    def _to_dataframe(log):
+        raise NotImplementedError()
 
 
 class TrainingStatus(AbstractTrainingStatus):
@@ -255,17 +261,5 @@ class TrainingLog(AbstractTrainingLog):
     def get_status(self):
         return self._status
 
-    def to_dataframe(self):
+    def _to_dataframe(self):
         return DataFrame.from_dict(self._storage, orient='index')
-
-
-def to_dataframe(log):
-    """Convert a log into a :class:`.DataFrame`."""
-    if not pandas_available:
-        raise Exception("The pandas library is not found. You can"
-                        " install it with pip.")
-    try:
-        return log.to_dataframe()
-    except NotImplementedError:
-        # TODO: some default method of converting a log into a dataframe
-        raise
