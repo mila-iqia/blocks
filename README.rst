@@ -34,4 +34,4 @@ Please see the documentation_ for more information.
 If you want to contribute, please make sure to read the `developer guidelines`_.
 
 .. _documentation: http://blocks.readthedocs.org
-.. _developer guidelines: http://blocks.readthedocs.org/en/latest/developer_guidelines.html
+.. _developer guidelines: http://blocks.readthedocs.org/en/latest/development/index.html
