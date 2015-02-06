@@ -208,14 +208,14 @@ class AbstractTrainingLog(object):
         if not isinstance(time, int) or time < 0:
             raise ValueError("time must be a positive integer")
 
-    def to_dataframe(log):
+    def to_dataframe(self):
         """Convert a log into a :class:`.DataFrame`."""
         if not pandas_available:
             raise ImportError("The pandas library is not found. You can"
                               " install it with pip.")
-        return log._to_dataframe()
+        return self._to_dataframe()
 
-    def _to_dataframe(log):
+    def _to_dataframe(self):
         raise NotImplementedError()
 
 
