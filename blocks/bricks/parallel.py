@@ -18,17 +18,19 @@ class Parallel(Initializable):
     every copy is applied to the respective input.
 
     >>> from theano import tensor
-    >>> from blocks.initialization import IsotropicGaussian
+    >>> from blocks.initialization import Constant
     >>> x = tensor.matrix('x')
     >>> y = tensor.matrix('y')
     >>> parallel = Parallel(
     ...     input_names=['x', 'y'],
     ...     input_dims=dict(x=2, y=3), output_dims=dict(x=4, y=5),
-    ...     weights_init=IsotropicGaussian(0.01))
+    ...     weights_init=Constant(2))
     >>> parallel.initialize()
     >>> new_x, new_y = parallel.apply(x=x, y=y)
-    >>> new_x, new_y
-    (parallel_apply_x, parallel_apply_y)
+    >>> new_x.eval({x: [[1, 1]]})
+    array([[ 4.,  4.,  4.,  4.]])
+    >>> new_y.eval({y: [[1, 1, 1]]})
+    array([[ 6.,  6.,  6.,  6.,  6.]])
 
     Parameters
     ----------
