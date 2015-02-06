@@ -226,7 +226,7 @@ class StepRule(object):
         Returns
         -------
         A tuple (step, updates). `step` is a Theano variable for the step
-        to take, updates are a list of Theano updates.
+        to take, `updates` are a list of Theano updates.
 
         """
         raise NotImplementedError
@@ -250,11 +250,11 @@ class StepRule(object):
         -------
         A tuple (steps, updates). `steps` is ordered dictionary of the
         same form as `gradients`, with the proposed steps as values.
-        Updates are a list of Theano updates.
+        `updates` are a list of Theano updates.
 
         """
-        parameter_wise  = [self.compute_step(param, gradients[param])
-                           for param in gradients]
+        parameter_wise = [self.compute_step(param, gradients[param])
+                          for param in gradients]
         (steps, updates) = zip(*parameter_wise)
         steps = OrderedDict((param, step) for param, step
                             in zip(gradients.keys(), steps))
