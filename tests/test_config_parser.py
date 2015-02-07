@@ -1,4 +1,5 @@
 import os
+import tempfile
 
 from numpy.testing import assert_raises
 
@@ -10,10 +11,11 @@ from tests import temporary_files
 def test_config_parser():
     _environ = dict(os.environ)
     try:
-        os.environ['BLOCKS_CONFIG'] = os.path.join(os.getcwd(),
-                                                   '.test_blocksrc')
-        with open(os.environ['BLOCKS_CONFIG'], 'w') as f:
+
+        with tempfile.NamedTemporaryFile(delete=False) as f:
             f.write('data_path: yaml_path')
+            filename = f.name
+        os.environ['BLOCKS_CONFIG'] = filename
         if 'BLOCKS_DATA_PATH' in os.environ:
             del os.environ['BLOCKS_DATA_PATH']
         config = Configuration()
