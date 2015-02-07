@@ -5,16 +5,15 @@ from numpy.testing import assert_raises
 from six import BytesIO
 
 from blocks.datasets.text import TextFile
-from tests import temporary_files
 
 
 def test_text():
     # Test word level and epochs.
-    with tempfile.NamedTemporaryFile(delete=False) as f:
+    with tempfile.NamedTemporaryFile(mode='w', delete=False) as f:
         sentences1 = f.name
         f.write("This is a sentence\n")
         f.write("This another one")
-    with tempfile.NamedTemporaryFile(delete=False) as f:
+    with tempfile.NamedTemporaryFile(mode='w', delete=False) as f:
         sentences2 = f.name
         f.write("More sentences\n")
         f.write("The last one")

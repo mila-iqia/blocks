@@ -4,15 +4,13 @@ import tempfile
 from numpy.testing import assert_raises
 
 from blocks.config_parser import Configuration, ConfigurationError
-from tests import temporary_files
 
 
-@temporary_files('.test_blocksrc')
 def test_config_parser():
     _environ = dict(os.environ)
     try:
 
-        with tempfile.NamedTemporaryFile(delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode='w', delete=False) as f:
             f.write('data_path: yaml_path')
             filename = f.name
         os.environ['BLOCKS_CONFIG'] = filename

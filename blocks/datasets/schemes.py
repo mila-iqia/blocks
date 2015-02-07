@@ -98,7 +98,8 @@ class ConstantIterator(six.Iterator):
         if num_examples is not None and times is not None:
             raise ValueError
         if times is not None or num_examples is not None:
-            if not (times >= 1 or num_examples >= 1):
+            if not ((times is None or times >= 1) or
+                    (num_examples is None or num_examples >= 1)):
                 raise ValueError
             self.current = 0
 
