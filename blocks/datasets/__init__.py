@@ -354,7 +354,7 @@ class ContainerDataset(Dataset):
         values are interpreted as data channels and its keys are used as
         source names. Note, that only if the container is an OrderedDict
         the order of elements in the returned tuples is determined. If the
-        iterable is not a dictionary, the source ``'data'`` will be used.
+        iterable is not a dictionary, the source ``data`` will be used.
 
     """
     default_scheme = None
@@ -377,8 +377,15 @@ class ContainerDataset(Dataset):
             lambda: tuple([next(iterator) for iterator in iterators]))
 
     def get_data(self, state=None, request=None):
-        if state is None or request is not None:
-            raise ValueError
+        if request is not None:
+            try:
+                batch = []
+                for _ in range(request):
+                    batch.append(next(state))
+            except StopIteration:
+                if not batch:
+                    raise
+            return tuple(zip(*batch))
         return next(state)
 
 

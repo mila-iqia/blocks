@@ -8,9 +8,7 @@ from blocks.datasets import (
     CachedDataStream, ContainerDataset, DataStream,
     DataStreamMapping, BatchDataStream, PaddingDataStream,
     DataStreamFilter)
-from blocks.datasets.mnist import MNIST
-from blocks.datasets.schemes import (BatchSizeScheme, ConstantScheme,
-                                     SequentialScheme)
+from blocks.datasets.schemes import BatchSizeScheme, ConstantScheme
 
 
 def test_dataset():
@@ -115,32 +113,31 @@ def test_data_driven_epochs():
 
 
 def test_cache():
-    mnist = MNIST('test')
+    dataset = ContainerDataset(range(100))
     stream = DataStream(
-        mnist, iteration_scheme=SequentialScheme(mnist.num_examples, 11))
+        dataset, iteration_scheme=ConstantScheme(11))
     cached_stream = CachedDataStream(stream, ConstantScheme(7))
     epoch = cached_stream.get_epoch_iterator()
 
     # Make sure that cache is filled as expected
-    for (features, targets), cache_size in zip(epoch, [4, 8, 1, 5, 9, 2,
-                                                       6, 10, 3, 7, 0, 4]):
+    for (features,), cache_size in zip(epoch, [4, 8, 1, 5, 9, 2,
+                                               6, 10, 3, 7, 0, 4]):
         assert len(cached_stream.cache[0]) == cache_size
 
     # Make sure that the epoch finishes correctly
-    for features, targets in cached_stream.get_epoch_iterator():
+    for (features,) in cached_stream.get_epoch_iterator():
         pass
-    assert len(features) == mnist.num_examples % 7
+    assert len(features) == 100 % 7
     assert not cached_stream.cache[0]
 
     # Ensure that the epoch transition is correct
     cached_stream = CachedDataStream(stream, ConstantScheme(7, times=3))
     for _, epoch in zip(range(2), cached_stream.iterate_epochs()):
         cache_sizes = [4, 8, 1]
-        for i, (features, targets) in enumerate(epoch):
+        for i, (features,) in enumerate(epoch):
             assert len(cached_stream.cache[0]) == cache_sizes[i]
             assert len(features) == 7
-            assert numpy.all(mnist.features[i * 7:(i + 1) * 7] ==
-                             features)
+            assert numpy.all(range(100)[i * 7:(i + 1) * 7] == features)
         assert i == 2
 
 

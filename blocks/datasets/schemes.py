@@ -63,31 +63,56 @@ class ConstantScheme(BatchSizeScheme):
     This subset iterator simply returns the same constant batch size
     for a given number of times (or else infinitely).
 
+    Parameters
+    ----------
+    batch_size : int
+        The size of the batch to return.
+    num_examples : int, optional
+        If given, the request iterator will return `batch_size` until the
+        sum reaches `num_exampes`. Note that this means that the last batch
+        size returned could be smaller than `batch_size`. If you want to
+        ensure all batches are of equal size, then pass `times` equal to
+        ``num_examples / batch-size`` instead.
+    times : int, optional
+        The number of times to return `batch_size`.
+
     """
-    def __init__(self, batch_size, times=None):
+    def __init__(self, batch_size, num_examples=None, times=None):
+        if num_examples and times:
+            raise ValueError
         self.batch_size = batch_size
+        self.num_examples = num_examples
         self.times = times
 
     def get_request_iterator(self):
-        return ConstantIterator(self.batch_size, self.times)
+        return ConstantIterator(self.batch_size, self.num_examples, self.times)
 
 
 class ConstantIterator(six.Iterator):
-    def __init__(self, batch_size, times=None):
-        self.batch_size = batch_size
-        self.times = times
-        if times is not None:
+    def __init__(self, batch_size, num_examples=None, times=None):
+        if num_examples is not None and times is not None:
+            raise ValueError
+        if times is not None or num_examples is not None:
+            if not (times >= 1 or num_examples >= 1):
+                raise ValueError
             self.current = 0
+
+        self.batch_size = batch_size
+        self.num_examples = num_examples
+        self.times = times
 
     def __iter__(self):
         return self
 
     def __next__(self):
-        if self.times is not None:
+        if self.times or self.num_examples:
             if self.current == self.times:
                 raise StopIteration
-            else:
+            if self.times:
                 self.current += 1
+            else:
+                self.current += self.batch_size
+                return min(self.batch_size, self.num_examples - self.current)
         return self.batch_size
 
 
