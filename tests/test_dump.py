@@ -85,7 +85,7 @@ def test_main_loop_state_manager():
     main_loop2 = sqrt_example(folder2, 1)
     manager.load_to(main_loop2)
     # Continue until 33 iterations are done
-    main_loop2.find_extension("FinishAfter").invoke_after_n_batches(33)
+    main_loop2.find_extension("FinishAfter").set_conditions(after_n_batches=33)
     main_loop2.run()
     assert main_loop2.log.status.iterations_done == 33
 
