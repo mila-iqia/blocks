@@ -2,7 +2,7 @@
 from theano import tensor
 
 
-def L2_norm(tensors):
+def l2_norm(tensors):
     """Computes the total L2 norm of a set of tensors.
 
     Converts all operands to :class:`~tensor.TensorVariable`

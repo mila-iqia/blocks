@@ -303,12 +303,12 @@ class Annotation(object):
         self.auxiliary_variables.append(variable)
 
 
-def apply_noise(graph, variables, level, seed=None):
+def apply_noise(computation_graph, variables, level, seed=None):
     """Add Gaussian noise to certain variable of a computation graph.
 
     Parameters
     ----------
-    graph : instance of :class:`ComputationGraph`
+    computation_graph : instance of :class:`ComputationGraph`
         The computation graph.
     variables : :class:`~tensor.TensorVariable`
         Variables to add noise to.
@@ -327,4 +327,4 @@ def apply_noise(graph, variables, level, seed=None):
     for variable in variables:
         replace[variable] = (variable +
                              rng.normal(variable.shape, std=level))
-    return graph.replace(replace)
+    return computation_graph.replace(replace)

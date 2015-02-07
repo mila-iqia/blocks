@@ -5,9 +5,9 @@ from collections import defaultdict
 from six import add_metaclass
 try:
     from pandas import DataFrame
-    pandas_available = True
-except:
-    pandas_available = False
+    PANDAS_AVAILABLE = True
+except ImportError:
+    PANDAS_AVAILABLE = False
 
 
 @add_metaclass(ABCMeta)
@@ -210,7 +210,7 @@ class AbstractTrainingLog(object):
 
     def to_dataframe(self):
         """Convert a log into a :class:`.DataFrame`."""
-        if not pandas_available:
+        if not PANDAS_AVAILABLE:
             raise ImportError("The pandas library is not found. You can"
                               " install it with pip.")
         return self._to_dataframe()

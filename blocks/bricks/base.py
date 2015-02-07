@@ -147,9 +147,9 @@ class Application(object):
         if not isinstance(name, six.string_types):
             raise ValueError
 
-        def wrap_property(property_):
-            self.properties[name] = property_
-            return property_
+        def wrap_property(application_property):
+            self.properties[name] = application_property
+            return application_property
         return wrap_property
 
     def delegate(self, f):
@@ -351,8 +351,8 @@ class BoundApplication(object):
 
 class _Brick(ABCMeta):
     """Metaclass which attaches brick instances to the applications."""
-    def __new__(mcl, name, bases, namespace):
-        brick = super(_Brick, mcl).__new__(mcl, name, bases, namespace)
+    def __new__(mcs, name, bases, namespace):
+        brick = super(_Brick, mcs).__new__(mcs, name, bases, namespace)
         for attr in namespace.values():
             if isinstance(attr, Application):
                 attr.brick = brick
