@@ -343,7 +343,7 @@ class ContainerDataset(Dataset):
 
     .. todo::
 
-        Multiple containers, returning batches.
+        Multiple containers.
 
     Parameters
     ----------
@@ -354,7 +354,12 @@ class ContainerDataset(Dataset):
         values are interpreted as data channels and its keys are used as
         source names. Note, that only if the container is an OrderedDict
         the order of elements in the returned tuples is determined. If the
-        iterable is not a dictionary, the source ``'data'`` will be used.
+        iterable is not a dictionary, the source ``data`` will be used.
+
+    Notes
+    -----
+    To iterate over a container in batches, combine this dataset with the
+    :class:`BatchDataStream` data stream.
 
     """
     default_scheme = None
@@ -685,16 +690,19 @@ class BatchDataStream(DataStreamWrapper):
     iteration_scheme : :class:`.BatchSizeScheme` instance
         The iteration scheme to use; should return integers representing
         the size of the batch to return.
-    strict : bool, optional
-        Whether the batch size should be strictly adhered to or not. For
-        example, if the dataset ends before the last batch is being filled,
-        can a smaller batch still be returned? By default ``False``.
+    strictness : int, optional
+        How strictly the iterator should adhere to the batch size. By
+        default, the value 0 means that the last batch is returned
+        regardless of its size, so it can be smaller than what is actually
+        requested. At level 1, the last batch is discarded if it is not of
+        the correct size. At the highest strictness level, 2, an error is
+        raised if a batch of the requested size cannot be provided.
 
     """
-    def __init__(self, data_stream, iteration_scheme, strict=False):
+    def __init__(self, data_stream, iteration_scheme, strictness=0):
         super(BatchDataStream, self).__init__(
             data_stream, iteration_scheme=iteration_scheme)
-        self.strict = strict
+        self.strictness = strictness
 
     def get_data(self, request=None):
         """Get data from the dataset."""
@@ -707,13 +715,12 @@ class BatchDataStream(DataStreamWrapper):
                         data, next(self.child_epoch_iterator)):
                     source_data.append(example)
             except StopIteration:
-                if self.strict and data[0]:
-                    raise ValueError("Not enough examples to form a batch of"
-                                     " requested size")
                 # If some data has been extracted and `strict` is not set,
                 # we should spit out this data before stopping iteration.
-                if data[0]:
+                if not self.strictness and data[0]:
                     break
+                elif self.strictness > 1 and data[0]:
+                    raise ValueError
                 raise
         return tuple(numpy.asarray(source_data) for source_data in data)
 
