@@ -9,13 +9,13 @@ from tests import temporary_files
 @temporary_files('.test_blocksrc')
 def test_config_parser():
     _environ = dict(os.environ)
-    os.environ['BLOCKS_CONFIG'] = os.path.join(os.getcwd(),
-                                               '.test_blocksrc')
-    with open(os.environ['BLOCKS_CONFIG'], 'w') as f:
-        f.write('data_path: yaml_path')
-    if 'BLOCKS_DATA_PATH' in os.environ:
-        del os.environ['BLOCKS_DATA_PATH']
     try:
+        os.environ['BLOCKS_CONFIG'] = os.path.join(os.getcwd(),
+                                                   '.test_blocksrc')
+        with open(os.environ['BLOCKS_CONFIG'], 'w') as f:
+            f.write('data_path: yaml_path')
+        if 'BLOCKS_DATA_PATH' in os.environ:
+            del os.environ['BLOCKS_DATA_PATH']
         config = Configuration()
         config.add_config('data_path', str, env_var='BLOCKS_DATA_PATH')
         config.add_config('config_with_default', int, default='1',

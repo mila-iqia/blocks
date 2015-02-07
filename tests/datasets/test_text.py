@@ -1,11 +1,12 @@
 import dill
 from numpy.testing import assert_raises
+from six import BytesIO
 
 from blocks.datasets.text import TextFile
 from tests import temporary_files
 
 
-@temporary_files('sentences1.txt', 'sentences2.txt', 'text_stream.pkl')
+@temporary_files('sentences1.txt', 'sentences2.txt')
 def test_text():
     # Test word level and epochs.
     with open('sentences1.txt', 'w') as f:
@@ -24,11 +25,11 @@ def test_text():
     epoch = stream.get_epoch_iterator()
     for sentence in zip(range(3), epoch):
         pass
-    with open('text_stream.pkl', 'wb') as f:
-        dill.dump(epoch, f, fmode=dill.CONTENTS_FMODE)
+    f = BytesIO()
+    dill.dump(epoch, f, fmode=dill.CONTENTS_FMODE)
     sentence = next(epoch)
-    with open('text_stream.pkl', 'rb') as f:
-        epoch = dill.load(f)
+    f.seek(0)
+    epoch = dill.load(f)
     assert next(epoch) == sentence
     assert_raises(StopIteration, next, epoch)
 
