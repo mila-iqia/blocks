@@ -232,8 +232,11 @@ class SimpleExtension(TrainingExtension):
         if not arguments:
             arguments = []
         if not predicate:
-            predicate = lambda log: True
-        self._conditions.append((callback_name, predicate, arguments))
+            self._conditions.append((callback_name, lambda log: True,
+                                     arguments))
+        else:
+            self._conditions.append((callback_name, predicate,
+                                     arguments))
         return self
 
     @abstractmethod
