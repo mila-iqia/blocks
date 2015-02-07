@@ -31,13 +31,6 @@ class MNIST(InMemoryDataset):
        support e.g. convolutions and visualization, it needs to support the
        original 28 x 28 image format.
 
-    .. todo::
-
-       The data path is hardcoded right now. A similar approach to Pylearn2
-       should be adopted, where the data path can be configured in one way
-       or the other, so that it can seamlessly load datasets from one
-       directory (e.g. /data/lisa/data).
-
     Parameters
     ----------
     which_set : 'train' or 'test'
