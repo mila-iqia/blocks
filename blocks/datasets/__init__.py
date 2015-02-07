@@ -341,10 +341,6 @@ def lazy_properties(*lazy_properties):
 class ContainerDataset(Dataset):
     """Equips a Python container with the dataset interface.
 
-    .. todo::
-
-        Multiple containers.
-
     Parameters
     ----------
     container : iterable
