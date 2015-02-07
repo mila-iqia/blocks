@@ -114,9 +114,9 @@ def test_data_driven_epochs():
 
 def test_cache():
     dataset = ContainerDataset(range(100))
-    stream = DataStream(
-        dataset, iteration_scheme=ConstantScheme(11))
-    cached_stream = CachedDataStream(stream, ConstantScheme(7))
+    stream = DataStream(dataset)
+    batched_stream = BatchDataStream(stream, ConstantScheme(11))
+    cached_stream = CachedDataStream(batched_stream, ConstantScheme(7))
     epoch = cached_stream.get_epoch_iterator()
 
     # Make sure that cache is filled as expected
@@ -131,7 +131,8 @@ def test_cache():
     assert not cached_stream.cache[0]
 
     # Ensure that the epoch transition is correct
-    cached_stream = CachedDataStream(stream, ConstantScheme(7, times=3))
+    cached_stream = CachedDataStream(batched_stream,
+                                     ConstantScheme(7, times=3))
     for _, epoch in zip(range(2), cached_stream.iterate_epochs()):
         cache_sizes = [4, 8, 1]
         for i, (features,) in enumerate(epoch):
@@ -153,12 +154,14 @@ def test_batch_data_stream():
         assert (b[0] == e[0]).all()
 
     # Check the `strict` flag
-    def try_strict():
-        list(BatchDataStream(stream, ConstantScheme(2), strict=True)
-             .get_epoch_iterator())
-    assert_raises(ValueError, try_strict)
+    def try_strict(strictness):
+        return list(
+            BatchDataStream(stream, ConstantScheme(2), strictness=strictness)
+            .get_epoch_iterator())
+    assert_raises(ValueError, try_strict, 2)
+    assert len(try_strict(1)) == 2
     stream2 = ContainerDataset([1, 2, 3, 4, 5, 6]).get_default_stream()
-    assert len(list(BatchDataStream(stream2, ConstantScheme(2), strict=True)
+    assert len(list(BatchDataStream(stream2, ConstantScheme(2), strictness=2)
                     .get_epoch_iterator())) == 3
 
 

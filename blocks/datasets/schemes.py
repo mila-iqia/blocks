@@ -74,9 +74,9 @@ class ConstantScheme(BatchSizeScheme):
         The size of the batch to return.
     num_examples : int, optional
         If given, the request iterator will return `batch_size` until the
-        sum reaches `num_exampes`. Note that this means that the last batch
-        size returned could be smaller than `batch_size`. If you want to
-        ensure all batches are of equal size, then pass `times` equal to
+        sum reaches `num_exam;pes`. Note that this means that the last
+        batch size returned could be smaller than `batch_size`. If you want
+        to ensure all batches are of equal size, then pass `times` equal to
         ``num_examples / batch-size`` instead.
     times : int, optional
         The number of times to return `batch_size`.
