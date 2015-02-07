@@ -161,10 +161,11 @@ class ShuffledScheme(BatchScheme):
 
 class BatchIterator(six.Iterator):
     def __init__(self, num_examples, batch_size, shuffled=False, rng=None):
-        indices = numpy.arange(num_examples)
+        indices = range(num_examples)
         if shuffled:
             if rng is None:
                 rng = numpy.random.RandomState(config.default_seed)
+            indices = list(indices)
             rng.shuffle(indices)
 
         self.batch_size = batch_size
@@ -179,4 +180,4 @@ class BatchIterator(six.Iterator):
             raise StopIteration
         batch = self.indices[self.current:self.current + self.batch_size]
         self.current += len(batch)
-        return batch.tolist()
+        return list(batch)
