@@ -9,6 +9,9 @@
 
 .. image:: https://img.shields.io/scrutinizer/g/bartvm/blocks.svg
    :target: https://scrutinizer-ci.com/g/bartvm/blocks/
+   
+.. image:: https://img.shields.io/badge/license-MIT-blue.svg
+   :target: https://github.com/bartvm/blocks/blob/master/LICENSE
 
 Blocks
 ======
