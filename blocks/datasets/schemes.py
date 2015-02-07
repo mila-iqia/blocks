@@ -106,13 +106,15 @@ class ConstantIterator(six.Iterator):
 
     def __next__(self):
         if self.times or self.num_examples:
-            if self.current == self.times:
+            if self.current == self.times or self.current == self.num_examples:
                 raise StopIteration
             if self.times:
                 self.current += 1
             else:
-                self.current += self.batch_size
-                return min(self.batch_size, self.num_examples - self.current)
+                batch_size = min(self.batch_size,
+                                 self.num_examples - self.current)
+                self.current += batch_size
+                return batch_size
         return self.batch_size
 
 
