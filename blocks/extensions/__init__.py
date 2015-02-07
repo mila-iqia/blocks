@@ -206,6 +206,7 @@ class SimpleExtension(TrainingExtension):
                                    predicate=predicate)
             else:
                 raise KeyError("Invalid condition: {}".format(key))
+        return self  # For chaining calls.
 
     def add_condition(self, callback_name, predicate=None, arguments=None):
         """Adds a condition under which a :meth:`do` is called.
