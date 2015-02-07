@@ -7,10 +7,6 @@ build:
     override:
       - flake8 blocks bin tests examples
       - pep257 blocks bin tests examples --numpy --ignore=D100,D101,D102,D103
-tools:
-  external_code_coverage:
-    runs: 4
-    timeout: 3600
 checks:
     python:
         code_rating: true
