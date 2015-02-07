@@ -84,3 +84,9 @@ class BiasesRole(ParameterRole):
 
 #: Biases of linear transformations
 BIASES = BiasesRole()
+
+
+class FiltersRole(WeightsRole):
+    pass
+
+FILTERS = FiltersRole()
