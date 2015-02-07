@@ -155,10 +155,13 @@ class SimpleExtension(TrainingExtension):
         self._conditions = []
         super_kwargs = {}
         trigger_keywords = self.BOOLEAN_TRIGGERS | self.INTEGER_TRIGGERS
+        conditions = {}
         for key, value in kwargs.items():
-            if key not in trigger_keywords:
+            if key in trigger_keywords:
+                conditions[key] = value
+            else:
                 super_kwargs[key] = value
-        self.set_conditions(**kwargs)
+        self.set_conditions(**conditions)
         super(SimpleExtension, self).__init__(**super_kwargs)
 
     def set_conditions(self, **kwargs):
@@ -201,6 +204,8 @@ class SimpleExtension(TrainingExtension):
                 predicate = predicate_factories.get(key, lambda: None)(value)
                 self.add_condition(conditions.get(key, key),
                                    predicate=predicate)
+            else:
+                raise KeyError("Invalid condition: {}".format(key))
 
     def add_condition(self, callback_name, predicate=None, arguments=None):
         """Adds a condition under which a :meth:`do` is called.
