@@ -1,7 +1,10 @@
 from abc import ABCMeta, abstractmethod
 
+import numpy
 import six
 from six import add_metaclass
+
+from blocks import config
 
 
 @add_metaclass(ABCMeta)
@@ -54,7 +57,9 @@ class BatchScheme(IterationScheme):
     labels to the dataset.
 
     """
-    pass
+    def __init__(self, num_examples, batch_size):
+        self.num_examples = num_examples
+        self.batch_size = batch_size
 
 
 class ConstantScheme(BatchSizeScheme):
@@ -129,27 +134,48 @@ class SequentialScheme(BatchScheme):
     The batch size isn't enforced, so the last batch could be smaller.
 
     """
-    def __init__(self, num_examples, batch_size):
-        self.num_examples = num_examples
-        self.batch_size = batch_size
+    def get_request_iterator(self):
+        return BatchIterator(self.num_examples, self.batch_size)
+
+
+class ShuffledScheme(BatchScheme):
+    """Shuffled batches iterator.
+
+    Iterate over all the examples in a dataset of fixed size in shuffled
+    batches.
+
+    Notes
+    -----
+    The batch size isn't enforced, so the last batch could be smaller.
+
+    """
+    def __init__(self, *args, **kwargs):
+        self.rng = kwargs.pop('rng', None)
+        super(ShuffledScheme, self).__init__(*args, **kwargs)
 
     def get_request_iterator(self):
-        return SequentialIterator(self.num_examples, self.batch_size)
+        return BatchIterator(self.num_examples, self.batch_size,
+                             shuffled=True, rng=self.rng)
 
 
-class SequentialIterator(six.Iterator):
-    def __init__(self, num_examples, batch_size):
-        self.num_examples = num_examples
+class BatchIterator(six.Iterator):
+    def __init__(self, num_examples, batch_size, shuffled=False, rng=None):
+        indices = numpy.arange(num_examples)
+        if shuffled:
+            if rng is None:
+                rng = numpy.random.RandomState(config.default_seed)
+            rng.shuffle(indices)
+
         self.batch_size = batch_size
         self.current = 0
+        self.indices = indices
 
     def __iter__(self):
         return self
 
     def __next__(self):
-        if self.current >= self.num_examples:
+        if self.current >= len(self.indices):
             raise StopIteration
-        slice_ = range(self.current, min(self.num_examples,
-                                         self.current + self.batch_size))
-        self.current += self.batch_size
-        return slice_
+        batch = self.indices[self.current:self.current + self.batch_size]
+        self.current += len(batch)
+        return batch.tolist()

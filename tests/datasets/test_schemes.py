@@ -1,6 +1,8 @@
+import numpy
 from numpy.testing import assert_raises
 
-from blocks.datasets.schemes import ConstantScheme, SequentialScheme
+from blocks.datasets.schemes import (ConstantScheme, SequentialScheme,
+                                     ShuffledScheme)
 
 
 def iterator_requester(scheme):
@@ -26,3 +28,15 @@ def test_sequential_scheme():
     get_request_iterator = iterator_requester(SequentialScheme)
     assert list(get_request_iterator(5, 3)) == [[0, 1, 2], [3, 4]]
     assert list(get_request_iterator(4, 2)) == [[0, 1], [2, 3]]
+
+
+def test_shuffled_scheme():
+    get_request_iterator = iterator_requester(ShuffledScheme)
+    indices = range(7)
+    rng = numpy.random.RandomState(3)
+    test_rng = numpy.random.RandomState(3)
+    test_rng.shuffle(indices)
+    assert list(get_request_iterator(7, 3, rng=rng)) == \
+        [indices[:3], indices[3:6], indices[6:]]
+    assert list(get_request_iterator(7, 3, rng=rng)) != \
+        [indices[:3], indices[3:6], indices[6:]]
