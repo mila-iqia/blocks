@@ -364,7 +364,7 @@ class GatedRecurrent(BaseRecurrent, Initializable):
     def get_dim(self, name):
         if name == 'mask':
             return 0
-        if name in (self.apply.sequences + self.apply.states):
+        if name in self.apply.sequences + self.apply.states:
             return self.dim
         return super(GatedRecurrent, self).get_dim(name)
 
