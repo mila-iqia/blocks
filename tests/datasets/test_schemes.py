@@ -32,11 +32,10 @@ def test_sequential_scheme():
 
 def test_shuffled_scheme():
     get_request_iterator = iterator_requester(ShuffledScheme)
-    indices = numpy.arange(7)
+    indices = list(range(7))
     rng = numpy.random.RandomState(3)
     test_rng = numpy.random.RandomState(3)
     test_rng.shuffle(indices)
-    indices = indices.tolist()
     assert list(get_request_iterator(7, 3, rng=rng)) == \
         [indices[:3], indices[3:6], indices[6:]]
     assert list(get_request_iterator(7, 3, rng=rng)) != \

@@ -149,6 +149,10 @@ class ShuffledScheme(BatchScheme):
     -----
     The batch size isn't enforced, so the last batch could be smaller.
 
+    Shuffling the batches requires creating a shuffled list of indices in
+    memory. This can be memory-intensive for very large numbers of examples
+    (i.e. in the order of tens of millions).
+
     """
     def __init__(self, *args, **kwargs):
         self.rng = kwargs.pop('rng', None)
@@ -161,22 +165,28 @@ class ShuffledScheme(BatchScheme):
 
 class BatchIterator(six.Iterator):
     def __init__(self, num_examples, batch_size, shuffled=False, rng=None):
-        indices = numpy.arange(num_examples)
         if shuffled:
             if rng is None:
                 rng = numpy.random.RandomState(config.default_seed)
-            rng.shuffle(indices)
+            self.indices = list(range(num_examples))
+            rng.shuffle(self.indices)
 
         self.batch_size = batch_size
         self.current = 0
-        self.indices = indices
+        self.num_examples = num_examples
+        self.shuffled = shuffled
 
     def __iter__(self):
         return self
 
     def __next__(self):
-        if self.current >= len(self.indices):
+        if self.current >= self.num_examples:
             raise StopIteration
-        batch = self.indices[self.current:self.current + self.batch_size]
+        if self.shuffled:
+            batch = self.indices[self.current:self.current + self.batch_size]
+        else:
+            batch = list(range(self.current,
+                               min(self.num_examples,
+                                   self.current + self.batch_size)))
         self.current += len(batch)
-        return batch.tolist()
+        return batch
