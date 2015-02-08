@@ -251,7 +251,8 @@ class StepRule(object):
         Returns
         -------
         steps : OrderedDict
-            A dictionary of the proposed steps in the same form as `gradients`.
+            A dictionary of the proposed steps in the same form as
+            `gradients`.
         updates : list
             A list of tuples representing updates to be performed.
 
