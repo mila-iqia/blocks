@@ -19,8 +19,7 @@ class Parallel(Initializable):
 
     >>> from theano import tensor
     >>> from blocks.initialization import Constant
-    >>> x = tensor.matrix('x')
-    >>> y = tensor.matrix('y')
+    >>> x, y = tensor.matrix('x'), tensor.matrix('y')
     >>> parallel = Parallel(
     ...     input_names=['x', 'y'],
     ...     input_dims=dict(x=2, y=3), output_dims=dict(x=4, y=5),
@@ -35,16 +34,25 @@ class Parallel(Initializable):
     Parameters
     ----------
     input_names : list of str
-        Input names.
+        The input names.
     input_dims : dict
-        Dictonary of input dimensions, keys are input names, values are
-        dimensions.
+        The dictionary of input dimensions, keys are input names, values
+        are dimensions.
     output_dims : dict
-        Dictionary of output dimensions, keys are input names, values are
-        dimensions of transformed inputs.
+        The dictionary of output dimensions, keys are input names, values
+        are dimensions of transformed inputs.
     prototype : :class:`~blocks.bricks.Feedforward`
         A transformation prototype. A copy will be created for every
         input.  If ``None``, a linear transformation without bias is used.
+
+    Attributes
+    ----------
+    input_names : list of str
+        The input names.
+    input_dims : dict
+        Dictionary of input dimensions.
+    output_dims : dict
+        Dictionary of output dimensions.
 
     Notes
     -----
@@ -90,12 +98,35 @@ class Parallel(Initializable):
 
 
 class Fork(Parallel):
-    """Forks single input into multiple channels.
+    """Several outputs from one input by applying similar transformations.
+
+    Given a prototype brick, a :class:`Fork` brick makes several
+    copies of it (each with its own parameters). At the application time
+    the copies are applied to the input to produce different outputs.
+
+    A typical usecase for this brick is to produce inputs for gates
+    of a gated recurrent bricks, such as
+    :class:`~blocks.bricks.GatedRecurrent`.
+
+    >>> from theano import tensor
+    >>> from blocks.initialization import Constant
+    >>> x = tensor.matrix('x')
+    >>> fork = Fork(output_names=['y', 'z'],
+    ...             input_dim=2, output_dims=dict(y=3, z=4),
+    ...             weights_init=Constant(2))
+    >>> fork.initialize()
+    >>> y, z = fork.apply(x)
+    >>> y.eval({x: [[1, 1]]}) # doctest: +ELLIPSIS
+    array([[ 4.,  4.,  4.]]...
+    >>> z.eval({x: [[1, 1]]}) # doctest: +ELLIPSIS
+    array([[ 4.,  4.,  4.,  4.]]...
 
     Parameters
     ----------
-    fork_names : list of str
-        Names of the channels to fork.
+    output_names : list of str
+        Names of the outputs to produce.
+    input_dim : int
+        The input dimension.
     prototype : instance of :class:`.Brick`
         A prototype for the input-to-fork transformations. A copy will be
         created for every output channel.
@@ -103,28 +134,32 @@ class Fork(Parallel):
     Attributes
     ----------
     input_dim : int
-        The input dimension. Required for allocation.
-    fork_dims : dict of (output_name, int) pairs
-        The dimensions of the forks. Required for allocation.
+        The input dimension.
+    output_dims : dict
+        Dictionary of output dimensions, keys are input names, values are
+        dimensions of transformed inputs.
 
     Notes
     -----
-        Lazy initialization only.
+    See :class:`.Initializable` for initialization parameters.
 
     """
-    def __init__(self, fork_names, prototype=None, **kwargs):
-        super(Fork, self).__init__(fork_names, prototype=prototype, **kwargs)
-        self.fork_names = fork_names
+    @lazy
+    def __init__(self, output_names, input_dim,  prototype=None, **kwargs):
+        self.output_names = output_names
+        self.input_dim = input_dim
+
+        super(Fork, self).__init__(output_names, prototype=prototype,
+                                   **kwargs)
 
     def _push_allocation_config(self):
-        self.input_dims = {name: self.input_dim for name in self.fork_names}
-        self.output_dims = self.fork_dims
+        self.input_dims = {name: self.input_dim for name in self.output_names}
         super(Fork, self)._push_allocation_config()
 
     @application(inputs=['input_'])
     def apply(self, input_):
         return super(Fork, self).apply(**{name: input_
-                                          for name in self.fork_names})
+                                          for name in self.input_names})
 
     @apply.property('outputs')
     def apply_outputs(self):

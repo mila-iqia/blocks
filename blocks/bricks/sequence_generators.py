@@ -121,7 +121,7 @@ class BaseSequenceGenerator(Initializable):
         if not len(feedback_names) == 1:
             raise ValueError
         self.fork.input_dim = self.readout.get_dim(feedback_names[0])
-        self.fork.fork_dims = {
+        self.fork.output_dims = {
             name: self.transition.get_dim(name)
             for name in self.fork.apply.outputs}
 
