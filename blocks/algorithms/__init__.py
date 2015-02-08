@@ -225,8 +225,10 @@ class StepRule(object):
 
         Returns
         -------
-        A tuple (step, updates). `step` is a Theano variable for the step
-        to take, `updates` are a list of Theano updates.
+        step : :class:`~theano.Variable`
+            Theano variable for the step to take.
+        updates : list
+            A list of tuples representing updates to be performed.
 
         """
         raise NotImplementedError
@@ -248,9 +250,10 @@ class StepRule(object):
 
         Returns
         -------
-        A tuple (steps, updates). `steps` is ordered dictionary of the
-        same form as `gradients`, with the proposed steps as values.
-        `updates` are a list of Theano updates.
+        steps : OrderedDict
+            A dictionary of the proposed steps in the same form as `gradients`.
+        updates : list
+            A list of tuples representing updates to be performed.
 
         """
         parameter_wise = [self.compute_step(param, gradients[param])
