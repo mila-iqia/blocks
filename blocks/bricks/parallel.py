@@ -39,6 +39,8 @@ class Parallel(Initializable):
     prototype : :class:`~blocks.bricks.Feedforward`
         A transformation prototype. A copy will be created for every
         input.  If ``None``, a linear transformation without bias is used.
+    child_prefix : str, optional
+        A prefix for children names. By default "transform" is used.
 
     Attributes
     ----------
@@ -56,10 +58,12 @@ class Parallel(Initializable):
     """
     @lazy
     def __init__(self, input_names, input_dims, output_dims,
-                 prototype=None, **kwargs):
+                 prototype=None, child_prefix=None, **kwargs):
         super(Parallel, self).__init__(**kwargs)
         if not prototype:
             prototype = Linear(use_bias=False)
+        if not child_prefix:
+            child_prefix = "transform"
 
         self.input_names = input_names
         self.input_dims = input_dims
@@ -69,7 +73,8 @@ class Parallel(Initializable):
         self.transforms = []
         for name in input_names:
             self.transforms.append(copy.deepcopy(self.prototype))
-            self.transforms[-1].name = "transform_{}".format(name)
+            self.transforms[-1].name = (
+                "{}_{}".format(child_prefix, name))
         self.children = self.transforms
 
     def _push_allocation_config(self):
@@ -145,7 +150,7 @@ class Fork(Parallel):
         self.input_dim = input_dim
 
         super(Fork, self).__init__(output_names, prototype=prototype,
-                                   **kwargs)
+                                   child_prefix="fork", **kwargs)
 
     def _push_allocation_config(self):
         self.input_dims = {name: self.input_dim for name in self.output_names}
@@ -202,7 +207,7 @@ class Merge(Parallel):
 
         kwargs.update(self._get_parent_dims())
         super(Merge, self).__init__(changed_names, prototype=prototype,
-                                    **kwargs)
+                                    child_prefix="fork", **kwargs)
 
     def _get_parent_dims(self):
         result = dict()
