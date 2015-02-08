@@ -105,7 +105,7 @@ class Fork(Parallel):
     the copies are applied to the input to produce different outputs.
 
     A typical usecase for this brick is to produce inputs for gates
-    of a gated recurrent bricks, such as
+    of gated recurrent bricks, such as
     :class:`~blocks.bricks.GatedRecurrent`.
 
     >>> from theano import tensor
@@ -127,9 +127,6 @@ class Fork(Parallel):
         Names of the outputs to produce.
     input_dim : int
         The input dimension.
-    prototype : instance of :class:`.Brick`
-        A prototype for the input-to-fork transformations. A copy will be
-        created for every output channel.
 
     Attributes
     ----------
@@ -210,6 +207,10 @@ class Merge(Parallel):
         values are dimensions.
     merged_dim : dict
         The dimension of the merged input.
+
+    Notes
+    -----
+    See :class:`.Initializable` for initialization parameters.
 
     """
     @lazy
