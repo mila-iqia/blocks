@@ -165,16 +165,16 @@ class Merge(Parallel):
     """Transform an input and add it to other inputs.
 
     This brick is designed for the following scenario: one has a group of
-    variables and another separate variable, and one needs to somehow
-    merge information from the latter into the former. We call that
-    "to merge a varible into a group of variables", and refer to the separate
-    variable as "the merged input" and to the variables from the group
-    as "the changed inputs".
+    variables and another separate variable, and one needs to somehow merge
+    information from the latter into the former. We call that "to merge a
+    varible into a group of variables", and refer to the separate variable
+    as "the merged input" and to the variables from the group as "the
+    changed inputs".
 
-    Given a prototype brick, a :class:`Parallel` brick makes several
-    copies of it (each with its own parameters). At the application time
-    the copies are applied to the merged input and the transformation
-    results are added to the changed inputs giving the output.
+    Given a prototype brick, a :class:`Parallel` brick makes several copies
+    of it (each with its own parameters). At the application time the
+    copies are applied to the merged input and the transformation results
+    are added to the changed inputs giving the output.
 
     Parameters
     ----------
@@ -201,7 +201,8 @@ class Merge(Parallel):
         self.merged_dim = merged_dim
 
         kwargs.update(self._get_parent_dims())
-        super(Merge, self).__init__(changed_names, prototype=prototype, **kwargs)
+        super(Merge, self).__init__(changed_names, prototype=prototype,
+                                    **kwargs)
 
     def _get_parent_dims(self):
         result = dict()
@@ -211,7 +212,6 @@ class Merge(Parallel):
                                   for name in self.changed_names}
                                  if self.changed_dims else None)
         return result
-
 
     def _push_allocation_config(self):
         self.__dict__.update(self._get_parent_dims())
