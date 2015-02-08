@@ -1,5 +1,5 @@
-from theano.tensor.nnet.conv import conv2d
-from theano.tensor.signal.downsample import max_pool_2d
+from theano.tensor.nnet.conv import conv2d, ConvOp
+from theano.tensor.signal.downsample import max_pool_2d, DownsampleFactorMax
 
 from blocks.bricks import Initializable, Feedforward, Sequence
 from blocks.bricks.base import application, Brick, lazy
@@ -148,12 +148,25 @@ class ConvolutionalLayer(Sequence, Initializable):
     def __init__(self, filter_size, num_filters, num_channels, pooling_size,
                  activation, conv_step=(1, 1), pooling_step=None,
                  border_mode='valid', **kwargs):
-        convolution = Convolutional(filter_size, num_filters,
-                                    num_channels, conv_step, border_mode)
-        pooling = MaxPooling(pooling_size, pooling_step)
+        self.convolution = Convolutional(filter_size, num_filters,
+                                         num_channels, conv_step, border_mode)
+        self.pooling = MaxPooling(pooling_size, pooling_step)
         super(ConvolutionalLayer, self).__init__(
-            application_methods=[convolution.apply, activation, pooling.apply],
+            application_methods=[self.convolution.apply, activation,
+                                 self.pooling.apply],
             **kwargs)
+
+    @property
+    def output_dim(self):
+        out_dim = ConvOp.getOutputShape(self.input_dim[1:],
+                                        self.convolution.filter_size,
+                                        self.convolution.step,
+                                        self.convolution.border_mode)
+        out_dim = DownsampleFactorMax.out_shape(out_dim,
+                                                self.pooling.pooling_size,
+                                                st=self.pooling.step)
+
+        return self.num_filters, out_dim[0], out_dim[1]
 
 
 class Flattener(Brick):
