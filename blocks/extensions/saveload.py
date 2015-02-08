@@ -65,7 +65,7 @@ class SerializeMainLoop(SimpleExtension):
                 root, ext = os.path.splitext(self.path)
                 path = root + "_" + attribute + ext
                 secure_dill_dump(getattr(self.main_loop, attribute), path)
-        except:
+        except Exception:
             self.main_loop.log.current_row[SAVED_TO] = None
             raise
 
@@ -98,7 +98,7 @@ class LoadFromDump(TrainingExtension):
         try:
             self.manager.load_to(self.main_loop)
             self.main_loop.log.current_row[LOADED_FROM] = self.manager.folder
-        except:
+        except Exception:
             reraise_as("Failed to load the state")
 
 
@@ -129,6 +129,6 @@ class Dump(SimpleExtension):
             self.main_loop.log.current_row[SAVED_TO] = (
                 self.manager.folder)
             self.manager.dump(self.main_loop)
-        except:
+        except Exception:
             self.main_loop.log.current_row[SAVED_TO] = None
             raise

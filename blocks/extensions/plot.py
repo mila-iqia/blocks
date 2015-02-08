@@ -5,9 +5,9 @@ from subprocess import Popen, PIPE
 
 try:
     from bokeh.plotting import figure, output_server, show, cursession, push
-    bokeh_available = True
+    BOKEH_AVAILABLE = True
 except ImportError:
-    bokeh_available = False
+    BOKEH_AVAILABLE = False
 
 from blocks.extensions import SimpleExtension
 
@@ -65,7 +65,7 @@ class Plot(SimpleExtension):
 
     def __init__(self, document, channels, open_browser=False,
                  start_server=False, **kwargs):
-        if not bokeh_available:
+        if not BOKEH_AVAILABLE:
             raise ImportError
         self.plots = {}
         self.start_server = start_server

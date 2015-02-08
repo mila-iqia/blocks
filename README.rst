@@ -1,5 +1,5 @@
-.. image:: https://img.shields.io/scrutinizer/coverage/g/bartvm/blocks/master.svg
-   :target: https://scrutinizer-ci.com/g/bartvm/blocks/code-structure/master
+.. image:: https://img.shields.io/coveralls/bartvm/blocks.svg
+   :target: https://coveralls.io/r/bartvm/blocks
 
 .. image:: https://travis-ci.org/bartvm/blocks.svg?branch=master
    :target: https://travis-ci.org/bartvm/blocks
@@ -9,6 +9,9 @@
 
 .. image:: https://img.shields.io/scrutinizer/g/bartvm/blocks.svg
    :target: https://scrutinizer-ci.com/g/bartvm/blocks/
+
+.. image:: https://img.shields.io/badge/license-MIT-blue.svg
+   :target: https://github.com/bartvm/blocks/blob/master/LICENSE
 
 Blocks
 ======
@@ -34,4 +37,4 @@ Please see the documentation_ for more information.
 If you want to contribute, please make sure to read the `developer guidelines`_.
 
 .. _documentation: http://blocks.readthedocs.org
-.. _developer guidelines: http://blocks.readthedocs.org/en/latest/developer_guidelines.html
+.. _developer guidelines: http://blocks.readthedocs.org/en/latest/development/index.html

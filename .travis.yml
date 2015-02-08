@@ -37,7 +37,7 @@ install:
   - |
       conda install -q --yes python=$TRAVIS_PYTHON_VERSION mkl bokeh nose numpy pip coverage six scipy
       pip install -q --no-deps git+git://github.com/Theano/Theano.git # Development version
-      pip install -q nose2 scrutinizer-ocular
+      pip install -q nose2[coverage-plugin] coveralls
 script:
   - |
       python setup.py -q install # Tests setup.py (should also install dill)
@@ -45,6 +45,6 @@ script:
       export THEANO_FLAGS=floatX=$TESTS
       # Running nose2 within coverage makes imports count towards coverage
       bokeh-server &> /dev/null &
-      coverage run --source=blocks -m nose2.__main__ tests
+      coverage run --source=blocks -m nose2.__main__ -v tests
 after_script:
-  - ocular --data-file ".coverage"
+  - coveralls

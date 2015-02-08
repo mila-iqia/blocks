@@ -86,6 +86,7 @@ class TextFile(Dataset):
             raise ValueError
         self.level = level
         self.preprocess = preprocess
+        super(TextFile, self).__init__()
 
     def open(self):
         state = TextFileState()
@@ -225,7 +226,7 @@ class NGramStream(CachedDataStream):
         if not self.cache[0]:
             self._cache()
         features, targets = [], []
-        for i, sentence in enumerate(self.cache[0]):
+        for _, sentence in enumerate(self.cache[0]):
             for j in range(request):
                 features.append(sentence[j:j + self.ngram_order])
                 targets.append([sentence[j + self.ngram_order]])

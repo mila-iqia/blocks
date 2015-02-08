@@ -4,7 +4,7 @@ import logging
 import traceback
 
 from blocks.log import TrainingLog
-from blocks.utils import unpack
+from blocks.utils import reraise_as, unpack
 
 logger = logging.getLogger(__name__)
 
@@ -135,6 +135,7 @@ class MainLoop(object):
     def _run_epoch(self):
         if not self.status._epoch_started:
             try:
+                self.log.status._received_first_batch = False
                 self.epoch_iterator = (self.data_stream.
                                        get_epoch_iterator(as_dict=True))
             except StopIteration:
@@ -155,7 +156,10 @@ class MainLoop(object):
         try:
             batch = next(self.epoch_iterator)
         except StopIteration:
+            if not self.log.status._received_first_batch:
+                reraise_as(ValueError("epoch iterator yielded zero batches"))
             return False
+        self.log.status._received_first_batch = True
         self._run_extensions('before_batch', batch)
         self.algorithm.process_batch(batch)
         self.status.iterations_done += 1

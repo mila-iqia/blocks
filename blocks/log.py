@@ -3,6 +3,11 @@ from abc import ABCMeta, abstractmethod
 from collections import defaultdict
 
 from six import add_metaclass
+try:
+    from pandas import DataFrame
+    PANDAS_AVAILABLE = True
+except ImportError:
+    PANDAS_AVAILABLE = False
 
 
 @add_metaclass(ABCMeta)
@@ -203,6 +208,16 @@ class AbstractTrainingLog(object):
         if not isinstance(time, int) or time < 0:
             raise ValueError("time must be a positive integer")
 
+    def to_dataframe(self):
+        """Convert a log into a :class:`.DataFrame`."""
+        if not PANDAS_AVAILABLE:
+            raise ImportError("The pandas library is not found. You can"
+                              " install it with pip.")
+        return self._to_dataframe()
+
+    def _to_dataframe(self):
+        raise NotImplementedError()
+
 
 class TrainingStatus(AbstractTrainingStatus):
     """A simple training status."""
@@ -245,3 +260,6 @@ class TrainingLog(AbstractTrainingLog):
 
     def get_status(self):
         return self._status
+
+    def _to_dataframe(self):
+        return DataFrame.from_dict(self._storage, orient='index')

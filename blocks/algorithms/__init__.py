@@ -10,7 +10,7 @@ from theano import tensor
 
 from blocks.graph import ComputationGraph
 from blocks.utils import named_copy, shared_floatx
-from blocks.theano_expressions import L2_norm
+from blocks.theano_expressions import l2_norm
 
 logger = logging.getLogger(__name__)
 
@@ -179,11 +179,11 @@ class GradientDescent(DifferentiableCostMinimizer):
             logger.info("The cost gradient computation graph is built")
         self.step_rule = step_rule if step_rule else SteepestDescent()
 
-        self.total_gradient_norm = named_copy(L2_norm(self.gradients.values()),
+        self.total_gradient_norm = named_copy(l2_norm(self.gradients.values()),
                                               "total_gradient_norm")
         self.steps, self.step_rule_updates = (
             self.step_rule.compute_steps(self.gradients))
-        self.total_step_norm = named_copy(L2_norm(self.steps.values()),
+        self.total_step_norm = named_copy(l2_norm(self.steps.values()),
                                           "total_step_norm")
 
     def initialize(self):
@@ -330,7 +330,7 @@ class GradientClipping(StepRule):
     def compute_steps(self, gradients):
         if not hasattr(self, 'threshold'):
             return gradients
-        norm = L2_norm(gradients.values())
+        norm = l2_norm(gradients.values())
         multiplier = tensor.switch(norm < self.threshold,
                                    1, self.threshold / norm)
         steps = OrderedDict(

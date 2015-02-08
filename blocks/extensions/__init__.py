@@ -134,6 +134,8 @@ class SimpleExtension(TrainingExtension):
     after_n_epochs : int, optional
         If not ``None``, :meth:`do` is invoked when `after_n_epochs`
         epochs are done.
+    every_n_epochs : int, optional
+        If not ``None``, :meth:`do` is invoked after every n-th epoch.
     after_n_batches : int, optional
         If not ``None``, :meth:`do` is invoked when `after_n_batches`
         batches are processed.
@@ -141,36 +143,70 @@ class SimpleExtension(TrainingExtension):
         If not ``None``, :meth:`do` is invoked after every n-th batch.
 
     """
-    def __init__(self, before_training=False, before_first_epoch=False,
-                 on_resumption=False, on_interrupt=False,
-                 after_every_epoch=False, after_every_batch=False,
-                 after_training=False,
-                 after_n_epochs=None, after_n_batches=None,
-                 every_n_batches=None, **kwargs):
-        super(SimpleExtension, self).__init__(**kwargs)
+    BOOLEAN_TRIGGERS = frozenset(["before_training", "before_first_epoch",
+                                  "on_resumption", "on_interrupt",
+                                  "after_every_epoch", "after_every_batch",
+                                  "after_training"])
+
+    INTEGER_TRIGGERS = frozenset(["after_n_epochs", "after_n_batches",
+                                  "every_n_epochs", "every_n_batches"])
+
+    def __init__(self, **kwargs):
         self._conditions = []
-        if before_training:
-            self.add_condition("before_training")
-        if before_first_epoch:
-            self.add_condition(
-                "before_epoch",
-                predicate=lambda log: log.status.epochs_done == 0)
-        if on_resumption:
-            self.add_condition("on_resumption")
-        if on_interrupt:
-            self.add_condition("on_interrupt")
-        if after_every_epoch:
-            self.add_condition("after_epoch")
-        if after_every_batch:
-            self.add_condition("after_batch")
-        if after_training:
-            self.add_condition("after_training")
-        if after_n_epochs:
-            self.invoke_after_n_epochs(after_n_epochs)
-        if after_n_batches:
-            self.invoke_after_n_batches(after_n_batches)
-        if every_n_batches:
-            self.invoke_every_n_batches(every_n_batches)
+        super_kwargs = {}
+        trigger_keywords = self.BOOLEAN_TRIGGERS | self.INTEGER_TRIGGERS
+        conditions = {}
+        for key, value in kwargs.items():
+            if key in trigger_keywords:
+                conditions[key] = value
+            else:
+                super_kwargs[key] = value
+        self.set_conditions(**conditions)
+        super(SimpleExtension, self).__init__(**super_kwargs)
+
+    def set_conditions(self, **kwargs):
+        """Set the conditions for which this extension should be run.
+
+        Parameters
+        ----------
+        See the :class:`SimpleExtension` docstring for a list of
+        possible parameters.
+
+        """
+        self._conditions[:] = []
+        predicates = {'before_first_epoch':
+                      lambda log: log.status.epochs_done == 0}
+        predicate_factories = {
+            'every_n_batches': lambda n_batches:
+                lambda log: log.status.iterations_done % n_batches == 0,
+            'after_n_batches': lambda n_batches:
+                lambda log: log.status.iterations_done == n_batches,
+            'every_n_epochs': lambda n_epochs:
+                lambda log: log.status.epochs_done % n_epochs == 0,
+            'after_n_epochs': lambda n_epochs:
+                lambda log: log.status.epochs_done == n_epochs,
+        }
+        conditions = {
+            'before_first_epoch': 'before_epoch',
+            'after_every_epoch': 'after_epoch',
+            'after_every_batch': 'after_batch',
+            'every_n_batches': 'after_batch',
+            'every_n_epochs': 'after_epoch',
+            'after_n_batches': 'after_batch',
+            'after_n_epochs': 'after_epoch'
+        }
+        # Freeze the keys as a list so that we can safely modify kwargs.
+        for key, value in kwargs.items():
+            if key in self.BOOLEAN_TRIGGERS and value:
+                self.add_condition(conditions.get(key, key),
+                                   predicate=predicates.get(key, None))
+            elif key in self.INTEGER_TRIGGERS and value:
+                predicate = predicate_factories.get(key, lambda: None)(value)
+                self.add_condition(conditions.get(key, key),
+                                   predicate=predicate)
+            else:
+                raise KeyError("Invalid condition: {}".format(key))
+        return self  # For chaining calls.
 
     def add_condition(self, callback_name, predicate=None, arguments=None):
         """Adds a condition under which a :meth:`do` is called.
@@ -197,27 +233,12 @@ class SimpleExtension(TrainingExtension):
         if not arguments:
             arguments = []
         if not predicate:
-            predicate = lambda log: True
-        self._conditions.append((callback_name, predicate, arguments))
+            self._conditions.append((callback_name, lambda log: True,
+                                     arguments))
+        else:
+            self._conditions.append((callback_name, predicate,
+                                     arguments))
         return self
-
-    def invoke_after_n_epochs(self, n_epochs):
-        self.add_condition(
-            "after_epoch",
-            predicate=lambda log:
-                log.status.epochs_done == n_epochs)
-
-    def invoke_after_n_batches(self, n_batches):
-        self.add_condition(
-            "after_batch",
-            predicate=lambda log:
-                log.status.iterations_done == n_batches)
-
-    def invoke_every_n_batches(self, n_batches):
-        self.add_condition(
-            "after_batch",
-            predicate=lambda log:
-                log.status.iterations_done % n_batches == 0)
 
     @abstractmethod
     def do(self, which_callback, *args):

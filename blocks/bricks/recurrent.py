@@ -364,13 +364,14 @@ class GatedRecurrent(BaseRecurrent, Initializable):
     def get_dim(self, name):
         if name == 'mask':
             return 0
-        if name in (self.apply.sequences + self.apply.states):
+        if name in self.apply.sequences + self.apply.states:
             return self.dim
         return super(GatedRecurrent, self).get_dim(name)
 
     def _allocate(self):
-        new_param = lambda name: shared_floatx_zeros((self.dim, self.dim),
-                                                     name=name)
+        def new_param(name):
+            return shared_floatx_zeros((self.dim, self.dim), name=name)
+
         self.params.append(new_param('state_to_state'))
         self.params.append(new_param('state_to_update')
                            if self.use_update_gate else None)
