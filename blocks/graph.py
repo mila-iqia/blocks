@@ -1,13 +1,12 @@
 """Annotated computation graph management."""
 import logging
 from collections import OrderedDict
-from operator import attrgetter
+from itertools import chain
 
 import theano
 from theano import Variable
 from theano.gof import graph
 from theano.sandbox.rng_mrg import MRG_RandomStreams
-from toolz import mapcat
 
 from blocks import config
 from blocks.roles import add_role, AUXILIARY
@@ -98,9 +97,9 @@ class ComputationGraph(object):
             sorted_apply_nodes = graph.io_toposort(inputs, usual_outputs)
 
             seen = set()
-            main_vars = [var for var in mapcat(attrgetter('inputs'),
-                                               sorted_apply_nodes)
-                         if not (var in seen or seen.add(var))] + self.outputs
+            main_vars = [var for var in list(chain(
+                *[apply_node.inputs for apply_node in sorted_apply_nodes]))
+                if not (var in seen or seen.add(var))] + self.outputs
 
             # While preserving order add auxiliary variables, and collect
             # updates
