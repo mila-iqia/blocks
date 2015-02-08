@@ -21,8 +21,11 @@ class Convolutional(Initializable):
     num_filters : int
         Number of filters per channel.
     num_channels : int
-        Number of input channels in the image e.g. 1 for grayscale and 3
-        for RGB. The filters are pooled over the channels.
+        Number of input channels in the image. For the first layer this is
+        normally 1 for grayscale images and 3 for color (RGB) images. For
+        subsequent layers this is equal to the number of filters output by
+        the previous convolutional layer. The filters are pooled over the
+        channels.
     step : tuple, optional
         The step (or stride) with which to slide the filters over the
         image. Defaults to (1, 1).
@@ -94,12 +97,17 @@ class MaxPooling(Initializable, Feedforward):
     pooling_size : tuple
         The height and width of the pooling region i.e. this is the factor
         by which your input's last two dimensions will be downscaled.
+    step : tuple, optional
+        The vertical and horizontal shift (stride) between pooling regions.
+        By default this is equal to `pooling_size`. Setting this to a lower
+        number results in overlapping pooling regions.
 
     """
     @lazy
-    def __init__(self, pooling_size, **kwargs):
+    def __init__(self, pooling_size, step=None, **kwargs):
         super(MaxPooling, self).__init__(**kwargs)
         self.pooling_size = pooling_size
+        self.step = step
 
     @application(inputs=['input_'], outputs=['output'])
     def apply(self, input_):
@@ -120,7 +128,7 @@ class MaxPooling(Initializable, Feedforward):
             with the last two dimensions downsampled.
 
         """
-        output = max_pool_2d(input_, self.pooling_size)
+        output = max_pool_2d(input_, self.pooling_size, st=self.step)
         return output
 
 
@@ -138,10 +146,11 @@ class ConvolutionalLayer(Sequence, Initializable):
 
     """
     def __init__(self, filter_size, num_filters, num_channels, pooling_size,
-                 activation, step=(1, 1), border_mode='valid', **kwargs):
+                 activation, conv_step=(1, 1), pooling_step=None,
+                 border_mode='valid', **kwargs):
         convolution = Convolutional(filter_size, num_filters,
-                                    num_channels, step, border_mode)
-        pooling = MaxPooling(pooling_size)
+                                    num_channels, conv_step, border_mode)
+        pooling = MaxPooling(pooling_size, pooling_step)
         super(ConvolutionalLayer, self).__init__(
             application_methods=[convolution.apply, activation, pooling.apply],
             **kwargs)
