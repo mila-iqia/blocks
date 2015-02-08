@@ -1,9 +1,4 @@
-"""Generic transformations with multiple inputs and/or outputs.
-
-As bricks from this module are intended to serve as adapters, most of them
-are lazy-only, i.e. can not be initialized with a single constructor call.
-
-"""
+"""Generic transformations with multiple inputs and/or outputs."""
 import copy
 
 from blocks.bricks import Initializable, Linear
@@ -166,68 +161,77 @@ class Fork(Parallel):
         return super(Fork, self).apply.outputs
 
 
-class Mixer(Parallel):
-    """Mixes a new channel with old ones.
+class Merge(Parallel):
+    """Transform an input and add it to other inputs.
 
-    .. digraph:: mixer
+    This brick is designed for the following scenario: one has a group of
+    variables and another separate variable, and one needs to somehow
+    merge information from the latter into the former. We call that
+    "to merge a varible into a group of variables", and refer to the separate
+    variable as "the merged input" and to the variables from the group
+    as "the changed inputs".
 
-       rankdir=TB;
-       splines=line;
-       subgraph cluster_0 {
-         label="old_inputs";
-         a[label=""]; b[label=""]; c[label=""];
-       }
-       subgraph cluster_1 {
-         label="outputs"; labelloc=b;
-         d[label=""]; e[label=""]; f[label=""];
-       }
-       a -> d;
-       b -> e;
-       c -> f;
-       new_input -> d;
-       new_input -> e;
-       new_input -> f;
+    Given a prototype brick, a :class:`Parallel` brick makes several
+    copies of it (each with its own parameters). At the application time
+    the copies are applied to the merged input and the transformation
+    results are added to the changed inputs giving the output.
 
     Parameters
     ----------
-    old_names : list of str
-        The names of the old channels.
-    new_name : list of str
-        The new channel's name.
+    changed_names : list of str
+        The names of the inputs.
+    merged_name : str
+        The name of the merged input.
 
     Attributes
     ----------
-    channel_dims : dict of (channel_name, int) pairs
-        The dimensions of the channels. Required for allocation.
+    changed_dims : dict
+        The dictionary of changed inputs dimensions, keys are input names,
+        values are dimensions.
+    merged_dim : dict
+        The dimension of the merged input.
 
     """
-    def __init__(self, old_names, new_name, prototype=None, **kwargs):
-        super(Mixer, self).__init__(old_names, prototype=prototype, **kwargs)
-        self.old_names = old_names
-        self.new_name = new_name
+    @lazy
+    def __init__(self, changed_names, merged_name, changed_dims, merged_dim,
+                 prototype=None, **kwargs):
+        self.changed_names = changed_names
+        self.merged_name = merged_name
+        self.changed_dims = changed_dims
+        self.merged_dim = merged_dim
+
+        kwargs.update(self._get_parent_dims())
+        super(Merge, self).__init__(changed_names, prototype=prototype, **kwargs)
+
+    def _get_parent_dims(self):
+        result = dict()
+        result['input_dims'] = {name: self.merged_dim
+                                for name in self.changed_names}
+        result['output_dims'] = ({name: self.changed_dims.get(name, None)
+                                  for name in self.changed_names}
+                                 if self.changed_dims else None)
+        return result
+
 
     def _push_allocation_config(self):
-        self.input_dims = {name: self.channel_dims[self.new_name]
-                           for name in self.old_names}
-        self.output_dims = {name: self.channel_dims[name]
-                            for name in self.old_names}
-        super(Mixer, self)._push_allocation_config()
+        self.__dict__.update(self._get_parent_dims())
+        super(Merge, self)._push_allocation_config()
 
     @application
     def apply(self, **kwargs):
-        new = kwargs.pop(self.new_name)
-        if not set(kwargs.keys()) == set(self.old_names):
+        new = kwargs.pop(self.merged_name)
+        if not set(kwargs.keys()) == set(self.changed_names):
             raise ValueError
-        result = super(Mixer, self).apply(
-            return_list=True, **{name: new for name in self.old_names})
-        for i, name in enumerate(self.old_names):
+        result = super(Merge, self).apply(
+            return_list=True, **{name: new for name in self.changed_names})
+        for i, name in enumerate(self.changed_names):
             result[i] += kwargs[name]
         return result
 
     @apply.property('inputs')
     def apply_inputs(self):
-        return [self.new_name] + self.old_names
+        return [self.merged_name] + self.changed_names
 
     @apply.property('outputs')
     def apply_outputs(self):
-        return self.old_names
+        return self.changed_names

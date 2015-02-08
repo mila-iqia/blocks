@@ -7,7 +7,7 @@ from theano import tensor
 from blocks.bricks import Initializable, Identity, MLP, Random
 from blocks.bricks.base import application, Brick, lazy
 from blocks.bricks.recurrent import BaseRecurrent
-from blocks.bricks.parallel import Fork, Mixer
+from blocks.bricks.parallel import Fork, Merge
 from blocks.bricks.lookup import LookupTable
 from blocks.bricks.recurrent import recurrent
 from blocks.utils import dict_subset, dict_union
@@ -524,7 +524,7 @@ class AttentionTransition(AbstractAttentionTransition, Initializable):
     """Combines an attention mechanism and a recurrent transition.
 
     This brick is assembled from three components: an attention mechanism,
-    a recurrent transition and a mixer brick to make the first two work
+    a recurrent transition and a merge brick to make the first two work
     together.  It is expected that among the contexts of the transition's
     `apply` methods there is one, intended to be attended by the attention
     mechanism, and another one serving as a mask for the first one.
@@ -549,13 +549,13 @@ class AttentionTransition(AbstractAttentionTransition, Initializable):
     Currently lazy-only.
 
     """
-    def __init__(self, transition, attention, mixer,
+    def __init__(self, transition, attention, merge,
                  attended_name=None, attended_mask_name=None,
                  **kwargs):
         super(AttentionTransition, self).__init__(**kwargs)
         self.transition = transition
         self.attention = attention
-        self.mixer = mixer
+        self.merge = merge
 
         self.sequence_names = self.transition.apply.sequences
         self.state_names = self.transition.apply.states
@@ -577,17 +577,18 @@ class AttentionTransition(AbstractAttentionTransition, Initializable):
             name for name in self.glimpse_names
             if name in self.attention.take_look.inputs]
 
-        self.children = [self.transition, self.attention, self.mixer]
+        self.children = [self.transition, self.attention, self.merge]
 
     def _push_allocation_config(self):
         self.attention.state_dims = self.transition.get_dims(self.state_names)
         self.attention.sequence_dim = self.transition.get_dim(
             self.attended_name)
-        self.mixer.channel_dims = dict_subset(
+        self.merge.changed_dims = dict_subset(
             dict_union(
-                self.transition.get_dims(self.sequence_names),
-                self.attention.get_dims(self.glimpse_names)),
-            self.mixer.apply.inputs)
+                self.transition.get_dims(self.sequence_names)),
+            self.merge.changed_names)
+        self.merge.merged_dim = self.attention.get_dim(
+            self.merge.merged_name)
 
     @application
     def take_look(self, **kwargs):
@@ -635,10 +636,10 @@ class AttentionTransition(AbstractAttentionTransition, Initializable):
                                 must_have=False)
         states = dict_subset(kwargs, self.state_names, pop=True)
         glimpses = dict_subset(kwargs, self.glimpse_names, pop=True)
-        sequences.update(self.mixer.apply(
+        sequences.update(self.merge.apply(
             return_dict=True,
             **dict_subset(dict_union(sequences, glimpses),
-                          self.mixer.apply.inputs)))
+                          self.merge.apply.inputs)))
         current_states = self.transition.apply(
             iterate=False, return_list=True,
             **dict_union(sequences, states, kwargs))
@@ -817,9 +818,8 @@ class SequenceGenerator(BaseSequenceGenerator):
 
         fork = Fork(fork_inputs)
         if attention:
-            mixer = Mixer(fork_inputs, attention.take_look.outputs[0],
-                          name="mixer")
-            transition = AttentionTransition(transition, attention, mixer,
+            merge = Merge(fork_inputs, attention.take_look.outputs[0])
+            transition = AttentionTransition(transition, attention, merge,
                                              name="att_trans")
         else:
             transition = FakeAttentionTransition(transition,
