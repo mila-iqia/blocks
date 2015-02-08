@@ -1,6 +1,7 @@
 import os
 
 import numpy
+from toolz import sliding_window
 
 from blocks import config
 from blocks.datasets import Dataset, CachedDataStream
@@ -223,25 +224,18 @@ class NGramStream(CachedDataStream):
         self.ngram_order = ngram_order
 
     def get_data(self, request=None):
-        if not self.cache[0]:
-            self._cache()
         features, targets = [], []
         for _, sentence in enumerate(self.cache[0]):
-            for j in range(request):
-                features.append(sentence[j:j + self.ngram_order])
-                targets.append([sentence[j + self.ngram_order]])
-                if j + self.ngram_order == len(sentence) - 1:
-                    sentence_ended = True
-                    break
-                elif len(features) == request:
-                    sentence_ended = False
-                    break
-            if sentence_ended:
+            features.append(list(
+                sliding_window(self.ngram_order,
+                               sentence[:-1]))[:request - len(features)])
+            targets.append(
+                sentence[self.ngram_order:][:request - len(targets)])
+            self.cache[0][0] = self.cache[0][0][request:]
+            if not self.cache[0][0]:
                 self.cache[0].pop(0)
                 if not self.cache[0]:
                     self._cache()
-            else:
-                self.cache[0][0] = self.cache[0][0][j + 1:]
             if len(features) == request:
                 break
         return tuple(numpy.asarray(data) for data in (features, targets))
