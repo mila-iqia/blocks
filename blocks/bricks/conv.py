@@ -22,7 +22,7 @@ class Convolutional(Initializable):
         Number of filters per channel.
     num_channels : int
         Number of input channels in the image e.g. 1 for grayscale and 3
-        for RBG. The filters are pooled over the channels.
+        for RGB. The filters are pooled over the channels.
     step : tuple, optional
         The step (or stride) with which to slide the filters over the
         image. Defaults to (1, 1).
