@@ -181,6 +181,21 @@ class Merge(Parallel):
     copies are applied to the merged input and the transformation results
     are added to the changed inputs giving the output.
 
+    >>> from theano import tensor
+    >>> from blocks.initialization import Constant
+    >>> x = tensor.matrix('x')
+    >>> y = tensor.matrix('y')
+    >>> z = tensor.matrix('z')
+    >>> merge = Merge(changed_names=['x', 'y'], merged_name='z',
+    ...               changed_dims=dict(x=2, y=3), merged_dim=3,
+    ...               weights_init=Constant(2))
+    >>> merge.initialize()
+    >>> new_x, new_y = merge.apply(x=x, y=y, z=z)
+    >>> new_x.eval({x: [[2, 2]], z: [[1, 1, 1]]}) # doctest: +ELLIPSIS
+    array([[ 8.,  8.]]...
+    >>> new_y.eval({y: [[1, 1, 1]], z: [[1, 1, 1]]}) # doctest: +ELLIPSIS
+    array([[ 7.,  7.,  7.]]...
+
     Parameters
     ----------
     changed_names : list of str
@@ -210,6 +225,7 @@ class Merge(Parallel):
                                     child_prefix="fork", **kwargs)
 
     def _get_parent_dims(self):
+        """Dimension configuration for the parent brick."""
         result = dict()
         result['input_dims'] = {name: self.merged_dim
                                 for name in self.changed_names}
