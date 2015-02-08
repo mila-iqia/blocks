@@ -1,14 +1,14 @@
 from theano.tensor.nnet.conv import conv2d
 from theano.tensor.signal.downsample import max_pool_2d
 
-from blocks.bricks import Initializable, Feedforward
+from blocks.bricks import Initializable, Feedforward, Sequence
 from blocks.bricks.base import application, Brick, lazy
 from blocks.roles import add_role, FILTERS
 from blocks.utils import shared_floatx_zeros
 
 
 class Convolutional(Initializable):
-    """Convolutional layer.
+    """Performs a 2D convolution.
 
     .. todo::
 
@@ -122,6 +122,29 @@ class MaxPooling(Initializable, Feedforward):
         """
         output = max_pool_2d(input_, self.pooling_size)
         return output
+
+
+class ConvolutionalLayer(Sequence, Initializable):
+    """A complete convolutional layer: Convolution, nonlinearity, pooling.
+
+    Parameters
+    ----------
+    activation : :class:`.Application`
+        The application method to apply in the detector stage (i.e. the
+        nonlinearity before pooling.
+
+    See :class:`Convolutional` and :class:`MaxPooling` for explanations of
+    other parameters.
+
+    """
+    def __init__(self, filter_size, num_filters, num_channels, pooling_size,
+                 activation, step=(1, 1), border_mode='valid', **kwargs):
+        convolution = Convolutional(filter_size, num_filters,
+                                    num_channels, step, border_mode)
+        pooling = MaxPooling(pooling_size)
+        super(ConvolutionalLayer, self).__init__(
+            application_methods=[convolution.apply, activation, pooling.apply],
+            **kwargs)
 
 
 class Flattener(Brick):
