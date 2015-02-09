@@ -41,5 +41,4 @@ setup(
         'plot': ['bokeh'],
         'docs': ['sphinx', 'sphinxcontrib-napoleon', 'sphinx-rtd-theme']
     },
-    zip_safe=False
-)
+    zip_safe=False)
