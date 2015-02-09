@@ -161,8 +161,6 @@ class ConvolutionalLayer(Sequence, Initializable):
         if name == 'input_':
             return self.input_dim
         if name == 'output':
-            if hasattr(self, '_output_dim'):
-                return self._output_dim
             conv_out_dim = ConvOp.getOutputShape(self.input_dim[1:],
                                                  self.convolution.filter_size,
                                                  self.convolution.step,
@@ -170,8 +168,7 @@ class ConvolutionalLayer(Sequence, Initializable):
             out_dim = DownsampleFactorMax.out_shape(conv_out_dim,
                                                     self.pooling.pooling_size,
                                                     st=self.pooling.step)
-            self._output_dim = (self.num_filters, out_dim[0], out_dim[1])
-            return self._output_dim
+            return self.num_filters, out_dim[0], out_dim[1]
         return super(ConvolutionalLayer, self).get_dim(name)
 
 
