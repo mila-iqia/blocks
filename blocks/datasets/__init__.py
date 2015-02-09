@@ -26,7 +26,7 @@ class Dataset(object):
     Attributes
     ----------
     sources : tuple of strings
-        The sources this dataset will when queried for data e.g.
+        The sources this dataset will provide when queried for data e.g.
         ``('features',)`` when querying only the data from MNIST.
     provides_sources : tuple of strings
         The sources this dataset *is able to* provide e.g. ``('features',
