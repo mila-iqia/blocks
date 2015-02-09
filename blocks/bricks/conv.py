@@ -88,9 +88,10 @@ class Convolutional(Initializable):
         """
         W, = self.params
         output = conv2d(
-            input_, W, subsample=self.step, border_mode=self.border_mode,
-            filter_shape=(self.num_filters,
-                          self.num_channels) + self.filter_size)
+            input_, W, image_shape=self.input_dim, subsample=self.step,
+            border_mode=self.border_mode,
+            filter_shape=((self.num_filters, self.num_channels) +
+                          self.filter_size))
         return output
 
     def get_dim(self, name):
