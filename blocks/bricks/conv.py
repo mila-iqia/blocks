@@ -53,9 +53,8 @@ class Convolutional(Initializable):
         self.step = step
 
     def _allocate(self):
-        filter_size_x, filter_size_y = self.filter_size
-        W = shared_floatx_zeros((self.num_filters, self.num_channels,
-                                 filter_size_x, filter_size_y), name='W')
+        W = shared_floatx_zeros((self.num_filters, self.num_channels) +
+                                 self.filter_size, name='W')
         add_role(W, FILTERS)
         self.params.append(W)
         self.add_auxiliary_variable(W.norm(2), name='W_norm')
@@ -98,9 +97,9 @@ class Convolutional(Initializable):
         if name == 'input_':
             return self.input_dim
         if name == 'output':
-            return (self.num_filters,) + \
-                ConvOp.getOutputShape(self.input_dim, self.filter_size,
-                                      self.step, self.border_mode)
+            return ((self.num_filters,) +
+                    ConvOp.getOutputShape(self.input_dim, self.filter_size,
+                                          self.step, self.border_mode))
         return super(ConvolutionalLayer, self).get_dim(name)
 
 
@@ -124,6 +123,8 @@ class MaxPooling(Initializable, Feedforward):
     @lazy
     def __init__(self, pooling_size, step=None, input_dim=None, **kwargs):
         super(MaxPooling, self).__init__(**kwargs)
+
+        self.input_dim = input_dim
         self.pooling_size = pooling_size
         self.step = step
 
@@ -153,8 +154,7 @@ class MaxPooling(Initializable, Feedforward):
         if name == 'input_':
             return self.input_dim
         if name == 'output':
-            return tuple(list(self.input_dim[:2]) +
-                         DownsampleFactorMax.out_shape(self.input_dim,
+            return tuple(DownsampleFactorMax.out_shape(self.input_dim,
                                                        self.pooling_size,
                                                        st=self.step))
 
@@ -162,14 +162,22 @@ class MaxPooling(Initializable, Feedforward):
 class ConvolutionalLayer(Sequence, Initializable):
     """A complete convolutional layer: Convolution, nonlinearity, pooling.
 
+    .. todo::
+
+       Mean pooling.
+
     Parameters
     ----------
-    activation : :class:`.Application`
+    activation : :class:`.BoundApplication`
         The application method to apply in the detector stage (i.e. the
         nonlinearity before pooling.
 
     See :class:`Convolutional` and :class:`MaxPooling` for explanations of
     other parameters.
+
+    Notes
+    -----
+    Uses max pooling.
 
     """
     def __init__(self, filter_size, num_filters, num_channels, pooling_size,
