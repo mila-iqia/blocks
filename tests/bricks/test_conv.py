@@ -1,31 +1,36 @@
-__author__ = 'Dmitry Serdyuk'
-
 import numpy
 
+import theano
+from numpy.testing import assert_allclose
 from theano import tensor
 from theano import function
 
-from blocks.initialization import Constant
-
 from blocks.bricks.conv import Convolutional, MaxPooling
+from blocks.initialization import Constant
 
 
 def test_convolutional():
     x = tensor.tensor4('x')
-    n_channels = 4
-    conv = Convolutional((3, 3), 3, n_channels, (1, 1),
+    num_channels = 4
+    num_filters = 3
+    batch_size = 5
+    filter_size = (3, 3)
+    conv = Convolutional(filter_size, num_filters, num_channels,
                          weights_init=Constant(1.))
     conv.initialize()
     y = conv.apply(x)
     func = function([x], y)
 
-    x_val = numpy.ones((5, n_channels, 17, 13))
-    assert numpy.all(func(x_val) == 3 * 3 * n_channels * numpy.ones((15, 11)))
+    x_val = numpy.ones((batch_size, num_channels, 17, 13),
+                       dtype=theano.config.floatX)
+    assert_allclose(func(x_val),
+                    numpy.prod(filter_size) * num_channels *
+                    numpy.ones((batch_size, num_filters, 15, 11)))
 
 
 def test_max_pooling():
     x = tensor.tensor4('x')
-    n_channels = 4
+    num_channels = 4
     batch_size = 5
     x_size = 17
     y_size = 13
@@ -34,8 +39,9 @@ def test_max_pooling():
     y = pool.apply(x)
     func = function([x], y)
 
-    x_val = numpy.ones((batch_size, n_channels, x_size, y_size))
-    assert numpy.all(func(x_val) == numpy.ones((batch_size, n_channels,
-                                                x_size / pool_size + 1,
-                                                y_size / pool_size + 1)))
-
+    x_val = numpy.ones((batch_size, num_channels, x_size, y_size),
+                       dtype=theano.config.floatX)
+    assert_allclose(func(x_val),
+                    numpy.ones((batch_size, num_channels,
+                                x_size / pool_size + 1,
+                                y_size / pool_size + 1)))
