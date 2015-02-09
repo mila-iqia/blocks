@@ -26,6 +26,10 @@ class Convolutional(Initializable):
         subsequent layers this is equal to the number of filters output by
         the previous convolutional layer. The filters are pooled over the
         channels.
+    input_dim : tuple, optional
+        The height and width of the input (image or feature map). If given,
+        this will be passed to the Theano convolution operator, resulting
+        in possibly faster execution times.
     step : tuple, optional
         The step (or stride) with which to slide the filters over the
         image. Defaults to (1, 1).
@@ -37,11 +41,12 @@ class Convolutional(Initializable):
     has_bias = False
 
     @lazy
-    def __init__(self, filter_size, num_filters, num_channels,
+    def __init__(self, filter_size, num_filters, num_channels, input_dim=None,
                  step=(1, 1), border_mode='valid', **kwargs):
         super(Convolutional, self).__init__(**kwargs)
 
         self.filter_size = filter_size
+        self.input_dim = input_dim
         self.border_mode = border_mode
         self.num_filters = num_filters
         self.num_channels = num_channels
@@ -88,6 +93,15 @@ class Convolutional(Initializable):
                           self.num_channels) + self.filter_size)
         return output
 
+    def get_dim(self, name):
+        if name == 'input_':
+            return self.input_dim
+        if name == 'output':
+            return (self.num_filters,) + \
+                ConvOp.getOutputShape(self.input_dim, self.filter_size,
+                                      self.step, self.border_mode)
+        return super(ConvolutionalLayer, self).get_dim(name)
+
 
 class MaxPooling(Initializable, Feedforward):
     """Max pooling layer.
@@ -101,10 +115,13 @@ class MaxPooling(Initializable, Feedforward):
         The vertical and horizontal shift (stride) between pooling regions.
         By default this is equal to `pooling_size`. Setting this to a lower
         number results in overlapping pooling regions.
+    input_dim : tuple, optional
+        A tuple of integers representing the shape of the input. The last
+        two dimensions will be used to calculate the output dimension.
 
     """
     @lazy
-    def __init__(self, pooling_size, step=None, **kwargs):
+    def __init__(self, pooling_size, step=None, input_dim=None, **kwargs):
         super(MaxPooling, self).__init__(**kwargs)
         self.pooling_size = pooling_size
         self.step = step
@@ -131,6 +148,15 @@ class MaxPooling(Initializable, Feedforward):
         output = max_pool_2d(input_, self.pooling_size, st=self.step)
         return output
 
+    def get_dim(self, name):
+        if name == 'input_':
+            return self.input_dim
+        if name == 'output':
+            return tuple(list(self.input_dim[:2]) +
+                         DownsampleFactorMax.out_shape(self.input_dim,
+                                                       self.pooling_size,
+                                                       st=self.step))
+
 
 class ConvolutionalLayer(Sequence, Initializable):
     """A complete convolutional layer: Convolution, nonlinearity, pooling.
@@ -148,27 +174,27 @@ class ConvolutionalLayer(Sequence, Initializable):
     def __init__(self, filter_size, num_filters, num_channels, pooling_size,
                  activation, conv_step=(1, 1), pooling_step=None,
                  border_mode='valid', input_dim=None, **kwargs):
-        self.input_dim = input_dim
         self.convolution = Convolutional(filter_size, num_filters,
-                                         num_channels, conv_step, border_mode)
-        self.pooling = MaxPooling(pooling_size, pooling_step)
+                                         num_channels, input_dim=input_dim,
+                                         step=conv_step,
+                                         border_mode=border_mode)
+        if input_dim is not None:
+            pooling_input_dim = self.convolution.get_dim('output')
+        else:
+            pooling_input_dim = None
+        self.pooling = MaxPooling(pooling_size, step=pooling_step,
+                                  input_dim=pooling_input_dim)
         super(ConvolutionalLayer, self).__init__(
             application_methods=[self.convolution.apply, activation,
-                                 self.pooling.apply],
-            **kwargs)
+                                 self.pooling.apply], **kwargs)
+
+        self.input_dim = input_dim
 
     def get_dim(self, name):
         if name == 'input_':
             return self.input_dim
         if name == 'output':
-            conv_out_dim = ConvOp.getOutputShape(self.input_dim[1:],
-                                                 self.convolution.filter_size,
-                                                 self.convolution.step,
-                                                 self.convolution.border_mode)
-            out_dim = DownsampleFactorMax.out_shape(conv_out_dim,
-                                                    self.pooling.pooling_size,
-                                                    st=self.pooling.step)
-            return self.num_filters, out_dim[0], out_dim[1]
+            return self.pooling.get_dim('output')
         return super(ConvolutionalLayer, self).get_dim(name)
 
 
