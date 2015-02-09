@@ -23,7 +23,7 @@ def test_convolutional():
     assert numpy.all(func(x_val) == 3 * 3 * n_channels * numpy.ones((15, 11)))
 
 
-def test_pooling():
+def test_max_pooling():
     x = tensor.tensor4('x')
     n_channels = 4
     batch_size = 5
