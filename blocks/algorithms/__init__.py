@@ -241,12 +241,12 @@ class StepRule(object):
 
         Parameters
         ----------
-        gradients : :class:`~OrderedDict` of
-                    (:class:`~tensor.TensorSharedVariable`
-                    :class:`~tensor.TensorVariable`) pairs
-            A dictionary. The keys are the optimized parameters, the values
-            are the expressions for the gradients of the cost with respect
-            to the parameters.
+        gradients : OrderedDict
+            An :class:`~OrderedDict` of
+            (:class:`~tensor.TensorSharedVariable`
+            :class:`~tensor.TensorVariable`) pairs. The keys are the
+            parameters being trained, the values are the expressions for
+            the gradients of the cost with respect to the parameters.
 
         Returns
         -------
