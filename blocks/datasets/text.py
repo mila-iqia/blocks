@@ -4,7 +4,8 @@ import numpy
 from toolz import sliding_window
 
 from blocks import config
-from blocks.datasets import Dataset, CachedDataStream
+from blocks.datasets import Dataset
+from blocks.datasets.streams import CachedDataStream
 
 
 class TextFileState(object):

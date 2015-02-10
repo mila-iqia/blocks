@@ -54,7 +54,7 @@ Quickstart
    >>> from blocks.bricks import MLP, Tanh, Softmax
    >>> from blocks.bricks.cost import CategoricalCrossEntropy, MisclassificationRate
    >>> from blocks.initialization import IsotropicGaussian, Constant
-   >>> from blocks.datasets import DataStream
+   >>> from blocks.datasets.streams import DataStream
    >>> from blocks.datasets.mnist import MNIST
    >>> from blocks.datasets.schemes import SequentialScheme
    >>> from blocks.extensions import FinishAfter, Printing
