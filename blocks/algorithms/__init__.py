@@ -133,6 +133,14 @@ class DifferentiableCostMinimizer(TrainingAlgorithm):
         self.updates.extend(updates)
 
 
+variable_mismatch_error = """
+
+Blocks tried to match the sources ({sources}) of the training dataset to
+the names of the Theano variables ({variables}), but failed to do so.
+If you want to train on a subset of the sources that your dataset provides,
+pass the `sources` keyword argument to its constructor. """
+
+
 class GradientDescent(DifferentiableCostMinimizer):
     """A base class for all gradient descent algorithms.
 
@@ -200,13 +208,10 @@ class GradientDescent(DifferentiableCostMinimizer):
 
     def process_batch(self, batch):
         if not set(batch.keys()) == set([v.name for v in self.inputs]):
-            raise ValueError("The names of the input variables of your"
-                             " computation graph (%s) must correspond to the"
-                             " data sources (%s). Maybe your Dataset supports"
-                             " the 'sources' keyword to explicitly select"
-                             " which data sources you want?" %
-                             (", ".join([v.name for v in self.inputs]),
-                              ", ".join(batch.keys())))
+            raise ValueError("mismatch of variable names and data sources" +
+                             variable_mismatch_error.format(
+                                sources=batch.keys(),
+                                variables=[v.name for v in self.inputs]))
         ordered_batch = [batch[v.name] for v in self.inputs]
         self._function(*ordered_batch)
 
