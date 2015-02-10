@@ -49,6 +49,9 @@ They should use Python 3 syntax.
 .. _doctests: https://docs.python.org/2/library/doctest.html
 .. _Read the Docs: https://readthedocs.org/
 .. _online documentation: http://blocks.readthedocs.org/
+.. _a bug in Napoleon: https://bitbucket.org/birkenfeld/sphinx-contrib/issue/82/napoleon-return-type-containing-colons-is
+
+.. _references_and_intersphinx:
 
 References and Intersphinx
 --------------------------
@@ -72,5 +75,27 @@ the documentation of other projects such as Theano, NumPy and Scipy.
    in this case we need to give the full path. The tilde (~) tells Sphinx not
    to render the full path (numpy.ndarray), but only the object itself
    (ndarray).
+
+.. warning::
+
+   Because of `a bug in Napoleon`_ you can't use the reference to a type in the
+   "Returns" section of your docstring without giving it a name. This doesn't
+   render correctly:
+
+   ::
+
+      Returns
+      -------
+      :class:`Brick`
+          The returned Brick.
+
+   But this does:
+
+   ::
+
+      Returns
+      -------
+      retured_brick : :class:`Brick`
+          The returned Brick.
 
 .. _reference other objects: http://sphinx-doc.org/domains.html#python-roles
