@@ -379,15 +379,8 @@ class LSTM(BaseRecurrent, Initializable):
             Next cell activations of the network.
 
         """
-        # Unfortunately, I'm not aware of a general way to slice the last
-        # dimension of a theano tensor.
         def slice_last(x, no):
-            if x.ndim == 3:
-                return x[:, :, no*self.dim: (no+1)*self.dim]
-            elif x.ndim == 2:
-                return x[:, no*self.dim: (no+1)*self.dim]
-            elif x.ndim == 1:
-                return x[no*self.dim: (no+1)*self.dim]
+            return x.T[no*self.dim: (no+1)*self.dim].T
 
         activation = tensor.dot(states, self.W_state) + inputs + self.biases
         cellW_cell = tensor.dot(cells, self.W_cell)
