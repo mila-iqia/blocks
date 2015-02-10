@@ -181,6 +181,29 @@ intended. Instead, use:
            bar.append('baz')
            self.bar = bar
 
+Writing error messages
+~~~~~~~~~~~~~~~~~~~~~~
+Comprehensive error messages can be a great way to inform users of what could
+have gone wrong. However, lengthy error messages can clutter code, and
+implicitly concatenated strings over multiple lines are frustrating to edit. To
+prevent this, use a separate triple-quoted string with escaped newlines to
+store the detailed explanation of your error. Keep a terse error message
+directly in the code though, so that someone reading the code still knows what
+the error is being raised for.
+
+.. code-block:: python
+
+   informative_error = """
+
+   You probably passed the wrong keyword argument, which caused this error. \
+   Please pass `b` instead of `{value}`, and have a look at the documentation \
+   of the `is_b` method for details."""
+
+   def is_b(value):
+       """Raises an error if the value is not 'b'."""
+       if value != 'b':
+           raise ValueError("wrong value" + informative_error.format(value))
+       return value
 
 Unit testing
 ------------
