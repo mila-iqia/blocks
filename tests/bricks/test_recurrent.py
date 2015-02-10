@@ -87,7 +87,10 @@ class TestLSTM(unittest.TestCase):
         # omitting biases because they are zero
         activation = numpy.dot(h0_val, W_state_val) + x_val
         cW_c = numpy.dot(c0_val, W_cell_val)
-        sigmoid = lambda x: 1. / (1. + numpy.exp(-x))
+
+        def sigmoid(x):
+            return 1. / (1. + numpy.exp(-x))
+
         i_t = sigmoid(activation[:, :3] + cW_c[:, :3])
         f_t = sigmoid(activation[:, 3:6] + cW_c[:, 3:6])
         next_cells = f_t * c0_val + i_t * numpy.tanh(activation[:, 6:9])
@@ -115,7 +118,10 @@ class TestLSTM(unittest.TestCase):
         W_state_val = 2 * numpy.ones((3, 12), dtype=floatX)
         W_cell_val = 2 * numpy.ones((3, 6), dtype=floatX)
         W_cell_to_gate_val = 2 * numpy.ones((3, 3), dtype=floatX)
-        sigmoid = lambda x: 1. / (1. + numpy.exp(-x))
+
+        def sigmoid(x):
+            return 1. / (1. + numpy.exp(-x))
+
         for i in range(1, 25):
             activation = numpy.dot(h_val[i-1], W_state_val) + x_val[i-1]
             cW_c = numpy.dot(c_val[i-1], W_cell_val)
