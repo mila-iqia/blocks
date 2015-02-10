@@ -81,21 +81,21 @@ class TestLSTM(unittest.TestCase):
         x_val = 0.1 * numpy.array([range(12), range(12, 24)],
                                   dtype=floatX)
         W_state_val = 2 * numpy.ones((3, 12), dtype=floatX)
-        W_cell_val = 2 * numpy.ones((3, 6), dtype=floatX)
-        W_cell_to_gate_val = 2 * numpy.ones((3, 3), dtype=floatX)
+        W_cell_to_in = 2 * numpy.ones((3,), dtype=floatX)
+        W_cell_to_out = 2 * numpy.ones((3,), dtype=floatX)
+        W_cell_to_forget = 2 * numpy.ones((3,), dtype=floatX)
 
         # omitting biases because they are zero
         activation = numpy.dot(h0_val, W_state_val) + x_val
-        cW_c = numpy.dot(c0_val, W_cell_val)
 
         def sigmoid(x):
             return 1. / (1. + numpy.exp(-x))
 
-        i_t = sigmoid(activation[:, :3] + cW_c[:, :3])
-        f_t = sigmoid(activation[:, 3:6] + cW_c[:, 3:6])
+        i_t = sigmoid(activation[:, :3] + c0_val * W_cell_to_in)
+        f_t = sigmoid(activation[:, 3:6] + c0_val * W_cell_to_forget)
         next_cells = f_t * c0_val + i_t * numpy.tanh(activation[:, 6:9])
         o_t = sigmoid(activation[:, 9:12] +
-                      numpy.dot(next_cells, W_cell_to_gate_val))
+                      next_cells * W_cell_to_out)
         h1_val = o_t * numpy.tanh(next_cells)
         assert_allclose(h1_val, next_h(x_val, h0_val, c0_val)[0],
                         rtol=1e-6)
@@ -116,20 +116,20 @@ class TestLSTM(unittest.TestCase):
         h_val = numpy.zeros((25, 4, 3), dtype=floatX)
         c_val = numpy.zeros((25, 4, 3), dtype=floatX)
         W_state_val = 2 * numpy.ones((3, 12), dtype=floatX)
-        W_cell_val = 2 * numpy.ones((3, 6), dtype=floatX)
-        W_cell_to_gate_val = 2 * numpy.ones((3, 3), dtype=floatX)
+        W_cell_to_in = 2 * numpy.ones((3,), dtype=floatX)
+        W_cell_to_out = 2 * numpy.ones((3,), dtype=floatX)
+        W_cell_to_forget = 2 * numpy.ones((3,), dtype=floatX)
 
         def sigmoid(x):
             return 1. / (1. + numpy.exp(-x))
 
         for i in range(1, 25):
             activation = numpy.dot(h_val[i-1], W_state_val) + x_val[i-1]
-            cW_c = numpy.dot(c_val[i-1], W_cell_val)
-            i_t = sigmoid(activation[:, :3] + cW_c[:, :3])
-            f_t = sigmoid(activation[:, 3:6] + cW_c[:, 3:6])
+            i_t = sigmoid(activation[:, :3] + c_val[i-1] * W_cell_to_in)
+            f_t = sigmoid(activation[:, 3:6] + c_val[i-1] * W_cell_to_forget)
             c_val[i] = f_t * c_val[i-1] + i_t * numpy.tanh(activation[:, 6:9])
             o_t = sigmoid(activation[:, 9:12] +
-                          numpy.dot(c_val[i], W_cell_to_gate_val))
+                          c_val[i] * W_cell_to_out)
             h_val[i] = o_t * numpy.tanh(c_val[i])
             h_val[i] = (mask_val[i - 1, :, None] * h_val[i] +
                         (1 - mask_val[i - 1, :, None]) * h_val[i - 1])

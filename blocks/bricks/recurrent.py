@@ -310,12 +310,20 @@ class LSTM(BaseRecurrent, Initializable):
     do as many computations in parallel as possible and expects the last
     dimension of the input to be four times the output dimension.
 
+    Unlike a vanilla LSTM as described in [HS97]_, this model has peephole
+    connections from the cells to the gates. The output gates receive
+    information about the cells at the current time step, while the other
+    gates only receive information about the cells at the previous time
+    step. All 'peephole' weight matrices are diagonal.
+
     .. [GSS03] Gers, Felix A., Nicol N. Schraudolph, and Jürgen
         Schmidhuber, *Learning precise timing with LSTM recurrent
         networks*, Journal of Machine Learning Research 3 (2003),
         pp. 115-143.
     .. [Grav13] Graves, Alex, *Generating sequences with recurrent neural
         networks*, arXiv preprint arXiv:1308.0850 (2013).
+    .. [HS97] Sepp Hochreiter, and Jürgen Schmidhuber, *Long Short-Term
+        Memory*, Neural Computation 9(8) (1997), pp. 1735-1780.
 
     Parameters
     ----------
@@ -344,18 +352,21 @@ class LSTM(BaseRecurrent, Initializable):
     def _allocate(self):
         self.W_state = shared_floatx_zeros((self.dim, 4*self.dim),
                                            name='W_state')
-        self.W_cell = shared_floatx_zeros((self.dim, 2*self.dim),
-                                          name='W_cell')
-        self.W_cell_to_gate = shared_floatx_zeros((self.dim, self.dim),
-                                                  name='W_cell_to_gate')
+        self.W_cell_to_in = shared_floatx_zeros((self.dim,),
+                                                name='W_cell_to_in')
+        self.W_cell_to_forget = shared_floatx_zeros((self.dim,),
+                                                    name='W_cell_to_forget')
+        self.W_cell_to_out = shared_floatx_zeros((self.dim,),
+                                                 name='W_cell_to_out')
         self.biases = shared_floatx_zeros((4*self.dim,), name='biases')
         add_role(self.W_state, WEIGHTS)
-        add_role(self.W_cell, WEIGHTS)
-        add_role(self.W_cell_to_gate, WEIGHTS)
+        add_role(self.W_cell_to_in, WEIGHTS)
+        add_role(self.W_cell_to_forget, WEIGHTS)
+        add_role(self.W_cell_to_out, WEIGHTS)
         add_role(self.biases, BIASES)
 
-        self.params = [self.W_state, self.W_cell, self.W_cell_to_gate,
-                       self.biases]
+        self.params = [self.W_state, self.W_cell_to_in, self.W_cell_to_forget,
+                       self.W_cell_to_out, self.biases]
 
     def _initialize(self):
         self.biases_init.initialize(self.biases, self.rng)
@@ -394,16 +405,14 @@ class LSTM(BaseRecurrent, Initializable):
             return x.T[no*self.dim: (no+1)*self.dim].T
 
         activation = tensor.dot(states, self.W_state) + inputs + self.biases
-        cellW_cell = tensor.dot(cells, self.W_cell)
         in_gate = tensor.nnet.sigmoid(slice_last(activation, 0) +
-                                      slice_last(cellW_cell, 0))
+                                      cells * self.W_cell_to_in)
         forget_gate = tensor.nnet.sigmoid(slice_last(activation, 1) +
-                                          slice_last(cellW_cell, 1))
+                                          cells * self.W_cell_to_forget)
         next_cells = (forget_gate * cells +
                       in_gate * tensor.tanh(slice_last(activation, 2)))
         out_gate = tensor.nnet.sigmoid(slice_last(activation, 3) +
-                                       tensor.dot(next_cells,
-                                                  self.W_cell_to_gate))
+                                       next_cells * self.W_cell_to_out)
         next_states = out_gate * tensor.tanh(next_cells)
 
         if mask:
