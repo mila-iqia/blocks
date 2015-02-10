@@ -163,7 +163,7 @@ class Fork(Parallel):
         return super(Fork, self).apply.outputs
 
 
-class Merge(Parallel):
+class Merge(Fork):
     """Transform an input and add it to other inputs.
 
     This brick is designed for the following scenario: one has a group of
@@ -221,33 +221,23 @@ class Merge(Parallel):
         self.changed_dims = changed_dims
         self.merged_dim = merged_dim
 
-        kwargs.update(self._get_parent_dims())
-        super(Merge, self).__init__(changed_names, prototype=prototype,
-                                    child_prefix="fork", **kwargs)
-
-    def _get_parent_dims(self):
-        """Dimension configuration for the parent brick."""
-        result = dict()
-        result['input_dims'] = {name: self.merged_dim
-                                for name in self.changed_names}
-        result['output_dims'] = ({name: self.changed_dims.get(name, None)
-                                  for name in self.changed_names}
-                                 if self.changed_dims else None)
-        return result
+        super(Merge, self).__init__(
+            output_names=changed_names, output_dims=changed_dims,
+            input_dim=merged_dim, prototype=prototype, **kwargs)
 
     def _push_allocation_config(self):
-        self.__dict__.update(self._get_parent_dims())
+        self.input_dim = self.merged_dim
+        self.output_dims = self.changed_dims
         super(Merge, self)._push_allocation_config()
 
     @application
     def apply(self, **kwargs):
-        new = kwargs.pop(self.merged_name)
-        if not set(kwargs.keys()) == set(self.changed_names):
-            raise ValueError
-        result = super(Merge, self).apply(
-            return_list=True, **{name: new for name in self.changed_names})
+        result = super(Merge, self).apply(kwargs.pop(self.merged_name),
+                                          return_list=True)
         for i, name in enumerate(self.changed_names):
-            result[i] += kwargs[name]
+            result[i] += kwargs.pop(name)
+        if len(kwargs):
+            raise ValueError
         return result
 
     @apply.property('inputs')
