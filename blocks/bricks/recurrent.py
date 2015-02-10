@@ -327,8 +327,11 @@ class LSTM(BaseRecurrent, Initializable):
     def get_dim(self, name):
         if name == 'inputs':
             return self.dim * 4
-        else:
+        if name in ['states', 'cells']:
             return self.dim
+        if name == 'mask':
+            return 0
+        return super(LSTM, self).get_dim(name)
 
     def _allocate(self):
         self.W_state = shared_floatx_zeros((self.dim, 4*self.dim),
@@ -388,8 +391,8 @@ class LSTM(BaseRecurrent, Initializable):
                                       slice_last(cellW_cell, 0))
         forget_gate = tensor.nnet.sigmoid(slice_last(activation, 1) +
                                           slice_last(cellW_cell, 1))
-        next_cells = forget_gate * cells + \
-            in_gate * tensor.tanh(slice_last(activation, 2))
+        next_cells = (forget_gate * cells +
+                      in_gate * tensor.tanh(slice_last(activation, 2)))
         out_gate = tensor.nnet.sigmoid(slice_last(activation, 3) +
                                        tensor.dot(next_cells,
                                                   self.W_cell_to_gate))
