@@ -305,9 +305,17 @@ class LSTM(BaseRecurrent, Initializable):
     u"""Long Short Term Memory.
 
     Every unit of an LSTM is equipped with input, forget and output gates.
-    This implementation aims to do as many computations in parallel as
-    possible and expects the last dimension of the input to be four times
-    the output dimension.
+    This implementation is based on code by Mohammad Pezeshki that
+    implements the architecture used in [GSS03]_ and [Grav13]_. It aims to
+    do as many computations in parallel as possible and expects the last
+    dimension of the input to be four times the output dimension.
+
+    .. [GSS03] Gers, Felix A., Nicol N. Schraudolph, and Jürgen
+        Schmidhuber, *Learning precise timing with LSTM recurrent
+        networks*, Journal of Machine Learning Research 3 (2003),
+        pp. 115-143.
+    .. [Grav13] Graves, Alex, *Generating sequences with recurrent neural
+        networks*, arXiv preprint arXiv:1308.0850 (2013).
 
     Parameters
     ----------
