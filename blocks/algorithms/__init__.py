@@ -135,9 +135,9 @@ class DifferentiableCostMinimizer(TrainingAlgorithm):
 
 variable_mismatch_error = """
 
-Blocks tried to match the sources ({sources}) of the training dataset to
-the names of the Theano variables ({variables}), but failed to do so.
-If you want to train on a subset of the sources that your dataset provides,
+Blocks tried to match the sources ({sources}) of the training dataset to \
+the names of the Theano variables ({variables}), but failed to do so. \
+If you want to train on a subset of the sources that your dataset provides, \
 pass the `sources` keyword argument to its constructor. """
 
 
