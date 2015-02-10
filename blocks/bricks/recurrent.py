@@ -305,9 +305,9 @@ class LSTM(BaseRecurrent, Initializable):
     u"""Long Short Term Memory.
 
     Every unit of an LSTM is equipped with input, forget and output gates.
-    This implementation aims to do as many computations in parallel as possible
-    and expects the last dimension of the input to be four times the output
-    dimension.
+    This implementation aims to do as many computations in parallel as
+    possible and expects the last dimension of the input to be four times
+    the output dimension.
 
     Parameters
     ----------
