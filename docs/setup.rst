@@ -64,7 +64,7 @@ with your own GitHub user name:
 
 .. code-block:: bash
 
-   $ pip install --upgrade -e git+git://github.com/user/blocks.git#egg=blocks[test,docs] --src=$HOME
+   $ pip install --upgrade -e git+git://github.com/user/blocks.git#egg=blocks[tests] --src=$HOME
 
 As with the usual installation, you can use ``--user`` or ``--no-deps`` if you
 need to. You can now make changes in the ``blocks`` directory created by pip,
@@ -75,9 +75,6 @@ push to your repository and make a pull request.
 Documentation
 ~~~~~~~~~~~~~
 
-If you want to build a local copy of the documentation, run the following
-command from within the Blocks directory.
+If you want to build a local copy of the documentation, follow the instructions
+at the :doc:`documentation development guidelines <development/docs>`.
 
-.. code-block:: bash
-
-   $ sphinx-build -b html docs docs/_build/html

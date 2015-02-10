@@ -4,7 +4,7 @@ import tempfile
 import dill
 import numpy
 
-from blocks.datasets import DataStream
+from blocks.datasets.streams import DataStream
 from blocks.datasets.mnist import MNIST
 from blocks.datasets.schemes import SequentialScheme
 

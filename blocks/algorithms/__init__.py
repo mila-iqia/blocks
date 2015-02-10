@@ -133,6 +133,14 @@ class DifferentiableCostMinimizer(TrainingAlgorithm):
         self.updates.extend(updates)
 
 
+variable_mismatch_error = """
+
+Blocks tried to match the sources ({sources}) of the training dataset to \
+the names of the Theano variables ({variables}), but failed to do so. \
+If you want to train on a subset of the sources that your dataset provides, \
+pass the `sources` keyword argument to its constructor. """
+
+
 class GradientDescent(DifferentiableCostMinimizer):
     """A base class for all gradient descent algorithms.
 
@@ -200,9 +208,10 @@ class GradientDescent(DifferentiableCostMinimizer):
 
     def process_batch(self, batch):
         if not set(batch.keys()) == set([v.name for v in self.inputs]):
-            raise ValueError("The names of the input variables of your"
-                             " computation graph must correspond to the"
-                             " data sources.")
+            raise ValueError("mismatch of variable names and data sources" +
+                             variable_mismatch_error.format(
+                                sources=batch.keys(),
+                                variables=[v.name for v in self.inputs]))
         ordered_batch = [batch[v.name] for v in self.inputs]
         self._function(*ordered_batch)
 
@@ -241,12 +250,12 @@ class StepRule(object):
 
         Parameters
         ----------
-        gradients : :class:`~OrderedDict` of
-                    (:class:`~tensor.TensorSharedVariable`
-                    :class:`~tensor.TensorVariable`) pairs
-            A dictionary. The keys are the optimized parameters, the values
-            are the expressions for the gradients of the cost with respect
-            to the parameters.
+        gradients : OrderedDict
+            An :class:`~OrderedDict` of
+            (:class:`~tensor.TensorSharedVariable`
+            :class:`~tensor.TensorVariable`) pairs. The keys are the
+            parameters being trained, the values are the expressions for
+            the gradients of the cost with respect to the parameters.
 
         Returns
         -------
