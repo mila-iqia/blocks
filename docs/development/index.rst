@@ -181,33 +181,6 @@ intended. Instead, use:
            bar.append('baz')
            self.bar = bar
 
-Docstrings
-----------
-Blocks follows the `NumPy docstring standards`_. For a quick introduction, have
-a look at the NumPy_ or Napoleon_ examples of compliant docstrings. A few common
-mistakes to avoid:
-
-* There is no line break after the opening quotes (``"""``).
-* There is an empty line before the closing quotes (``"""``).
-* The summary should not be more than one line.
-
-The docstrings are formatted using reStructuredText_, and can make use of all
-the formatting capabilities this provides. They are rendered into HTML
-documentation using the `Read the Docs`_ service. After code has been merged,
-please ensure that documentation was built successfully and that your docstrings
-rendered as you intended by looking at the `online documentation`_, which is
-automatically updated.
-
-Writing doctests_ is encouraged, and they are run as part of the test suite.
-They should use Python 3 syntax.
-
-.. _NumPy docstring standards: https://github.com/numpy/numpy/blob/master/doc/HOWTO_DOCUMENT.rst.txt
-.. _NumPy: https://github.com/numpy/numpy/blob/master/doc/example.py
-.. _Napoleon: http://sphinxcontrib-napoleon.readthedocs.org/en/latest/example_numpy.html
-.. _reStructuredText: http://docutils.sourceforge.net/rst.html
-.. _doctests: https://docs.python.org/2/library/doctest.html
-.. _Read the Docs: https://readthedocs.org/
-.. _online documentation: http://blocks.readthedocs.org/
 
 Unit testing
 ------------
@@ -234,6 +207,12 @@ The test suite can be executed locally using nose2_ [#]_.
 .. _nose2: https://readthedocs.org/projects/nose2/
 .. _nose: http://nose.readthedocs.org/en/latest/
 
+Writing and building documentation
+----------------------------------
+The :doc:`documentation guidelines <docs>` outline how to write documentation
+for Blocks, and how to build a local copy of the documentation for testing
+purposes.
+
 Internal API
 ------------
 The :doc:`development API reference <internal_api>` contains documentation on
@@ -244,3 +223,4 @@ to Blocks, have a look at the :doc:`user API reference </api/index>` instead.
    :hidden:
 
    internal_api
+   docs
