@@ -11,6 +11,7 @@ from theano import tensor, Variable
 from blocks.bricks import Initializable, Identity, Sigmoid
 from blocks.bricks.base import Application, application, Brick, lazy
 from blocks.initialization import NdarrayInitialization
+from blocks.roles import add_role, WEIGHTS, BIASES
 from blocks.utils import (pack, shared_floatx_zeros, dict_union,
                           is_shared_variable)
 
@@ -298,6 +299,116 @@ class Recurrent(BaseRecurrent, Initializable):
             next_state = (mask[:, None] * next_state +
                           (1 - mask[:, None]) * state)
         return next_state
+
+
+class LSTM(BaseRecurrent, Initializable):
+    u"""Long Short Term Memory.
+
+    Every unit of an LSTM is equipped with input, forget and output gates.
+    This implementation aims to do as many computations in parallel as possible
+    and expects the last dimension of the input to be four times the output
+    dimension.
+
+    Parameters
+    ----------
+    dim : int
+        The dimension of the hidden state.
+
+    Notes
+    -----
+    See :class:`.Initializable` for initialization parameters.
+
+    """
+    @lazy
+    def __init__(self, dim, **kwargs):
+        super(LSTM, self).__init__(**kwargs)
+        self.dim = dim
+
+    def get_dim(self, name):
+        if name == 'inputs':
+            return self.dim * 4
+        else:
+            return self.dim
+
+    def _allocate(self):
+        self.W_state = shared_floatx_zeros((self.dim, 4*self.dim),
+                                           name='W_state')
+        self.W_cell = shared_floatx_zeros((self.dim, 2*self.dim),
+                                          name='W_cell')
+        self.W_cell_to_gate = shared_floatx_zeros((self.dim, self.dim),
+                                                  name='W_cell_to_gate')
+        self.biases = shared_floatx_zeros((4*self.dim,), name='biases')
+        add_role(self.W_state, WEIGHTS)
+        add_role(self.W_cell, WEIGHTS)
+        add_role(self.W_cell_to_gate, WEIGHTS)
+        add_role(self.biases, BIASES)
+
+        self.params = [self.W_state, self.W_cell, self.W_cell_to_gate,
+                       self.biases]
+
+    def _initialize(self):
+        self.biases_init.initialize(self.biases, self.rng)
+        for w in self.params[:-1]:
+            self.weights_init.initialize(w, self.rng)
+
+    @recurrent(sequences=['inputs', 'mask'], states=['states', 'cells'],
+               contexts=[], outputs=['states', 'cells'])
+    def apply(self, inputs, states, cells, mask=None):
+        """Apply the Long Short Term Memory transition.
+
+        Parameters
+        ----------
+        states : :class:`~tensor.TensorVariable`
+            The 2 dimensional matrix of current states in the shape
+            (batch_size, features). Required for `one_step` usage.
+        cells : :class:`~tensor.TensorVariable`
+            The 2 dimensional matrix of current cells in the shape
+            (batch_size, features). Required for `one_step` usage.
+        inputs : :class:`~tensor.TensorVariable`
+            The 2 dimensional matrix of inputs in the shape (batch_size,
+            features * 4).
+        mask : :class:`~tensor.TensorVariable`
+            A 1D binary array in the shape (batch,) which is 1 if there is
+            data available, 0 if not. Assumed to be 1-s only if not given.
+
+        Returns
+        -------
+        states : :class:`~tensor.TensorVariable`
+            Next states of the network.
+        cells : :class:`~tensor.TensorVariable`
+            Next cell activations of the network.
+
+        """
+        # Unfortunately, I'm not aware of a general way to slice the last
+        # dimension of a theano tensor.
+        def slice_last(x, no):
+            if x.ndim == 3:
+                return x[:, :, no*self.dim: (no+1)*self.dim]
+            elif x.ndim == 2:
+                return x[:, no*self.dim: (no+1)*self.dim]
+            elif x.ndim == 1:
+                return x[no*self.dim: (no+1)*self.dim]
+
+        activation = tensor.dot(states, self.W_state) + inputs + self.biases
+        cellW_cell = tensor.dot(cells, self.W_cell)
+        in_gate = tensor.nnet.sigmoid(slice_last(activation, 0) +
+                                      slice_last(cellW_cell, 0))
+        forget_gate = tensor.nnet.sigmoid(slice_last(activation, 1) +
+                                          slice_last(cellW_cell, 1))
+        next_cells = forget_gate * cells + \
+            in_gate * tensor.tanh(slice_last(activation, 2))
+        out_gate = tensor.nnet.sigmoid(slice_last(activation, 3) +
+                                       tensor.dot(next_cells,
+                                                  self.W_cell_to_gate))
+        next_states = out_gate * tensor.tanh(next_cells)
+
+        if mask:
+            next_states = (mask[:, None] * next_states +
+                           (1 - mask[:, None]) * states)
+            next_cells = (mask[:, None] * next_cells +
+                          (1 - mask[:, None]) * cells)
+
+        return next_states, next_cells
 
 
 class GatedRecurrent(BaseRecurrent, Initializable):
