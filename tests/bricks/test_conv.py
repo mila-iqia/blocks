@@ -26,6 +26,8 @@ def test_convolutional():
     assert_allclose(func(x_val),
                     numpy.prod(filter_size) * num_channels *
                     numpy.ones((batch_size, num_filters, 15, 11)))
+    conv.input_dim = (17, 13)
+    assert conv.get_dim('output') == (num_filters, 15, 11)
 
 
 def test_max_pooling():
@@ -45,3 +47,6 @@ def test_max_pooling():
                     numpy.ones((batch_size, num_channels,
                                 x_size / pool_size + 1,
                                 y_size / pool_size + 1)))
+    pool.input_dim = (x_size, y_size)
+    pool.get_dim('output') == (num_channels, x_size / pool_size + 1,
+                               y_size / pool_size + 1)
