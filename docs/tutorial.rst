@@ -165,7 +165,7 @@ stream which makes use of a particular iteration scheme. We will use an
 iteration scheme that iterates over our MNIST examples sequentially in batches
 of size 256.
 
->>> from blocks.datasets import DataStream
+>>> from blocks.datasets.streams import DataStream
 >>> from blocks.datasets.schemes import SequentialScheme
 >>> data_stream = DataStream(mnist, iteration_scheme=SequentialScheme(
 ...     num_examples=mnist.num_examples, batch_size=256))

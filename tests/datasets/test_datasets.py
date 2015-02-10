@@ -4,10 +4,10 @@ import numpy
 from six.moves import zip
 from nose.tools import assert_raises
 
-from blocks.datasets import (
-    CachedDataStream, ContainerDataset, DataStream,
-    DataStreamMapping, BatchDataStream, PaddingDataStream,
-    DataStreamFilter)
+from blocks.datasets import ContainerDataset
+from blocks.datasets.streams import (
+    CachedDataStream, DataStream, DataStreamMapping, BatchDataStream,
+    PaddingDataStream, DataStreamFilter)
 from blocks.datasets.schemes import BatchSizeScheme, ConstantScheme
 
 

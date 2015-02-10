@@ -17,8 +17,8 @@ from blocks.algorithms import GradientDescent, SteepestDescent
 from blocks.bricks import MLP, Tanh, Identity
 from blocks.bricks.cost import SquaredError
 from blocks.initialization import IsotropicGaussian, Constant
-from blocks.datasets import (ContainerDataset, BatchDataStream,
-                             DataStreamMapping)
+from blocks.datasets import ContainerDataset
+from blocks.datasets.streams import BatchDataStream, DataStreamMapping
 from blocks.datasets.schemes import ConstantScheme
 from blocks.extensions import FinishAfter, Timing, Printing
 from blocks.extensions.saveload import LoadFromDump, Dump
