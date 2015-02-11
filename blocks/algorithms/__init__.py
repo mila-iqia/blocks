@@ -316,6 +316,54 @@ class Momentum(StepRule):
         return step, updates
 
 
+class AdaDelta(StepRule):
+    """Adapts the step size over time using only first order information.
+
+    Parameters
+    ----------
+    decay_rate : float, optional
+        Decay rate in [0, 1]. Defaults to 0.
+    epsilon : float, optional
+        Stabilizing constant for RMS. Defaults to 1e-7.
+
+    Notes
+    -----
+    For more information, see [ADADELTA]_.
+
+    .. [ADADELTA] Matthew D. Zeiler, *ADADELTA: An Adaptive Learning
+       Rate Method*, arXiv:1212.5701.
+
+    """
+    def __init__(self, decay_rate=0., epsilon=1e-7):
+        if not 0.0 <= decay_rate <= 1.0:
+            raise ValueError("decay rate needs to be in [0, 1]")
+        self.decay_rate = shared_floatx(decay_rate)
+        self.epsilon = shared_floatx(epsilon)
+
+    def compute_step(self, param, gradient):
+        mean_square_grad_tm1 = shared_floatx(param.get_value() * 0.)
+        mean_square_delta_x_tm1 = shared_floatx(param.get_value() * 0.)
+
+        mean_square_grad_t = (
+            self.decay_rate * mean_square_grad_tm1 +
+            (1 - self.decay_rate) * tensor.sqr(gradient)
+        )
+
+        rms_delta_x_tm1 = tensor.sqrt(mean_square_delta_x_tm1 + self.epsilon)
+        rms_grad_t = tensor.sqrt(mean_square_grad_t + self.epsilon)
+        delta_x_t = - rms_delta_x_tm1 / rms_grad_t * gradient
+
+        mean_square_delta_x_t = (
+            self.decay_rate * mean_square_delta_x_tm1 +
+            (1 - self.decay_rate) * tensor.sqr(delta_x_t)
+        )
+
+        step = delta_x_t
+        updates = [(mean_square_grad_tm1, mean_square_grad_t),
+                   (mean_square_delta_x_tm1, mean_square_delta_x_t)]
+        return step, updates
+
+
 class GradientClipping(StepRule):
     """Clips the total gradient to make it not exceed a threshold.
 
