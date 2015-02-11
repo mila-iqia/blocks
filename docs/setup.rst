@@ -59,12 +59,12 @@ Development
 
 If you want to work on Blocks' development, your first step is to `fork Blocks
 on GitHub`_. You will now want to install your fork of Blocks in editable mode.
-To install in your home directory, use the following command, replacing ``user``
+To install in your home directory, use the following command, replacing ``USER``
 with your own GitHub user name:
 
 .. code-block:: bash
 
-   $ pip install --upgrade -e git+git://github.com/user/blocks.git#egg=blocks[test,plot,docs] --src=$HOME
+   $ pip install --upgrade -e git+git@github.com:USER/blocks.git#egg=blocks[test,plot,docs] --src=$HOME
 
 As with the usual installation, you can use ``--user`` or ``--no-deps`` if you
 need to. You can now make changes in the ``blocks`` directory created by pip,
