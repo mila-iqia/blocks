@@ -7,7 +7,8 @@ from theano import tensor
 
 from blocks.algorithms import (GradientDescent, GradientClipping,
                                CompositeRule, SteepestDescent,
-                               StepRule, Momentum, AdaDelta)
+                               StepRule, Momentum, AdaDelta, RMSPropChainable,
+                               RMSProp)
 from blocks.utils import shared_floatx
 
 
@@ -48,6 +49,39 @@ def test_adadelta():
 def test_adadelta_decay_rate_sanity_check():
     assert_raises(ValueError, AdaDelta, -1.0)
     assert_raises(ValueError, AdaDelta, 2.0)
+
+
+def test_rmspropbase():
+    a = shared_floatx([3, 4])
+    cost = (a ** 2).sum()
+    step_rule = RMSPropChainable(decay_rate=0.5, max_scaling=1e5)
+    steps, updates = step_rule.compute_steps(
+        OrderedDict([(a, tensor.grad(cost, a))]))
+    f = theano.function([], [steps[a]], updates=updates)
+    assert_allclose(f()[0], [1.41421356, 1.41421356])
+    a.set_value([2, 3])
+    assert_allclose(f()[0], [0.9701425, 1.02899151])
+    a.set_value([1, 1.5])
+    assert_allclose(f()[0], [0.6172134, 0.64699664])
+
+
+def test_rmspropbase_max_scaling():
+    a = shared_floatx([1e-6, 1e-6])
+    cost = (a ** 2).sum()
+    step_rule = RMSPropChainable(decay_rate=0.5, max_scaling=1e5)
+    steps, updates = step_rule.compute_steps(
+        OrderedDict([(a, tensor.grad(cost, a))]))
+    f = theano.function([], [steps[a]], updates=updates)
+    assert_allclose(f()[0], [0.2, 0.2])
+
+
+def test_rmspropbase_decay_rate_sanity_check():
+    assert_raises(ValueError, RMSPropChainable, -1.0)
+    assert_raises(ValueError, RMSPropChainable, 2.0)
+
+
+def test_rmspropbase_max_scaling_sanity_check():
+    assert_raises(ValueError, RMSPropChainable, 0.5, -1.0)
 
 
 def test_gradient_clipping():
