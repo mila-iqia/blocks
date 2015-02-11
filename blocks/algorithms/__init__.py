@@ -317,7 +317,7 @@ class Momentum(StepRule):
 
 
 class AdaDelta(StepRule):
-    """Adapts the step size over time using only first order information
+    """Adapts the step size over time using only first order information.
 
     Parameters
     ----------
