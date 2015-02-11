@@ -80,8 +80,22 @@ def test_rmspropchainable_decay_rate_sanity_check():
     assert_raises(ValueError, RMSPropChainable, 2.0)
 
 
-def test_rmspropbase_max_scaling_sanity_check():
+def test_rmspropchainable_max_scaling_sanity_check():
     assert_raises(ValueError, RMSPropChainable, 0.5, -1.0)
+
+
+def test_rmsprop():
+    a = shared_floatx([3, 4])
+    cost = (a ** 2).sum()
+    step_rule = RMSProp(learning_rate=0.1, decay_rate=0.5, max_scaling=1e5)
+    steps, updates = step_rule.compute_steps(
+        OrderedDict([(a, tensor.grad(cost, a))]))
+    f = theano.function([], [steps[a]], updates=updates)
+    assert_allclose(f()[0], [-0.141421356, -0.141421356])
+    a.set_value([2, 3])
+    assert_allclose(f()[0], [-0.09701425, -0.102899151])
+    a.set_value([1, 1.5])
+    assert_allclose(f()[0], [-0.06172134, -0.064699664])
 
 
 def test_gradient_clipping():
