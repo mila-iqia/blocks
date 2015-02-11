@@ -40,9 +40,9 @@ def test_adadelta():
     steps, updates = AdaDelta(decay_rate=0.5, epsilon=1e-7).compute_steps(
         OrderedDict([(a, tensor.grad(cost, a))]))
     f = theano.function([], [steps[a]], updates=updates)
-    assert_allclose(f()[0], [-0.00044721, -0.00044721], rtol=1e-5)
-    assert_allclose(f()[0], [-0.0005164, -0.0005164], rtol=1e-5)
-    assert_allclose(f()[0], [-0.00056904, -0.00056904], rtol=1e-5)
+    assert_allclose(f()[0], [0.00044721, 0.00044721], rtol=1e-5)
+    assert_allclose(f()[0], [0.0005164, 0.0005164], rtol=1e-5)
+    assert_allclose(f()[0], [0.00056904, 0.00056904], rtol=1e-5)
 
 
 def test_adadelta_decay_rate_sanity_check():
@@ -67,8 +67,8 @@ def test_composite_rule():
     rule = CompositeRule([GradientClipping(4), SteepestDescent(0.1)])
     gradients = {0: shared_floatx(3.0), 1: shared_floatx(4.0)}
     result, _ = rule.compute_steps(gradients)
-    assert_allclose(result[0].eval(), -12 / 50.0)
-    assert_allclose(result[1].eval(), -16 / 50.0)
+    assert_allclose(result[0].eval(), 12 / 50.0)
+    assert_allclose(result[1].eval(), 16 / 50.0)
 
     class RuleWithUpdates(StepRule):
         def __init__(self, updates):
