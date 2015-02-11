@@ -394,11 +394,11 @@ class RMSPropBase(StepRule):
     Parameters
     ----------
     decay_rate : float, optional
-        How fast the running average decays (lower is faster).
-        Defaults to 0.9.
+        How fast the running average decays, value in [0, 1]
+        (lower is faster).  Defaults to 0.9.
     max_scaling : float, optional
         Maximum scaling of the step size, in case the running average is
-        really small. Defaults to 1e5.
+        really small. Needs to be greater than 0. Defaults to 1e5.
 
     Notes
     -----
@@ -414,6 +414,10 @@ class RMSPropBase(StepRule):
 
     """
     def __init__(self, decay_rate=0.9, max_scaling=1e5):
+        if not 0.0 <= decay_rate <= 1.0:
+            raise ValueError("decay rate needs to be in [0, 1]")
+        if max_scaling <= 0:
+            raise ValueError("max. scaling needs to be greater than 0")
         self.decay_rate = shared_floatx(decay_rate)
         self.epsilon = 1. / max_scaling
 
