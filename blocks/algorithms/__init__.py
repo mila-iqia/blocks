@@ -419,9 +419,10 @@ class RMSPropBase(StepRule):
 
     def compute_step(self, param, gradient):
         mean_square_grad_tm1 = shared_floatx(param.get_value() * 0.)
-        mean_squared_grad_t = (self.decay_rate * mean_square_grad_tm1 +
-                               (1 - self.decay_rate) * T.sqr(param))
-        rms_grad_t = T.maximum(T.sqrt(mean_squared_grad_t), self.epsilon)
+        mean_square_grad_t = (self.decay_rate * mean_square_grad_tm1 +
+                              (1 - self.decay_rate) * tensor.sqr(param))
+        rms_grad_t = tensor.maximum(
+            tensor.sqrt(mean_square_grad_t), self.epsilon)
         step = gradient / rms_grad_t
         updates = [(mean_square_grad_t, rms_grad_t)]
         return step, updates
