@@ -406,6 +406,12 @@ class RMSPropBase(StepRule):
     step rule, _e.g._ :class:`SteepestDescent`. For an
     all-batteries-included experience, look at :class:`RMSProp`.
 
+    For more information, see [RMSProp]_.
+
+    .. [RMSProp] Geoff Hinton, *Neural Networks for Machine Learning*,
+       lecture 6a, <http://www.cs.toronto.edu/~tijmen/csc321/slides/
+       lecture_slides_lec6.pdf>
+
     """
     def __init__(self, decay_rate=0.9, max_scaling=1e5):
         self.decay_rate = shared_floatx(decay_rate)
@@ -419,6 +425,36 @@ class RMSPropBase(StepRule):
         step = gradient / rms_grad_t
         updates = [(mean_square_grad_t, rms_grad_t)]
         return step, updates
+
+
+class RMSProp(CompositeRule):
+    """Scales the step size by a running average of the recent gradient norms.
+
+    Parameters
+    ----------
+    learning_rate : float, optional
+        The learning rate by which the gradient is multiplied to produce
+        the descent step. Defaults to 1.
+    decay_rate : float, optional
+        How fast the running average decays (lower is faster).
+        Defaults to 0.9.
+    max_scaling : float, optional
+        Maximum scaling of the step size, in case the running average is
+        really small. Defaults to 1e5.
+
+    Notes
+    -----
+    For more information, see [RMSProp]_.
+
+    .. [RMSProp] Geoff Hinton, *Neural Networks for Machine Learning*,
+       lecture 6a, <http://www.cs.toronto.edu/~tijmen/csc321/slides/
+       lecture_slides_lec6.pdf>
+
+    """
+    def __init__(self, learning_rate=1.0, decay_rate=0.9, max_scaling=1e5):
+        self.components = [
+            SteepestDescent(learning_rate=learning_rate),
+            RMSPropBase(decay_rate=decay_rate, max_scaling=max_scaling)]
 
 
 class GradientClipping(StepRule):
