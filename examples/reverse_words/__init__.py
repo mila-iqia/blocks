@@ -126,7 +126,7 @@ def main(mode, save_path, num_batches, from_dump):
                     weights_init=IsotropicGaussian(0.1),
                     biases_init=Constant(0))
         fork.input_dim = dimension
-        fork.fork_dims = {name: dimension for name in fork.fork_names}
+        fork.output_dims = {name: dimension for name in fork.input_names}
         fork.initialize()
         lookup = LookupTable(readout_dimension, dimension,
                              weights_init=IsotropicGaussian(0.1))
