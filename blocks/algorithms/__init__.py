@@ -388,7 +388,7 @@ class AdaDelta(StepRule):
         return step, updates
 
 
-class RMSPropBase(StepRule):
+class RMSPropChainable(StepRule):
     """Scales the step size by a running average of the recent gradient norms.
 
     Parameters
@@ -459,7 +459,7 @@ class RMSProp(CompositeRule):
     def __init__(self, learning_rate=1.0, decay_rate=0.9, max_scaling=1e5):
         self.components = [
             SteepestDescent(learning_rate=learning_rate),
-            RMSPropBase(decay_rate=decay_rate, max_scaling=max_scaling)]
+            RMSPropChainable(decay_rate=decay_rate, max_scaling=max_scaling)]
 
 
 class GradientClipping(StepRule):
