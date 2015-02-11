@@ -11,6 +11,7 @@ from theano import tensor, Variable
 from blocks.bricks import Initializable, Identity, Sigmoid
 from blocks.bricks.base import Application, application, Brick, lazy
 from blocks.initialization import NdarrayInitialization
+from blocks.roles import add_role, WEIGHTS, BIASES
 from blocks.utils import (pack, shared_floatx_zeros, dict_union,
                           is_shared_variable)
 
@@ -298,6 +299,129 @@ class Recurrent(BaseRecurrent, Initializable):
             next_state = (mask[:, None] * next_state +
                           (1 - mask[:, None]) * state)
         return next_state
+
+
+class LSTM(BaseRecurrent, Initializable):
+    u"""Long Short Term Memory.
+
+    Every unit of an LSTM is equipped with input, forget and output gates.
+    This implementation is based on code by Mohammad Pezeshki that
+    implements the architecture used in [GSS03]_ and [Grav13]_. It aims to
+    do as many computations in parallel as possible and expects the last
+    dimension of the input to be four times the output dimension.
+
+    Unlike a vanilla LSTM as described in [HS97]_, this model has peephole
+    connections from the cells to the gates. The output gates receive
+    information about the cells at the current time step, while the other
+    gates only receive information about the cells at the previous time
+    step. All 'peephole' weight matrices are diagonal.
+
+    .. [GSS03] Gers, Felix A., Nicol N. Schraudolph, and Jürgen
+        Schmidhuber, *Learning precise timing with LSTM recurrent
+        networks*, Journal of Machine Learning Research 3 (2003),
+        pp. 115-143.
+    .. [Grav13] Graves, Alex, *Generating sequences with recurrent neural
+        networks*, arXiv preprint arXiv:1308.0850 (2013).
+    .. [HS97] Sepp Hochreiter, and Jürgen Schmidhuber, *Long Short-Term
+        Memory*, Neural Computation 9(8) (1997), pp. 1735-1780.
+
+    Parameters
+    ----------
+    dim : int
+        The dimension of the hidden state.
+
+    Notes
+    -----
+    See :class:`.Initializable` for initialization parameters.
+
+    """
+    @lazy
+    def __init__(self, dim, **kwargs):
+        super(LSTM, self).__init__(**kwargs)
+        self.dim = dim
+
+    def get_dim(self, name):
+        if name == 'inputs':
+            return self.dim * 4
+        if name in ['states', 'cells']:
+            return self.dim
+        if name == 'mask':
+            return 0
+        return super(LSTM, self).get_dim(name)
+
+    def _allocate(self):
+        self.W_state = shared_floatx_zeros((self.dim, 4*self.dim),
+                                           name='W_state')
+        self.W_cell_to_in = shared_floatx_zeros((self.dim,),
+                                                name='W_cell_to_in')
+        self.W_cell_to_forget = shared_floatx_zeros((self.dim,),
+                                                    name='W_cell_to_forget')
+        self.W_cell_to_out = shared_floatx_zeros((self.dim,),
+                                                 name='W_cell_to_out')
+        self.biases = shared_floatx_zeros((4*self.dim,), name='biases')
+        add_role(self.W_state, WEIGHTS)
+        add_role(self.W_cell_to_in, WEIGHTS)
+        add_role(self.W_cell_to_forget, WEIGHTS)
+        add_role(self.W_cell_to_out, WEIGHTS)
+        add_role(self.biases, BIASES)
+
+        self.params = [self.W_state, self.W_cell_to_in, self.W_cell_to_forget,
+                       self.W_cell_to_out, self.biases]
+
+    def _initialize(self):
+        self.biases_init.initialize(self.biases, self.rng)
+        for w in self.params[:-1]:
+            self.weights_init.initialize(w, self.rng)
+
+    @recurrent(sequences=['inputs', 'mask'], states=['states', 'cells'],
+               contexts=[], outputs=['states', 'cells'])
+    def apply(self, inputs, states, cells, mask=None):
+        """Apply the Long Short Term Memory transition.
+
+        Parameters
+        ----------
+        states : :class:`~tensor.TensorVariable`
+            The 2 dimensional matrix of current states in the shape
+            (batch_size, features). Required for `one_step` usage.
+        cells : :class:`~tensor.TensorVariable`
+            The 2 dimensional matrix of current cells in the shape
+            (batch_size, features). Required for `one_step` usage.
+        inputs : :class:`~tensor.TensorVariable`
+            The 2 dimensional matrix of inputs in the shape (batch_size,
+            features * 4).
+        mask : :class:`~tensor.TensorVariable`
+            A 1D binary array in the shape (batch,) which is 1 if there is
+            data available, 0 if not. Assumed to be 1-s only if not given.
+
+        Returns
+        -------
+        states : :class:`~tensor.TensorVariable`
+            Next states of the network.
+        cells : :class:`~tensor.TensorVariable`
+            Next cell activations of the network.
+
+        """
+        def slice_last(x, no):
+            return x.T[no*self.dim: (no+1)*self.dim].T
+
+        activation = tensor.dot(states, self.W_state) + inputs + self.biases
+        in_gate = tensor.nnet.sigmoid(slice_last(activation, 0) +
+                                      cells * self.W_cell_to_in)
+        forget_gate = tensor.nnet.sigmoid(slice_last(activation, 1) +
+                                          cells * self.W_cell_to_forget)
+        next_cells = (forget_gate * cells +
+                      in_gate * tensor.tanh(slice_last(activation, 2)))
+        out_gate = tensor.nnet.sigmoid(slice_last(activation, 3) +
+                                       next_cells * self.W_cell_to_out)
+        next_states = out_gate * tensor.tanh(next_cells)
+
+        if mask:
+            next_states = (mask[:, None] * next_states +
+                           (1 - mask[:, None]) * states)
+            next_cells = (mask[:, None] * next_cells +
+                          (1 - mask[:, None]) * cells)
+
+        return next_states, next_cells
 
 
 class GatedRecurrent(BaseRecurrent, Initializable):
