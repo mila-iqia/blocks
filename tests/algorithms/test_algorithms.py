@@ -7,7 +7,7 @@ from theano import tensor
 
 from blocks.algorithms import (GradientDescent, GradientClipping,
                                CompositeRule, SteepestDescent,
-                               StepRule, Momentum)
+                               StepRule, Momentum, AdaDelta)
 from blocks.utils import shared_floatx
 
 
@@ -32,6 +32,17 @@ def test_momentum():
     assert_allclose(f()[0], [6., 8.])
     assert_allclose(f()[0], [9., 12.])
     assert_allclose(f()[0], [10.5, 14.])
+
+
+def test_adadelta():
+    a = shared_floatx([3, 4])
+    cost = (a ** 2).sum()
+    steps, updates = AdaDelta(decay_rate=0.5, epsilon=1e-7).compute_steps(
+        OrderedDict([(a, tensor.grad(cost, a))]))
+    f = theano.function([], [steps[a]], updates=updates)
+    assert_allclose(f()[0], [-0.00044721, -0.00044721], rtol=1e-5)
+    assert_allclose(f()[0], [-0.0005164, -0.0005164], rtol=1e-5)
+    assert_allclose(f()[0], [-0.00056904, -0.00056904], rtol=1e-5)
 
 
 def test_gradient_clipping():
