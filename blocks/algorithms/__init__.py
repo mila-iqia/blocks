@@ -366,6 +366,39 @@ class AdaDelta(StepRule):
         return step, updates
 
 
+class RMSPropBase(StepRule):
+    """Scales the step size by a running average of the recent gradient norms.
+
+    Parameters
+    ----------
+    decay_rate : float, optional
+        How fast the running average decays (lower is faster).
+        Defaults to 0.9.
+    max_scaling : float, optional
+        Maximum scaling of the step size, in case the running average is
+        really small. Defaults to 1e5.
+
+    Notes
+    -----
+    This step rule is intended to be used in conjunction with another
+    step rule, _e.g._ :class:`SteepestDescent`. For an
+    all-batteries-included experience, look at :class:`RMSProp`.
+
+    """
+    def __init__(self, decay_rate=0.9, max_scaling=1e5):
+        self.decay_rate = shared_floatx(decay_rate)
+        self.epsilon = 1. / max_scaling
+
+    def compute_step(self, param, gradient):
+        mean_square_grad_tm1 = shared_floatx(param.get_value() * 0.)
+        mean_squared_grad_t = (self.decay_rate * mean_square_grad_tm1 +
+                               (1 - self.decay_rate) * T.sqr(param))
+        rms_grad_t = T.maximum(T.sqrt(mean_squared_grad_t), self.epsilon)
+        step = gradient / rms_grad_t
+        updates = [(mean_square_grad_t, rms_grad_t)]
+        return step, updates
+
+
 class GradientClipping(StepRule):
     """Clips the total gradient to make it not exceed a threshold.
 
