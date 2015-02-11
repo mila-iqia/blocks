@@ -222,6 +222,13 @@ class ConvolutionalLayer(Sequence, Initializable):
 
 
 class Flattener(Brick):
+    """Flattens the input.
+
+    It may be used to pass multidimensional objects like images or feature
+    maps of convolutional bricks into bricks which allow only two dimensional
+    input (batch, features) like MLP.
+
+    """
     @application(inputs=['input_'], outputs=['output'])
     def apply(self, input_):
         batch_size = input_.shape[0]
