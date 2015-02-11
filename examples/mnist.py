@@ -7,31 +7,32 @@ from theano import tensor
 
 from blocks.algorithms import GradientDescent, SteepestDescent
 from blocks.bricks import MLP, Tanh, Softmax, WEIGHTS
-from blocks.bricks.cost import CategoricalCrossEntropy, MisclassficationRate
+from blocks.bricks.cost import CategoricalCrossEntropy, MisclassificationRate
 from blocks.initialization import IsotropicGaussian, Constant
-from blocks.datasets import DataStream
+from blocks.datasets.streams import DataStream
 from blocks.datasets.mnist import MNIST
 from blocks.datasets.schemes import SequentialScheme
 from blocks.filter import VariableFilter
 from blocks.graph import ComputationGraph
 from blocks.monitoring import aggregation
-from blocks.extensions import FinishAfter, Printing
+from blocks.extensions import FinishAfter, Timing, Printing
 from blocks.extensions.saveload import SerializeMainLoop
 from blocks.extensions.monitoring import (DataStreamMonitoring,
                                           TrainingDataMonitoring)
+from blocks.extensions.plot import Plot
 from blocks.main_loop import MainLoop
 
 
 def main(save_to, num_epochs):
     mlp = MLP([Tanh(), Softmax()], [784, 100, 10],
-              weights_init=IsotropicGaussian(0, 0.01),
+              weights_init=IsotropicGaussian(0.01),
               biases_init=Constant(0))
     mlp.initialize()
     x = tensor.matrix('features')
     y = tensor.lmatrix('targets')
     probs = mlp.apply(x)
     cost = CategoricalCrossEntropy().apply(y.flatten(), probs)
-    error_rate = MisclassficationRate().apply(y.flatten(), probs)
+    error_rate = MisclassificationRate().apply(y.flatten(), probs)
 
     cg = ComputationGraph([cost])
     W1, W2 = VariableFilter(roles=[WEIGHTS])(cg.variables)
@@ -49,7 +50,8 @@ def main(save_to, num_epochs):
                    iteration_scheme=SequentialScheme(
                        mnist_train.num_examples, 50)),
         algorithm,
-        extensions=[FinishAfter(after_n_epochs=num_epochs),
+        extensions=[Timing(),
+                    FinishAfter(after_n_epochs=num_epochs),
                     DataStreamMonitoring(
                         [cost, error_rate],
                         DataStream(mnist_test,
@@ -62,6 +64,12 @@ def main(save_to, num_epochs):
                         prefix="train",
                         after_every_epoch=True),
                     SerializeMainLoop(save_to),
+                    Plot(
+                        'MNIST example',
+                        channels=[
+                            ['test_final_cost',
+                             'test_misclassificationrate_apply_error_rate'],
+                            ['train_total_gradient_norm']]),
                     Printing()])
     main_loop.run()
 

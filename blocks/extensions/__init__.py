@@ -1,4 +1,5 @@
 from __future__ import print_function
+import time
 
 from abc import ABCMeta, abstractmethod
 
@@ -11,7 +12,7 @@ class TrainingExtension(object):
     An extension is a set of callbacks sharing a joint context that are
     invoked at certain stages of the training procedure. This callbacks
     typically add a certain functionality to the training procedure,
-    e.g. running validation on auxiliarry datasets or early stopping.
+    e.g. running validation on auxiliary datasets or early stopping.
 
     Parameters
     ----------
@@ -23,7 +24,7 @@ class TrainingExtension(object):
 
     Attributes
     ----------
-    main_loop : :class:`MainLoop`
+    main_loop : :class:`.MainLoop`
         The main loop to which the extension belongs.
     name : str
         The name of the extension.
@@ -133,6 +134,8 @@ class SimpleExtension(TrainingExtension):
     after_n_epochs : int, optional
         If not ``None``, :meth:`do` is invoked when `after_n_epochs`
         epochs are done.
+    every_n_epochs : int, optional
+        If not ``None``, :meth:`do` is invoked after every n-th epoch.
     after_n_batches : int, optional
         If not ``None``, :meth:`do` is invoked when `after_n_batches`
         batches are processed.
@@ -140,36 +143,70 @@ class SimpleExtension(TrainingExtension):
         If not ``None``, :meth:`do` is invoked after every n-th batch.
 
     """
-    def __init__(self, before_training=False, before_first_epoch=False,
-                 on_resumption=False, on_interrupt=False,
-                 after_every_epoch=False, after_every_batch=False,
-                 after_training=False,
-                 after_n_epochs=None, after_n_batches=None,
-                 every_n_batches=None, **kwargs):
-        super(SimpleExtension, self).__init__(**kwargs)
+    BOOLEAN_TRIGGERS = frozenset(["before_training", "before_first_epoch",
+                                  "on_resumption", "on_interrupt",
+                                  "after_every_epoch", "after_every_batch",
+                                  "after_training"])
+
+    INTEGER_TRIGGERS = frozenset(["after_n_epochs", "after_n_batches",
+                                  "every_n_epochs", "every_n_batches"])
+
+    def __init__(self, **kwargs):
         self._conditions = []
-        if before_training:
-            self.add_condition("before_training")
-        if before_first_epoch:
-            self.add_condition(
-                "before_epoch",
-                predicate=lambda log: log.status.epochs_done == 0)
-        if on_resumption:
-            self.add_condition("on_resumption")
-        if on_interrupt:
-            self.add_condition("on_interrupt")
-        if after_every_epoch:
-            self.add_condition("after_epoch")
-        if after_every_batch:
-            self.add_condition("after_batch")
-        if after_training:
-            self.add_condition("after_training")
-        if after_n_epochs:
-            self.invoke_after_n_epochs(after_n_epochs)
-        if after_n_batches:
-            self.invoke_after_n_batches(after_n_batches)
-        if every_n_batches:
-            self.invoke_every_n_batches(every_n_batches)
+        super_kwargs = {}
+        trigger_keywords = self.BOOLEAN_TRIGGERS | self.INTEGER_TRIGGERS
+        conditions = {}
+        for key, value in kwargs.items():
+            if key in trigger_keywords:
+                conditions[key] = value
+            else:
+                super_kwargs[key] = value
+        self.set_conditions(**conditions)
+        super(SimpleExtension, self).__init__(**super_kwargs)
+
+    def set_conditions(self, **kwargs):
+        """Set the conditions for which this extension should be run.
+
+        Parameters
+        ----------
+        See the :class:`SimpleExtension` docstring for a list of
+        possible parameters.
+
+        """
+        self._conditions[:] = []
+        predicates = {'before_first_epoch':
+                      lambda log: log.status.epochs_done == 0}
+        predicate_factories = {
+            'every_n_batches': lambda n_batches:
+                lambda log: log.status.iterations_done % n_batches == 0,
+            'after_n_batches': lambda n_batches:
+                lambda log: log.status.iterations_done == n_batches,
+            'every_n_epochs': lambda n_epochs:
+                lambda log: log.status.epochs_done % n_epochs == 0,
+            'after_n_epochs': lambda n_epochs:
+                lambda log: log.status.epochs_done == n_epochs,
+        }
+        conditions = {
+            'before_first_epoch': 'before_epoch',
+            'after_every_epoch': 'after_epoch',
+            'after_every_batch': 'after_batch',
+            'every_n_batches': 'after_batch',
+            'every_n_epochs': 'after_epoch',
+            'after_n_batches': 'after_batch',
+            'after_n_epochs': 'after_epoch'
+        }
+        # Freeze the keys as a list so that we can safely modify kwargs.
+        for key, value in kwargs.items():
+            if key in self.BOOLEAN_TRIGGERS and value:
+                self.add_condition(conditions.get(key, key),
+                                   predicate=predicates.get(key, None))
+            elif key in self.INTEGER_TRIGGERS and value:
+                predicate = predicate_factories.get(key, lambda: None)(value)
+                self.add_condition(conditions.get(key, key),
+                                   predicate=predicate)
+            else:
+                raise KeyError("Invalid condition: {}".format(key))
+        return self  # For chaining calls.
 
     def add_condition(self, callback_name, predicate=None, arguments=None):
         """Adds a condition under which a :meth:`do` is called.
@@ -188,41 +225,31 @@ class SimpleExtension(TrainingExtension):
             be concatenated with the ones passed from the main loop
             (e.g. the batch in case of `after_epoch` callback).
 
+        Returns
+        -------
+            The extension object (allow chaining calls)
+
         """
         if not arguments:
             arguments = []
         if not predicate:
-            predicate = lambda log: True
-        self._conditions.append((callback_name, predicate, arguments))
-
-    def invoke_after_n_epochs(self, n_epochs):
-        self.add_condition(
-            "after_epoch",
-            predicate=lambda log:
-                log.status.epochs_done == n_epochs)
-
-    def invoke_after_n_batches(self, n_batches):
-        self.add_condition(
-            "after_batch",
-            predicate=lambda log:
-                log.status.iterations_done == n_batches)
-
-    def invoke_every_n_batches(self, n_batches):
-        self.add_condition(
-            "after_batch",
-            predicate=lambda log:
-                log.status.iterations_done % n_batches == 0)
+            self._conditions.append((callback_name, lambda log: True,
+                                     arguments))
+        else:
+            self._conditions.append((callback_name, predicate,
+                                     arguments))
+        return self
 
     @abstractmethod
     def do(self, which_callback, *args):
-        """Does the job of the training extension.
+        r"""Does the job of the training extension.
 
         Parameters
         ----------
         which_callback : str
             The name of the callback in the context of which :meth:`do` is
             run.
-        *args : tuple
+        \*args : tuple
             The arguments from the main loop concatenated with additional
             arguments from user.
 
@@ -295,3 +322,100 @@ class Printing(SimpleExtension):
                 log.status.iterations_done))
             self._print_attributes(log.current_row)
         print()
+
+
+class Timing(TrainingExtension):
+    """Keeps track of time used.
+
+    Depending of the `clock_function` parameter this extension
+    can track both CPU or user time.
+
+    It is highly recommended to put this extension first in the extension
+    list. Assuming that this recommendation is respected, the semantics
+    of the records it writes to the log is explained below:
+
+    * `initilialization_took`: number of seconds the initialization took.
+      Includes time spent running `before_training` callbacks.
+
+    * `iteration_took`: number of seconds an iteration took. Includes
+      time spent running `after_batch` callbacks at the previous iteration
+      and `before_batch` callbacks of current iteration
+
+    * `epoch_took`: number of seconds an epoch took. Includes
+      time spent running `after_epoch` callbacks at the previous iteration
+      and `before_epoch` callbacks of current iteration
+
+    * `total_took`: number of seconds running until the current iteration
+      took.
+
+    * `final_total_took`: total number of seconds spent on training
+      including all extension calls except `after_training`.
+
+    Parameters
+    ----------
+    clock_function : callable, optional
+        Return the current time. By default `time.time` is used,
+        which means that user time is tracked.
+
+    Notes
+    -----
+    When training is interrupted this extension saves intermediate
+    time measurements to the training status, i.e. it should be robust
+    to any training interruptions.
+
+
+    """
+    def __init__(self, clock_function=None, **kwargs):
+        super(Timing, self).__init__(**kwargs)
+        if not clock_function:
+            clock_function = time.time
+        self.clock_function = clock_function
+
+    @property
+    def log(self):
+        return self.main_loop.log
+
+    def before_training(self):
+        self.started_at = self.clock_function()
+        self.log.status._epoch_before_interrupted = 0
+        self.log.status._total_before_interrupted = 0
+
+    def before_epoch(self):
+        self.epoch_started_at = self.clock_function()
+        if self.log.status.epochs_done == 0:
+            self.log.current_row.initialization_took = (
+                self.epoch_started_at - self.started_at)
+
+    def before_batch(self, batch):
+        self.batch_started_at = self.clock_function()
+
+    def after_batch(self, batch):
+        self.log.current_row.iteration_took = (
+            self.clock_function() - self.batch_started_at)
+        self.log.current_row.total_took = (
+            self.log.status._total_before_interrupted +
+            self.clock_function() - self.started_at)
+
+    def after_epoch(self):
+        self.log.current_row.epoch_took = (
+            self.log.status._epoch_before_interrupted +
+            self.clock_function() - self.epoch_started_at)
+        self.log.status._epoch_before_interrupted = 0
+
+    def after_training(self):
+        self.log.current_row.final_total_took = (
+            self.log.status._total_before_interrupted +
+            self.clock_function() - self.started_at)
+
+        # Save intermediate results to the log.status
+        self.log.status._total_before_interrupted = (
+            self.log.current_row.final_total_took)
+        if self.log.status._epoch_started:
+            epoch_ends = self.log.status._epoch_ends
+            self.log.status._epoch_before_interrupted = (
+                self.clock_function() -
+                0 if not epoch_ends else self.log[epoch_ends[-1]].total_took)
+
+    def on_resumption(self):
+        self.started_at = self.clock_function()
+        self.epoch_started_at = self.clock_function()

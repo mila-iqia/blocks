@@ -16,12 +16,14 @@ Which could be overwritten by using environment variables:
 
 .. code-block:: bash
 
-   BLOCKS_DATA_PATH=/home/users/other_datasets python
+   $ BLOCKS_DATA_PATH=/home/users/other_datasets python
 
 If a setting is not configured and does not provide a default, a
-:class:`ConfigurationError` is raised when it is accessed.
+:class:`~.ConfigurationError` is raised when it is
+accessed.
 
-Configuration values can be accessed as attributes of ``blocks.config``.
+Configuration values can be accessed as attributes of
+:const:`blocks.config`.
 
     >>> from blocks import config
     >>> print(config.data_path) # doctest: +SKIP
@@ -33,6 +35,13 @@ The following configurations are supported:
 
    The path where dataset files are stored. Can also be set using the
    environment variable ``BLOCKS_DATA_PATH``.
+
+.. option:: default_seed
+
+   The seed used when initializing random number generators (RNGs) such as
+   NumPy :class:`~numpy.random.RandomState` objects as well as Theano's
+   :class:`~theano.sandbox.rng_mrg.MRG_RandomStreams` objects. Must be an
+   integer. By default this is set to 1.
 
 .. _YAML: http://yaml.org/
 .. _environment variables:
@@ -50,6 +59,7 @@ NOT_SET = object()
 
 
 class ConfigurationError(Exception):
+    """Error raised when a configuration value is requested but not set."""
     pass
 
 
@@ -73,19 +83,20 @@ class Configuration(object):
     def __getattr__(self, key):
         if key == 'config' or key not in self.config:
             raise AttributeError
-        config = self.config[key]
-        if 'value' in config:
-            value = config['value']
-        elif 'env_var' in config and config['env_var'] in os.environ:
-            value = os.environ[config['env_var']]
-        elif 'yaml' in config:
-            value = config['yaml']
-        elif 'default' in config:
-            value = config['default']
+        config_setting = self.config[key]
+        if 'value' in config_setting:
+            value = config_setting['value']
+        elif ('env_var' in config_setting and
+              config_setting['env_var'] in os.environ):
+            value = os.environ[config_setting['env_var']]
+        elif 'yaml' in config_setting:
+            value = config_setting['yaml']
+        elif 'default' in config_setting:
+            value = config_setting['default']
         else:
             raise ConfigurationError("Configuration not set and no default "
                                      "provided: {}.".format(key))
-        return config['type'](value)
+        return config_setting['type'](value)
 
     def __setattr__(self, key, value):
         if key != 'config' and key in self.config:

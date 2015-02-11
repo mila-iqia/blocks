@@ -17,7 +17,7 @@ from blocks.bricks.recurrent import GatedRecurrent
 from blocks.bricks.sequence_generators import (
     SequenceGenerator, LinearReadout, SoftmaxEmitter, LookupFeedback)
 from blocks.graph import ComputationGraph
-from blocks.datasets import DataStream
+from blocks.datasets.streams import DataStream
 from blocks.datasets.schemes import ConstantScheme
 from blocks.algorithms import GradientDescent, SteepestDescent
 from blocks.initialization import Orthogonal, IsotropicGaussian, Constant

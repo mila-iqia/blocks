@@ -1,9 +1,11 @@
 import os
 
 import numpy
+from toolz import sliding_window
 
 from blocks import config
-from blocks.datasets import Dataset, CachedDataStream
+from blocks.datasets import Dataset
+from blocks.datasets.streams import CachedDataStream
 
 
 class TextFileState(object):
@@ -86,6 +88,7 @@ class TextFile(Dataset):
             raise ValueError
         self.level = level
         self.preprocess = preprocess
+        super(TextFile, self).__init__()
 
     def open(self):
         state = TextFileState()
@@ -193,14 +196,14 @@ class NGramStream(CachedDataStream):
     (e.g. bigrams, trigrams, etc.) are extracted and returned. It also
     creates a ``targets`` data source. For each example, the target is the
     word immediately following that n-gram. It is normally used for
-    language modelling, where we try to predict the next word from the
+    language modeling, where we try to predict the next word from the
     previous n words.
 
     Parameters
     ----------
     ngram_order : int
         The order of the n-grams to output e.g. 3 for trigrams.
-    data_stream : :class:`DataStream` instance
+    data_stream : :class:`.DataStream` instance
         The data stream providing sentences. Each example is assumed to be
         a list of integers.
     target_source : str, optional
@@ -209,8 +212,8 @@ class NGramStream(CachedDataStream):
 
     Notes
     -----
-    This class inherits from :class:`CachedDataStream` because it makes use
-    of a cache to store the sentences from the wrapped data stream in.
+    This class inherits from :class:`.CachedDataStream` because it makes
+    use of a cache to store the sentences from the wrapped data stream in.
 
     """
     def __init__(self, ngram_order, data_stream, target_source='targets',
@@ -222,25 +225,18 @@ class NGramStream(CachedDataStream):
         self.ngram_order = ngram_order
 
     def get_data(self, request=None):
-        if not self.cache[0]:
-            self._cache()
         features, targets = [], []
-        for i, sentence in enumerate(self.cache[0]):
-            for j in range(request):
-                features.append(sentence[j:j + self.ngram_order])
-                targets.append([sentence[j + self.ngram_order]])
-                if j + self.ngram_order == len(sentence) - 1:
-                    sentence_ended = True
-                    break
-                elif len(features) == request:
-                    sentence_ended = False
-                    break
-            if sentence_ended:
+        for _, sentence in enumerate(self.cache[0]):
+            features.append(list(
+                sliding_window(self.ngram_order,
+                               sentence[:-1]))[:request - len(features)])
+            targets.append(
+                sentence[self.ngram_order:][:request - len(targets)])
+            self.cache[0][0] = self.cache[0][0][request:]
+            if not self.cache[0][0]:
                 self.cache[0].pop(0)
                 if not self.cache[0]:
                     self._cache()
-            else:
-                self.cache[0][0] = self.cache[0][0][j + 1:]
             if len(features) == request:
                 break
         return tuple(numpy.asarray(data) for data in (features, targets))

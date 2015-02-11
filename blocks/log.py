@@ -3,6 +3,11 @@ from abc import ABCMeta, abstractmethod
 from collections import defaultdict
 
 from six import add_metaclass
+try:
+    from pandas import DataFrame
+    PANDAS_AVAILABLE = True
+except ImportError:
+    PANDAS_AVAILABLE = False
 
 
 @add_metaclass(ABCMeta)
@@ -62,6 +67,12 @@ class TrainingLogRow(object):
 
     def __getattr__(self, key):
         return self.log.fetch_record(self.time, key)
+
+    def __getitem__(self, key):
+        return getattr(self, key)
+
+    def __setitem__(self, key, value):
+        setattr(self, key, value)
 
     def __setattr__(self, key, value):
         if key in ['log', 'time']:
@@ -140,7 +151,7 @@ class AbstractTrainingLog(object):
     def _add_record(self, time, key, value):
         """Adds a record to the log.
 
-        The implementation method to be overriden.
+        The implementation method to be overridden.
 
         """
         pass
@@ -162,7 +173,7 @@ class AbstractTrainingLog(object):
     def _fetch_record(self, time, key):
         """Fetches a record from the log.
 
-        The implementation method to be overriden.
+        The implementation method to be overridden.
 
         """
         pass
@@ -196,6 +207,16 @@ class AbstractTrainingLog(object):
     def _check_time(self, time):
         if not isinstance(time, int) or time < 0:
             raise ValueError("time must be a positive integer")
+
+    def to_dataframe(self):
+        """Convert a log into a :class:`.DataFrame`."""
+        if not PANDAS_AVAILABLE:
+            raise ImportError("The pandas library is not found. You can"
+                              " install it with pip.")
+        return self._to_dataframe()
+
+    def _to_dataframe(self):
+        raise NotImplementedError()
 
 
 class TrainingStatus(AbstractTrainingStatus):
@@ -239,3 +260,6 @@ class TrainingLog(AbstractTrainingLog):
 
     def get_status(self):
         return self._status
+
+    def _to_dataframe(self):
+        return DataFrame.from_dict(self._storage, orient='index')

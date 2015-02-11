@@ -25,6 +25,7 @@ def test_training_data_monitoring():
     x = tensor.vector('features')
     y = tensor.scalar('targets')
     W = shared_floatx([0, 0], name='W')
+    V = shared_floatx(7, name='V')
     W_sum = named_copy(W.sum(), 'W_sum')
     cost = ((x * W).sum() - y) ** 2
     cost.name = 'cost'
@@ -42,13 +43,16 @@ def test_training_data_monitoring():
                                   step_rule=SteepestDescent(0.001)),
         extensions=[
             FinishAfter(after_n_epochs=1),
-            TrainingDataMonitoring([W_sum, cost], "train1",
+            TrainingDataMonitoring([W_sum, cost, V], "train1",
                                    after_every_batch=True),
             TrainingDataMonitoring([aggregation.mean(W_sum), cost], "train2",
                                    after_every_epoch=True),
             TrueCostExtension()])
 
     main_loop.run()
+
+    # Check monitoring of a shared varible
+    assert_allclose(main_loop.log.current_row.train1_V, 7.0)
 
     for i in range(n_batches):
         # The ground truth is written to the log before the batch is

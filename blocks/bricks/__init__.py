@@ -1,30 +1,18 @@
 """The interface of bricks and some simple implementations."""
 import logging
-from itertools import chain
 
 import numpy
 from six import add_metaclass
 from theano import tensor
 from theano.sandbox.rng_mrg import MRG_RandomStreams
+from toolz import interleave
 
 from blocks import config
 from blocks.bricks.base import application, _Brick, Brick, lazy
-from blocks.graph import add_role, ParameterRole
+from blocks.roles import add_role, WEIGHTS, BIASES
 from blocks.utils import pack, shared_floatx_zeros
 
 logger = logging.getLogger(__name__)
-
-
-class WeightsRole(ParameterRole):
-    pass
-
-WEIGHTS = WeightsRole()
-
-
-class BiasesRole(ParameterRole):
-    pass
-
-BIASES = BiasesRole()
 
 
 class Random(Brick):
@@ -36,9 +24,26 @@ class Random(Brick):
         A ``MRG_RandomStreams`` instance.
 
     """
-    def __init__(self, theano_rng=None, **kwargs):
+    seed_rng = numpy.random.RandomState(config.default_seed)
+
+    def __init__(self, theano_seed=None, **kwargs):
         super(Random, self).__init__(**kwargs)
-        self.theano_rng = theano_rng
+        self.theano_seed = theano_seed
+
+    @property
+    def theano_seed(self):
+        if getattr(self, '_theano_seed', None) is not None:
+            return self._theano_seed
+        else:
+            self._theano_seed = self.seed_rng.randint(
+                numpy.iinfo(numpy.int32).max)
+            return self._theano_seed
+
+    @theano_seed.setter
+    def theano_seed(self, value):
+        if hasattr(self, '_theano_seed'):
+            raise AttributeError("seed already set")
+        self._theano_seed = value
 
     @property
     def theano_rng(self):
@@ -50,8 +55,7 @@ class Random(Brick):
         if getattr(self, '_theano_rng', None) is not None:
             return self._theano_rng
         else:
-            return MRG_RandomStreams(
-                config.default_seed)
+            return MRG_RandomStreams(self.theano_seed)
 
     @theano_rng.setter
     def theano_rng(self, theano_rng):
@@ -70,33 +74,34 @@ class Initializable(Brick):
     ----------
     weights_init : object
         A `NdarrayInitialization` instance which will be used by to
-        initialize the weight matrix. Required by :meth:`initialize`.
-    biases_init : object, optional
+        initialize the weight matrix. Required by
+        :meth:`~.Brick.initialize`.
+    biases_init : :obj:`object`, optional
         A `NdarrayInitialization` instance that will be used to initialize
-        the biases. Required by :meth:`initialize` when `use_bias` is
-        `True`. Only supported by bricks for which :attr:`has_biases` is
+        the biases. Required by :meth:`~.Brick.initialize` when `use_bias`
+        is `True`. Only supported by bricks for which :attr:`has_biases` is
         ``True``.
-    use_bias : bool, optional
+    use_bias : :obj:`bool`, optional
         Whether to use a bias. Defaults to `True`. Required by
-        :meth:`initialize`. Only supported by bricks for which
+        :meth:`~.Brick.initialize`. Only supported by bricks for which
         :attr:`has_biases` is ``True``.
-    rng : object
-        A ``numpy.RandomState`` instance.
+    rng : :class:`numpy.random.RandomState`
 
     Attributes
     ----------
     has_biases : bool
         ``False`` if the brick does not support biases, and only has
         :attr:`weights_init`.  For an example of this, see
-        :class:`Bidirectional`. If this is ``False``, the brick does not
+        :class:`.Bidirectional`. If this is ``False``, the brick does not
         support the arguments ``biases_init`` or ``use_bias``.
 
     """
     has_biases = True
+    seed_rng = numpy.random.RandomState(config.default_seed)
 
     @lazy
-    def __init__(self, weights_init, biases_init=None, use_bias=True, rng=None,
-                 **kwargs):
+    def __init__(self, weights_init, biases_init=None, use_bias=True,
+                 seed=None, **kwargs):
         super(Initializable, self).__init__(**kwargs)
         self.weights_init = weights_init
         if self.has_biases:
@@ -104,14 +109,29 @@ class Initializable(Brick):
         elif biases_init is not None or not use_bias:
             raise ValueError("This brick does not support biases config")
         self.use_bias = use_bias
-        self.rng = rng
+        self.seed = seed
+
+    @property
+    def seed(self):
+        if getattr(self, '_seed', None) is not None:
+            return self._seed
+        else:
+            self._seed = self.seed_rng.randint(
+                numpy.iinfo(numpy.int32).max)
+            return self._seed
+
+    @seed.setter
+    def seed(self, value):
+        if hasattr(self, '_seed'):
+            raise AttributeError("seed already set")
+        self._seed = value
 
     @property
     def rng(self):
         if getattr(self, '_rng', None) is not None:
             return self._rng
         else:
-            return numpy.random.RandomState(config.default_seed)
+            return numpy.random.RandomState(self.seed)
 
     @rng.setter
     def rng(self, rng):
@@ -130,7 +150,33 @@ class Initializable(Brick):
                     child.biases_init = self.biases_init
 
 
-class Linear(Initializable):
+class Feedforward(Brick):
+    """Declares an interface for bricks with one input and one output.
+
+    Many bricks have just one input and just one output (activations,
+    :class:`Linear`, :class:`MLP`). To make such bricks interchangable
+    in most contexts they should share an interface for configuring
+    their input and output dimensions. This brick declares such an
+    interface.
+
+    Attributes
+    ----------
+    input_dim : int
+        The input dimension of the brick.
+    output_dim : int
+        The output dimension of the brick.
+
+    """
+    def __getattr__(self, name):
+        message = ("'{}' object does not have an attribute '{}'"
+                   .format(self.__class__.__name__, name))
+        if name in ('input_dim', 'output_dim'):
+            message += (" (which is a part of 'Feedforward' interface it"
+                        " claims to support)")
+        raise AttributeError(message)
+
+
+class Linear(Initializable, Feedforward):
     r"""A linear transformation with optional bias.
 
     Linear brick which applies a linear (affine) transformation by
@@ -139,9 +185,9 @@ class Linear(Initializable):
     Parameters
     ----------
     input_dim : int
-        The dimension of the input. Required by :meth:`allocate`.
+        The dimension of the input. Required by :meth:`~.Brick.allocate`.
     output_dim : int
-        The dimension of the output. Required by :meth:`allocate`.
+        The dimension of the output. Required by :meth:`~.Brick.allocate`.
 
     Notes
     -----
@@ -184,12 +230,12 @@ class Linear(Initializable):
 
         Parameters
         ----------
-        input_ : Theano variable
+        input_ : :class:`~tensor.TensorVariable`
             The input on which to apply the transformation
 
         Returns
         -------
-        output : Theano variable
+        output : :class:`~tensor.TensorVariable`
             The transformed input plus optional bias
 
         """
@@ -201,6 +247,13 @@ class Linear(Initializable):
         if self.use_bias:
             output += b
         return output
+
+    def get_dim(self, name):
+        if name == 'input_':
+            return self.input_dim
+        if name == 'output':
+            return self.output_dim
+        super(Linear, self).get_dim(name)
 
 
 class Maxout(Brick):
@@ -235,12 +288,12 @@ class Maxout(Brick):
 
         Parameters
         ----------
-        input_ : Theano variable
+        input_ : :class:`~tensor.TensorVariable`
             The input on which to apply the transformation
 
         Returns
         -------
-        output : Theano variable
+        output : :class:`~tensor.TensorVariable`
             The transformed input
 
         """
@@ -262,11 +315,12 @@ class LinearMaxout(Initializable):
     Parameters
     ----------
     input_dim : int
-        The dimension of the input. Required by :meth:`allocate`.
+        The dimension of the input. Required by :meth:`~.Brick.allocate`.
     output_dim : int
-        The dimension of the output. Required by :meth:`allocate`.
+        The dimension of the output. Required by :meth:`~.Brick.allocate`.
     num_pieces : int
-        The number of linear functions. Required by :meth:`allocate`.
+        The number of linear functions. Required by
+        :meth:`~.Brick.allocate`.
 
     Notes
     -----
@@ -297,12 +351,12 @@ class LinearMaxout(Initializable):
 
         Parameters
         ----------
-        input_ : Theano variable
+        input_ : :class:`~tensor.TensorVariable`
             The input on which to apply the transformations
 
         Returns
         -------
-        output : Theano variable
+        output : :class:`~tensor.TensorVariable`
             The transformed input
 
         """
@@ -324,16 +378,16 @@ class ActivationDocumentation(_Brick):
             """Elementwise application of {0} function.""".format(name.lower())
         if 'apply' in classdict:
             classdict['apply'].__doc__ = \
-                """Apply the {0} function elementwise.
+                """Apply the {0} function element-wise.
 
                 Parameters
                 ----------
-                input_ : Theano variable
-                    Theano variable to apply {0} to, elementwise.
+                input_ : :class:`~tensor.TensorVariable`
+                    Theano variable to apply {0} to, element-wise.
 
                 Returns
                 -------
-                output : Theano variable
+                output : :class:`~tensor.TensorVariable`
                     The input with the activation function applied.
 
                 """.format(name.lower())
@@ -343,7 +397,7 @@ class ActivationDocumentation(_Brick):
 
 @add_metaclass(ActivationDocumentation)
 class Activation(Brick):
-    """A base class for simple, elementwise activation functions.
+    """A base class for simple, element-wise activation functions.
 
     This base class ensures that activation functions are automatically
     documented using the :class:`ActivationDocumentation` metaclass.
@@ -390,7 +444,7 @@ class Sequence(Brick):
 
     Parameters
     ----------
-    application_methods : list of application methods to apply
+    application_methods : list of :class:`.BoundApplication` to apply
 
     """
     def __init__(self, application_methods, **kwargs):
@@ -411,7 +465,7 @@ class Sequence(Brick):
         return output
 
 
-class MLP(Sequence, Initializable):
+class MLP(Sequence, Initializable, Feedforward):
     """A simple multi-layer perceptron.
 
     Parameters
@@ -422,7 +476,7 @@ class MLP(Sequence, Initializable):
         :meth:`__init__`.
     dims : list of ints
         A list of input dimensions, as well as the output dimension of the
-        last layer. Required for :meth:`allocate`.
+        last layer. Required for :meth:`~.Brick.allocate`.
 
     Notes
     -----
@@ -450,12 +504,28 @@ class MLP(Sequence, Initializable):
         self.linear_transformations = [Linear(name='linear_{}'.format(i))
                                        for i in range(len(activations))]
         # Interleave the transformations and activations
-        application_methods = [brick.apply for brick in list(chain(*zip(
-            self.linear_transformations, activations))) if brick is not None]
+        application_methods = [brick.apply for brick in interleave(
+            [self.linear_transformations, activations]) if brick is not None]
         if not dims:
             dims = [None] * (len(activations) + 1)
         self.dims = dims
         super(MLP, self).__init__(application_methods, **kwargs)
+
+    @property
+    def input_dim(self):
+        return self.dims[0]
+
+    @input_dim.setter
+    def input_dim(self, value):
+        self.dims[0] = value
+
+    @property
+    def output_dim(self):
+        return self.dims[-1]
+
+    @output_dim.setter
+    def output_dim(self, value):
+        self.dims[-1] = value
 
     def _push_allocation_config(self):
         if not len(self.dims) - 1 == len(self.linear_transformations):

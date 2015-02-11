@@ -16,17 +16,16 @@ class NdarrayInitialization(object):
 
         Parameters
         ----------
-        rng : object
-            A `numpy.random.RandomState`.
+        rng : :class:`numpy.random.RandomState`
         shape : tuple
             A shape tuple for the requested parameter array shape.
 
         Returns
         -------
-        ndarray
+        output : :class:`~numpy.ndarray`
             An ndarray with values drawn from the distribution specified by
             this object, of shape `shape`, with dtype
-            `theano.config.floatX`.
+            :attr:`config.floatX`.
 
         """
 
@@ -38,8 +37,7 @@ class NdarrayInitialization(object):
         var : object
             A Theano shared variable whose value will be set with values
             drawn from this :class:`NdarrayInitialization` instance.
-        rng : object
-            A `numpy.random.RandomState`.
+        rng : :class:`numpy.random.RandomState`
         shape : tuple
             A shape tuple for the requested parameter array shape.
 
@@ -52,13 +50,12 @@ class NdarrayInitialization(object):
 class Constant(NdarrayInitialization):
     """Initialize parameters to a constant.
 
-    The constant may be a scalar or an
-    array_like of any shape that is broadcastable with the requested
-    parameter arrays.
+    The constant may be a scalar or a :class:`~numpy.ndarray` of any shape
+    that is broadcastable with the requested parameter arrays.
 
     Parameters
     ----------
-    constant : array_like
+    constant : :class:`~numpy.ndarray`
         The initialization value to use. Must be a scalar or an ndarray (or
         compatible object, such as a nested list) that has a shape that is
         broadcastable with any shape requested by `initialize`.
@@ -78,13 +75,18 @@ class IsotropicGaussian(NdarrayInitialization):
 
     Parameters
     ----------
-    mean : float, optional
-        The mean of the Gaussian distribution. Defaults to 0
     std : float, optional
         The standard deviation of the Gaussian distribution. Defaults to 1.
+    mean : float, optional
+        The mean of the Gaussian distribution. Defaults to 0
+
+    Notes
+    -----
+    Be careful: the standard deviation goes first and the mean goes
+    second!
 
     """
-    def __init__(self, mean=0, std=1):
+    def __init__(self, std=1, mean=0):
         self._mean = mean
         self._std = std
 

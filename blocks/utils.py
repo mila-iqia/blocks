@@ -1,9 +1,13 @@
 import sys
-from collections import OrderedDict, Sequence
+import os
+import shutil
+import tempfile
+from collections import OrderedDict
 
 import numpy
 import six
 import theano
+import dill
 from theano import tensor
 from theano import printing
 from theano.gof.graph import Constant
@@ -77,20 +81,20 @@ def shared_floatx(value, name=None, borrow=False, dtype=None):
 
     Parameters
     ----------
-    value : array_like
+    value : :class:`~numpy.ndarray`
         The value to associate with the Theano shared.
-    name : str, optional
-        The name for the shared varaible. Defaults to `None`.
-    borrow : bool, optional
+    name : :obj:`str`, optional
+        The name for the shared variable. Defaults to `None`.
+    borrow : :obj:`bool`, optional
         If set to True, the given `value` will not be copied if possible.
         This can save memory and speed. Defaults to False.
-    dtype : str, optional
+    dtype : :obj:`str`, optional
         The `dtype` of the shared variable. Default value is
-        `theano.config.floatX`.
+        :attr:`config.floatX`.
 
     Returns
     -------
-    theano.compile.SharedVariable
+    :class:`tensor.TensorSharedVariable`
         A Theano shared variable with the requested value and `dtype`.
 
     """
@@ -101,24 +105,24 @@ def shared_floatx(value, name=None, borrow=False, dtype=None):
                          borrow=borrow)
 
 
-def shared_like(expression, name=None):
-    """Construct a shared variable to hold the results of a theano expression.
+def shared_like(variable, name=None):
+    """Construct a shared variable to hold the value of a tensor variable.
 
     Parameters
     ----------
-    expression : theano variable
-        The expression whose dtype and ndim will be used to construct
+    variable : :class:`~tensor.TensorVariable`
+        The variable whose dtype and ndim will be used to construct
         the new shared variable.
-    name : string or None
+    name : :obj:`str` or :obj:`None`
         The name of the shared variable. If None, the name is determined
-        based on expression's name.
+        based on variable's name.
 
     """
-    expression = tensor.as_tensor_variable(expression)
+    variable = tensor.as_tensor_variable(variable)
     if name is None:
-        name = "shared_{}".format(expression.name)
-    return theano.shared(numpy.zeros((0,) * expression.ndim,
-                                     dtype=expression.dtype),
+        name = "shared_{}".format(variable.name)
+    return theano.shared(numpy.zeros((0,) * variable.ndim,
+                                     dtype=variable.dtype),
                          name=name)
 
 
@@ -130,7 +134,7 @@ def reraise_as(new_exc):
 
     Parameters
     ----------
-    new_exc : Exception isinstance
+    new_exc : :class:`Exception` or :obj:`str`
         The new error to be raised e.g. (ValueError("New message"))
         or a string that will be prepended to the original exception
         message
@@ -197,7 +201,7 @@ def check_theano_variable(variable, n_dim, dtype_prefix):
 
     Parameters
     ----------
-    variable : Theano variable or convertable to one
+    variable : :class:`~tensor.TensorVariable` or convertible to one
         A variable to check.
     n_dim : int
         Expected number of dimensions or None. If None, no check is
@@ -238,7 +242,7 @@ def is_graph_input(variable):
 
     Parameters
     ----------
-    variable : theano expression
+    variable : :class:`~tensor.TensorVariable`
 
     Returns
     -------
@@ -378,7 +382,7 @@ def put_hook(variable, hook_fn):
 
     Parameters
     ----------
-    variable : Theano variable
+    variable : :class:`~tensor.TensorVariable`
         The variable to put a hook on.
     hook_fn : function
         The hook function. Should take a single argument: the variable's
@@ -393,7 +397,7 @@ def ipdb_breakpoint(x):
 
     Parameters
     ----------
-    x : :class:`numpy.ndarray`
+    x : :class:`~numpy.ndarray`
         The value of the hooked variable.
 
     """
@@ -431,12 +435,11 @@ class SequenceIterator(six.Iterator):
 
     Parameters
     ----------
-    sequence : list or tuple
+    sequence : :obj:`list` or :obj:`tuple`
         The sequence to iterate over.
 
     """
     def __init__(self, sequence):
-        assert isinstance(sequence, Sequence)
         self.sequence = sequence
         self._offset = 0
 
@@ -449,3 +452,24 @@ class SequenceIterator(six.Iterator):
         result = self.sequence[self._offset]
         self._offset += 1
         return result
+
+
+def secure_dill_dump(object_, path):
+    """Robust serialization - does not corrupt your files when failed.
+
+    Parameters
+    ----------
+    object_ : object
+        The object to be saved to the disk.
+    path : str
+        The destination path.
+
+    """
+    try:
+        with tempfile.NamedTemporaryFile(delete=False) as temp:
+            dill.dump(object_, temp, fmode=dill.CONTENTS_FMODE)
+        shutil.move(temp.name, path)
+    except:
+        if "temp" in locals():
+            os.remove(temp.name)
+        raise

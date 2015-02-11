@@ -6,26 +6,27 @@ import theano
 from blocks.utils import dict_subset
 from blocks.monitoring.aggregation import _DataIndependent, Mean, TakeLast
 from blocks.graph import ComputationGraph
+from blocks.utils import reraise_as
 
 logger = logging.getLogger()
 
 
 class AggregationBuffer(object):
-    """Intermediate results of aggregating values of Theano expressions.
+    """Intermediate results of aggregating values of Theano variables.
 
-    Encapsulates aggregators for a list of Theano expressions. Collects
+    Encapsulates aggregators for a list of Theano variables. Collects
     the respective updates and provides initialization and readout
     routines.
 
 
     Parameters
     ----------
-    expressions : list
-        If a list of Theano variables. The variable names are used as
-        expression names. All the variables names must be different.
+    variables : list of :class:`~tensor.TensorVariable`
+        The variable names are used as record names in the logs. Hence, all
+        the variable names must be different.
     use_take_last : bool
         When ``True``, the :class:`TakeLast` aggregation scheme is used
-        instead of :class:`_DataIndependent` for those expressions that
+        instead of :class:`_DataIndependent` for those variables that
         do not require data to be computed.
 
     Attributes
@@ -34,23 +35,24 @@ class AggregationBuffer(object):
         Initialization updates of the aggregators.
     accumulation_updates : list of tuples
         Accumulation updates of the aggregators.
-    readout_expressions : dict
-        Maps an aggregated variable into a readout expression.
-    input : list of Theano variables
+    readout_variables : dict
+        A dictionary of record names to :class:`~tensor.TensorVariable`
+        representing the aggregated values.
+    input : list of :class:`~tensor.TensorVariable`
         The list of inputs needed for accumulation.
     input_names : list of str
         The name of the inputs needed for accumulation.
 
     """
-    def __init__(self, expressions, use_take_last=False):
-        self.expressions = expressions
+    def __init__(self, variables, use_take_last=False):
+        self.variables = variables
         self.use_take_last = use_take_last
 
-        self.expression_names = [v.name for v in self.expressions]
-        if len(self.expression_names) < len(self.expressions):
-            raise ValueError(
-                "Expression variables should have different names")
-        self.inputs = ComputationGraph(self.expressions).inputs
+        self.variable_names = [v.name for v in self.variables]
+        if len(self.variable_names) < len(self.variables):
+            raise ValueError("variables should have different names")
+        self._computation_graph = ComputationGraph(self.variables)
+        self.inputs = self._computation_graph.inputs
         self.input_names = [v.name for v in self.inputs]
 
         self._initialized = False
@@ -61,27 +63,36 @@ class AggregationBuffer(object):
         """Create aggregators and collect updates."""
         self.initialization_updates = []
         self.accumulation_updates = []
-        self.readout_expressions = OrderedDict()
+        self.readout_variables = OrderedDict()
 
-        for v in self.expressions:
-            logger.debug('Expression to evaluate: %s', v.name)
+        for v in self.variables:
+            logger.debug('variable to evaluate: %s', v.name)
             if not hasattr(v.tag, 'aggregation_scheme'):
-                if ComputationGraph([v]).inputs == []:
-                    logger.debug('Using _DataIndependent aggregation scheme'
+                if not self._computation_graph.has_inputs(v):
+                    scheme = (TakeLast if self.use_take_last
+                              else _DataIndependent)
+                    logger.debug('Using %s aggregation scheme'
                                  ' for %s since it does not depend on'
-                                 ' the data', v.name)
-                    v.tag.aggregation_scheme = (TakeLast if self.use_take_last
-                                                else _DataIndependent)(v)
+                                 ' the data', scheme.__name__, v.name)
+                    v.tag.aggregation_scheme = scheme(v)
                 else:
-                    logger.debug('Using the default (average over minibatches)'
-                                 ' aggregation scheme for %s', v.name)
-                    v.tag.aggregation_scheme = Mean(v, 1.0)
+                    if v.ndim == 0:
+                        logger.debug('Using the default '
+                                     ' (average over minibatches)'
+                                     ' aggregation scheme for %s', v.name)
+                        v.tag.aggregation_scheme = Mean(v, 1.0)
+                    else:
+                        # TODO: support averaging for multi-dim variables
+                        logger.debug('Multidimensional variable:'
+                                     ' using the TakeLast'
+                                     ' aggregation scheme for %s', v.name)
+                        v.tag.aggregation_scheme = TakeLast(v)
 
             aggregator = v.tag.aggregation_scheme.get_aggregator()
             self.initialization_updates.extend(
                 aggregator.initialization_updates)
             self.accumulation_updates.extend(aggregator.accumulation_updates)
-            self.readout_expressions[v.name] = aggregator.readout_expression
+            self.readout_variables[v.name] = aggregator.readout_variable
 
     def _compile(self):
         """Compiles Theano functions.
@@ -93,6 +104,7 @@ class AggregationBuffer(object):
             be out-sourced to `ComputationGraph` to deal with it.
 
         """
+        logger.debug("Compiling initialization and readout functions")
         if self.initialization_updates:
             self._initialize_fun = theano.function(
                 [], [], updates=self.initialization_updates)
@@ -100,7 +112,8 @@ class AggregationBuffer(object):
             self._initialize_fun = None
 
         self._readout_fun = theano.function(
-            [], list(self.readout_expressions.values()))
+            [], list(self.readout_variables.values()))
+        logger.debug("Initialization and readout functions compiled")
 
     def initialize_aggregators(self):
         """Initialize the aggregators."""
@@ -114,14 +127,14 @@ class AggregationBuffer(object):
             raise Exception("To readout you must first initialize, then"
                             "process batches!")
         ret_vals = self._readout_fun()
-        return dict(zip(self.expression_names, ret_vals))
+        return dict(zip(self.variable_names, ret_vals))
 
 
 class DatasetEvaluator(object):
-    """A DatasetEvaluator evaluates many Theano expressions on a dataset.
+    """A DatasetEvaluator evaluates many Theano variables on a dataset.
 
     The DatasetEvaluator provides a do-it-all method, :meth:`evaluate`,
-    which computes values of ``expressions`` on a dataset.
+    which computes values of ``variables`` on a dataset.
 
     Alternatively, methods :meth:`initialize_aggregators`,
     :meth:`process_batch`, :meth:`get_aggregated_values` can be used with a
@@ -135,17 +148,17 @@ class DatasetEvaluator(object):
 
     Parameters
     ----------
-    expressions : dict or list
-        If a list of Theano variables. The variable names are used as
-        expression names. All the variables names must be different.
+    variables : list of :class:`~tensor.TensorVariable`
+        The variable names are used as record names in the logs. Hence, all
+        the names must be different.
 
         Each variable can be tagged with an :class:`AggregationScheme` that
         specifies how the value can be computed for a data set by
         aggregating minibatches.
 
     """
-    def __init__(self, expressions):
-        self.buffer_ = AggregationBuffer(expressions)
+    def __init__(self, variables):
+        self.buffer_ = AggregationBuffer(variables)
         self._compile()
 
     def _compile(self):
@@ -169,7 +182,13 @@ class DatasetEvaluator(object):
         self.buffer_.initialize_aggregators()
 
     def process_batch(self, batch):
-        batch = dict_subset(batch, self.buffer_.input_names)
+        try:
+            batch = dict_subset(batch, self.buffer_.input_names)
+        except KeyError:
+            reraise_as(
+                "Not all data sources required for monitoring were"
+                " provided. The list of required data sources:"
+                " {}.".format(self.buffer_.input_names))
         if self._accumulate_fun is not None:
             self._accumulate_fun(**batch)
 
@@ -177,17 +196,17 @@ class DatasetEvaluator(object):
         return self.buffer_.get_aggregated_values()
 
     def evaluate(self, data_stream):
-        """Compute the expressions over a data stream.
+        """Compute the variables over a data stream.
 
         Parameters
         ----------
-        data_stream : instance of :class:`DataStream`
+        data_stream : instance of :class:`.DataStream`
             The data stream. Only the first epoch of data is used.
 
         Returns
         -------
-        A mapping from expression names to the values computed on the
-        provided dataset.
+        A mapping from record names to the values computed on the provided
+        dataset.
 
         """
         self.initialize_aggregators()
@@ -197,7 +216,7 @@ class DatasetEvaluator(object):
                 self.process_batch(batch)
         else:
             logger.debug(
-                'Only data independent expressions were given,'
+                'Only data independent variables were given,'
                 'will not iterate the over data!')
 
         return self.get_aggregated_values()

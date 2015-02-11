@@ -2,10 +2,12 @@ import numpy
 import theano
 from numpy.testing import assert_allclose
 from theano import tensor
-from theano.tensor.shared_randomstreams import RandomStreams
+from theano.sandbox.rng_mrg import MRG_RandomStreams
 
+from blocks.bricks import MLP, Identity
 from blocks.bricks.base import Brick
 from blocks.graph import apply_noise, ComputationGraph
+from blocks.initialization import Constant
 from tests.bricks.test_bricks import TestBrick
 
 floatX = theano.config.floatX
@@ -50,6 +52,14 @@ def test_computation_graph():
     cg3 = ComputationGraph([z + W])
     assert set(cg3.shared_variables) == {W}
 
+    cg4 = ComputationGraph([W])
+    assert cg4.variables == [W]
+
+    w1 = W ** 2
+    cg5 = ComputationGraph([w1])
+    assert W in cg5.variables
+    assert w1 in cg5.variables
+
 
 def test_apply_noise():
     x = tensor.scalar()
@@ -57,7 +67,18 @@ def test_apply_noise():
     z = x + y
 
     cg = ComputationGraph([z])
-    rng = RandomStreams(1)
-    noised_cg = apply_noise(cg, [y], 1, rng)
-    assert_allclose(noised_cg.outputs[0].eval({x: 1., y: 1.}),
-                    2 + RandomStreams(1).normal().eval())
+    noised_cg = apply_noise(cg, [y], 1, 1)
+    assert_allclose(
+        noised_cg.outputs[0].eval({x: 1., y: 1.}),
+        2 + MRG_RandomStreams(1).normal(tuple()).eval())
+
+
+def test_snapshot():
+    x = tensor.matrix('x')
+    linear = MLP([Identity(), Identity()], [10, 10, 10],
+                 weights_init=Constant(1), biases_init=Constant(2))
+    linear.initialize()
+    y = linear.apply(x)
+    cg = ComputationGraph(y)
+    snapshot = cg.get_snapshot(dict(x=numpy.zeros((1, 10), dtype=floatX)))
+    assert len(snapshot) == 14

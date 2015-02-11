@@ -1,7 +1,7 @@
 from blocks.log import TrainingLog
 
 
-def test_ram_training_log():
+def test_training_log():
     log = TrainingLog()
 
     # test basic writing capabilities
@@ -21,3 +21,7 @@ def test_ram_training_log():
 
     # test iteration
     assert len(list(log)) == 2
+    df = log.to_dataframe()
+    assert list(sorted(df.columns)) == ["field", "flag"]
+    assert df.flag[1] is False
+    assert df.field[0] == 45

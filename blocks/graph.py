@@ -6,17 +6,18 @@ from itertools import chain
 import theano
 from theano import Variable
 from theano.gof import graph
-from theano.gof.sched import make_dependence_cmp, sort_apply_nodes
 from theano.sandbox.rng_mrg import MRG_RandomStreams
 
-from blocks.utils import is_graph_input, is_shared_variable, dict_union
+from blocks import config
+from blocks.roles import add_role, AUXILIARY
+from blocks.utils import (is_graph_input, is_shared_variable, dict_union,
+                          shared_like)
 
 logger = logging.getLogger(__name__)
-dependence = make_dependence_cmp()
 
 
 class ComputationGraph(object):
-    """Encapsulates a managed Theano computation graph.
+    r"""Encapsulates a managed Theano computation graph.
 
     This implies that it not only contains the variables required to
     compute the given outputs, but also all the auxiliary variables and
@@ -28,26 +29,26 @@ class ComputationGraph(object):
 
     Parameters
     ----------
-    outputs : Theano variable or list of Theano variables
+    outputs : (list of) :class:`~tensor.TensorVariable`
         The output(s) of the computation graph.
 
     Attributes
     ----------
-    inputs : list of Theano variables
+    inputs : list of :class:`~tensor.TensorVariable`
         The inputs of the computation graph. This does not include shared
         variables and constants.
-    shared_variables : list of Theano shared variables
+    shared_variables : list of :class:`~tensor.TensorSharedVariable`
         All the shared variables in the graph.
-    outputs : list of Theano variables
+    outputs : list of :class:`~tensor.TensorVariable`
         The outputs of the computations graph (as passed to the
         constructor).
-    auxiliary_variables : list of Theano variables
-        All variables which have the :attr:`Variable.AUXILIARY` role.
-    intermediary_variables : list of Theano variables
+    auxiliary_variables : list of :class:`~tensor.TensorVariable`
+        All variables which have the :const:`.AUXILIARY` role.
+    intermediary_variables : list of :class:`~tensor.TensorVariable`
         Any variable that is not part of :attr:`inputs` or :attr:`outputs`.
-    variables : list of Theano variables
+    variables : list of :class:`~tensor.TensorVariable`
         All variables (including auxiliary) in the managed graph.
-    updates : list of (Theano variable, Theano expression) pairs
+    updates : :class:`~tensor.TensorSharedVariable` updates
         All the updates found attached to the annotations.
 
     """
@@ -56,6 +57,10 @@ class ComputationGraph(object):
             outputs = [outputs]
         self.outputs = outputs
         self._get_variables()
+        self._has_inputs = {}
+
+    def __iter__(self):
+        return iter(self.variables)
 
     @property
     def inputs(self):
@@ -81,28 +86,37 @@ class ComputationGraph(object):
         """Collect variables, updates and auxiliary variables."""
         updates = OrderedDict()
 
-        # Sort apply nodes topologically, get variables and remove duplicates
-        inputs = graph.inputs(self.outputs)
-        sorted_apply_nodes = sort_apply_nodes([inputs], self.outputs,
-                                              [dependence])
-        seen = set()
-        main_vars = [var for var in list(chain(
-            *[apply_node.inputs for apply_node in sorted_apply_nodes]))
-            if not (var in seen or seen.add(var))] + self.outputs
+        shared_outputs = [o for o in self.outputs if is_shared_variable(o)]
+        usual_outputs = [o for o in self.outputs if not is_shared_variable(o)]
+        variables = shared_outputs
 
-        # While preserving order add auxiliary variables, and collect updates
-        seen = set()
-        seen_avs = set(main_vars)  # Intermediate variables could be auxiliary
-        variables = []
-        for var in main_vars:
-            variables.append(var)
-            for annotation in getattr(var.tag, 'annotations', []):
-                if annotation not in seen:
-                    seen.add(annotation)
-                    new_avs = [av for av in annotation.auxiliary_variables
-                               if not (av in seen_avs or seen_avs.add(av))]
-                    variables.extend(new_avs)
-                    updates = dict_union(updates, annotation.updates)
+        if usual_outputs:
+            # Sort apply nodes topologically, get variables and remove
+            # duplicates
+            inputs = graph.inputs(self.outputs)
+            sorted_apply_nodes = graph.io_toposort(inputs, usual_outputs)
+
+            seen = set()
+            main_vars = [var for var in list(chain(
+                *[apply_node.inputs for apply_node in sorted_apply_nodes]))
+                if not (var in seen or seen.add(var))] + self.outputs
+
+            # While preserving order add auxiliary variables, and collect
+            # updates
+            seen = set()
+            # Intermediate variables could be auxiliary
+            seen_avs = set(main_vars)
+            variables = []
+            for var in main_vars:
+                variables.append(var)
+                for annotation in getattr(var.tag, 'annotations', []):
+                    if annotation not in seen:
+                        seen.add(annotation)
+                        new_avs = [
+                            av for av in annotation.auxiliary_variables
+                            if not (av in seen_avs or seen_avs.add(av))]
+                        variables.extend(new_avs)
+                        updates = dict_union(updates, annotation.updates)
 
         self.variables = variables
         self.updates = updates
@@ -124,43 +138,56 @@ class ComputationGraph(object):
         return ComputationGraph(theano.clone(self.outputs,
                                              replace=replacements))
 
-    def get_theano_function(self):
+    def get_theano_function(self, additional_updates=None):
         """Create Theano function from the graph contained."""
-        return theano.function(self.inputs, self.outputs,
-                               updates=self.updates)
+        updates = self.updates
+        if additional_updates:
+            updates = dict_union(updates, OrderedDict(additional_updates))
+        return theano.function(self.inputs, self.outputs, updates=updates)
 
+    def get_snapshot(self, data):
+        """Evaluate all role-carrying Theano variables on given data.
 
-def add_role(var, role):
-    r"""Add a role to a given Theano variable.
+        Parameters
+        ----------
+        data : dict of (data source, data) pairs
+            Data for input variables. The sources should match with the
+            names of the input variables.
 
-    Parameters
-    ----------
-    var : Theano variable
-        The variable to assign the new role to.
-    role : :class:`VariableRole` instance
+        Returns
+        -------
+        Dictionary of (variable, variable value on given data) pairs.
 
-    Notes
-    -----
-    Some roles are subroles of others (e.g. :const:`WEIGHTS` is a subrole
-    of :const:`PARAMETER`). This function will not add a role if a more
-    specific role has already been added. If you need to replace a role
-    with a parent role (e.g. replace :const:`WEIGHTS` with
-    :const:`PARAMETER`) you must do so manually.
+        """
+        role_variables = [var for var in self.variables
+                          if hasattr(var.tag, "roles")
+                          and not is_shared_variable(var)]
+        value_holders = [shared_like(var) for var in role_variables]
+        function = self.get_theano_function(zip(value_holders, role_variables))
+        function(*(data[input_.name] for input_ in self.inputs))
+        return OrderedDict([(var, value_holder.get_value(borrow=True))
+                            for var, value_holder in zip(role_variables,
+                                                         value_holders)])
 
-    Examples
-    --------
-    >>> from theano import tensor
-    >>> W = tensor.matrix()
-    >>> from blocks.bricks import WEIGHTS
-    >>> add_role(W, WEIGHTS)
-    >>> print(*W.tag.roles)
-    WEIGHTS
+    def has_inputs(self, variable):
+        """Check if a variable depends on input variables.
 
-    """
-    roles = getattr(var.tag, 'roles', [])
-    roles = [old_role for old_role in roles
-             if not isinstance(role, old_role.__class__)] + [role]
-    var.tag.roles = roles
+        Returns
+        -------
+        bool
+            ``True`` if the given variable depends on input variables,
+            ``False`` otherwise.
+
+        """
+        if variable not in self._has_inputs:
+            self._has_inputs[variable] = False
+            if is_graph_input(variable):
+                self._has_inputs[variable] = True
+            elif getattr(variable, 'owner', None):
+                for dependancy in variable.owner.inputs:
+                    if self.has_inputs(dependancy):
+                        self._has_inputs[variable] = True
+        return self._has_inputs[variable]
 
 
 def add_annotation(var, annotation):
@@ -177,19 +204,20 @@ class Annotation(object):
 
     In Blocks annotations are automatically attached to variables created
     using bricks. One form of annotation is that many variables are
-    assigned a role (see :class:`VariableRole`). A second form of
+    assigned a role (see :class:`.VariableRole`). A second form of
     annotation comes in the form of attaching a :class:`Annotation`
     instance to the variable's ``tag`` attribute, with auxiliary variables
     and/or updates.
 
     For example, we might be interested in the mean activation of certain
-    application of a :class:`Linear` brick. The variable representing the
+    application of a :class:`.Linear` brick. The variable representing the
     mean activation is attached as an auxiliary variable to the annotations
     of the input and output variables of this brick. Using the
     :class:`ComputationGraph` class (the
-    :meth:`ComputationGraph.get_variables` method in particular) we can
-    retrieve these Theano variables to pass on to the monitor, use as a
-    regularizer, etc.
+    :attr:`~ComputationGraph.variables`,
+    :attr:`~ComputationGraph.auxiliary_variables`, etc.  attributes in
+    particular) we can retrieve these Theano variables to pass on to the
+    monitor, use as a regularizer, etc.
 
     In most cases, annotations are added on a brick level (e.g. each brick
     will assign the weight norm of its weights as an auxiliary value) or on
@@ -216,7 +244,7 @@ class Annotation(object):
         self.auxiliary_variables = []
         self.updates = OrderedDict()
 
-    def add_auxiliary_variable(self, expression, roles=None, name=None):
+    def add_auxiliary_variable(self, variable, roles=None, name=None):
         """Attach an auxiliary variable to the graph.
 
         Auxiliary variables are Theano variables that are not part of a
@@ -225,19 +253,20 @@ class Annotation(object):
 
         Parameters
         ----------
-        expression : Theano variable
-            The expression of the variable you want to add.
-        roles : list of :class:`VariableRole` instances, optional
-            The roles of this variable. The :const:`AUXILIARY`
+        variable : :class:`~tensor.TensorVariable`
+            The variable you want to add.
+        roles : list of :class:`.VariableRole` instances, optional
+            The roles of this variable. The :const:`.AUXILIARY`
             role will automatically be added. Other options are
-            :const:`COST`, :const:`WEIGHTS`, etc.
+            :const:`.COST`, :const:`.WEIGHTS`, etc.
         name : str, optional
-            The name of the expression; overrides the name of the variable
-            if it already has one.
+            Name to give to the variable. If the variable already has a
+            name it will be overwritten.
 
         Examples
         --------
         >>> from blocks.bricks.base import application, Brick
+        >>> from blocks.roles import COST
         >>> from blocks.utils import shared_floatx_zeros
         >>> class Foo(Brick):
         ...     def _allocate(self):
@@ -263,71 +292,39 @@ class Annotation(object):
         {mean_x}
 
         """
-        add_annotation(expression, self)
+        add_annotation(variable, self)
         if name is not None:
-            expression.name = name
-        add_role(expression, AUXILIARY)
+            variable.name = name
+            variable.tag.name = name
+        add_role(variable, AUXILIARY)
         if roles is not None:
             for role in roles:
-                add_role(expression, role)
-        self.auxiliary_variables.append(expression)
+                add_role(variable, role)
+        self.auxiliary_variables.append(variable)
 
 
-def apply_noise(graph, variables, level, rng=None):
+def apply_noise(computation_graph, variables, level, seed=None):
     """Add Gaussian noise to certain variable of a computation graph.
 
     Parameters
     ----------
-    graph : instance of :class:`ComputationGraph`
+    computation_graph : instance of :class:`ComputationGraph`
         The computation graph.
-    varibles : Theano variables
+    variables : :class:`~tensor.TensorVariable`
         Variables to add noise to.
     level : float
         Noise level.
-    rng : Theano random stream, optional
-        The random stream to use. By default an RNG with seed equal to 1 is
-        used.
+    seed : int, optional
+        The seed with which
+        :class:`~theano.sandbox.rng_mrg.MRG_RandomStreams` is initialized,
+        is set to 1 by default.
 
     """
-    if not rng:
-        rng = MRG_RandomStreams(1)
+    if not seed:
+        seed = config.default_seed
+    rng = MRG_RandomStreams(seed)
     replace = {}
     for variable in variables:
         replace[variable] = (variable +
                              rng.normal(variable.shape, std=level))
-    return graph.replace(replace)
-
-
-class VariableRole(object):
-    def __str__(self):
-        return self.__class__.__name__[:-4].upper()
-
-
-class InputRole(VariableRole):
-    pass
-
-INPUT = InputRole()
-
-
-class OutputRole(VariableRole):
-    pass
-
-OUTPUT = OutputRole
-
-
-class CostRole(VariableRole):
-    pass
-
-COST = CostRole()
-
-
-class ParameterRole(VariableRole):
-    pass
-
-PARAMETER = ParameterRole()
-
-
-class AuxiliaryRole(VariableRole):
-    pass
-
-AUXILIARY = AuxiliaryRole()
+    return computation_graph.replace(replace)

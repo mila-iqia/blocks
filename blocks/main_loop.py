@@ -1,8 +1,12 @@
 """The event-based main loop of Blocks."""
 import signal
+import logging
+import traceback
 
 from blocks.log import TrainingLog
-from blocks.utils import unpack
+from blocks.utils import reraise_as, unpack
+
+logger = logging.getLogger(__name__)
 
 
 class MainLoop(object):
@@ -34,13 +38,13 @@ class MainLoop(object):
     model : object
         The model object. It is entirely transparent for the main loop
         but may be used by extensions.
-    data_stream : instance of :class:`DataStream`.
+    data_stream : instance of :class:`.DataStream`.
         The data stream.
     algorithm : object
         The training algorithm.
-    log : instance of :class:`TrainingLog`
-        The log. When not given, a :class:`TrainingLog` is created.
-    extensions : list of :class:`TrainingExtension` instances
+    log : instance of :class:`.TrainingLog`
+        The log. When not given, a :class:`.TrainingLog` is created.
+    extensions : list of :class:`.TrainingExtension` instances
         The training extensions. Will be called in the same order as given
         here.
 
@@ -62,6 +66,15 @@ class MainLoop(object):
         self.status._epoch_started = False
 
     @property
+    def iteration_state(self):
+        """Quick access to the (data stream, epoch iterator) pair."""
+        return (self.data_stream, self.epoch_iterator)
+
+    @iteration_state.setter
+    def iteration_state(self, value):
+        (self.data_stream, self.epoch_iterator) = value
+
+    @property
     def status(self):
         """A shortcut for `self.log.status`."""
         return self.log.status
@@ -73,9 +86,10 @@ class MainLoop(object):
         a `training_finish_requested` record in the log.
 
         """
-        original_handler = signal.signal(signal.SIGINT,
-                                         self._handle_keyboard_interrupt)
+        self.original_handler = signal.signal(
+            signal.SIGINT, self._handle_keyboard_interrupt)
         try:
+            logger.info("Entered the main loop")
             if not self.status._training_started:
                 for extension in self.extensions:
                     extension.main_loop = self
@@ -83,15 +97,24 @@ class MainLoop(object):
                 self._run_extensions('before_training')
                 self.algorithm.initialize()
                 self.status._training_started = True
-            else:
+            # We can not write "else:" here because extension
+            # called "before_training" could have changed the status
+            # of the main loop.
+            if self.log.status.iterations_done > 0:
                 self._run_extensions('on_resumption')
             while self._run_epoch():
                 pass
         except TrainingFinish:
             self.log.current_row.training_finished = True
+        except Exception as e:
+            logger.error(traceback.format_exc(e))
+            logger.info(
+                "An error occurred during the training.\n"
+                "Attempting to run extensions before exiting...")
+            # TODO: change the serialization destination here
         finally:
             self._run_extensions('after_training')
-            signal.signal(signal.SIGINT, original_handler)
+            signal.signal(signal.SIGINT, self.original_handler)
 
     def find_extension(self, name):
         """Find an extension with a given name.
@@ -112,6 +135,7 @@ class MainLoop(object):
     def _run_epoch(self):
         if not self.status._epoch_started:
             try:
+                self.log.status._received_first_batch = False
                 self.epoch_iterator = (self.data_stream.
                                        get_epoch_iterator(as_dict=True))
             except StopIteration:
@@ -132,7 +156,10 @@ class MainLoop(object):
         try:
             batch = next(self.epoch_iterator)
         except StopIteration:
+            if not self.log.status._received_first_batch:
+                reraise_as(ValueError("epoch iterator yielded zero batches"))
             return False
+        self.log.status._received_first_batch = True
         self._run_extensions('before_batch', batch)
         self.algorithm.process_batch(batch)
         self.status.iterations_done += 1
@@ -156,7 +183,7 @@ class MainLoop(object):
     def _handle_keyboard_interrupt(self, signal_number, frame):
         # After receiving a first keyboard interrupt signal,
         # ignore all following ones.
-        signal.signal(signal.SIGINT, signal.SIG_DFL)
+        signal.signal(signal.SIGINT, self.original_handler)
         self._run_extensions('on_interrupt')
         self.log.current_row.keyboard_interrupt_received = True
 

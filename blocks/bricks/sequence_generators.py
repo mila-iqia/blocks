@@ -7,7 +7,7 @@ from theano import tensor
 from blocks.bricks import Initializable, Identity, MLP, Random
 from blocks.bricks.base import application, Brick, lazy
 from blocks.bricks.recurrent import BaseRecurrent
-from blocks.bricks.parallel import Fork, Mixer
+from blocks.bricks.parallel import Fork, Distribute
 from blocks.bricks.lookup import LookupTable
 from blocks.bricks.recurrent import recurrent
 from blocks.utils import dict_subset, dict_union
@@ -40,31 +40,31 @@ class BaseSequenceGenerator(Initializable):
 
     **Algorithm:**
 
-    0. The initial states are computed from the contexts. This includes
+    1. The initial states are computed from the contexts. This includes
        fake initial outputs given by the `initial_outputs` method of the
        readout, initial states and glimpses given by the `initial_state`
        method of the transition.
 
-    1. Given the contexts, the current state and the glimpses from the
+    2. Given the contexts, the current state and the glimpses from the
        previous step the attention mechanism hidden in the transition
        produces current step glimpses. This happens in the `take_look`
        method of the transition.
 
-    2. Using the contexts, the fed back output from the previous step, the
+    3. Using the contexts, the fed back output from the previous step, the
        current states and glimpses, the readout brick is used to generate
        the new output by calling its `readout` and `emit` methods.
 
-    3. The new output is fed back in the `feedback` method of the readout
+    4. The new output is fed back in the `feedback` method of the readout
        brick. This feedback, together with the contexts, the glimpses and
        the previous states is used to get the new states in the
        transition's `apply` method. Optionally the `fork` brick is used in
        between to compute the transition's inputs from the feedback.
 
-    4. Back to step 1 if desired sequence length is not yet reached.
+    5. Back to step 1 if desired sequence length is not yet reached.
 
     | A scheme of the algorithm described above follows.
 
-    .. image:: _static/sequence_generator_scheme.png
+    .. image:: /_static/sequence_generator_scheme.png
             :height: 500px
             :width: 500px
 
@@ -84,12 +84,12 @@ class BaseSequenceGenerator(Initializable):
         The readout component of the sequence generator.
     transition : instance of :class:`AbstractAttentionTransition`
         The transition component of the sequence generator.
-    fork : :class:`Brick`
+    fork : :class:`.Brick`
         The brick to compute the transition's inputs from the feedback.
 
     Notes
     -----
-    See :class:`Initializable` for initialization parameters.
+    See :class:`.Initializable` for initialization parameters.
 
     """
     @lazy
@@ -123,21 +123,22 @@ class BaseSequenceGenerator(Initializable):
         if not len(feedback_names) == 1:
             raise ValueError
         self.fork.input_dim = self.readout.get_dim(feedback_names[0])
-        self.fork.fork_dims = {
+        self.fork.output_dims = {
             name: self.transition.get_dim(name)
             for name in self.fork.apply.outputs}
 
     @application
-    def cost(self, outputs, mask=None, **kwargs):
+    def cost(self, application_call, outputs, mask=None, **kwargs):
         """Returns generation costs for output sequences.
 
         Parameters
         ----------
-        outputs : Theano variable
+        outputs : :class:`~tensor.TensorVariable`
             The 3(2) dimensional tensor containing output sequences.
             The dimension 0 must stand for time, the dimension 1 for the
             position on the batch.
-        mask : The 0/1 matrix identifying fake outputs.
+        mask : :class:`~tensor.TensorVariable`
+            The binary matrix identifying fake outputs.
 
         Notes
         -----
@@ -173,11 +174,11 @@ class BaseSequenceGenerator(Initializable):
             feedback=feedback, **dict_union(states, glimpses, contexts))
         costs = self.readout.cost(readouts, outputs)
 
+        for name, variable in glimpses.items():
+            application_call.add_auxiliary_variable(
+                variable.copy(), name=name)
+
         # In case the user needs some glimpses or states or smth else
-        also_return = kwargs.get("also_return")
-        if also_return:
-            others = {name: results[name] for name in also_return}
-            return (costs, others)
         return costs
 
     @recurrent
@@ -186,7 +187,7 @@ class BaseSequenceGenerator(Initializable):
 
         Parameters
         ----------
-        outputs : Theano variable
+        outputs : :class:`~tensor.TensorVariable`
             The outputs from the previous step.
 
         Notes
@@ -410,7 +411,7 @@ class LinearReadout(Readout, Initializable):
 
     Notes
     -----
-    See :class:`Initializable` for initialization parameters.
+    See :class:`.Initializable` for initialization parameters.
 
     """
     @lazy
@@ -564,16 +565,16 @@ class AttentionTransition(AbstractAttentionTransition, Initializable):
     """Combines an attention mechanism and a recurrent transition.
 
     This brick is assembled from three components: an attention mechanism,
-    a recurrent transition and a mixer brick to make the first two work
+    a recurrent transition and a brick to make the first two work
     together.  It is expected that among the contexts of the transition's
     `apply` methods there is one, intended to be attended by the attention
     mechanism, and another one serving as a mask for the first one.
 
     Parameters
     ----------
-    transition : :class:`Brick`
+    transition : :class:`.Brick`
         The recurrent transition.
-    attention : :class:`Brick`
+    attention : :class:`.Brick`
         The attention mechanism.
     attended_name : str
         The name of the attended context. If ``None``, the first context is
@@ -584,18 +585,18 @@ class AttentionTransition(AbstractAttentionTransition, Initializable):
 
     Notes
     -----
-    See :class:`Initializable` for initialization parameters.
+    See :class:`.Initializable` for initialization parameters.
 
     Currently lazy-only.
 
     """
-    def __init__(self, transition, attention, mixer,
+    def __init__(self, transition, attention, distribute,
                  attended_name=None, attended_mask_name=None,
                  **kwargs):
         super(AttentionTransition, self).__init__(**kwargs)
         self.transition = transition
         self.attention = attention
-        self.mixer = mixer
+        self.distribute = distribute
 
         self.sequence_names = self.transition.apply.sequences
         self.state_names = self.transition.apply.states
@@ -617,17 +618,18 @@ class AttentionTransition(AbstractAttentionTransition, Initializable):
             name for name in self.glimpse_names
             if name in self.attention.take_look.inputs]
 
-        self.children = [self.transition, self.attention, self.mixer]
+        self.children = [self.transition, self.attention, self.distribute]
 
     def _push_allocation_config(self):
         self.attention.state_dims = self.transition.get_dims(self.state_names)
         self.attention.sequence_dim = self.transition.get_dim(
             self.attended_name)
-        self.mixer.channel_dims = dict_subset(
+        self.distribute.target_dims = dict_subset(
             dict_union(
-                self.transition.get_dims(self.sequence_names),
-                self.attention.get_dims(self.glimpse_names)),
-            self.mixer.apply.inputs)
+                self.transition.get_dims(self.sequence_names)),
+            self.distribute.target_names)
+        self.distribute.source_dim = self.attention.get_dim(
+            self.distribute.source_name)
 
     @application
     def take_look(self, **kwargs):
@@ -640,13 +642,14 @@ class AttentionTransition(AbstractAttentionTransition, Initializable):
 
         Returns
         -------
-        glimpses : list of Theano variables
+        glimpses : list of :class:`~tensor.TensorVariable`
             Current step glimpses.
 
         """
         return self.attention.take_look(
             kwargs[self.attended_name],
             kwargs.get(self.preprocessed_attended_name),
+            mask=kwargs.get("mask"),
             **dict_subset(kwargs,
                           self.state_names + self.previous_glimpses_needed))
 
@@ -666,7 +669,7 @@ class AttentionTransition(AbstractAttentionTransition, Initializable):
 
         Returns
         -------
-        current_states : list of Theano variables
+        current_states : list of :class:`~tensor.TensorVariable`
             Current states computed by `self.transition`.
 
         """
@@ -674,10 +677,10 @@ class AttentionTransition(AbstractAttentionTransition, Initializable):
                                 must_have=False)
         states = dict_subset(kwargs, self.state_names, pop=True)
         glimpses = dict_subset(kwargs, self.glimpse_names, pop=True)
-        sequences.update(self.mixer.apply(
+        sequences.update(self.distribute.apply(
             return_dict=True,
             **dict_subset(dict_union(sequences, glimpses),
-                          self.mixer.apply.inputs)))
+                          self.distribute.apply.inputs)))
         current_states = self.transition.apply(
             iterate=False, return_list=True,
             **dict_union(sequences, states, kwargs))
@@ -699,7 +702,7 @@ class AttentionTransition(AbstractAttentionTransition, Initializable):
 
         Returns
         -------
-        outputs : list of Theano variables
+        outputs : list of :class:`~tensor.TensorVariable`
             The current step states and glimpses.
 
         """
@@ -723,9 +726,14 @@ class AttentionTransition(AbstractAttentionTransition, Initializable):
             **dict_union(sequences, states, current_glimpses, kwargs))
         return current_states + list(current_glimpses.values())
 
-    @do_apply.delegate
-    def do_apply_delegate(self):
-        return self.transition.apply
+    @do_apply.property('sequences')
+    def do_apply_sequences(self):
+        return self.transition.apply.sequences
+
+    @do_apply.property('contexts')
+    def do_apply_contexts(self):
+        return self.transition.apply.contexts + [
+            self.preprocessed_attended_name]
 
     @do_apply.property('states')
     def do_apply_states(self):
@@ -755,6 +763,10 @@ class AttentionTransition(AbstractAttentionTransition, Initializable):
         # TODO: Nice interface for this trick?
         return self.do_apply.__get__(self, None)
 
+    @apply.property('contexts')
+    def apply_contexts(self):
+        return self.transition.apply.contexts
+
     @application
     def initial_state(self, state_name, batch_size, **kwargs):
         if state_name in self.glimpse_names:
@@ -765,6 +777,9 @@ class AttentionTransition(AbstractAttentionTransition, Initializable):
     def get_dim(self, name):
         if name in self.glimpse_names:
             return self.attention.get_dim(name)
+        if name == self.preprocessed_attended_name:
+            (original_name,) = self.attention.preprocess.outputs
+            return self.attention.get_dim(original_name)
         return self.transition.get_dim(name)
 
 
@@ -823,11 +838,11 @@ class SequenceGenerator(BaseSequenceGenerator):
     ----------
     readout : instance of :class:`AbstractReadout`
         The readout component for the sequence generator.
-    transition : instance of :class:`BaseRecurrent`
+    transition : instance of :class:`.BaseRecurrent`
         The recurrent transition to be used in the sequence generator.
         Will be combined with `attention`, if that one is given.
-    attention : :class:`Brick`
-        The attention mechanism to be added to `transition`. Can be
+    attention : :class:`.Brick`
+        The attention mechanism to be added to ``transition``. Can be
         ``None``, in which case no attention mechanism is used.
 
     Notes
@@ -844,9 +859,9 @@ class SequenceGenerator(BaseSequenceGenerator):
 
         fork = Fork(fork_inputs)
         if attention:
-            mixer = Mixer(fork_inputs, attention.take_look.outputs[0],
-                          name="mixer")
-            transition = AttentionTransition(transition, attention, mixer,
+            distribute = Distribute(fork_inputs,
+                                    attention.take_look.outputs[0])
+            transition = AttentionTransition(transition, attention, distribute,
                                              name="att_trans")
         else:
             transition = FakeAttentionTransition(transition,

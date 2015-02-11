@@ -1,4 +1,5 @@
 from inspect import isclass
+import re
 
 from blocks.bricks.base import ApplicationCall, Brick
 
@@ -40,15 +41,20 @@ class VariableFilter(object):
 
     Parameters
     ----------
-    roles : list of :class:`VariableRole` instances, optional
+    roles : list of :class:`.VariableRole` instances, optional
         Matches any variable which has one of the roles given.
-    bricks : list of :class:`Brick` classes or instances, optional
-        Matches any variable whose brick is either the given brick, or
-        whose brick is of a given class.
+    bricks : list of :class:`.Brick` classes or instances, optional
+        Matches any variable whose brick is either one of the given
+        bricks, or whose brick is of given classes.
     each_role : bool, optional
         If ``True``, the variable needs to have all given roles.  If
         ``False``, a variable matching any of the roles given will be
         returned. ``False`` by default.
+    name : str, optional
+        A regular expression for the variable name. The Blocks name (i.e.
+        `x.tag.name`) is used.
+    application : :class:`.Application` instance
+        Matches a variable that was produced by the application given.
 
     Notes
     -----
@@ -57,7 +63,7 @@ class VariableFilter(object):
     were created in the process of applying a brick will be filtered out.
 
     Note that technically speaking, bricks are able to have non-shared
-    variables as parameters. For example, we can use the tranpose of
+    variables as parameters. For example, we can use the transpose of
     another weight matrix as the parameter of a particular brick. This
     means that in some unusual cases, filtering by the :const:`PARAMETER`
     role alone will not be enough to retrieve all trainable parameters in
@@ -80,17 +86,20 @@ class VariableFilter(object):
     [b]
 
     """
-    def __init__(self, roles=None, bricks=None, each_role=False):
+    def __init__(self, roles=None, bricks=None, each_role=False, name=None,
+                 application=None):
         self.roles = roles
         self.bricks = bricks
         self.each_role = each_role
+        self.name = name
+        self.application = application
 
     def __call__(self, variables):
         """Filter the given variables.
 
         Parameters
         ----------
-        variables : list of Theano variables
+        variables : list of :class:`~tensor.TensorVariable`
 
         """
         if self.roles:
@@ -120,4 +129,13 @@ class VariableFilter(object):
                         filtered_variables.append(var)
                         break
             variables = filtered_variables
+        if self.name:
+            variables = [var for var in variables
+                         if hasattr(var.tag, 'name')
+                         and re.match(self.name, var.tag.name)]
+        if self.application:
+            variables = [var for var in variables
+                         if get_application_call(var)
+                         and get_application_call(var).application
+                         == self.application]
         return variables
