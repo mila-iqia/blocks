@@ -322,7 +322,9 @@ class AdaDelta(StepRule):
     Parameters
     ----------
     decay_rate : float, optional
-        Decay rate
+        Decay rate. Defaults to 0.
+    epsilon : float, optional
+        Stabilizing constant for RMS. Defaults to 1e-7.
 
     Notes
     -----
