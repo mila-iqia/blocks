@@ -3,7 +3,7 @@ from theano.tensor.signal.downsample import max_pool_2d, DownsampleFactorMax
 
 from blocks.bricks import Initializable, Feedforward, Sequence
 from blocks.bricks.base import application, Brick, lazy
-from blocks.roles import add_role, FILTERS
+from blocks.roles import add_role, FILTERS, BIASES
 from blocks.utils import shared_floatx_zeros
 
 
@@ -38,7 +38,6 @@ class Convolutional(Initializable):
         details. Defaults to 'valid'.
 
     """
-    has_bias = False
 
     @lazy
     def __init__(self, filter_size, num_filters, num_channels, input_dim=None,
@@ -58,9 +57,18 @@ class Convolutional(Initializable):
         add_role(W, FILTERS)
         self.params.append(W)
         self.add_auxiliary_variable(W.norm(2), name='W_norm')
+        if self.use_bias:
+            b = shared_floatx_zeros((self.num_filters,), name='b')
+            add_role(b, BIASES)
+            self.params.append(b)
+            self.add_auxiliary_variable(b.norm(2), name='b_norm')
 
     def _initialize(self):
-        W, = self.params
+        if self.use_bias:
+            W, b = self.params
+            self.biases_init.initialize(b, self.rng)
+        else:
+            W, = self.params
         self.weights_init.initialize(W, self.rng)
 
     @application(inputs=['input_'], outputs=['output'])
@@ -85,12 +93,18 @@ class Convolutional(Initializable):
             for 'full' it is ``image_shape + filter_size - 1``.
 
         """
-        W, = self.params
+        if self.use_bias:
+            W, b = self.params
+        else:
+            W = self.params
+
         output = conv2d(
             input_, W, image_shape=self.input_dim, subsample=self.step,
             border_mode=self.border_mode,
             filter_shape=((self.num_filters, self.num_channels) +
                           self.filter_size))
+        if self.use_bias:
+            output += b.dimshuffle('x', 0, 'x', 'x')
         return output
 
     def get_dim(self, name):
