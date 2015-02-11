@@ -38,7 +38,7 @@ class Convolutional(Initializable):
         details. Defaults to 'valid'.
 
     """
-    use_bias = True
+
     @lazy
     def __init__(self, filter_size, num_filters, num_channels, input_dim=None,
                  step=(1, 1), border_mode='valid', **kwargs):
@@ -97,7 +97,7 @@ class Convolutional(Initializable):
             W, b = self.params
         else:
             W = self.params
-            
+
         output = conv2d(
             input_, W, image_shape=self.input_dim, subsample=self.step,
             border_mode=self.border_mode,
