@@ -139,10 +139,10 @@ def test_attention_transition():
                                 name="transition")
     attention = SequenceContentAttention(transition.apply.states,
                                          match_dim=inp_dim, name="attention")
-    merge = Distribute([name for name in transition.apply.sequences
-                        if name != 'mask'],
-                       attention.take_look.outputs[0])
-    att_trans = AttentionTransition(transition, attention, merge,
+    distribute = Distribute([name for name in transition.apply.sequences
+                             if name != 'mask'],
+                            attention.take_look.outputs[0])
+    att_trans = AttentionTransition(transition, attention, distribute,
                                     name="att_trans")
     att_trans.weights_init = IsotropicGaussian(0.01)
     att_trans.biases_init = Constant(0)

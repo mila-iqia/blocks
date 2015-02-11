@@ -183,11 +183,11 @@ class Distribute(Fork):
     >>> x = tensor.matrix('x')
     >>> y = tensor.matrix('y')
     >>> z = tensor.matrix('z')
-    >>> merge = Distribute(target_names=['x', 'y'], source_name='z',
-    ...                    target_dims=dict(x=2, y=3), source_dim=3,
-    ...                    weights_init=Constant(2))
-    >>> merge.initialize()
-    >>> new_x, new_y = merge.apply(x=x, y=y, z=z)
+    >>> distribute = Distribute(target_names=['x', 'y'], source_name='z',
+    ...                         target_dims=dict(x=2, y=3), source_dim=3,
+    ...                         weights_init=Constant(2))
+    >>> distribute.initialize()
+    >>> new_x, new_y = distribute.apply(x=x, y=y, z=z)
     >>> new_x.eval({x: [[2, 2]], z: [[1, 1, 1]]}) # doctest: +ELLIPSIS
     array([[ 8.,  8.]]...
     >>> new_y.eval({y: [[1, 1, 1]], z: [[1, 1, 1]]}) # doctest: +ELLIPSIS

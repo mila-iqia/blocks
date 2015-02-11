@@ -524,7 +524,7 @@ class AttentionTransition(AbstractAttentionTransition, Initializable):
     """Combines an attention mechanism and a recurrent transition.
 
     This brick is assembled from three components: an attention mechanism,
-    a recurrent transition and a merge brick to make the first two work
+    a recurrent transition and a brick to make the first two work
     together.  It is expected that among the contexts of the transition's
     `apply` methods there is one, intended to be attended by the attention
     mechanism, and another one serving as a mask for the first one.
@@ -549,13 +549,13 @@ class AttentionTransition(AbstractAttentionTransition, Initializable):
     Currently lazy-only.
 
     """
-    def __init__(self, transition, attention, merge,
+    def __init__(self, transition, attention, distribute,
                  attended_name=None, attended_mask_name=None,
                  **kwargs):
         super(AttentionTransition, self).__init__(**kwargs)
         self.transition = transition
         self.attention = attention
-        self.merge = merge
+        self.distribute = distribute
 
         self.sequence_names = self.transition.apply.sequences
         self.state_names = self.transition.apply.states
@@ -577,18 +577,18 @@ class AttentionTransition(AbstractAttentionTransition, Initializable):
             name for name in self.glimpse_names
             if name in self.attention.take_look.inputs]
 
-        self.children = [self.transition, self.attention, self.merge]
+        self.children = [self.transition, self.attention, self.distribute]
 
     def _push_allocation_config(self):
         self.attention.state_dims = self.transition.get_dims(self.state_names)
         self.attention.sequence_dim = self.transition.get_dim(
             self.attended_name)
-        self.merge.target_dims = dict_subset(
+        self.distribute.target_dims = dict_subset(
             dict_union(
                 self.transition.get_dims(self.sequence_names)),
-            self.merge.target_names)
-        self.merge.source_dim = self.attention.get_dim(
-            self.merge.source_name)
+            self.distribute.target_names)
+        self.distribute.source_dim = self.attention.get_dim(
+            self.distribute.source_name)
 
     @application
     def take_look(self, **kwargs):
@@ -636,10 +636,10 @@ class AttentionTransition(AbstractAttentionTransition, Initializable):
                                 must_have=False)
         states = dict_subset(kwargs, self.state_names, pop=True)
         glimpses = dict_subset(kwargs, self.glimpse_names, pop=True)
-        sequences.update(self.merge.apply(
+        sequences.update(self.distribute.apply(
             return_dict=True,
             **dict_subset(dict_union(sequences, glimpses),
-                          self.merge.apply.inputs)))
+                          self.distribute.apply.inputs)))
         current_states = self.transition.apply(
             iterate=False, return_list=True,
             **dict_union(sequences, states, kwargs))
@@ -818,8 +818,9 @@ class SequenceGenerator(BaseSequenceGenerator):
 
         fork = Fork(fork_inputs)
         if attention:
-            merge = Distribute(fork_inputs, attention.take_look.outputs[0])
-            transition = AttentionTransition(transition, attention, merge,
+            distribute = Distribute(fork_inputs,
+                                    attention.take_look.outputs[0])
+            transition = AttentionTransition(transition, attention, distribute,
                                              name="att_trans")
         else:
             transition = FakeAttentionTransition(transition,
