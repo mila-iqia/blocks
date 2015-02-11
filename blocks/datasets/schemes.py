@@ -156,6 +156,8 @@ class ShuffledScheme(BatchScheme):
     """
     def __init__(self, *args, **kwargs):
         self.rng = kwargs.pop('rng', None)
+        if self.rng is None:
+            self.rng = numpy.random.RandomState(config.default_seed)
         super(ShuffledScheme, self).__init__(*args, **kwargs)
 
     def get_request_iterator(self):
@@ -167,7 +169,7 @@ class BatchIterator(six.Iterator):
     def __init__(self, num_examples, batch_size, shuffled=False, rng=None):
         if shuffled:
             if rng is None:
-                rng = numpy.random.RandomState(config.default_seed)
+                raise ValueError
             self.indices = list(range(num_examples))
             rng.shuffle(self.indices)
 
