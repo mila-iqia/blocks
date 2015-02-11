@@ -48,7 +48,7 @@ class OutputRole(VariableRole):
     pass
 
 #: The output of a :class:`.Brick`
-OUTPUT = OutputRole
+OUTPUT = OutputRole()
 
 
 class CostRole(VariableRole):
