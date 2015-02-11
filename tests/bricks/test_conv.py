@@ -16,7 +16,8 @@ def test_convolutional():
     batch_size = 5
     filter_size = (3, 3)
     conv = Convolutional(filter_size, num_filters, num_channels,
-                         weights_init=Constant(1.))
+                         weights_init=Constant(1.),
+                         bias_init=Constant(5.))
     conv.initialize()
     y = conv.apply(x)
     func = function([x], y)
@@ -25,7 +26,7 @@ def test_convolutional():
                        dtype=theano.config.floatX)
     assert_allclose(func(x_val),
                     numpy.prod(filter_size) * num_channels *
-                    numpy.ones((batch_size, num_filters, 15, 11)))
+                    numpy.ones((batch_size, num_filters, 15, 11)) + 5)
     conv.input_dim = (17, 13)
     assert conv.get_dim('output') == (num_filters, 15, 11)
 
