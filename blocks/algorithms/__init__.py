@@ -328,8 +328,10 @@ class AdaDelta(StepRule):
 
     Notes
     -----
-    For more information, see Zeiler, M. D. "ADADELTA: An Adaptive Learning
-    Rate Method" [http://arxiv.org/abs/1212.5701].
+    For more information, see [ADADELTA]_.
+
+    .. [ADADELTA] Matthew D. Zeiler, *ADADELTA: An Adaptive Learning
+       Rate Method*, arXiv:1212.5701.
 
     """
     def __init__(self, decay_rate=0., epsilon=1e-7):
