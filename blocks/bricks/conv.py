@@ -3,7 +3,7 @@ from theano.tensor.signal.downsample import max_pool_2d, DownsampleFactorMax
 
 from blocks.bricks import Initializable, Feedforward, Sequence
 from blocks.bricks.base import application, Brick, lazy
-from blocks.roles import add_role, FILTERS
+from blocks.roles import add_role, FILTERS, BIASES
 from blocks.utils import shared_floatx_zeros
 
 
@@ -38,8 +38,7 @@ class Convolutional(Initializable):
         details. Defaults to 'valid'.
 
     """
-    has_bias = False
-
+    use_bias = True
     @lazy
     def __init__(self, filter_size, num_filters, num_channels, input_dim=None,
                  step=(1, 1), border_mode='valid', **kwargs):

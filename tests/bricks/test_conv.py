@@ -17,7 +17,7 @@ def test_convolutional():
     filter_size = (3, 3)
     conv = Convolutional(filter_size, num_filters, num_channels,
                          weights_init=Constant(1.),
-                         bias_init=Constant(5.))
+                         biases_init=Constant(5.))
     conv.initialize()
     y = conv.apply(x)
     func = function([x], y)
