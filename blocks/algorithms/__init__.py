@@ -154,16 +154,18 @@ class GradientDescent(DifferentiableCostMinimizer):
             for param in params:
                 param -= steps[param]
 
+    Note, that the step is _subtracted, not added_! This is done in order
+    to make step rule chaining possible.
+
     Parameters
     ----------
     step_rule : instance of :class:`StepRule`, optional
         An object encapsulating most of the algorithm's logic. Its
         `compute_steps` method is called to get Theano expression for
-        steps. Note, that the step rule
-        might have a state, e.g. to remember a weighted sum of gradients
-        from previous steps like it is done in gradient descent with
-        momentum. If ``None``, an instance of :class:`SteepestDescent` is
-        created.
+        steps.  Note, that the step rule might have a state, e.g. to
+        remember a weighted sum of gradients from previous steps like it is
+        done in gradient descent with momentum. If ``None``, an instance of
+        :class:`SteepestDescent` is created.
     gradients : dict, optional
         A dictionary mapping a parameter to an expression for the cost's
         gradient with respect to the parameter. If ``None``, the gradient
@@ -210,8 +212,8 @@ class GradientDescent(DifferentiableCostMinimizer):
         if not set(batch.keys()) == set([v.name for v in self.inputs]):
             raise ValueError("mismatch of variable names and data sources" +
                              variable_mismatch_error.format(
-                                sources=batch.keys(),
-                                variables=[v.name for v in self.inputs]))
+                                 sources=batch.keys(),
+                                 variables=[v.name for v in self.inputs]))
         ordered_batch = [batch[v.name] for v in self.inputs]
         self._function(*ordered_batch)
 
@@ -298,7 +300,7 @@ class SteepestDescent(StepRule):
 
 
 class Momentum(StepRule):
-    """Accumulates the step with exponential discount.
+    """Accumulates gradients with exponential discount.
 
     Parameters
     ----------
