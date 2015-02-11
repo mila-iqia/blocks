@@ -1,7 +1,5 @@
 from blocks.utils import dict_union
 
-__author__ = "Dmitry Serdyuk <serdyuk.dmitriy@gmail.com>"
-
 from abc import ABCMeta, abstractmethod
 
 import numpy as np
@@ -58,15 +56,22 @@ class BeamSearch(Search):
 
     Parameters
     ----------
-    :param beam_size : int, size of beam
-    :param batch_size : int, size of batch, should be dividable by `beam_size`
-    :param sequence_generator : a sequence generator brick
+    beam_size : int, size of beam
+    batch_size : int, size of batch, should be dividable by `beam_size`
+    sequence_generator : a sequence generator brick
+
     """
-    def __init__(self, beam_size, batch_size, sequence_generator):
+    def __init__(self, beam_size, batch_size, sequence_generator, x, y, x_mask,
+                 y_mask, f_input):
         super(BeamSearch, self).__init__(sequence_generator)
-        assert batch_size % beam_size == 0
         self.beam_size = beam_size
         self.batch_size = batch_size
+        self.sequence_generator = sequence_generator
+        self.x = x
+        self.y = y
+        self.x_mask = x_mask
+        self.y_mask = y_mask
+        self.f_input  = f_input
 
     def compile(self, *args, **kwargs):
         """Compiles functions for beamsearch
@@ -98,36 +103,24 @@ class BeamSearch(Search):
             feedback=self.readout.feedback(self.outputs),
             **input_dict)
 
-        self.next_readouts_computer = next_readouts.eval()
+        self.next_readouts_computer = function([self.outputs], next_readouts)
 
         next_outputs, next_states, next_costs = \
             self.generator.compute_next_states(next_readouts,
                                                next_glimpses,
                                                **kwargs)
 
-        self.next_states_computers = [var.eval() for var in next_states]
+        self.next_states_computers = [function([], var) for var in next_states]
         self.next_outputs_computer = next_outputs.eval()
         self.next_costs_computer = next_costs.eval()
 
         next_probs = self.generator.readout.emit_probs(next_readouts)
-        self.next_probs_computer = next_probs.eval()
+        self.next_probs_computer = function([], next_probs)
 
         super(BeamSearch, self).compile(*args, **kwargs)
 
     @classmethod
-    def _chunks(cls, list, n):
-        """ Yields successive n-sized chunks from l.
-
-        :param list: list to be divided into chunks
-        :param n: chunk size
-        :return: a list of lists with dimension (l / n, n), where l is
-                 length of the `list`
-        """
-        for i in xrange(0, len(list), n):
-            yield list[i:i + n]
-
-    @classmethod
-    def _top_probs(cls, probs, beam_size):
+    def _top_probs(cls, probs, beam_size, unique=False):
         """
         Returns indexes of elements with highest probabilities
 
@@ -135,21 +128,37 @@ class BeamSearch(Search):
         :param beam_size: beam size, number of top probs to return
         :return: tuple of (indexes, top probabilities)
         """
-        args = np.argpartition(-probs.flatten(), beam_size)
+        flatten = probs.flatten()
+        if unique:
+            args = np.unique(np.argpartition(-flatten, beam_size))[:beam_size]
+        else:
+            args = np.argpartition(-flatten, beam_size)[:beam_size]
+        args = args[np.argsort(-flatten[args])]
+        if unique:
+            # append best if needed
+            if args.shape[0] < beam_size:
+                args = np.append(args,
+                                 np.tile(args[0], beam_size - args.shape[0]))
         # convert args back
         indexes = np.unravel_index(args, probs.shape)
         return indexes, probs[indexes]
 
-    def search(self, eol_symbol=-1, max_length=512, **kwargs):
+    def search(self, start_symbol, eol_symbol=-1, max_length=512, **kwargs):
         """Performs greedy search
 
-        :param kwargs: Contexts are expected as
-               keyword arguments
-        :param eol_symbol: End of line symbol, the search stops when the
+        Parameters
+        ----------
+        eol_symbol: End of line symbol, the search stops when the
                symbol is generated
-        :param max_length: Maximum sequence length, the search stops when it
+        max_length: Maximum sequence length, the search stops when it
                is reached
-        :return: Most probable sequence, corresponding probabilities and costs
+
+        Returns
+        -------
+        Most probable sequence, corresponding probabilities and costs
+
+        .. note: Contexts are expected as keyword arguments
+
         """
         super(BeamSearch, self).search(**kwargs)
         states = {name: kwargs[name] for name
@@ -159,6 +168,15 @@ class BeamSearch(Search):
         glimpses = {name: kwargs[name] for name
                     in self.generator.glimpse_names}
         inputs = dict_union(states, contexts, glimpses)
+
+        n_chunks = inputs[0].shape[1] # input batch size
+        real_batch_size = n_chunks * self.beam_size
+        aux_inp = np.tile(inp_seq, (1, self.beam_size, 1))
+        aux_mask = np.tile(inp_mask, (1, self.beam_size))
+
+        current_outputs = np.zeros((0, n_chunks, self.beam_size),
+                                   dtype='int64')
+        curr_out_mask = np.ones((0, n_chunks, self.beam_size), dtype=floatX)
 
         outputs_dim = self.generator.get_dim('outputs')
         current_outputs = np.array(outputs_dim)  # TODO: outputs dimensionality
