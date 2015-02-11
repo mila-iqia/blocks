@@ -1,11 +1,10 @@
-from nose.tools import assert_raises
-
 from collections import OrderedDict
 
 import numpy
 import theano
 from numpy.testing import assert_allclose
 from theano import tensor
+from nose.tools import assert_raises
 
 from blocks.algorithms import (GradientDescent, GradientClipping,
                                CompositeRule, SteepestDescent,
