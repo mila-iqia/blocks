@@ -2,8 +2,7 @@ from collections import OrderedDict
 
 import numpy
 import theano
-from numpy.testing import assert_allclose
-from nose.tools import assert_raises
+from numpy.testing import assert_allclose, assert_raises
 from theano import tensor
 
 from blocks.algorithms import (GradientDescent, GradientClipping,
