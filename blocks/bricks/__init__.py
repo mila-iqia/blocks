@@ -248,6 +248,13 @@ class Linear(Initializable, Feedforward):
             output += b
         return output
 
+    def get_dim(self, name):
+        if name == 'input_':
+            return self.input_dim
+        if name == 'output':
+            return self.output_dim
+        super(Linear, self).get_dim(name)
+
 
 class Maxout(Brick):
     """Maxout pooling transformation.
