@@ -5,7 +5,7 @@ from theano import tensor
 
 from blocks.bricks import Tanh
 from blocks.bricks.base import application
-from blocks.bricks.parallel import Merge
+from blocks.bricks.parallel import Distribute
 from blocks.bricks.recurrent import Recurrent, GatedRecurrent
 from blocks.bricks.attention import SequenceContentAttention
 from blocks.bricks.sequence_generators import (
@@ -139,9 +139,9 @@ def test_attention_transition():
                                 name="transition")
     attention = SequenceContentAttention(transition.apply.states,
                                          match_dim=inp_dim, name="attention")
-    merge = Merge([name for name in transition.apply.sequences
-                   if name != 'mask'],
-                  attention.take_look.outputs[0])
+    merge = Distribute([name for name in transition.apply.sequences
+                        if name != 'mask'],
+                       attention.take_look.outputs[0])
     att_trans = AttentionTransition(transition, attention, merge,
                                     name="att_trans")
     att_trans.weights_init = IsotropicGaussian(0.01)

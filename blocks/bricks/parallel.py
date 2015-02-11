@@ -163,29 +163,29 @@ class Fork(Parallel):
         return super(Fork, self).apply.outputs
 
 
-class Merge(Fork):
+class Distribute(Fork):
     """Transform an input and add it to other inputs.
 
     This brick is designed for the following scenario: one has a group of
-    variables and another separate variable, and one needs to somehow merge
-    information from the latter into the former. We call that "to merge a
-    varible into a group of variables", and refer to the separate variable
-    as "the merged input" and to the variables from the group as "the
-    changed inputs".
+    variables and another separate variable, and one needs to somehow
+    distribute information from the latter across the former. We call that
+    "to distribute a varible across other variables", and refer to the
+    separate variable as "the source" and to the variables from the group
+    as "the targets".
 
     Given a prototype brick, a :class:`Parallel` brick makes several copies
     of it (each with its own parameters). At the application time the
-    copies are applied to the merged input and the transformation results
-    are added to the changed inputs giving the output.
+    copies are applied to the source and the transformation results
+    are added to the targets (in the literate sense).
 
     >>> from theano import tensor
     >>> from blocks.initialization import Constant
     >>> x = tensor.matrix('x')
     >>> y = tensor.matrix('y')
     >>> z = tensor.matrix('z')
-    >>> merge = Merge(changed_names=['x', 'y'], merged_name='z',
-    ...               changed_dims=dict(x=2, y=3), merged_dim=3,
-    ...               weights_init=Constant(2))
+    >>> merge = Distribute(target_names=['x', 'y'], source_name='z',
+    ...                    target_dims=dict(x=2, y=3), source_dim=3,
+    ...                    weights_init=Constant(2))
     >>> merge.initialize()
     >>> new_x, new_y = merge.apply(x=x, y=y, z=z)
     >>> new_x.eval({x: [[2, 2]], z: [[1, 1, 1]]}) # doctest: +ELLIPSIS
@@ -195,18 +195,18 @@ class Merge(Fork):
 
     Parameters
     ----------
-    changed_names : list of str
-        The names of the inputs.
-    merged_name : str
-        The name of the merged input.
+    target_names : list of str
+        The names of the targets.
+    source_name : str
+        The name of the source.
 
     Attributes
     ----------
-    changed_dims : dict
-        The dictionary of changed inputs dimensions, keys are input names,
+    target_dims : dict
+        The dictionary of target inputs dimensions, keys are input names,
         values are dimensions.
-    merged_dim : dict
-        The dimension of the merged input.
+    source_dim : dict
+        The dimension of the source input.
 
     Notes
     -----
@@ -214,27 +214,40 @@ class Merge(Fork):
 
     """
     @lazy
-    def __init__(self, changed_names, merged_name, changed_dims, merged_dim,
+    def __init__(self, target_names, source_name, target_dims, source_dim,
                  prototype=None, **kwargs):
-        self.changed_names = changed_names
-        self.merged_name = merged_name
-        self.changed_dims = changed_dims
-        self.merged_dim = merged_dim
+        self.target_names = target_names
+        self.source_name = source_name
+        self.target_dims = target_dims
+        self.source_dim = source_dim
 
-        super(Merge, self).__init__(
-            output_names=changed_names, output_dims=changed_dims,
-            input_dim=merged_dim, prototype=prototype, **kwargs)
+        super(Distribute, self).__init__(
+            output_names=target_names, output_dims=target_dims,
+            input_dim=source_dim, prototype=prototype, **kwargs)
 
     def _push_allocation_config(self):
-        self.input_dim = self.merged_dim
-        self.output_dims = self.changed_dims
-        super(Merge, self)._push_allocation_config()
+        self.input_dim = self.source_dim
+        self.output_dims = self.target_dims
+        super(Distribute, self)._push_allocation_config()
 
     @application
     def apply(self, **kwargs):
-        result = super(Merge, self).apply(kwargs.pop(self.merged_name),
-                                          return_list=True)
-        for i, name in enumerate(self.changed_names):
+        r"""Distribute the source across the targets.
+
+        Parameters
+        -----------
+            **kwargs : dict
+                The source and the target variables.
+
+        Returns
+        -------
+        output : list
+            The new target variables.
+
+        """
+        result = super(Distribute, self).apply(kwargs.pop(self.source_name),
+                                               return_list=True)
+        for i, name in enumerate(self.target_names):
             result[i] += kwargs.pop(name)
         if len(kwargs):
             raise ValueError
@@ -242,8 +255,8 @@ class Merge(Fork):
 
     @apply.property('inputs')
     def apply_inputs(self):
-        return [self.merged_name] + self.changed_names
+        return [self.source_name] + self.target_names
 
     @apply.property('outputs')
     def apply_outputs(self):
-        return self.changed_names
+        return self.target_names

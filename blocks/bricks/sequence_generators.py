@@ -7,7 +7,7 @@ from theano import tensor
 from blocks.bricks import Initializable, Identity, MLP, Random
 from blocks.bricks.base import application, Brick, lazy
 from blocks.bricks.recurrent import BaseRecurrent
-from blocks.bricks.parallel import Fork, Merge
+from blocks.bricks.parallel import Fork, Distribute
 from blocks.bricks.lookup import LookupTable
 from blocks.bricks.recurrent import recurrent
 from blocks.utils import dict_subset, dict_union
@@ -583,12 +583,12 @@ class AttentionTransition(AbstractAttentionTransition, Initializable):
         self.attention.state_dims = self.transition.get_dims(self.state_names)
         self.attention.sequence_dim = self.transition.get_dim(
             self.attended_name)
-        self.merge.changed_dims = dict_subset(
+        self.merge.target_dims = dict_subset(
             dict_union(
                 self.transition.get_dims(self.sequence_names)),
-            self.merge.changed_names)
-        self.merge.merged_dim = self.attention.get_dim(
-            self.merge.merged_name)
+            self.merge.target_names)
+        self.merge.source_dim = self.attention.get_dim(
+            self.merge.source_name)
 
     @application
     def take_look(self, **kwargs):
@@ -818,7 +818,7 @@ class SequenceGenerator(BaseSequenceGenerator):
 
         fork = Fork(fork_inputs)
         if attention:
-            merge = Merge(fork_inputs, attention.take_look.outputs[0])
+            merge = Distribute(fork_inputs, attention.take_look.outputs[0])
             transition = AttentionTransition(transition, attention, merge,
                                              name="att_trans")
         else:
