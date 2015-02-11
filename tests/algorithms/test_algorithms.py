@@ -1,3 +1,5 @@
+from nose.tools import assert_raises
+
 from collections import OrderedDict
 
 import numpy
@@ -43,6 +45,11 @@ def test_adadelta():
     assert_allclose(f()[0], [-0.00044721, -0.00044721], rtol=1e-5)
     assert_allclose(f()[0], [-0.0005164, -0.0005164], rtol=1e-5)
     assert_allclose(f()[0], [-0.00056904, -0.00056904], rtol=1e-5)
+
+
+def test_adadelta_decay_rate_sanity_check():
+    assert_raises(ValueError, AdaDelta, -1.0)
+    assert_raises(ValueError, AdaDelta, 2.0)
 
 
 def test_gradient_clipping():
