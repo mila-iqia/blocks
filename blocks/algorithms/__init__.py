@@ -277,6 +277,28 @@ class StepRule(object):
         return steps, updates
 
 
+class CompositeRule(StepRule):
+    """Chains several step rules.
+
+    Parameters
+    ----------
+    components : list of :class:`StepRule`
+        The learning rules to be chained. The rules will be applied in the
+        order as given.
+
+    """
+    def __init__(self, components):
+        self.components = components
+
+    def compute_steps(self, gradients):
+        result = gradients
+        updates = []
+        for rule in self.components:
+            result, more_updates = rule.compute_steps(result)
+            updates += more_updates
+        return result, updates
+
+
 class SteepestDescent(StepRule):
     """A step in the direction proportional to the gradient.
 
@@ -429,25 +451,3 @@ class GradientClipping(StepRule):
             (param, gradient * multiplier)
             for param, gradient in gradients.items())
         return steps, []
-
-
-class CompositeRule(StepRule):
-    """Chains several step rules.
-
-    Parameters
-    ----------
-    components : list of :class:`StepRule`
-        The learning rules to be chained. The rules will be applied in the
-        order as given.
-
-    """
-    def __init__(self, components):
-        self.components = components
-
-    def compute_steps(self, gradients):
-        result = gradients
-        updates = []
-        for rule in self.components:
-            result, more_updates = rule.compute_steps(result)
-            updates += more_updates
-        return result, updates
