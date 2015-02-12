@@ -187,7 +187,8 @@ def main(mode, save_path, num_batches, from_dump):
         (activations,) = VariableFilter(
             application=generator.transition.apply,
             name="states")(cg.variables)
-        mean_activation = named_copy(activations.mean(), "mean_activation")
+        mean_activation = named_copy(abs(activations).mean(),
+                                     "mean_activation")
 
         # Define the training algorithm.
         algorithm = GradientDescent(
