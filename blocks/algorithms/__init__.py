@@ -382,7 +382,7 @@ class GradientClipping(StepRule):
     """
     def __init__(self, threshold=None):
         if threshold:
-            self.threshold = theano.shared(threshold)
+            self.threshold = shared_floatx(threshold)
 
     def compute_steps(self, gradients):
         if not hasattr(self, 'threshold'):
