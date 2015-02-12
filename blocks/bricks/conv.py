@@ -26,7 +26,7 @@ class Convolutional(Initializable):
         subsequent layers this is equal to the number of filters output by
         the previous convolutional layer. The filters are pooled over the
         channels.
-    input_dim : tuple, optional
+    image_shape : tuple, optional
         The height and width of the input (image or feature map). If given,
         this will be passed to the Theano convolution operator, resulting
         in possibly faster execution times.
@@ -39,12 +39,12 @@ class Convolutional(Initializable):
 
     """
     @lazy
-    def __init__(self, filter_size, num_filters, num_channels, input_dim=None,
-                 step=(1, 1), border_mode='valid', **kwargs):
+    def __init__(self, filter_size, num_filters, num_channels,
+                 image_shape=None, step=(1, 1), border_mode='valid', **kwargs):
         super(Convolutional, self).__init__(**kwargs)
 
         self.filter_size = filter_size
-        self.input_dim = input_dim
+        self.image_shape = image_shape
         self.border_mode = border_mode
         self.num_filters = num_filters
         self.num_channels = num_channels
@@ -100,7 +100,7 @@ class Convolutional(Initializable):
         output = conv2d(
             input_, W,
             image_shape=(None, self.num_channels) +
-                        (self.input_dim if self.input_dim else (None, None)),
+                        (self.image_shape if self.image_shape else (None, None)),
             subsample=self.step,
             border_mode=self.border_mode,
             filter_shape=((self.num_filters, self.num_channels) +
@@ -111,10 +111,10 @@ class Convolutional(Initializable):
 
     def get_dim(self, name):
         if name == 'input_':
-            return self.input_dim
+            return (self.num_channels,) + self.image_shape
         if name == 'output':
             return ((self.num_filters,) +
-                    ConvOp.getOutputShape(self.input_dim, self.filter_size,
+                    ConvOp.getOutputShape(self.image_shape, self.filter_size,
                                           self.step, self.border_mode))
         return super(Convolutional, self).get_dim(name)
 
