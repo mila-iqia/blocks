@@ -8,8 +8,8 @@ class SharedVariableModifier(TrainingExtension):
     Applies function to compute the new value of a shared parameter each
     iteration.
 
-    This class can be used to adapt over the training process parameters like
-    learning rate, momentum, etc.
+    This class can be used to adapt over the training process parameters
+    like learning rate, momentum, etc.
 
     Parameters
     ----------
@@ -17,14 +17,15 @@ class SharedVariableModifier(TrainingExtension):
         shared variable to be adjusted
     function : callable
         a function which outputs a numeric value to which the
-        given shared variable will be set and may take one or two arguments.
+        given shared variable will be set and may take one or two
+        arguments.
 
-        In the first case, function that takes the total number of iterations
-        done (``int``) as an input.
+        In the first case, function that takes the total number of
+        iterations done (``int``) as an input.
 
-        In the second case, it is a function which takes number of iterations
-        done (``int``) and old value of the shared variable (with the same
-        dtype as `parameter`).
+        In the second case, it is a function which takes number of
+        iterations done (``int``) and old value of the shared variable
+        (with the same dtype as `parameter`).
 
     """
     def __init__(self, parameter, function, **kwargs):
