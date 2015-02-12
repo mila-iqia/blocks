@@ -42,6 +42,14 @@ The following configurations are supported:
    NumPy :class:`~numpy.random.RandomState` objects as well as Theano's
    :class:`~theano.sandbox.rng_mrg.MRG_RandomStreams` objects. Must be an
    integer. By default this is set to 1.
+   
+.. option:: recursion_limit
+
+   The recursion max depth limit used in :class:`~blocks.main_loop.MainLoop` 
+   as well as in other situations when deep recursion is required. The 
+   most notable example of such a situation is pickling or unpickling
+   a complex structure with lots of objects, such as a big Theano 
+   computation graph.
 
 .. _YAML: http://yaml.org/
 .. _environment variables:
