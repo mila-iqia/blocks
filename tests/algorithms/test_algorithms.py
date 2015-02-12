@@ -7,7 +7,7 @@ from theano import tensor
 
 from blocks.algorithms import (GradientDescent, GradientClipping,
                                CompositeRule, SteepestDescent,
-                               StepRule, Momentum, AdaDelta, RMSPropChainable,
+                               StepRule, Momentum, AdaDelta, BasicRMSProp,
                                RMSProp)
 from blocks.utils import shared_floatx
 
@@ -51,10 +51,10 @@ def test_adadelta_decay_rate_sanity_check():
     assert_raises(ValueError, AdaDelta, 2.0)
 
 
-def test_rmspropchainable():
+def test_basicrmsprop():
     a = shared_floatx([3, 4])
     cost = (a ** 2).sum()
-    step_rule = RMSPropChainable(decay_rate=0.5, max_scaling=1e5)
+    step_rule = BasicRMSProp(decay_rate=0.5, max_scaling=1e5)
     steps, updates = step_rule.compute_steps(
         OrderedDict([(a, tensor.grad(cost, a))]))
     f = theano.function([], [steps[a]], updates=updates)
@@ -65,23 +65,23 @@ def test_rmspropchainable():
     assert_allclose(f()[0], [0.6172134, 0.64699664])
 
 
-def test_rmspropchainable_max_scaling():
+def test_basicrmsprop_max_scaling():
     a = shared_floatx([1e-6, 1e-6])
     cost = (a ** 2).sum()
-    step_rule = RMSPropChainable(decay_rate=0.5, max_scaling=1e5)
+    step_rule = BasicRMSProp(decay_rate=0.5, max_scaling=1e5)
     steps, updates = step_rule.compute_steps(
         OrderedDict([(a, tensor.grad(cost, a))]))
     f = theano.function([], [steps[a]], updates=updates)
     assert_allclose(f()[0], [0.2, 0.2])
 
 
-def test_rmspropchainable_decay_rate_sanity_check():
-    assert_raises(ValueError, RMSPropChainable, -1.0)
-    assert_raises(ValueError, RMSPropChainable, 2.0)
+def test_basicrmsprop_decay_rate_sanity_check():
+    assert_raises(ValueError, BasicRMSProp, -1.0)
+    assert_raises(ValueError, BasicRMSProp, 2.0)
 
 
-def test_rmspropchainable_max_scaling_sanity_check():
-    assert_raises(ValueError, RMSPropChainable, 0.5, -1.0)
+def test_basicrmsprop_max_scaling_sanity_check():
+    assert_raises(ValueError, BasicRMSProp, 0.5, -1.0)
 
 
 def test_rmsprop():
