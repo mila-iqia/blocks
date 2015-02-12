@@ -1,15 +1,13 @@
 import os
 
 import numpy
+from picklable_itertools import chain
+from picklable_itertools.iter_dispatch import _iter
 from toolz import sliding_window
 
 from blocks import config
 from blocks.datasets import Dataset
 from blocks.datasets.streams import CachedDataStream
-
-
-class TextFileState(object):
-    pass
 
 
 class TextFile(Dataset):
@@ -91,10 +89,7 @@ class TextFile(Dataset):
         super(TextFile, self).__init__()
 
     def open(self):
-        state = TextFileState()
-        state.current_index = 0
-        state.file = self._open_file(state.current_index)
-        return state
+        return chain(*[_iter(open(f)) for f in self.files])
 
     def _open_file(self, partition_index):
         return open(self.files[partition_index])
@@ -102,20 +97,7 @@ class TextFile(Dataset):
     def get_data(self, state=None, request=None):
         if request is not None:
             raise ValueError
-        while True:
-            if state.file is None:
-                raise StopIteration
-            sentence = state.file.readline()
-            if not sentence:
-                state.file.close()
-                state.file = None
-                if state.current_index == len(self.files) - 1:
-                    raise StopIteration
-                else:
-                    state.current_index += 1
-                    state.file = self._open_file(state.current_index)
-            else:
-                break
+        sentence = next(state)
         if self.preprocess is not None:
             sentence = self.preprocess(sentence)
         data = [self.dictionary[self.bos_token]] if self.bos_token else []

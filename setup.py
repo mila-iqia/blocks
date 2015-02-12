@@ -33,10 +33,12 @@ setup(
     packages=find_packages(exclude=['examples', 'docs', 'tests']),
     scripts=['bin/blocks-continue', 'bin/blocks-dump'],
     install_requires=['dill', 'numpy', 'theano', 'six', 'pyyaml', 'pandas',
-                      'toolz'],
+                      'picklable_itertools', 'toolz'],
     extras_require={
         'test': ['nose', 'nose2'],
         'plot': ['bokeh'],
         'docs': ['sphinx', 'sphinxcontrib-napoleon', 'sphinx-rtd-theme']
     },
+    dependency_links=['http://github.com/dwf/picklable_itertools/'
+                      'tarball/master#egg=picklable_itertools'],
     zip_safe=False)
