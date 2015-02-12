@@ -91,11 +91,11 @@ def test_rmsprop():
     steps, updates = step_rule.compute_steps(
         OrderedDict([(a, tensor.grad(cost, a))]))
     f = theano.function([], [steps[a]], updates=updates)
-    assert_allclose(f()[0], [-0.141421356, -0.141421356])
+    assert_allclose(f()[0], [0.141421356, 0.141421356])
     a.set_value([2, 3])
-    assert_allclose(f()[0], [-0.09701425, -0.102899151])
+    assert_allclose(f()[0], [0.09701425, 0.102899151])
     a.set_value([1, 1.5])
-    assert_allclose(f()[0], [-0.06172134, -0.064699664])
+    assert_allclose(f()[0], [0.06172134, 0.064699664])
 
 
 def test_gradient_clipping():
