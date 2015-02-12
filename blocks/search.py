@@ -21,9 +21,6 @@ class Search(object):
     __metaclass__ = ABCMeta
 
     def __init__(self, sequence_generator):
-        if not isinstance(sequence_generator, BaseSequenceGenerator):
-            raise ValueError("The input should be BaseSequenceGenerator")
-
         self.generator = sequence_generator
         self.compiled = False
 
@@ -90,6 +87,9 @@ class BeamSearch(Search):
         glimpses = {name: kwargs[name] for name
                     in self.generator.glimpse_names}
         input_dict = dict_union(states, contexts, glimpses)
+        self.state_names = states.keys()
+        self.context_names = contexts.keys()
+        self.glimpse_names = glimpses.keys()
 
         next_glimpses = self.generator.transition.take_look(
             return_dict=True, **input_dict)
@@ -147,7 +147,8 @@ class BeamSearch(Search):
         indexes = np.unravel_index(args, probs.shape)
         return indexes, probs[indexes]
 
-    def search(self, start_symbol, eol_symbol=-1, max_length=512, **kwargs):
+    def search(self, start_symbol, eol_symbol=-1, max_length=512,
+               **kwargs):
         """Performs greedy search
 
         Parameters
@@ -165,16 +166,14 @@ class BeamSearch(Search):
 
         """
         super(BeamSearch, self).search(**kwargs)
-        states = {name: kwargs[name] for name
-                  in self.generator.state_names}
-        contexts = {name: kwargs[name] for name
-                    in self.generator.context_names}
-        glimpses = {name: kwargs[name] for name
-                    in self.generator.glimpse_names}
-        inputs = dict_union(states, contexts, glimpses)
+        context_vals = {name: val for name, val in kwargs.iteritems() if name
+                        in self.context_names}
 
-        n_chunks = inputs[0].shape[1] # input batch size
+        n_chunks = list(context_vals.values())[0].shape[1] # input batch size
         real_batch_size = n_chunks * self.beam_size
+
+        aux_inputs = {name: np.tile(val, (1, self.beam_size)) for name, val
+                      in context_vals.iteritems()}
         aux_inp = np.tile(inp_seq, (1, self.beam_size, 1))
         aux_mask = np.tile(inp_mask, (1, self.beam_size))
 
