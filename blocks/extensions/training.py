@@ -28,7 +28,7 @@ class SharedVariableModifier(TrainingExtension):
 
     """
     def __init__(self, parameter, function, **kwargs):
-        kwargs.setdefault("after_every_batch", True)
+        kwargs.setdefault("after_batch", True)
         super(SharedVariableModifier, self).__init__(**kwargs)
         self.parameter = parameter
         self.function = function
