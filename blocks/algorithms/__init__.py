@@ -152,18 +152,20 @@ class GradientDescent(DifferentiableCostMinimizer):
         for batch in data:
             steps = step_rule.compute_steps(params, gradients_wr_params)
             for param in params:
-                param += steps[param]
+                param -= steps[param]
+
+    Note, that the step is _subtracted, not added_! This is done in order
+    to make step rule chaining possible.
 
     Parameters
     ----------
     step_rule : instance of :class:`StepRule`, optional
         An object encapsulating most of the algorithm's logic. Its
         `compute_steps` method is called to get Theano expression for
-        steps. Note, that the step rule
-        might have a state, e.g. to remember a weighted sum of gradients
-        from previous steps like it is done in gradient descent with
-        momentum. If ``None``, an instance of :class:`SteepestDescent` is
-        created.
+        steps.  Note, that the step rule might have a state, e.g. to
+        remember a weighted sum of gradients from previous steps like it is
+        done in gradient descent with momentum. If ``None``, an instance of
+        :class:`SteepestDescent` is created.
     gradients : dict, optional
         A dictionary mapping a parameter to an expression for the cost's
         gradient with respect to the parameter. If ``None``, the gradient
@@ -201,7 +203,7 @@ class GradientDescent(DifferentiableCostMinimizer):
         # the parameters were given. Keep it like that to ensure
         # reproducibility.
         for param in self.params:
-            all_updates.append((param, param + self.steps[param]))
+            all_updates.append((param, param - self.steps[param]))
         all_updates += self.step_rule_updates
         self._function = theano.function(self.inputs, [], updates=all_updates)
         logger.info("The training algorithm is initialized")
@@ -210,8 +212,8 @@ class GradientDescent(DifferentiableCostMinimizer):
         if not set(batch.keys()) == set([v.name for v in self.inputs]):
             raise ValueError("mismatch of variable names and data sources" +
                              variable_mismatch_error.format(
-                                sources=batch.keys(),
-                                variables=[v.name for v in self.inputs]))
+                                 sources=batch.keys(),
+                                 variables=[v.name for v in self.inputs]))
         ordered_batch = [batch[v.name] for v in self.inputs]
         self._function(*ordered_batch)
 
@@ -276,7 +278,7 @@ class StepRule(object):
 
 
 class SteepestDescent(StepRule):
-    """A step in the direction opposite to the gradient.
+    """A step in the direction proportional to the gradient.
 
     Parameters
     ----------
@@ -294,11 +296,11 @@ class SteepestDescent(StepRule):
         self.learning_rate = shared_floatx(learning_rate)
 
     def compute_step(self, param, gradient):
-        return -self.learning_rate * gradient, []
+        return self.learning_rate * gradient, []
 
 
 class Momentum(StepRule):
-    """Accumulates the step with exponential discount.
+    """Accumulates gradients with exponential discount.
 
     Parameters
     ----------
@@ -351,7 +353,7 @@ class AdaDelta(StepRule):
 
         rms_delta_x_tm1 = tensor.sqrt(mean_square_delta_x_tm1 + self.epsilon)
         rms_grad_t = tensor.sqrt(mean_square_grad_t + self.epsilon)
-        delta_x_t = - rms_delta_x_tm1 / rms_grad_t * gradient
+        delta_x_t = rms_delta_x_tm1 / rms_grad_t * gradient
 
         mean_square_delta_x_t = (
             self.decay_rate * mean_square_delta_x_tm1 +
