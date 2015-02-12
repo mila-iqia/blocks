@@ -35,8 +35,8 @@ class SharedVariableModifier(SimpleExtension):
         self.function = function
         self.num_args = len(inspect.getargspec(function).args)
 
-    def do(self, batch):
-        iterations_done = self.main_loop.log.current_row.iterations_done
+    def do(self, which_callback, *args):
+        iterations_done = self.main_loop.log.status.iterations_done
         if self.num_args == 1:
             new_value = self.function(iterations_done)
         else:

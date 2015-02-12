@@ -2,24 +2,75 @@ import numpy
 from numpy.testing import assert_allclose
 
 import theano
+from theano import tensor
 
+from blocks.algorithms import GradientDescent, SteepestDescent
+from blocks.datasets import ContainerDataset
+from blocks.extensions import FinishAfter
 from blocks.extensions.training import SharedVariableModifier
+from blocks.main_loop import MainLoop
+from blocks.utils import shared_floatx
+
+floatX = theano.config.floatX
 
 
 def test_shared_variable_modifier():
-    parameter = theano.shared(0.)
-    modifier = SharedVariableModifier(parameter, lambda n: 10. / n)
+    weights = numpy.array([-1, 1], dtype=floatX)
+    features = [numpy.array(f, dtype=floatX)
+                for f in [[1, 2], [3, 4], [5, 6]]]
+    targets = [(weights * f).sum() for f in features]
+    n_batches = 3
+    dataset = ContainerDataset(dict(features=features, targets=targets))
 
-    dummy_batch = {0: numpy.zeros(5)}
-    modifier.after_batch(dummy_batch)
+    x = tensor.vector('features')
+    y = tensor.scalar('targets')
+    W = shared_floatx([0, 0], name='W')
+    cost = ((x * W).sum() - y) ** 2
+    cost.name = 'cost'
 
-    new_value = parameter.get_value()
-    assert_allclose(new_value, 2.)
+    step_rule = SteepestDescent(0.001)
+    sgd = GradientDescent(cost=cost, params=[W],
+                          step_rule=step_rule)
+    main_loop = MainLoop(
+        model=None, data_stream=dataset.get_default_stream(),
+        algorithm=sgd,
+        extensions=[
+            FinishAfter(after_n_epochs=1),
+            SharedVariableModifier(step_rule.learning_rate, lambda n: 10. / n)
+            ])
 
-    parameter.set_value(10.)
-    modifier = SharedVariableModifier(parameter, lambda n, val: val * 0.2)
+    main_loop.run()
 
-    modifier.after_batch(dummy_batch)
+    assert_allclose(step_rule.learning_rate.get_value(), 10. / n_batches)
 
-    new_value = parameter.get_value()
-    assert_allclose(new_value, 10. * 0.2)
+
+def test_shared_variable_modifier_two_params():
+    weights = numpy.array([-1, 1], dtype=floatX)
+    features = [numpy.array(f, dtype=floatX)
+                for f in [[1, 2], [3, 4], [5, 6]]]
+    targets = [(weights * f).sum() for f in features]
+    n_batches = 3
+    dataset = ContainerDataset(dict(features=features, targets=targets))
+
+    x = tensor.vector('features')
+    y = tensor.scalar('targets')
+    W = shared_floatx([0, 0], name='W')
+    cost = ((x * W).sum() - y) ** 2
+    cost.name = 'cost'
+
+    step_rule = SteepestDescent(0.001)
+    sgd = GradientDescent(cost=cost, params=[W],
+                          step_rule=step_rule)
+    main_loop = MainLoop(
+        model=None, data_stream=dataset.get_default_stream(),
+        algorithm=sgd,
+        extensions=[
+            FinishAfter(after_n_epochs=1),
+            SharedVariableModifier(step_rule.learning_rate,
+                                   lambda _, val: val * 0.2)
+            ])
+
+    main_loop.run()
+
+    new_value = step_rule.learning_rate.get_value()
+    assert_allclose(new_value, 0.001 * 0.2 ** n_batches)
