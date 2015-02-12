@@ -1,9 +1,9 @@
 from abc import ABCMeta, abstractmethod
 
 import numpy
-import six
-from picklable_itertools import chain, repeat
+from picklable_itertools import chain, repeat, imap, islice, _iter
 from six import add_metaclass
+from six.moves import xrange
 
 from blocks import config
 
@@ -61,6 +61,8 @@ class BatchScheme(IterationScheme):
     def __init__(self, num_examples, batch_size):
         self.num_examples = num_examples
         self.batch_size = batch_size
+        d, r = divmod(self.num_examples, self.batch_size)
+        self.num_batches = d + bool(r)
 
 
 class ConstantScheme(BatchSizeScheme):
@@ -111,7 +113,9 @@ class SequentialScheme(BatchScheme):
 
     """
     def get_request_iterator(self):
-        return BatchIterator(self.num_examples, self.batch_size)
+        return imap(list, imap(
+            islice, repeat(_iter(xrange(self.num_examples)), self.num_batches),
+            repeat(self.batch_size, self.num_batches)))
 
 
 class ShuffledScheme(BatchScheme):
@@ -136,34 +140,8 @@ class ShuffledScheme(BatchScheme):
         super(ShuffledScheme, self).__init__(*args, **kwargs)
 
     def get_request_iterator(self):
-        return BatchIterator(self.num_examples, self.batch_size,
-                             shuffled=True, rng=self.rng)
-
-
-class BatchIterator(six.Iterator):
-    def __init__(self, num_examples, batch_size, shuffled=False, rng=None):
-        if shuffled:
-            if rng is None:
-                raise ValueError
-            self.indices = list(range(num_examples))
-            rng.shuffle(self.indices)
-
-        self.batch_size = batch_size
-        self.current = 0
-        self.num_examples = num_examples
-        self.shuffled = shuffled
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        if self.current >= self.num_examples:
-            raise StopIteration
-        if self.shuffled:
-            batch = self.indices[self.current:self.current + self.batch_size]
-        else:
-            batch = list(range(self.current,
-                               min(self.num_examples,
-                                   self.current + self.batch_size)))
-        self.current += len(batch)
-        return batch
+        indices = list(range(self.num_examples))
+        self.rng.shuffle(indices)
+        return imap(list, imap(
+            islice, repeat(_iter(indices), self.num_batches),
+            repeat(self.batch_size, self.num_batches)))
