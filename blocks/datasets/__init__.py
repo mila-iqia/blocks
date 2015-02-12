@@ -2,9 +2,10 @@ import collections
 from abc import ABCMeta, abstractmethod
 
 from six import add_metaclass
+from picklable_itertools import izip
 
 from blocks.datasets.streams import DataStream
-from blocks.utils import LambdaIterator, SequenceIterator
+from blocks.utils import SequenceIterator
 
 
 @add_metaclass(ABCMeta)
@@ -372,8 +373,7 @@ class ContainerDataset(Dataset):
     def open(self):
         iterators = [SequenceIterator(channel)
                      for channel in self.data_channels]
-        return LambdaIterator(
-            lambda: tuple([next(iterator) for iterator in iterators]))
+        return izip(*iterators)
 
     def get_data(self, state=None, request=None):
         if state is None or request is not None:
