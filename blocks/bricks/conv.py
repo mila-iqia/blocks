@@ -99,7 +99,8 @@ class Convolutional(Initializable):
 
         output = conv2d(
             input_, W,
-            image_shape=(None,) + self.input_dim if self.input_dim else None,
+            image_shape=(None, self.num_channels) +
+                        (self.input_dim if self.input_dim else (None, None)),
             subsample=self.step,
             border_mode=self.border_mode,
             filter_shape=((self.num_filters, self.num_channels) +
@@ -113,7 +114,7 @@ class Convolutional(Initializable):
             return self.input_dim
         if name == 'output':
             return ((self.num_filters,) +
-                    ConvOp.getOutputShape(self.input_dim[1:], self.filter_size,
+                    ConvOp.getOutputShape(self.input_dim, self.filter_size,
                                           self.step, self.border_mode))
         return super(Convolutional, self).get_dim(name)
 
