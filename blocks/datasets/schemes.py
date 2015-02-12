@@ -2,6 +2,7 @@ from abc import ABCMeta, abstractmethod
 
 import numpy
 import six
+from picklable_itertools import chain, repeat
 from six import add_metaclass
 
 from blocks import config
@@ -90,38 +91,12 @@ class ConstantScheme(BatchSizeScheme):
         self.times = times
 
     def get_request_iterator(self):
-        return ConstantIterator(self.batch_size, self.num_examples, self.times)
-
-
-class ConstantIterator(six.Iterator):
-    def __init__(self, batch_size, num_examples=None, times=None):
-        if num_examples is not None and times is not None:
-            raise ValueError
-        if times is not None or num_examples is not None:
-            if not ((times is None or times >= 1) or
-                    (num_examples is None or num_examples >= 1)):
-                raise ValueError
-            self.current = 0
-
-        self.batch_size = batch_size
-        self.num_examples = num_examples
-        self.times = times
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        if self.times or self.num_examples:
-            if self.current == self.times or self.current == self.num_examples:
-                raise StopIteration
-            if self.times:
-                self.current += 1
-            else:
-                batch_size = min(self.batch_size,
-                                 self.num_examples - self.current)
-                self.current += batch_size
-                return batch_size
-        return self.batch_size
+        if self.times:
+            return repeat(self.batch_size, self.times)
+        if self.num_examples:
+            d, r = divmod(self.num_examples, self.batch_size)
+            return chain(repeat(self.batch_size, d), [r] if r else [])
+        return repeat(self.batch_size)
 
 
 class SequentialScheme(BatchScheme):
