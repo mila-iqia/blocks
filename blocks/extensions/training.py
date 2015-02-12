@@ -1,8 +1,8 @@
 import inspect
-from blocks.extensions import TrainingExtension
+from blocks.extensions import SimpleExtension
 
 
-class SharedVariableModifier(TrainingExtension):
+class SharedVariableModifier(SimpleExtension):
     """Adjusts shared variable parameter using some function.
 
     Applies function to compute the new value of a shared parameter each
@@ -29,13 +29,13 @@ class SharedVariableModifier(TrainingExtension):
 
     """
     def __init__(self, parameter, function, **kwargs):
-        kwargs.setdefault("after_batch", True)
+        kwargs.setdefault("after_every_batch", True)
         super(SharedVariableModifier, self).__init__(**kwargs)
         self.parameter = parameter
         self.function = function
         self.num_args = len(inspect.getargspec(function).args)
 
-    def after_batch(self, batch):
+    def do(self, batch):
         iterations_done = self.main_loop.log.current_row.iterations_done
         if self.num_args == 1:
             new_value = self.function(iterations_done)
