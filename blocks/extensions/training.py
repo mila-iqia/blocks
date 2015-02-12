@@ -19,25 +19,26 @@ class SharedVariableModifier(TrainingExtension):
         a function which outputs a numeric value to which the
         given shared variable will be set and may take one or two arguments.
 
-        In the first case, function that takes the total number of examples
-        seen (``int``) as an input.
+        In the first case, function that takes the total number of iterations
+        done (``int``) as an input.
 
-        In the second case, it is a function which takes number of examples
-        seen (``int``) and old value of the shared variable.
+        In the second case, it is a function which takes number of iterations
+        done (``int``) and old value of the shared variable (with the same
+        dtype as `parameter`).
 
     """
     def __init__(self, parameter, function, **kwargs):
+        kwargs.setdefault("after_every_batch", True)
         super(SharedVariableModifier, self).__init__(**kwargs)
         self.parameter = parameter
         self.function = function
-        self.num_examples = 0
         self.num_args = len(inspect.getargspec(function).args)
 
     def after_batch(self, batch):
-        self.num_examples += batch.values()[0].shape[0]
+        iterations_done = self.main_loop.log.current_row.iterations_done
         if self.num_args == 1:
-            new_value = self.function(self.num_examples)
+            new_value = self.function(iterations_done)
         else:
             old_value = self.parameter.get_value()
-            new_value = self.function(self.num_examples, old_value)
+            new_value = self.function(iterations_done, old_value)
         self.parameter.set_value(new_value)
