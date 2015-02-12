@@ -12,6 +12,14 @@ Bricks
     :undoc-members:
     :show-inheritance:
 
+Convolutional bricks
+--------------------
+
+.. automodule:: blocks.bricks.conv
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 Routing bricks
 --------------
 

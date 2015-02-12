@@ -92,3 +92,10 @@ class BiasesRole(ParameterRole):
 
 #: Biases of linear transformations
 BIASES = BiasesRole()
+
+
+class FiltersRole(WeightsRole):
+    pass
+
+#: The filters (kernels) of a convolution operation
+FILTERS = FiltersRole()
