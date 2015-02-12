@@ -36,12 +36,14 @@ def test_shared_variable_modifier():
         algorithm=sgd,
         extensions=[
             FinishAfter(after_n_epochs=1),
-            SharedVariableModifier(step_rule.learning_rate, lambda n: 10. / n)
+            SharedVariableModifier(step_rule.learning_rate,
+                                   lambda n: numpy.cast[floatX](10. / n))
             ])
 
     main_loop.run()
 
-    assert_allclose(step_rule.learning_rate.get_value(), 10. / n_batches)
+    assert_allclose(step_rule.learning_rate.get_value(),
+                    numpy.cast[floatX](10. / n_batches))
 
 
 def test_shared_variable_modifier_two_params():
@@ -61,16 +63,17 @@ def test_shared_variable_modifier_two_params():
     step_rule = SteepestDescent(0.001)
     sgd = GradientDescent(cost=cost, params=[W],
                           step_rule=step_rule)
+    modifier = SharedVariableModifier(
+        step_rule.learning_rate,
+        lambda _, val: numpy.cast[floatX](val * 0.2))
     main_loop = MainLoop(
         model=None, data_stream=dataset.get_default_stream(),
         algorithm=sgd,
-        extensions=[
-            FinishAfter(after_n_epochs=1),
-            SharedVariableModifier(step_rule.learning_rate,
-                                   lambda _, val: val * 0.2)
-            ])
+        extensions=[FinishAfter(after_n_epochs=1), modifier])
 
     main_loop.run()
 
     new_value = step_rule.learning_rate.get_value()
-    assert_allclose(new_value, 0.001 * 0.2 ** n_batches)
+    assert_allclose(new_value,
+                    0.001 * 0.2 ** n_batches,
+                    atol=1e-5)
