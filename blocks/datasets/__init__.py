@@ -2,10 +2,9 @@ import collections
 from abc import ABCMeta, abstractmethod
 
 from six import add_metaclass
-from picklable_itertools import izip
+from picklable_itertools import _iter, izip
 
 from blocks.datasets.streams import DataStream
-from blocks.utils import SequenceIterator
 
 
 @add_metaclass(ABCMeta)
@@ -371,8 +370,7 @@ class ContainerDataset(Dataset):
             self.data_channels = [container]
 
     def open(self):
-        iterators = [SequenceIterator(channel)
-                     for channel in self.data_channels]
+        iterators = [_iter(channel) for channel in self.data_channels]
         return izip(*iterators)
 
     def get_data(self, state=None, request=None):

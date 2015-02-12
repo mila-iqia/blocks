@@ -406,33 +406,6 @@ def ipdb_breakpoint(x):
     ipdb.set_trace()
 
 
-class SequenceIterator(six.Iterator):
-    """A serializable iterator for list and tuple.
-
-    The reason for having this is that list iterators are not serializable
-    in Python (even when using third-party libraries).
-
-    Parameters
-    ----------
-    sequence : :obj:`list` or :obj:`tuple`
-        The sequence to iterate over.
-
-    """
-    def __init__(self, sequence):
-        self.sequence = sequence
-        self._offset = 0
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        if self._offset == len(self.sequence):
-            raise StopIteration()
-        result = self.sequence[self._offset]
-        self._offset += 1
-        return result
-
-
 def secure_dill_dump(object_, path):
     """Robust serialization - does not corrupt your files when failed.
 
