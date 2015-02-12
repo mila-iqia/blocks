@@ -5,7 +5,7 @@ from blocks.extensions import SimpleExtension
 class SharedVariableModifier(SimpleExtension):
     """Adjusts shared variable parameter using some function.
 
-    Applies function to compute the new value of a shared parameter each
+    Applies a function to compute the new value of a shared parameter each
     iteration.
 
     This class can be used to adapt over the training process parameters
@@ -14,9 +14,9 @@ class SharedVariableModifier(SimpleExtension):
     Parameters
     ----------
     parameter : :class:`~tensor.TensorSharedVariable`
-        shared variable to be adjusted
+        Shared variable to be adjusted
     function : callable
-        a function which outputs a numeric value to which the
+        A function which outputs a numeric value to which the
         given shared variable will be set and may take one or two
         arguments.
 
