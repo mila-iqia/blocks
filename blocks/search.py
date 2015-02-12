@@ -6,7 +6,7 @@ import numpy as np
 
 from theano import function
 from theano import config
-from theano import tensor as tt
+from theano import tensor
 
 from blocks.bricks.sequence_generators import BaseSequenceGenerator
 
@@ -62,7 +62,7 @@ class BeamSearch(Search):
 
     """
     def __init__(self, beam_size, batch_size, sequence_generator, x, y, x_mask,
-                 y_mask, f_input):
+                 y_mask, f_input, inputs):
         super(BeamSearch, self).__init__(sequence_generator)
         self.beam_size = beam_size
         self.batch_size = batch_size
@@ -71,17 +71,17 @@ class BeamSearch(Search):
         self.y = y
         self.x_mask = x_mask
         self.y_mask = y_mask
-        self.f_input  = f_input
+        self.f_input = f_input
+        self.inputs = inputs
 
     def compile(self, *args, **kwargs):
         """Compiles functions for beamsearch
 
         Parameters
         ----------
-        :param args:
-        :param kwargs : States, contexts, and glimpses are expected as
-               keyword arguments
-        :return:
+        inputs : dict
+            Dictionary of named inputs
+
         """
         states = {name: kwargs[name] for name
                   in self.generator.state_names}
@@ -94,28 +94,32 @@ class BeamSearch(Search):
         next_glimpses = self.generator.transition.take_look(
             return_dict=True, **input_dict)
 
-        self.next_glimpse_computer = function(input_dict.values(),
+        self.next_glimpse_computer = function(self.inputs.values(),
                                               next_glimpses.values())
 
-        self.outputs = tt.TensorType('int64', (False,) *
+        self.outputs = tensor.TensorType('int64', (False,) *
                                      self.generator.get_dim("outputs"))()
         next_readouts = self.generator.readout.readout(
             feedback=self.readout.feedback(self.outputs),
             **input_dict)
 
-        self.next_readouts_computer = function([self.outputs], next_readouts)
+        readout_inputs = (self.outputs + states.values() + glimpses.values() +
+                          contexts.values())
+        self.next_readouts_computer = function(readout_inputs, next_readouts)
 
         next_outputs, next_states, next_costs = \
             self.generator.compute_next_states(next_readouts,
                                                next_glimpses,
                                                **kwargs)
 
-        self.next_states_computers = [function([], var) for var in next_states]
-        self.next_outputs_computer = next_outputs.eval()
-        self.next_costs_computer = next_costs.eval()
+        states_inputs = contexts.values() + next_readouts + states.values()
+        self.next_states_computers = [function(states_inputs, var) for var
+                                      in next_states]
+        self.next_outputs_computer = function(states_inputs, next_outputs)
+        self.next_costs_computer = function(states_inputs, next_costs)
 
         next_probs = self.generator.readout.emit_probs(next_readouts)
-        self.next_probs_computer = function([], next_probs)
+        self.next_probs_computer = function(next_readouts, next_probs)
 
         super(BeamSearch, self).compile(*args, **kwargs)
 
