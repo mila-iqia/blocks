@@ -98,7 +98,8 @@ class Convolutional(Initializable):
             W = self.params
 
         output = conv2d(
-            input_, W, image_shape=(None,) + self.input_dim,
+            input_, W,
+            image_shape=(None,) + self.input_dim if self.input_dim else None,
             subsample=self.step,
             border_mode=self.border_mode,
             filter_shape=((self.num_filters, self.num_channels) +

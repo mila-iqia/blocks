@@ -27,7 +27,7 @@ def test_convolutional():
     assert_allclose(func(x_val),
                     numpy.prod(filter_size) * num_channels *
                     numpy.ones((batch_size, num_filters, 15, 11)) + 5)
-    conv.input_dim = (17, 13)
+    conv.input_dim = (num_channels, 17, 13)
     assert conv.get_dim('output') == (num_filters, 15, 11)
 
 
