@@ -98,7 +98,8 @@ class Convolutional(Initializable):
             W = self.params
 
         output = conv2d(
-            input_, W, image_shape=self.input_dim, subsample=self.step,
+            input_, W, image_shape=(None,) + self.input_dim,
+            subsample=self.step,
             border_mode=self.border_mode,
             filter_shape=((self.num_filters, self.num_channels) +
                           self.filter_size))
@@ -111,9 +112,9 @@ class Convolutional(Initializable):
             return self.input_dim
         if name == 'output':
             return ((self.num_filters,) +
-                    ConvOp.getOutputShape(self.input_dim, self.filter_size,
+                    ConvOp.getOutputShape(self.input_dim[1:], self.filter_size,
                                           self.step, self.border_mode))
-        return super(ConvolutionalLayer, self).get_dim(name)
+        return super(Convolutional, self).get_dim(name)
 
 
 class MaxPooling(Initializable, Feedforward):
