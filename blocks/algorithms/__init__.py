@@ -406,6 +406,11 @@ class RMSPropChainable(StepRule):
     step rule, _e.g._ :class:`SteepestDescent`. For an
     all-batteries-included experience, look at :class:`RMSProp`.
 
+    In general, this step rule should be used _before_ other step rules,
+    because it has normalization properties that may undo their work.
+    For instance, it should be applied first when used in conjunction
+    with :class:`SteepestDescent`.
+
     For more information, see [RMSProp]_.
 
     .. [RMSProp] Geoff Hinton, *Neural Networks for Machine Learning*,
