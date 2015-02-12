@@ -10,6 +10,8 @@ from theano import tensor
 
 from blocks.bricks.sequence_generators import BaseSequenceGenerator
 
+floatX = config.floatX
+
 
 class Search(object):
     """Abstract search class
@@ -147,8 +149,23 @@ class BeamSearch(Search):
         indexes = np.unravel_index(args, probs.shape)
         return indexes, probs[indexes]
 
-    def search(self, start_symbol, eol_symbol=-1, max_length=512,
-               **kwargs):
+    @classmethod
+    def _tile(cls, val, times):
+        if val.ndim == 2:
+            return np.tile(val, (1, times))
+        else:
+            return np.tile(val, (1, times, 1))
+
+    @classmethod
+    def _rearrange(cls, outputs, indexes):
+        n_chunks = indexes.shape[0]
+        beam_size = indexes.shape[1]
+        new_outputs = outputs.reshape((-1, n_chunks * beam_size))
+        new_outputs = new_outputs[:, indexes.flatten()]
+        new_outputs = new_outputs.reshape(outputs.shape)
+        return new_outputs.copy()
+
+    def search(self, eol_symbol=-1, max_length=512, **kwargs):
         """Performs greedy search
 
         Parameters
@@ -172,20 +189,18 @@ class BeamSearch(Search):
         n_chunks = list(context_vals.values())[0].shape[1] # input batch size
         real_batch_size = n_chunks * self.beam_size
 
-        aux_inputs = {name: np.tile(val, (1, self.beam_size)) for name, val
+        aux_inputs = {name: self._tile(val, self.beam_size) for name, val
                       in context_vals.iteritems()}
-        aux_inp = np.tile(inp_seq, (1, self.beam_size, 1))
-        aux_mask = np.tile(inp_mask, (1, self.beam_size))
 
         current_outputs = np.zeros((0, n_chunks, self.beam_size),
                                    dtype='int64')
         curr_out_mask = np.ones((0, n_chunks, self.beam_size), dtype=floatX)
 
-        outputs_dim = self.generator.get_dim('outputs')
-        current_outputs = np.array(outputs_dim)  # TODO: outputs dimensionality
+        #outputs_dim = self.generator.get_dim('outputs')
+        #current_outputs = np.array(outputs_dim)
         for i in xrange(max_length):
             # Compute probabilities
-            next_glimpses = self.next_glimpse_computer(inputs.values())
+            next_glimpses = self.next_glimpse_computer(input_vals.values())
             next_readouts = self.next_readouts_computer(inputs.values())
 
             next_outputs = self.next_outputs_computer(inputs.values() +
@@ -198,19 +213,49 @@ class BeamSearch(Search):
             next_costs = self.next_costs_computer(inputs.values() +
                                                   next_readouts.values() +
                                                   [next_glimpses])
-            next_probs = self.next_probs_computer(next_readouts)
+            probs_val = self.next_probs_computer(next_readouts)
 
             # Choose top beam_size
-            prob_batches = self._chunks(next_probs, self.batch_size)
+            prob_batches = probs_val.reshape((n_chunks, self.beam_size, -1))
             # Top probs
-            indexes, top_probs = zip(*[self._top_probs(batch, self.beam_size)
+            indexes, top_probs = zip(*[self._top_probs(batch, self.beam_size,
+                                                       unique=i == 0)
                                        for batch in prob_batches])
-            outputs = [ind[-1] for ind in indexes]
-            #current_outputs.
-            # Next state
-            # Next output
+            indexes = np.array(indexes)  # chunk, 2, beam
+            # current_outputs.
+            # here we suppose, that we have 2d outputs
+            outputs = indexes[:, 1, :].copy()
 
-            # if all meet eol
-            if False:
+            # rearrange outputs
+            rearrange_ind = indexes[:, 0, :]
+            current_outputs = self._rearrange(current_outputs, rearrange_ind)
+            curr_out_mask = self._rearrange(curr_out_mask, rearrange_ind)
+            hidden_states = [self._rearrange(s, rearrange_ind) for s in
+                             hidden_states]
+            probs_val = self._rearrange(probs_val, rearrange_ind)
+
+            # construct next output
+            #next_outputs = np.array(outputs).flatten()[None, :]
+            outputs = outputs.reshape((1, n_chunks, self.beam_size))
+            current_outputs = np.append(current_outputs,
+                                        outputs.copy(), axis=0)
+            # check if we meet eol
+            next_out_mask = np.ones((1, n_chunks, self.beam_size),
+                                    dtype=floatX)
+
+            # Stop computing branch which met eol
+            #if curr_out_mask.shape[0] >= 1:
+            #    next_out_mask[0, :, :] = np.logical_and((outputs[0, :, :] != eol_symbol), curr_out_mask[-1, :, :] == 1)
+            #else:
+            next_out_mask[0, :, :] = (outputs[0, :, :] != eol_symbol)
+            curr_out_mask = np.append(curr_out_mask, next_out_mask.copy(), axis=0)
+
+            if np.all(current_outputs[-1, :, 0] == eol_symbol):
                 break
-        raise NotImplementedError()  # TODO: remove when implemented
+
+        # Select only best
+        current_outputs = current_outputs[:, :, 0]
+        curr_out_mask = curr_out_mask[:, :, 0]
+
+        return current_outputs, curr_out_mask
+
