@@ -38,7 +38,6 @@ class Convolutional(Initializable):
         details. Defaults to 'valid'.
 
     """
-
     @lazy
     def __init__(self, filter_size, num_filters, num_channels, input_dim=None,
                  step=(1, 1), border_mode='valid', **kwargs):
@@ -225,8 +224,8 @@ class Flattener(Brick):
     """Flattens the input.
 
     It may be used to pass multidimensional objects like images or feature
-    maps of convolutional bricks into bricks which allow only two dimensional
-    input (batch, features) like MLP.
+    maps of convolutional bricks into bricks which allow only two
+    dimensional input (batch, features) like MLP.
 
     """
     @application(inputs=['input_'], outputs=['output'])
