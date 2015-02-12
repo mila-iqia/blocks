@@ -9,4 +9,4 @@ if __name__ == "__main__":
         "path", help="A path to a file with a pickled main loop")
     args = parser.parse_args()
 
-    continue_training(args.path, args.rec_limit)
+    continue_training(args.path)

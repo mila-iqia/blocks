@@ -15,4 +15,4 @@ if __name__ == "__main__":
         "dump_path", help="A path where you want to dump")
     args = parser.parse_args()
 
-    dump(args.pickle_path, args.dump_path, args.rec_limit)
+    dump(args.pickle_path, args.dump_path)
