@@ -3,8 +3,9 @@ import signal
 import logging
 import traceback
 
+from blocks import config
 from blocks.log import TrainingLog
-from blocks.utils import reraise_as, unpack
+from blocks.utils import reraise_as, unpack, change_recursion_limit
 
 logger = logging.getLogger(__name__)
 
@@ -86,35 +87,36 @@ class MainLoop(object):
         a `training_finish_requested` record in the log.
 
         """
-        self.original_handler = signal.signal(
-            signal.SIGINT, self._handle_keyboard_interrupt)
-        try:
-            logger.info("Entered the main loop")
-            if not self.status._training_started:
-                for extension in self.extensions:
-                    extension.main_loop = self
-                self.algorithm.log = self.log
-                self._run_extensions('before_training')
-                self.algorithm.initialize()
-                self.status._training_started = True
-            # We can not write "else:" here because extension
-            # called "before_training" could have changed the status
-            # of the main loop.
-            if self.log.status.iterations_done > 0:
-                self._run_extensions('on_resumption')
-            while self._run_epoch():
-                pass
-        except TrainingFinish:
-            self.log.current_row.training_finished = True
-        except Exception as e:
-            logger.error(traceback.format_exc(e))
-            logger.info(
-                "An error occurred during the training.\n"
-                "Attempting to run extensions before exiting...")
-            # TODO: change the serialization destination here
-        finally:
-            self._run_extensions('after_training')
-            signal.signal(signal.SIGINT, self.original_handler)
+        with change_recursion_limit(config.recursion_limit):
+            self.original_handler = signal.signal(
+                signal.SIGINT, self._handle_keyboard_interrupt)
+            try:
+                logger.info("Entered the main loop")
+                if not self.status._training_started:
+                    for extension in self.extensions:
+                        extension.main_loop = self
+                    self.algorithm.log = self.log
+                    self._run_extensions('before_training')
+                    self.algorithm.initialize()
+                    self.status._training_started = True
+                # We can not write "else:" here because extension
+                # called "before_training" could have changed the status
+                # of the main loop.
+                if self.log.status.iterations_done > 0:
+                    self._run_extensions('on_resumption')
+                while self._run_epoch():
+                    pass
+            except TrainingFinish:
+                self.log.current_row.training_finished = True
+            except Exception as e:
+                logger.error(traceback.format_exc(e))
+                logger.info(
+                    "An error occurred during the training.\n"
+                    "Attempting to run extensions before exiting...")
+                # TODO: change the serialization destination here
+            finally:
+                self._run_extensions('after_training')
+                signal.signal(signal.SIGINT, self.original_handler)
 
     def find_extension(self, name):
         """Find an extension with a given name.
