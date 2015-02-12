@@ -139,5 +139,6 @@ config = Configuration()
 # Define configuration options
 config.add_config('data_path', type_=str, env_var='BLOCKS_DATA_PATH')
 config.add_config('default_seed', type_=int, default=1)
+config.add_config('recursion_limit', type_=int, default=10000)
 
 config.load_yaml()

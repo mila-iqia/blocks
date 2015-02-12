@@ -2,6 +2,7 @@ import sys
 import os
 import shutil
 import tempfile
+import contextlib
 from collections import OrderedDict
 
 import numpy
@@ -473,3 +474,12 @@ def secure_dill_dump(object_, path):
         if "temp" in locals():
             os.remove(temp.name)
         raise
+
+
+@contextlib.contextmanager
+def change_recursion_limit(limit):
+    """Temporarily changes the recursion limit."""
+    old_limit = sys.getrecursionlimit()
+    sys.setrecursionlimit(limit)
+    yield
+    sys.setrecursionlimit(old_limit)
