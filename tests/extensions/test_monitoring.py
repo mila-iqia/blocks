@@ -43,10 +43,10 @@ def test_training_data_monitoring():
                                   step_rule=SteepestDescent(0.001)),
         extensions=[
             FinishAfter(after_n_epochs=1),
-            TrainingDataMonitoring([W_sum, cost, V], "train1",
+            TrainingDataMonitoring([W_sum, cost, V], prefix="train1",
                                    after_every_batch=True),
-            TrainingDataMonitoring([aggregation.mean(W_sum), cost], "train2",
-                                   after_every_epoch=True),
+            TrainingDataMonitoring([aggregation.mean(W_sum), cost],
+                                   prefix="train2", after_every_epoch=True),
             TrueCostExtension()])
 
     main_loop.run()
