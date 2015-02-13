@@ -115,8 +115,7 @@ class BaseSequenceGenerator(Initializable):
                              for name in self.glimpse_names}
         self.readout.source_dims = dict_union(
             state_dims, context_dims, self.glimpse_dims,
-            feedback=self.readout.get_dim('feedback'),
-            )
+            feedback=self.readout.get_dim('feedback'))
 
         # Configure fork
         feedback_names = self.readout.feedback.outputs
@@ -264,33 +263,14 @@ class AbstractEmitter(Brick):
     """The interface for the emitter component of a readout."""
     @abstractmethod
     def emit(self, readouts):
-        """Computes next outputs
-
-        Parameters
-        ----------
-        readouts : current readouts
-        """
         pass
 
     @abstractmethod
     def emit_probs(self, readouts):
-        """Computes next probabilities
-
-        Parameters
-        ----------
-        readouts : readouts
-        """
         pass
 
     @abstractmethod
     def cost(self, readouts, outputs):
-        """Computes next costs
-
-        Parameters
-        ----------
-        readouts : current readouts
-        outputs : previous outputs
-        """
         pass
 
     @abstractmethod
@@ -490,8 +470,13 @@ class SoftmaxEmitter(AbstractEmitter, Initializable, Random):
 
     @application
     def emit(self, readouts):
-        probs = self.emit_probs(readouts)
-        return self.theano_rng.multinomial(pvals=probs).argmax(axis=-1)
+        probs = self._probs(readouts)
+        # Implemented in Theano only for pvals.ndim == 2
+        # TODO: Refactor reshapes when implemented in Theano
+        batch_size = probs.shape[0]
+        pvals_flat = probs.reshape((batch_size, -1))
+        generated = self.theano_rng.multinomial(pvals=pvals_flat)
+        return generated.reshape(probs.shape).argmax(axis=-1)
 
     @application
     def cost(self, readouts, outputs):

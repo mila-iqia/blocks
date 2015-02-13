@@ -1,8 +1,9 @@
 from abc import ABCMeta, abstractmethod
 
 import numpy
-import six
+from picklable_itertools import chain, repeat, imap, islice, _iter
 from six import add_metaclass
+from six.moves import xrange
 
 from blocks import config
 
@@ -60,6 +61,8 @@ class BatchScheme(IterationScheme):
     def __init__(self, num_examples, batch_size):
         self.num_examples = num_examples
         self.batch_size = batch_size
+        d, r = divmod(self.num_examples, self.batch_size)
+        self.num_batches = d + bool(r)
 
 
 class ConstantScheme(BatchSizeScheme):
@@ -90,38 +93,12 @@ class ConstantScheme(BatchSizeScheme):
         self.times = times
 
     def get_request_iterator(self):
-        return ConstantIterator(self.batch_size, self.num_examples, self.times)
-
-
-class ConstantIterator(six.Iterator):
-    def __init__(self, batch_size, num_examples=None, times=None):
-        if num_examples is not None and times is not None:
-            raise ValueError
-        if times is not None or num_examples is not None:
-            if not ((times is None or times >= 1) or
-                    (num_examples is None or num_examples >= 1)):
-                raise ValueError
-            self.current = 0
-
-        self.batch_size = batch_size
-        self.num_examples = num_examples
-        self.times = times
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        if self.times or self.num_examples:
-            if self.current == self.times or self.current == self.num_examples:
-                raise StopIteration
-            if self.times:
-                self.current += 1
-            else:
-                batch_size = min(self.batch_size,
-                                 self.num_examples - self.current)
-                self.current += batch_size
-                return batch_size
-        return self.batch_size
+        if self.times:
+            return repeat(self.batch_size, self.times)
+        if self.num_examples:
+            d, r = divmod(self.num_examples, self.batch_size)
+            return chain(repeat(self.batch_size, d), [r] if r else [])
+        return repeat(self.batch_size)
 
 
 class SequentialScheme(BatchScheme):
@@ -136,7 +113,9 @@ class SequentialScheme(BatchScheme):
 
     """
     def get_request_iterator(self):
-        return BatchIterator(self.num_examples, self.batch_size)
+        return imap(list, imap(
+            islice, repeat(_iter(xrange(self.num_examples)), self.num_batches),
+            repeat(self.batch_size, self.num_batches)))
 
 
 class ShuffledScheme(BatchScheme):
@@ -161,34 +140,8 @@ class ShuffledScheme(BatchScheme):
         super(ShuffledScheme, self).__init__(*args, **kwargs)
 
     def get_request_iterator(self):
-        return BatchIterator(self.num_examples, self.batch_size,
-                             shuffled=True, rng=self.rng)
-
-
-class BatchIterator(six.Iterator):
-    def __init__(self, num_examples, batch_size, shuffled=False, rng=None):
-        if shuffled:
-            if rng is None:
-                raise ValueError
-            self.indices = list(range(num_examples))
-            rng.shuffle(self.indices)
-
-        self.batch_size = batch_size
-        self.current = 0
-        self.num_examples = num_examples
-        self.shuffled = shuffled
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        if self.current >= self.num_examples:
-            raise StopIteration
-        if self.shuffled:
-            batch = self.indices[self.current:self.current + self.batch_size]
-        else:
-            batch = list(range(self.current,
-                               min(self.num_examples,
-                                   self.current + self.batch_size)))
-        self.current += len(batch)
-        return batch
+        indices = list(range(self.num_examples))
+        self.rng.shuffle(indices)
+        return imap(list, imap(
+            islice, repeat(_iter(indices), self.num_batches),
+            repeat(self.batch_size, self.num_batches)))

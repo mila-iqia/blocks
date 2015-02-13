@@ -470,9 +470,10 @@ class MLP(Sequence, Initializable, Feedforward):
 
     Parameters
     ----------
-    activations : bricks or ``None``
+    activations : list of :class:`.Brick` or ``None``
         A list of activations to apply after each linear transformation.
-        Give ``None`` to not apply any activation. Required for
+        Give ``None`` to not apply any activation. It is assumed that the
+        application method to use is ``apply``. Required for
         :meth:`__init__`.
     dims : list of ints
         A list of input dimensions, as well as the output dimension of the

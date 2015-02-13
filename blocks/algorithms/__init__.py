@@ -152,18 +152,20 @@ class GradientDescent(DifferentiableCostMinimizer):
         for batch in data:
             steps = step_rule.compute_steps(params, gradients_wr_params)
             for param in params:
-                param += steps[param]
+                param -= steps[param]
+
+    Note, that the step is _subtracted, not added_! This is done in order
+    to make step rule chaining possible.
 
     Parameters
     ----------
     step_rule : instance of :class:`StepRule`, optional
         An object encapsulating most of the algorithm's logic. Its
         `compute_steps` method is called to get Theano expression for
-        steps. Note, that the step rule
-        might have a state, e.g. to remember a weighted sum of gradients
-        from previous steps like it is done in gradient descent with
-        momentum. If ``None``, an instance of :class:`SteepestDescent` is
-        created.
+        steps.  Note, that the step rule might have a state, e.g. to
+        remember a weighted sum of gradients from previous steps like it is
+        done in gradient descent with momentum. If ``None``, an instance of
+        :class:`SteepestDescent` is created.
     gradients : dict, optional
         A dictionary mapping a parameter to an expression for the cost's
         gradient with respect to the parameter. If ``None``, the gradient
@@ -178,7 +180,10 @@ class GradientDescent(DifferentiableCostMinimizer):
 
     """
     def __init__(self, step_rule=None, gradients=None, **kwargs):
+        if gradients:
+            kwargs.setdefault("params", gradients.keys())
         super(GradientDescent, self).__init__(**kwargs)
+
         self.gradients = gradients
         if not self.gradients:
             logger.info("Taking the cost gradient")
@@ -201,7 +206,7 @@ class GradientDescent(DifferentiableCostMinimizer):
         # the parameters were given. Keep it like that to ensure
         # reproducibility.
         for param in self.params:
-            all_updates.append((param, param + self.steps[param]))
+            all_updates.append((param, param - self.steps[param]))
         all_updates += self.step_rule_updates
         self._function = theano.function(self.inputs, [], updates=all_updates)
         logger.info("The training algorithm is initialized")
@@ -210,8 +215,8 @@ class GradientDescent(DifferentiableCostMinimizer):
         if not set(batch.keys()) == set([v.name for v in self.inputs]):
             raise ValueError("mismatch of variable names and data sources" +
                              variable_mismatch_error.format(
-                                sources=batch.keys(),
-                                variables=[v.name for v in self.inputs]))
+                                 sources=batch.keys(),
+                                 variables=[v.name for v in self.inputs]))
         ordered_batch = [batch[v.name] for v in self.inputs]
         self._function(*ordered_batch)
 
@@ -275,8 +280,30 @@ class StepRule(object):
         return steps, updates
 
 
+class CompositeRule(StepRule):
+    """Chains several step rules.
+
+    Parameters
+    ----------
+    components : list of :class:`StepRule`
+        The learning rules to be chained. The rules will be applied in the
+        order as given.
+
+    """
+    def __init__(self, components):
+        self.components = components
+
+    def compute_steps(self, gradients):
+        result = gradients
+        updates = []
+        for rule in self.components:
+            result, more_updates = rule.compute_steps(result)
+            updates += more_updates
+        return result, updates
+
+
 class SteepestDescent(StepRule):
-    """A step in the direction opposite to the gradient.
+    """A step in the direction proportional to the gradient.
 
     Parameters
     ----------
@@ -294,11 +321,11 @@ class SteepestDescent(StepRule):
         self.learning_rate = shared_floatx(learning_rate)
 
     def compute_step(self, param, gradient):
-        return -self.learning_rate * gradient, []
+        return self.learning_rate * gradient, []
 
 
 class Momentum(StepRule):
-    """Accumulates the step with exponential discount.
+    """Accumulates gradients with exponential discount.
 
     Parameters
     ----------
@@ -351,7 +378,7 @@ class AdaDelta(StepRule):
 
         rms_delta_x_tm1 = tensor.sqrt(mean_square_delta_x_tm1 + self.epsilon)
         rms_grad_t = tensor.sqrt(mean_square_grad_t + self.epsilon)
-        delta_x_t = - rms_delta_x_tm1 / rms_grad_t * gradient
+        delta_x_t = rms_delta_x_tm1 / rms_grad_t * gradient
 
         mean_square_delta_x_t = (
             self.decay_rate * mean_square_delta_x_tm1 +
@@ -362,6 +389,85 @@ class AdaDelta(StepRule):
         updates = [(mean_square_grad_tm1, mean_square_grad_t),
                    (mean_square_delta_x_tm1, mean_square_delta_x_t)]
         return step, updates
+
+
+class BasicRMSProp(StepRule):
+    """Scales the step size by a running average of the recent gradient norms.
+
+    Parameters
+    ----------
+    decay_rate : float, optional
+        How fast the running average decays, value in [0, 1]
+        (lower is faster).  Defaults to 0.9.
+    max_scaling : float, optional
+        Maximum scaling of the step size, in case the running average is
+        really small. Needs to be greater than 0. Defaults to 1e5.
+
+    Notes
+    -----
+    This step rule is intended to be used in conjunction with another
+    step rule, _e.g._ :class:`SteepestDescent`. For an
+    all-batteries-included experience, look at :class:`RMSProp`.
+
+    In general, this step rule should be used _before_ other step rules,
+    because it has normalization properties that may undo their work.
+    For instance, it should be applied first when used in conjunction
+    with :class:`SteepestDescent`.
+
+    For more information, see [RMSProp]_.
+
+    .. [RMSProp] Geoff Hinton, *Neural Networks for Machine Learning*,
+       lecture 6a, <http://www.cs.toronto.edu/~tijmen/csc321/slides/
+       lecture_slides_lec6.pdf>
+
+    """
+    def __init__(self, decay_rate=0.9, max_scaling=1e5):
+        if not 0.0 <= decay_rate <= 1.0:
+            raise ValueError("decay rate needs to be in [0, 1]")
+        if max_scaling <= 0:
+            raise ValueError("max. scaling needs to be greater than 0")
+        self.decay_rate = shared_floatx(decay_rate)
+        self.epsilon = 1. / max_scaling
+
+    def compute_step(self, param, gradient):
+        mean_square_grad_tm1 = shared_floatx(param.get_value() * 0.)
+        mean_square_grad_t = (self.decay_rate * mean_square_grad_tm1 +
+                              (1 - self.decay_rate) * tensor.sqr(gradient))
+        rms_grad_t = tensor.maximum(
+            tensor.sqrt(mean_square_grad_t), self.epsilon)
+        step = gradient / rms_grad_t
+        updates = [(mean_square_grad_tm1, mean_square_grad_t)]
+        return step, updates
+
+
+class RMSProp(CompositeRule):
+    """Scales the step size by a running average of the recent gradient norms.
+
+    Parameters
+    ----------
+    learning_rate : float, optional
+        The learning rate by which the gradient is multiplied to produce
+        the descent step. Defaults to 1.
+    decay_rate : float, optional
+        How fast the running average decays (lower is faster).
+        Defaults to 0.9.
+    max_scaling : float, optional
+        Maximum scaling of the step size, in case the running average is
+        really small. Defaults to 1e5.
+
+    Notes
+    -----
+    For more information, see [RMSProp]_.
+
+    .. [RMSProp] Geoff Hinton, *Neural Networks for Machine Learning*,
+       lecture 6a, <http://www.cs.toronto.edu/~tijmen/csc321/slides/
+       lecture_slides_lec6.pdf>
+
+    """
+    def __init__(self, learning_rate=1.0, decay_rate=0.9, max_scaling=1e5):
+        self.components = [
+            BasicRMSProp(decay_rate=decay_rate, max_scaling=max_scaling),
+            SteepestDescent(learning_rate=learning_rate)]
 
 
 class GradientClipping(StepRule):
@@ -382,7 +488,7 @@ class GradientClipping(StepRule):
     """
     def __init__(self, threshold=None):
         if threshold:
-            self.threshold = theano.shared(threshold)
+            self.threshold = shared_floatx(threshold)
 
     def compute_steps(self, gradients):
         if not hasattr(self, 'threshold'):
@@ -394,25 +500,3 @@ class GradientClipping(StepRule):
             (param, gradient * multiplier)
             for param, gradient in gradients.items())
         return steps, []
-
-
-class CompositeRule(StepRule):
-    """Chains several step rules.
-
-    Parameters
-    ----------
-    components : list of :class:`StepRule`
-        The learning rules to be chained. The rules will be applied in the
-        order as given.
-
-    """
-    def __init__(self, components):
-        self.components = components
-
-    def compute_steps(self, gradients):
-        result = gradients
-        updates = []
-        for rule in self.components:
-            result, more_updates = rule.compute_steps(result)
-            updates += more_updates
-        return result, updates
