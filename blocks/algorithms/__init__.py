@@ -180,7 +180,10 @@ class GradientDescent(DifferentiableCostMinimizer):
 
     """
     def __init__(self, step_rule=None, gradients=None, **kwargs):
+        if gradients:
+            kwargs.setdefault("params", gradients.keys())
         super(GradientDescent, self).__init__(**kwargs)
+
         self.gradients = gradients
         if not self.gradients:
             logger.info("Taking the cost gradient")
