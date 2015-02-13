@@ -182,7 +182,9 @@ class GradientDescent(DifferentiableCostMinimizer):
     def __init__(self, step_rule=None, gradients=None, **kwargs):
         super(GradientDescent, self).__init__(**kwargs)
         self.gradients = gradients
-        if not self.gradients:
+        if self.gradients:
+            self.params = gradients.keys()
+        else:
             logger.info("Taking the cost gradient")
             self.gradients = dict(
                 zip(self.params, tensor.grad(self.cost, self.params)))
