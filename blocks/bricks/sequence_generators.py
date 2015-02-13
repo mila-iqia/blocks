@@ -378,6 +378,10 @@ class Readout(AbstractReadout):
         return self.emitter.emit(readouts)
 
     @application
+    def emit_probs(self, readouts):
+        return self.emitter.emit_probs(readouts)
+
+    @application
     def cost(self, readouts, outputs):
         return self.emitter.cost(readouts, outputs)
 
