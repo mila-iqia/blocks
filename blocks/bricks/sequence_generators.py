@@ -114,7 +114,8 @@ class BaseSequenceGenerator(Initializable):
         self.glimpse_dims = {name: self.transition.get_dim(name)
                              for name in self.glimpse_names}
         self.readout.source_dims = dict_union(
-            state_dims, context_dims, self.glimpse_dims)
+            state_dims, context_dims, self.glimpse_dims,
+            feedback=self.readout.get_dim('feedback'))
 
         # Configure fork
         feedback_names = self.readout.feedback.outputs
