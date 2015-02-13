@@ -7,10 +7,8 @@ from numpy.testing import assert_allclose
 from theano import tensor
 
 from blocks.bricks import Tanh
-from blocks.bricks.recurrent import (GatedRecurrent,
-                                     Recurrent,
-                                     Bidirectional,
-                                     LSTM)
+from blocks.bricks.recurrent import (
+    GatedRecurrent, SimpleRecurrent, Bidirectional, LSTM)
 from blocks.initialization import Constant, IsotropicGaussian, Orthogonal
 
 
@@ -19,8 +17,8 @@ floatX = theano.config.floatX
 
 class TestRecurrent(unittest.TestCase):
     def setUp(self):
-        self.simple = Recurrent(dim=3, weights_init=Constant(2),
-                                activation=Tanh())
+        self.simple = SimpleRecurrent(dim=3, weights_init=Constant(2),
+                                      activation=Tanh())
         self.simple.initialize()
 
     def test_one_step(self):
@@ -206,11 +204,11 @@ class TestGatedRecurrent(unittest.TestCase):
 class TestBidirectional(unittest.TestCase):
     def setUp(self):
         self.bidir = Bidirectional(weights_init=Orthogonal(),
-                                   prototype=Recurrent(
+                                   prototype=SimpleRecurrent(
                                        dim=3, activation=Tanh()),
                                    seed=1)
-        self.simple = Recurrent(dim=3, weights_init=Orthogonal(),
-                                activation=Tanh(), seed=1)
+        self.simple = SimpleRecurrent(dim=3, weights_init=Orthogonal(),
+                                      activation=Tanh(), seed=1)
         self.bidir.initialize()
         self.simple.initialize()
         self.x_val = 0.1 * numpy.asarray(

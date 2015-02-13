@@ -6,7 +6,7 @@ from theano import tensor
 
 from blocks.bricks import Initializable, Identity, MLP, Random
 from blocks.bricks.base import application, Brick, lazy
-from blocks.bricks.recurrent import BaseRecurrent
+from blocks.bricks.recurrent import Recurrent
 from blocks.bricks.parallel import Fork, Distribute
 from blocks.bricks.lookup import LookupTable
 from blocks.bricks.recurrent import recurrent
@@ -285,7 +285,7 @@ class AbstractReadout(AbstractEmitter, AbstractFeedback):
 
 
 @add_metaclass(ABCMeta)
-class AbstractAttentionTransition(BaseRecurrent):
+class AbstractAttentionTransition(Recurrent):
     """A base class for a transition component of a sequence generator.
 
     A recurrent transition combined with an attention mechanism.
@@ -797,7 +797,7 @@ class SequenceGenerator(BaseSequenceGenerator):
     ----------
     readout : instance of :class:`AbstractReadout`
         The readout component for the sequence generator.
-    transition : instance of :class:`.BaseRecurrent`
+    transition : instance of :class:`.Recurrent`
         The recurrent transition to be used in the sequence generator.
         Will be combined with `attention`, if that one is given.
     attention : :class:`.Brick`
