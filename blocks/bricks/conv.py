@@ -100,7 +100,8 @@ class Convolutional(Initializable):
         output = conv2d(
             input_, W,
             image_shape=(None, self.num_channels) +
-                        (self.image_shape if self.image_shape else (None, None)),
+                        (self.image_shape if self.image_shape else (None,
+                                                                    None)),
             subsample=self.step,
             border_mode=self.border_mode,
             filter_shape=((self.num_filters, self.num_channels) +
