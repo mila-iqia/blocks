@@ -269,9 +269,9 @@ class SimpleRecurrent(Recurrent, Initializable):
         Parameters
         ----------
         inputs : :class:`~tensor.TensorVariable`
-            The inputs, in the shape (batch, features).
+            The 2D inputs, in the shape (batch, features).
         states : :class:`~tensor.TensorVariable`
-            The states, in the shape (batch, features).
+            The 2D states, in the shape (batch, features).
         mask : :class:`~tensor.TensorVariable`
             A 1D binary array in the shape (batch,) which is 1 if
             there is data available, 0 if not. Assumed to be 1-s
