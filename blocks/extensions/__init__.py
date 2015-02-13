@@ -59,6 +59,11 @@ class TrainingExtension(object):
 
     def on_resumption(self):
         """The callback invoked after training is resumed."""
+        pass
+
+    def on_error(self):
+        """The callback invoked when an error occurs."""
+        pass
 
     def before_training(self):
         """The callback invoked before training is started."""

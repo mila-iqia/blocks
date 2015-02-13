@@ -9,6 +9,14 @@ from blocks.utils import reraise_as, unpack, change_recursion_limit
 
 logger = logging.getLogger(__name__)
 
+error_message = (
+    """An error occurred during the training.
+
+Attempting to run `on_error` extensions before exiting...""")
+
+error_in_error_handling_message = (
+    """While calling `on_error` extension another error occured.""")
+
 
 class MainLoop(object):
     """The standard main loop of Blocks.
@@ -109,13 +117,17 @@ class MainLoop(object):
             except TrainingFinish:
                 self.log.current_row.training_finished = True
             except Exception as e:
-                logger.error(traceback.format_exc(e))
-                logger.info(
-                    "An error occurred during the training.\n"
-                    "Attempting to run extensions before exiting...")
-                # TODO: change the serialization destination here
+                self.log.current_row.got_exception = traceback.format_exc(e)
+                logger.info(error_message)
+                try:
+                    self._run_extensions('on_error')
+                except Exception as inner_e:
+                    logger.error(traceback.format_exc(inner_e))
+                    logger.info(error_in_error_handling_message)
+                reraise_as(e)
             finally:
-                self._run_extensions('after_training')
+                if not self.log.current_row.got_exception:
+                    self._run_extensions('after_training')
                 signal.signal(signal.SIGINT, self.original_handler)
 
     def find_extension(self, name):
