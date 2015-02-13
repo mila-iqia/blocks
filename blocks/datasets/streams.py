@@ -239,8 +239,8 @@ class ForceFloatX(DataStreamWrapper):
         result = []
         for piece in data:
             if (isinstance(piece, numpy.ndarray)
-                   and str(piece.dtype).startswith('float')
-                   and piece.dtype != floatX):
+                    and str(piece.dtype).startswith('float')
+                    and piece.dtype != floatX):
                 result.append(piece.astype(floatX))
             else:
                 result.append(piece)
