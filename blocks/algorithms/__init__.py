@@ -180,10 +180,9 @@ class GradientDescent(DifferentiableCostMinimizer):
 
     """
     def __init__(self, step_rule=None, gradients=None, **kwargs):
-        if gradients and 'params' not in kwargs:
-            super(GradientDescent, self).__init__(params=gradients.keys(), **kwargs)
-        else:
-            super(GradientDescent, self).__init__(**kwargs)
+        if gradients:
+            kwargs.setdefault("params", gradients.keys())
+        super(GradientDescent, self).__init__(**kwargs)
 
         self.gradients = gradients
         if not self.gradients:
