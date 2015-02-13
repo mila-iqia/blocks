@@ -266,7 +266,7 @@ class AbstractEmitter(Brick):
         pass
 
     @abstractmethod
-    def emit_probs(self, readouts):
+    def probs(self, readouts):
         pass
 
     @abstractmethod
@@ -358,8 +358,8 @@ class Readout(AbstractReadout):
         return self.emitter.emit(readouts)
 
     @application
-    def emit_probs(self, readouts):
-        return self.emitter.emit_probs(readouts)
+    def probs(self, readouts):
+        return self.emitter.probs(readouts)
 
     @application
     def cost(self, readouts, outputs):
@@ -443,7 +443,7 @@ class TrivialEmitter(AbstractEmitter):
         return readouts
 
     @application
-    def emit_probs(self, readouts):
+    def probs(self, readouts):
         raise ValueError('Cannot compute probabilities in TrivialEmitter')
 
     @application
@@ -463,14 +463,14 @@ class SoftmaxEmitter(AbstractEmitter, Initializable, Random):
 
     """
     @application
-    def emit_probs(self, readouts):
+    def probs(self, readouts):
         shape = readouts.shape
         return tensor.nnet.softmax(readouts.reshape(
             (tensor.prod(shape[:-1]), shape[-1]))).reshape(shape)
 
     @application
     def emit(self, readouts):
-        probs = self.emit_probs(readouts)
+        probs = self.probs(readouts)
         # Implemented in Theano only for pvals.ndim == 2
         # TODO: Refactor reshapes when implemented in Theano
         batch_size = probs.shape[0]
@@ -480,7 +480,7 @@ class SoftmaxEmitter(AbstractEmitter, Initializable, Random):
 
     @application
     def cost(self, readouts, outputs):
-        probs = self.emit_probs(readouts)
+        probs = self.probs(readouts)
         max_output = probs.shape[-1]
         flat_outputs = outputs.flatten()
         num_outputs = flat_outputs.shape[0]

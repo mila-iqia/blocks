@@ -118,7 +118,7 @@ class BeamSearch(Search):
         self.next_outputs_computer = function(states_inputs, next_outputs)
         self.next_costs_computer = function(states_inputs, next_costs)
 
-        next_probs = self.generator.readout.emit_probs(next_readouts)
+        next_probs = self.generator.readout.probs(next_readouts)
         self.next_probs_computer = function(next_readouts, next_probs)
 
         super(BeamSearch, self).compile(*args, **kwargs)
