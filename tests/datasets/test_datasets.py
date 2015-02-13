@@ -1,14 +1,17 @@
 from collections import OrderedDict
 
 import numpy
+import theano
 from six.moves import zip
 from nose.tools import assert_raises
 
 from blocks.datasets import ContainerDataset
 from blocks.datasets.streams import (
     CachedDataStream, DataStream, DataStreamMapping, BatchDataStream,
-    PaddingDataStream, DataStreamFilter)
+    PaddingDataStream, DataStreamFilter, ForceFloatX)
 from blocks.datasets.schemes import BatchSizeScheme, ConstantScheme
+
+floatX = theano.config.floatX
 
 
 def test_dataset():
@@ -45,6 +48,15 @@ def test_data_stream_filter():
     stream = ContainerDataset(data).get_default_stream()
     wrapper = DataStreamFilter(stream, lambda d: d[0] % 2 == 1)
     assert list(wrapper.get_epoch_iterator()) == list(zip(data_filtered))
+
+
+def test_floatx():
+    x = [numpy.array(d, dtype="float64") for d in [[1, 2], [3, 4]]]
+    y = [numpy.array(d, dtype="int64") for d in [1, 2, 3]]
+    dataset = ContainerDataset(OrderedDict([("x", x), ("y", y)]))
+    data = next(ForceFloatX(dataset.get_default_stream()).get_epoch_iterator())
+    assert str(data[0].dtype) == floatX
+    assert str(data[1].dtype) == "int64"
 
 
 def test_sources_selection():
