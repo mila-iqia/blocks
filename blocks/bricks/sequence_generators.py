@@ -209,7 +209,8 @@ class BaseSequenceGenerator(Initializable):
                                      next_glimpses,
                                      **kwargs)
         return (next_states + [next_outputs]
-                + list(next_glimpses.values()) + [next_costs])
+                + list(next_glimpses.values()) +
+                [next_costs, self.readout.probs(next_readouts)])
 
     @application
     def compute_next_states(self, next_readouts, next_glimpses, **kwargs):
@@ -237,7 +238,7 @@ class BaseSequenceGenerator(Initializable):
     @generate.property('outputs')
     def generate_outputs(self):
         return (self.state_names + ['outputs']
-                + self.glimpse_names + ['costs'])
+                + self.glimpse_names + ['costs', 'probs'])
 
     def get_dim(self, name):
         if name in self.state_names + self.context_names + self.glimpse_names:

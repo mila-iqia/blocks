@@ -71,7 +71,7 @@ class BeamSearch(Search):
         self.f_input = f_input
         self.inputs = inputs
 
-    def compile(self, *args, **kwargs):
+    def compile(self, state_names, glipmse_names, *args, **kwargs):
         """Compiles functions for beamsearch
 
         Parameters
@@ -91,35 +91,32 @@ class BeamSearch(Search):
         self.context_names = contexts.keys()
         self.glimpse_names = glimpses.keys()
 
-        next_glimpses = self.generator.transition.take_look(
-            return_dict=True, **input_dict)
-
-        self.next_glimpse_computer = function(self.inputs.values(),
-                                              next_glimpses.values())
+        init_state, init_out, init_costs, init_probs = \
+            self.generator.generate(iterate=False, batch_size=self.batch_size,
+                                    n_steps=1, contexts=contexts,
+                                    output_probs=True,
+                                    return_initial_states=True,
+                                    return_dict=True)
+        self.init_state_computer = function(self.inputs.values(),
+                                            [init_state, init_out, init_costs,
+                                             init_probs])
 
         self.outputs = tensor.TensorType('int64', (False,) *
                                      self.generator.get_dim("outputs"))()
-        next_readouts = self.generator.readout.readout(
-            feedback=self.readout.feedback(self.outputs),
-            **input_dict)
 
-        readout_inputs = (self.outputs + states.values() + glimpses.values() +
-                          contexts.values())
-        self.next_readouts_computer = function(readout_inputs, next_readouts)
+        curr_out = tensor.zeros_like(init_out)
+        curr_states = tensor.zeros_like(init_state)
+        next_state, next_out, (next_costs, next_probs) = \
+            self.generator.generate(outputs=curr_out[None, :],
+                                    states=curr_states,
+                                    iterate=False,
+                                    batch_size=self.batch_size, n_steps=1,
+                                    contexts=contexts, output_probs=True,
+                                    return_dict=True)
 
-        next_outputs, next_states, next_costs = \
-            self.generator.compute_next_states(next_readouts,
-                                               next_glimpses,
-                                               **kwargs)
-
-        states_inputs = contexts.values() + next_readouts + states.values()
-        self.next_states_computers = [function(states_inputs, var) for var
-                                      in next_states]
-        self.next_outputs_computer = function(states_inputs, next_outputs)
-        self.next_costs_computer = function(states_inputs, next_costs)
-
-        next_probs = self.generator.readout.probs(next_readouts)
-        self.next_probs_computer = function(next_readouts, next_probs)
+        self.next_state_computer = function([curr_out, curr_states],
+                                            [next_state, next_out, next_costs,
+                                             next_probs])
 
         super(BeamSearch, self).compile(*args, **kwargs)
 
@@ -172,7 +169,7 @@ class BeamSearch(Search):
         n_chunks = list(context_vals.values())[0].shape[1] # input batch size
         real_batch_size = n_chunks * self.beam_size
 
-        aux_inputs = {name: np.tile(val, (1, self.beam_size)) for name, val
+        aux_inputs = {name: np.tile(val, self.beam_size) for name, val
                       in context_vals.iteritems()}
         aux_inp = np.tile(inp_seq, (1, self.beam_size, 1))
         aux_mask = np.tile(inp_mask, (1, self.beam_size))
