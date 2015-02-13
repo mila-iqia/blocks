@@ -15,7 +15,8 @@ class MonitoringExtension(TrainingExtension):
     Parameters
     ----------
     prefix : str, optional
-        The prefix for the log records done by the extension.
+        The prefix for the log records done by the extension.  It is
+        appended to the variable names with an underscore as a separator.
         If not given, the names of the observed variables are used as is.
 
     """
@@ -52,9 +53,6 @@ class DataStreamMonitoring(SimpleExtension, MonitoringExtension):
     data_stream : instance of :class:`.DataStream`
         The data stream to monitor on. A data epoch is requested
         each time monitoring is done.
-    prefix : str, optional
-        A prefix to add to the names when adding records to the log. An
-        underscore will be used to separate the prefix.
 
     """
     PREFIX_SEPARATOR = '_'
@@ -91,9 +89,6 @@ class TrainingDataMonitoring(SimpleExtension, MonitoringExtension):
     variables : list of :class:`~tensor.TensorVariable`
         The variables to monitor. The variable names are used as record
         names in the logs.
-    prefix : str, optional
-        A prefix to add to variable names when adding records to the
-        log. An underscore will be used to separate the prefix.
 
     Notes
     -----
