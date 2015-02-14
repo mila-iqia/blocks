@@ -7,7 +7,7 @@ from blocks.datasets import ContainerDataset
 from blocks.extensions import TrainingExtension, FinishAfter
 from blocks.extensions.monitoring import TrainingDataMonitoring
 from blocks.monitoring import aggregation
-from blocks.algorithms import GradientDescent, SteepestDescent
+from blocks.algorithms import GradientDescent, Scale
 from blocks.utils import shared_floatx, named_copy
 from blocks.main_loop import MainLoop
 
@@ -40,7 +40,7 @@ def test_training_data_monitoring():
     main_loop = MainLoop(
         model=None, data_stream=dataset.get_default_stream(),
         algorithm=GradientDescent(cost=cost, params=[W],
-                                  step_rule=SteepestDescent(0.001)),
+                                  step_rule=Scale(0.001)),
         extensions=[
             FinishAfter(after_n_epochs=1),
             TrainingDataMonitoring([W_sum, cost, V], "train1",

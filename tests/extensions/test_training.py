@@ -4,7 +4,7 @@ from numpy.testing import assert_allclose
 import theano
 from theano import tensor
 
-from blocks.algorithms import GradientDescent, SteepestDescent
+from blocks.algorithms import GradientDescent, Scale
 from blocks.datasets import ContainerDataset
 from blocks.extensions import FinishAfter
 from blocks.extensions.training import SharedVariableModifier
@@ -28,7 +28,7 @@ def test_shared_variable_modifier():
     cost = ((x * W).sum() - y) ** 2
     cost.name = 'cost'
 
-    step_rule = SteepestDescent(0.001)
+    step_rule = Scale(0.001)
     sgd = GradientDescent(cost=cost, params=[W],
                           step_rule=step_rule)
     main_loop = MainLoop(
@@ -60,7 +60,7 @@ def test_shared_variable_modifier_two_params():
     cost = ((x * W).sum() - y) ** 2
     cost.name = 'cost'
 
-    step_rule = SteepestDescent(0.001)
+    step_rule = Scale(0.001)
     sgd = GradientDescent(cost=cost, params=[W],
                           step_rule=step_rule)
     modifier = SharedVariableModifier(

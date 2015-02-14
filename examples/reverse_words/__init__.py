@@ -24,8 +24,8 @@ from blocks.datasets.streams import (
     DataStreamFilter)
 from blocks.datasets.text import OneBillionWord
 from blocks.datasets.schemes import ConstantScheme
-from blocks.algorithms import (GradientDescent, SteepestDescent,
-                               GradientClipping, CompositeRule)
+from blocks.algorithms import (GradientDescent, Scale,
+                               StepClipping, CompositeRule)
 from blocks.initialization import Orthogonal, IsotropicGaussian, Constant
 from blocks.monitoring import aggregation
 from blocks.extensions import FinishAfter, Printing, Timing
@@ -192,8 +192,8 @@ def main(mode, save_path, num_batches, from_dump):
 
         # Define the training algorithm.
         algorithm = GradientDescent(
-            cost=cost, step_rule=CompositeRule([GradientClipping(10.0),
-                                                SteepestDescent(0.01)]))
+            cost=cost, step_rule=CompositeRule([StepClipping(10.0),
+                                                Scale(0.01)]))
 
         observables = [
             cost, min_energy, max_energy, mean_activation,
