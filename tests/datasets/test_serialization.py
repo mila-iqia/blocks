@@ -1,7 +1,7 @@
 import os
 import tempfile
 
-import dill
+from six.moves import cPickle
 import numpy
 
 from blocks.datasets.streams import DataStream
@@ -23,12 +23,12 @@ def test_in_memory():
     # Pickle the epoch and make sure that the data wasn't dumped
     with tempfile.NamedTemporaryFile(delete=False) as f:
         filename = f.name
-        dill.dump(epoch, f, fmode=dill.CONTENTS_FMODE)
+        cPickle.dump(epoch, f)
     assert os.path.getsize(filename) < 1024 * 1024  # Less than 1MB
 
     # Reload the epoch and make sure that the state was maintained
     del epoch
     with open(filename, 'rb') as f:
-        epoch = dill.load(f)
+        epoch = cPickle.load(f)
     features, targets = next(epoch)
     assert numpy.all(features == mnist.features[512:768])

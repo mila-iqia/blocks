@@ -8,7 +8,7 @@ from collections import OrderedDict
 import numpy
 import six
 import theano
-import dill
+from six.moves import cPickle
 from theano import tensor
 from theano import printing
 from theano.gof.graph import Constant
@@ -419,7 +419,7 @@ def secure_dill_dump(object_, path):
     """
     try:
         with tempfile.NamedTemporaryFile(delete=False) as temp:
-            dill.dump(object_, temp, fmode=dill.CONTENTS_FMODE)
+            cPickle.dump(object_, temp)
         shutil.move(temp.name, path)
     except:
         if "temp" in locals():

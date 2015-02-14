@@ -22,7 +22,7 @@ import os
 import os.path
 from collections import OrderedDict
 
-import dill
+from six.moves import cPickle
 import numpy
 
 from blocks.bricks.base import Brick
@@ -177,11 +177,11 @@ class MainLoopDumpManager(object):
 
     def dump_iteration_state(self, main_loop):
         with open(self.path_to_iteration_state, "wb") as destination:
-            dill.dump(main_loop.iteration_state, destination)
+            cPickle.dump(main_loop.iteration_state, destination)
 
     def dump_log(self, main_loop):
         with open(self.path_to_log, "wb") as destination:
-            dill.dump(main_loop.log, destination)
+            cPickle.dump(main_loop.log, destination)
 
     def dump(self, main_loop):
         """Dumps the main loop to the root folder.
@@ -202,11 +202,11 @@ class MainLoopDumpManager(object):
 
     def load_iteration_state(self):
         with open(self.path_to_iteration_state, "rb") as source:
-            return dill.load(source)
+            return cPickle.load(source)
 
     def load_log(self):
         with open(self.path_to_log, "rb") as source:
-            return dill.load(source)
+            return cPickle.load(source)
 
     def load(self):
         return (self.load_parameters(),

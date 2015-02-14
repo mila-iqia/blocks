@@ -3,7 +3,7 @@ import logging
 import pprint
 import sys
 import math
-import dill
+from six.moves import cPickle
 import numpy
 import os
 
@@ -234,7 +234,7 @@ def main(mode, save_path, num_batches, from_dump, data_path=None):
         main_loop.run()
     elif mode == "test":
         with open(save_path, "rb") as source:
-            encoder, fork, lookup, generator = dill.load(source)
+            encoder, fork, lookup, generator = cPickle.load(source)
         logger.info("Model is loaded")
         chars = tensor.lmatrix("features")
         generated = generator.generate(

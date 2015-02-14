@@ -1,6 +1,6 @@
 import tempfile
 
-import dill
+from six.moves import cPickle
 from numpy.testing import assert_raises
 from six import BytesIO
 
@@ -28,10 +28,10 @@ def test_text():
     for sentence in zip(range(3), epoch):
         pass
     f = BytesIO()
-    dill.dump(epoch, f, fmode=dill.CONTENTS_FMODE)
+    cPickle.dump(epoch, f)
     sentence = next(epoch)
     f.seek(0)
-    epoch = dill.load(f)
+    epoch = cPickle.load(f)
     assert next(epoch) == sentence
     assert_raises(StopIteration, next, epoch)
 
