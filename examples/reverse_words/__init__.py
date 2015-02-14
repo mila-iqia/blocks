@@ -94,7 +94,7 @@ def lower(s):
     return s.lower()
 
 
-def tranpose(data):
+def transpose(data):
     return tuple(array.T for array in data)
 
 
@@ -104,6 +104,7 @@ def filter_long(data):
 
 def is_nan(log):
     return math.isnan(log.current_row.total_gradient_norm)
+
 
 def main(mode, save_path, num_batches, from_dump, data_path=None):
     if mode == "train":
@@ -288,6 +289,6 @@ def main(mode, save_path, num_batches, from_dump, data_path=None):
                 if sample == target:
                     message += " CORRECT!"
                 messages.append((cost, message))
-            messages.sort(key=operator.itemgetter(0), reversed=True)
+            messages.sort(key=operator.itemgetter(0), reverse=True)
             for _, message in messages:
                 print(message)

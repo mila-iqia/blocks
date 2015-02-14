@@ -123,6 +123,8 @@ class Application(object):
 
     @property
     def application_function(self):
+        if hasattr(self, '_application_function'):
+            return self._application_function
         return getattr(self.brick, '_' + self.application_name)
 
     def property(self, name):
@@ -217,17 +219,17 @@ class Application(object):
             raise AttributeError("can't set attribute")
         super(Application, self).__setattr__(name, value)
 
-# @property_
-# def inputs(self):
-#     return self._inputs
+    @property_
+    def inputs(self):
+        return self._inputs
 
-# @inputs.setter
-# def inputs(self, inputs):
-#     args_names, varargs_name, _, _ = inspect.getargspec(
-#         self.application_function)
-#     if not all(input_ in args_names + [varargs_name] for input_ in inputs):
-#         raise ValueError("Unexpected inputs")
-#     self._inputs = inputs
+    @inputs.setter
+    def inputs(self, inputs):
+        args_names, varargs_name, _, _ = inspect.getargspec(
+            self.application_function)
+        if not all(input_ in args_names + [varargs_name] for input_ in inputs):
+            raise ValueError("Unexpected inputs")
+        self._inputs = inputs
 
     @property_
     def name(self):
