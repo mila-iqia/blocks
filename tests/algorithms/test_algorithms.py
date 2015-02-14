@@ -6,8 +6,8 @@ from numpy.testing import assert_allclose, assert_raises
 from theano import tensor
 
 from blocks.algorithms import (GradientDescent, StepClipping, CompositeRule,
-                               Scale, StepRule, Momentum, AdaDelta,
-                               BasicRMSProp, RMSProp)
+                               Scale, StepRule, BasicMomentum, Momentum,
+                               AdaDelta, BasicRMSProp, RMSProp)
 from blocks.utils import shared_floatx
 
 
@@ -37,15 +37,26 @@ def test_gradient_descent_with_gradients():
     assert_allclose(W.get_value(), -0.5 * W_start_value)
 
 
-def test_momentum():
+def test_basic_momentum():
     a = shared_floatx([3, 4])
     cost = (a ** 2).sum()
-    steps, updates = Momentum(0.5).compute_steps(
+    steps, updates = BasicMomentum(0.5).compute_steps(
         OrderedDict([(a, tensor.grad(cost, a))]))
     f = theano.function([], [steps[a]], updates=updates)
     assert_allclose(f()[0], [6., 8.])
     assert_allclose(f()[0], [9., 12.])
     assert_allclose(f()[0], [10.5, 14.])
+
+
+def test_momentum():
+    a = shared_floatx([3, 4])
+    cost = (a ** 2).sum()
+    steps, updates = Momentum(0.1, 0.5).compute_steps(
+        OrderedDict([(a, tensor.grad(cost, a))]))
+    f = theano.function([], [steps[a]], updates=updates)
+    assert_allclose(f()[0], [0.6, 0.8])
+    assert_allclose(f()[0], [0.9, 1.2])
+    assert_allclose(f()[0], [1.05, 1.4])
 
 
 def test_adadelta():
