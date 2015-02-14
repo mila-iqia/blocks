@@ -331,13 +331,19 @@ class Scale(StepRule):
         return self.learning_rate * previous_step, []
 
 
-class Momentum(StepRule):
+class BasicMomentum(StepRule):
     """Accumulates step with exponential discount.
 
     Parameters
     ----------
     momentum : float, optional
-        The momentum coefficient.
+        The momentum coefficient. Defaults to 0.
+
+    Notes
+    -----
+    This step rule is intended to be used in conjunction with another
+    step rule, _e.g._ :class:`Scale`. For an all-batteries-included
+    experience, look at :class:`Momentum`.
 
     """
     def __init__(self, momentum=0.):
@@ -348,6 +354,25 @@ class Momentum(StepRule):
         step = self.momentum * velocity + previous_step
         updates = [(velocity, step)]
         return step, updates
+
+
+class Momentum(CompositeRule):
+    """Accumulates step with exponential discount.
+
+    Combines :class:`BasicMomentum` and :class:`Scale` to form the
+    usual momentum step rule.
+
+    Parameters
+    ----------
+    learning_rate : float, optional
+        The learning rate by which the previous step scaled. Defaults to 1.
+    momentum : float, optional
+        The momentum coefficient. Defaults to 0.
+
+    """
+    def __init__(self, learning_rate=1.0, momentum=0.):
+        self.components = [Scale(learning_rate=learning_rate),
+                           BasicMomentum(momentum=momentum)]
 
 
 class AdaDelta(StepRule):
