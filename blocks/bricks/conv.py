@@ -199,12 +199,12 @@ class ConvolutionalLayer(Sequence, Initializable):
     """
     def __init__(self, filter_size, num_filters, num_channels, pooling_size,
                  activation, conv_step=(1, 1), pooling_step=None,
-                 border_mode='valid', input_dim=None, **kwargs):
+                 border_mode='valid', image_shape=None, **kwargs):
         self.convolution = Convolutional(filter_size, num_filters,
-                                         num_channels, input_dim=input_dim,
+                                         num_channels, image_shape=image_shape,
                                          step=conv_step,
                                          border_mode=border_mode)
-        if input_dim is not None:
+        if image_shape is not None:
             pooling_input_dim = self.convolution.get_dim('output')
         else:
             pooling_input_dim = None
@@ -214,11 +214,9 @@ class ConvolutionalLayer(Sequence, Initializable):
             application_methods=[self.convolution.apply, activation,
                                  self.pooling.apply], **kwargs)
 
-        self.input_dim = input_dim
-
     def get_dim(self, name):
         if name == 'input_':
-            return self.input_dim
+            return self.convolution.get_dim('input_')
         if name == 'output':
             return self.pooling.get_dim('output')
         return super(ConvolutionalLayer, self).get_dim(name)
