@@ -1,5 +1,3 @@
-from six import BytesIO
-
 from six.moves import cPickle
 
 from blocks.main_loop import MainLoop
@@ -68,10 +66,7 @@ def test_training_resumption():
         assert main_loop.log.status.iterations_done == 14
 
         if with_serialization:
-            string_io = BytesIO()
-            cPickle.dump(main_loop, string_io)
-            string_io.seek(0)
-            main_loop = cPickle.load(string_io)
+            main_loop = cPickle.loads(cPickle.dumps(main_loop))
 
         finish_after = unpack(
             [ext for ext in main_loop.extensions
