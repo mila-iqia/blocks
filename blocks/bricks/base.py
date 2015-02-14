@@ -115,11 +115,16 @@ class Application(object):
     """
     call_stack = []
 
-    def __init__(self, application):
-        self.application = application
+    def __init__(self, application_function):
+        self._application_function = application_function
+        self.application_name = application_function.__name__
         self.delegate_function = None
         self.properties = {}
         self.bound_applications = {}
+
+    @property
+    def application_function(self):
+        return getattr(self.brick, '_' + self.application_name)
 
     def property(self, name):
         """Decorator to make application properties.
@@ -213,21 +218,21 @@ class Application(object):
             raise AttributeError("can't set attribute")
         super(Application, self).__setattr__(name, value)
 
-    @property_
-    def inputs(self):
-        return self._inputs
+    # @property_
+    # def inputs(self):
+    #     return self._inputs
 
-    @inputs.setter
-    def inputs(self, inputs):
-        args_names, varargs_name, _, _ = inspect.getargspec(
-            self.application)
-        if not all(input_ in args_names + [varargs_name] for input_ in inputs):
-            raise ValueError("Unexpected inputs")
-        self._inputs = inputs
+    # @inputs.setter
+    # def inputs(self, inputs):
+    #     args_names, varargs_name, _, _ = inspect.getargspec(
+    #         self.application_function)
+    #     if not all(input_ in args_names + [varargs_name] for input_ in inputs):
+    #         raise ValueError("Unexpected inputs")
+    #     self._inputs = inputs
 
     @property_
     def name(self):
-        return self.application.__name__
+        return self.application_name
 
     def __call__(self, brick, *args, **kwargs):
         if not isinstance(brick, Brick) and six.PY2:
@@ -245,7 +250,7 @@ class Application(object):
 
         # Find the names of the inputs to the application method
         args_names, varargs_name, _, _ = inspect.getargspec(
-            self.application)
+            self.application_function)
         args_names = args_names[1:]
 
         # Construct the ApplicationCall, used to store data in for this call
@@ -292,7 +297,7 @@ class Application(object):
             raise ValueError
         self.call_stack.append(brick)
         try:
-            outputs = self.application(brick, *args, **kwargs)
+            outputs = self.application_function(brick, *args, **kwargs)
             outputs = pack(outputs)
         finally:
             self.call_stack.pop()
@@ -349,9 +354,25 @@ class BoundApplication(object):
         return self.application.apply(self, *args, **kwargs)
 
 
+def rename_function(function, new_name):
+    old_name = function.__name__
+    function.__name__ = new_name
+    if six.PY3:
+        function.__qualname__ = \
+            function.__qualname__[:-len(old_name)] + new_name
+    return function
+
+
 class _Brick(ABCMeta):
     """Metaclass which attaches brick instances to the applications."""
     def __new__(mcs, name, bases, namespace):
+        for attr in list(namespace.values()):
+            if (isinstance(attr, Application) and
+                    hasattr(attr, '_application_function')):
+                namespace['_' + attr.application_name] = \
+                    rename_function(attr._application_function,
+                                    '_' + attr.application_name)
+                del attr._application_function
         brick = super(_Brick, mcs).__new__(mcs, name, bases, namespace)
         for attr in namespace.values():
             if isinstance(attr, Application):
@@ -857,6 +878,11 @@ def application(*args, **kwargs):
     instances. It also sets the attributes given as keyword arguments to
     the decorator.
 
+    Note that this decorator purposely does not wrap the original method
+    using e.g. :func:`~functools.wraps` or
+    :func:`~functools.update_wrapper`, since that would make the class
+    impossible to pickle (see notes at :class:`Application`).
+
     Examples
     --------
     >>> class Foo(Brick):
@@ -880,12 +906,10 @@ def application(*args, **kwargs):
     if args:
         application_function, = args
         application = Application(application_function)
-        update_wrapper(application, application_function)
         return application
     else:
         def wrap_application(application_function):
             application = Application(application_function)
-            update_wrapper(application, application_function)
             for key, value in kwargs.items():
                 setattr(application, key, value)
             return application
