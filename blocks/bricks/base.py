@@ -153,7 +153,7 @@ class Application(object):
             raise ValueError
 
         def wrap_property(application_property):
-            self.properties[name] = application_property
+            self.properties[name] = application_property.__name__
             return application_property
         return wrap_property
 
@@ -193,7 +193,7 @@ class Application(object):
         ['foo', 'bar']
 
         """
-        self.delegate_function = f
+        self.delegate_function = f.__name__
         return f
 
     def __get__(self, instance, owner):
@@ -208,8 +208,8 @@ class Application(object):
     def __getattr__(self, name):
         # Mimic behavior of properties
         if 'properties' in self.__dict__ and name in self.properties:
-            return property(create_unbound_method(self.properties[name],
-                                                  self.brick))
+            return property(create_unbound_method(
+                getattr(self, self.properties[name]), self.brick))
         raise AttributeError
 
     def __setattr__(self, name, value):
@@ -336,14 +336,18 @@ class BoundApplication(object):
         # These always belong to the parent (the unbound application)
         if name in ('delegate_function', 'properties'):
             return getattr(self.application, name)
+        if name in self.properties.values():
+            return getattr(self.application.brick, name)
         if name in self.properties:
-            return self.properties[name](self.brick)
+            return getattr(self, self.properties[name])(self.brick)
         # First try the parent (i.e. class level), before trying the delegate
         try:
             return getattr(self.application, name)
         except AttributeError:
             if self.delegate_function:
-                return getattr(self.delegate_function(self.brick), name)
+                return getattr(getattr(self.brick,
+                                       self.delegate_function)(),
+                               name)
             raise
 
     @property
