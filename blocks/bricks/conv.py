@@ -187,7 +187,7 @@ class ConvolutionalLayer(Sequence, Initializable):
     ----------
     activation : :class:`.BoundApplication`
         The application method to apply in the detector stage (i.e. the
-        nonlinearity before pooling.
+        nonlinearity before pooling. Needed for ``__init__``.
 
     See :class:`Convolutional` and :class:`MaxPooling` for explanations of
     other parameters.
@@ -197,22 +197,38 @@ class ConvolutionalLayer(Sequence, Initializable):
     Uses max pooling.
 
     """
+    @lazy
     def __init__(self, filter_size, num_filters, num_channels, pooling_size,
                  activation, conv_step=(1, 1), pooling_step=None,
                  border_mode='valid', image_shape=None, **kwargs):
-        self.convolution = Convolutional(filter_size, num_filters,
-                                         num_channels, image_shape=image_shape,
-                                         step=conv_step,
-                                         border_mode=border_mode)
-        if image_shape is not None:
-            pooling_input_dim = self.convolution.get_dim('output')
-        else:
-            pooling_input_dim = None
-        self.pooling = MaxPooling(pooling_size, step=pooling_step,
-                                  input_dim=pooling_input_dim)
+        self.convolution = Convolutional()
+        self.pooling = MaxPooling()
         super(ConvolutionalLayer, self).__init__(
             application_methods=[self.convolution.apply, activation,
                                  self.pooling.apply], **kwargs)
+        self.convolution.name = self.name + '_convolution'
+        self.pooling.name = self.name + '_pooling'
+
+        self.filter_size = filter_size
+        self.num_filters = num_filters
+        self.num_channels = num_channels
+        self.pooling_size = pooling_size
+        self.conv_step = conv_step
+        self.pooling_step = pooling_step
+        self.border_mode = border_mode
+        self.image_shape = image_shape
+
+    def _push_allocation_config(self):
+        for attr in ['filter_size', 'num_filters', 'num_channels', 'conv_step',
+                     'border_mode', 'image_shape']:
+            setattr(self.convolution, attr, getattr(self, attr))
+        if self.image_shape is not None:
+            pooling_input_dim = self.convolution.get_dim('output')
+        else:
+            pooling_input_dim = None
+        self.pooling.input_dim = pooling_input_dim
+        for attr in ['pooling_size', 'pooling_step']:
+            setattr(self.pooling, attr, getattr(self, attr))
 
     def get_dim(self, name):
         if name == 'input_':
