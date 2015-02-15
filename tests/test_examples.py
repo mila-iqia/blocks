@@ -1,3 +1,4 @@
+from __future__ import print_function
 import tempfile
 
 import dill
@@ -38,6 +39,9 @@ def test_markov_chain():
 @silence_printing
 def test_reverse_words():
     theano.config.optimizer = 'fast_compile'
-    with tempfile.NamedTemporaryFile() as f:
-        reverse_words_test("train", f.name, 1, False)
-
+    with tempfile.NamedTemporaryFile() as f_save,\
+         tempfile.NamedTemporaryFile() as f_data:
+        with open(f_data.name, 'wt') as data:
+            for i in range(10):
+                print("A line.", file=data)
+        reverse_words_test("train", f_save.name, 1, False, [f_data.name])

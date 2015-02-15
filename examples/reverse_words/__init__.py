@@ -22,7 +22,7 @@ from blocks.graph import ComputationGraph
 from blocks.datasets.streams import (
     DataStreamMapping, BatchDataStream, PaddingDataStream,
     DataStreamFilter)
-from blocks.datasets.text import OneBillionWord
+from blocks.datasets.text import OneBillionWord, TextFile
 from blocks.datasets.schemes import ConstantScheme
 from blocks.algorithms import (GradientDescent, Scale,
                                StepClipping, CompositeRule)
@@ -89,13 +89,19 @@ class Transition(SimpleRecurrent):
         return super(Transition, self).get_dim(name)
 
 
-def main(mode, save_path, num_batches, from_dump):
+def main(mode, save_path, num_batches, from_dump, data_path=None):
     if mode == "train":
         # Experiment configuration
         dimension = 100
         readout_dimension = len(char2code)
 
         # Data processing pipeline
+        dataset_options = dict(dictionary=char2code, level="character",
+                               preprocess=str.lower)
+        if data_path:
+            dataset = TextFile(data_path, **dataset_options)
+        else:
+            dataset = OneBillionWord("training", [99], **dataset_options)
         data_stream = DataStreamMapping(
             mapping=lambda data: tuple(array.T for array in data),
             data_stream=PaddingDataStream(
@@ -106,9 +112,7 @@ def main(mode, save_path, num_batches, from_dump):
                         add_sources=("targets",),
                         data_stream=DataStreamFilter(
                             predicate=lambda data: len(data[0]) <= 100,
-                            data_stream=OneBillionWord(
-                                "training", [99], char2code,
-                                level="character", preprocess=str.lower)
+                            data_stream=dataset
                             .get_default_stream())))))
 
         # Build the model
