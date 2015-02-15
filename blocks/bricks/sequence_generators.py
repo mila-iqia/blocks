@@ -212,8 +212,8 @@ class BaseSequenceGenerator(Initializable):
         next_states = self.transition.compute_states(
             return_list=True,
             **dict_union(next_inputs, states, next_glimpses, contexts))
-        return (next_states + [next_outputs]
-                + list(next_glimpses.values()) + [next_costs])
+        return (next_states + [next_outputs] +
+                list(next_glimpses.values()) + [next_costs])
 
     @generate.delegate
     def generate_delegate(self):
@@ -225,8 +225,8 @@ class BaseSequenceGenerator(Initializable):
 
     @generate.property('outputs')
     def generate_outputs(self):
-        return (self.state_names + ['outputs']
-                + self.glimpse_names + ['costs'])
+        return (self.state_names + ['outputs'] +
+                self.glimpse_names + ['costs'])
 
     def get_dim(self, name):
         if name in self.state_names + self.context_names + self.glimpse_names:
@@ -456,8 +456,8 @@ class SoftmaxEmitter(AbstractEmitter, Initializable, Random):
         flat_outputs = outputs.flatten()
         num_outputs = flat_outputs.shape[0]
         return -tensor.log(
-            probs.flatten()[max_output * tensor.arange(num_outputs)
-                            + flat_outputs].reshape(outputs.shape))
+            probs.flatten()[max_output * tensor.arange(num_outputs) +
+                            flat_outputs].reshape(outputs.shape))
 
     @application
     def initial_outputs(self, batch_size, *args, **kwargs):

@@ -238,9 +238,9 @@ class ForceFloatX(DataStreamWrapper):
         data = next(self.child_epoch_iterator)
         result = []
         for piece in data:
-            if (isinstance(piece, numpy.ndarray)
-                    and piece.dtype.kind == "f"
-                    and piece.dtype != floatX):
+            if (isinstance(piece, numpy.ndarray) and
+                    piece.dtype.kind == "f" and
+                    piece.dtype != floatX):
                 result.append(piece.astype(floatX))
             else:
                 result.append(piece)
