@@ -29,7 +29,7 @@ def test_mnist():
         with open(f.name, "rb") as source:
             main_loop = dill.load(source)
         main_loop.find_extension("FinishAfter").set_conditions(
-            after_n_epochs=1)
+            after_n_epochs=2)
         main_loop.run()
         assert main_loop.log.status.epochs_done == 2
 
