@@ -13,7 +13,7 @@ from theano import tensor
 
 from blocks.bricks import Tanh, application
 from blocks.bricks.lookup import LookupTable
-from blocks.bricks.recurrent import GatedRecurrent, Bidirectional
+from blocks.bricks.recurrent import SimpleRecurrent, Bidirectional
 from blocks.bricks.attention import SequenceContentAttention
 from blocks.bricks.parallel import Fork
 from blocks.bricks.sequence_generators import (
@@ -22,7 +22,7 @@ from blocks.graph import ComputationGraph
 from blocks.datasets.streams import (
     DataStreamMapping, BatchDataStream, PaddingDataStream,
     DataStreamFilter)
-from blocks.datasets.text import OneBillionWord
+from blocks.datasets.text import OneBillionWord, TextFile
 from blocks.datasets.schemes import ConstantScheme
 from blocks.algorithms import (GradientDescent, Scale,
                                StepClipping, CompositeRule)
@@ -66,7 +66,7 @@ def reverse_words(sample):
     return (result,)
 
 
-class Transition(GatedRecurrent):
+class Transition(SimpleRecurrent):
     def __init__(self, attended_dim, **kwargs):
         super(Transition, self).__init__(**kwargs)
         self.attended_dim = attended_dim
@@ -89,13 +89,19 @@ class Transition(GatedRecurrent):
         return super(Transition, self).get_dim(name)
 
 
-def main(mode, save_path, num_batches, from_dump):
+def main(mode, save_path, num_batches, from_dump, data_path=None):
     if mode == "train":
         # Experiment configuration
         dimension = 100
         readout_dimension = len(char2code)
 
         # Data processing pipeline
+        dataset_options = dict(dictionary=char2code, level="character",
+                               preprocess=str.lower)
+        if data_path:
+            dataset = TextFile(data_path, **dataset_options)
+        else:
+            dataset = OneBillionWord("training", [99], **dataset_options)
         data_stream = DataStreamMapping(
             mapping=lambda data: tuple(array.T for array in data),
             data_stream=PaddingDataStream(
@@ -106,9 +112,7 @@ def main(mode, save_path, num_batches, from_dump):
                         add_sources=("targets",),
                         data_stream=DataStreamFilter(
                             predicate=lambda data: len(data[0]) <= 100,
-                            data_stream=OneBillionWord(
-                                "training", [99], char2code,
-                                level="character", preprocess=str.lower)
+                            data_stream=dataset
                             .get_default_stream())))))
 
         # Build the model
@@ -118,7 +122,7 @@ def main(mode, save_path, num_batches, from_dump):
         targets_mask = tensor.matrix("targets_mask")
 
         encoder = Bidirectional(
-            GatedRecurrent(dim=dimension, activation=Tanh()),
+            SimpleRecurrent(dim=dimension, activation=Tanh()),
             weights_init=Orthogonal())
         encoder.initialize()
         fork = Fork([name for name in encoder.prototype.apply.sequences
