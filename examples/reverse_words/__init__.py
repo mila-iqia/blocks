@@ -24,8 +24,8 @@ from blocks.datasets.streams import (
     DataStreamFilter)
 from blocks.datasets.text import OneBillionWord
 from blocks.datasets.schemes import ConstantScheme
-from blocks.algorithms import (GradientDescent, SteepestDescent,
-                               GradientClipping, CompositeRule)
+from blocks.algorithms import (GradientDescent, Scale,
+                               StepClipping, CompositeRule)
 from blocks.initialization import Orthogonal, IsotropicGaussian, Constant
 from blocks.monitoring import aggregation
 from blocks.extensions import FinishAfter, Printing, Timing
@@ -192,8 +192,8 @@ def main(mode, save_path, num_batches, from_dump):
 
         # Define the training algorithm.
         algorithm = GradientDescent(
-            cost=cost, step_rule=CompositeRule([GradientClipping(10.0),
-                                                SteepestDescent(0.01)]))
+            cost=cost, step_rule=CompositeRule([StepClipping(10.0),
+                                                Scale(0.01)]))
 
         observables = [
             cost, min_energy, max_energy, mean_activation,
@@ -205,6 +205,8 @@ def main(mode, save_path, num_batches, from_dump):
             observables.append(named_copy(
                 algorithm.gradients[param].norm(2), name + "_grad_norm"))
 
+        average_monitoring = TrainingDataMonitoring(
+            observables, prefix="average", every_n_batches=10)
         main_loop = MainLoop(
             model=bricks,
             data_stream=data_stream,
@@ -212,16 +214,15 @@ def main(mode, save_path, num_batches, from_dump):
             extensions=([LoadFromDump(from_dump)] if from_dump else []) +
             [Timing(),
                 TrainingDataMonitoring(observables, after_every_batch=True),
-                TrainingDataMonitoring(observables, prefix="average",
-                                       every_n_batches=10),
+                average_monitoring,
                 FinishAfter(after_n_batches=num_batches)
                 .add_condition(
                     "after_batch",
                     lambda log:
                         math.isnan(log.current_row.total_gradient_norm)),
                 Plot(os.path.basename(save_path),
-                     [["average_" + cost.name],
-                      ["average_" + cost_per_character.name]],
+                     [[average_monitoring.record_name(cost)],
+                      [average_monitoring.record_name(cost_per_character)]],
                      every_n_batches=10),
                 SerializeMainLoop(save_path, every_n_batches=500,
                                   save_separately=["model", "log"]),

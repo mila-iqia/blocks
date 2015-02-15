@@ -19,7 +19,7 @@ from blocks.bricks.sequence_generators import (
 from blocks.graph import ComputationGraph
 from blocks.datasets.streams import DataStream
 from blocks.datasets.schemes import ConstantScheme
-from blocks.algorithms import GradientDescent, SteepestDescent
+from blocks.algorithms import GradientDescent, Scale
 from blocks.initialization import Orthogonal, IsotropicGaussian, Constant
 from blocks.monitoring import aggregation
 from blocks.extensions import FinishAfter, Printing
@@ -80,7 +80,7 @@ def main(mode, save_path, steps, num_batches):
 
         algorithm = GradientDescent(
             cost=cost, params=list(Selector(generator).get_params().values()),
-            step_rule=SteepestDescent(0.001))
+            step_rule=Scale(0.001))
         main_loop = MainLoop(
             model=generator,
             data_stream=DataStream(

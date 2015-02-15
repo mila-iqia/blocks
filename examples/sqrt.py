@@ -13,7 +13,7 @@ from argparse import ArgumentParser
 import theano
 from theano import tensor
 
-from blocks.algorithms import GradientDescent, SteepestDescent
+from blocks.algorithms import GradientDescent, Scale
 from blocks.bricks import MLP, Tanh, Identity
 from blocks.bricks.cost import SquaredError
 from blocks.initialization import IsotropicGaussian, Constant
@@ -54,7 +54,7 @@ def main(save_to, num_batches, continue_=False):
         mlp,
         get_data_stream(range(100)),
         GradientDescent(
-            cost=cost, step_rule=SteepestDescent(learning_rate=0.001)),
+            cost=cost, step_rule=Scale(learning_rate=0.001)),
         extensions=([LoadFromDump(save_to)] if continue_ else []) +
         [Timing(),
             FinishAfter(after_n_batches=num_batches),
