@@ -16,7 +16,7 @@ from blocks.utils import (pack, shared_floatx_zeros, dict_union,
                           is_shared_variable)
 
 
-class Recurrent(Brick):
+class BaseRecurrent(Brick):
     """Base class for brick with recurrent application method."""
     has_bias = False
 
@@ -215,7 +215,7 @@ def recurrent(*args, **kwargs):
         return wrap_application
 
 
-class SimpleRecurrent(Recurrent, Initializable):
+class SimpleRecurrent(BaseRecurrent, Initializable):
     """The traditional recurrent transition.
 
     The most well-known recurrent transition: a matrix multiplication,
@@ -286,7 +286,7 @@ class SimpleRecurrent(Recurrent, Initializable):
         return next_states
 
 
-class LSTM(Recurrent, Initializable):
+class LSTM(BaseRecurrent, Initializable):
     u"""Long Short Term Memory.
 
     Every unit of an LSTM is equipped with input, forget and output gates.
@@ -409,7 +409,7 @@ class LSTM(Recurrent, Initializable):
         return next_states, next_cells
 
 
-class GatedRecurrent(Recurrent, Initializable):
+class GatedRecurrent(BaseRecurrent, Initializable):
     u"""Gated recurrent neural network.
 
     Gated recurrent neural network (GRNN) as introduced in [CvMG14]_. Every
@@ -571,7 +571,7 @@ class Bidirectional(Initializable):
 
     Parameters
     ----------
-    prototype : instance of :class:`Recurrent`
+    prototype : instance of :class:`BaseRecurrent`
         A prototype brick from which the forward and backward bricks are
         cloned.
 
