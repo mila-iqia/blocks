@@ -13,7 +13,7 @@ from theano import tensor
 
 from blocks.bricks import Tanh, application
 from blocks.bricks.lookup import LookupTable
-from blocks.bricks.recurrent import GatedRecurrent, Bidirectional
+from blocks.bricks.recurrent import SimpleRecurrent, Bidirectional
 from blocks.bricks.attention import SequenceContentAttention
 from blocks.bricks.parallel import Fork
 from blocks.bricks.sequence_generators import (
@@ -66,7 +66,7 @@ def reverse_words(sample):
     return (result,)
 
 
-class Transition(GatedRecurrent):
+class Transition(SimpleRecurrent):
     def __init__(self, attended_dim, **kwargs):
         super(Transition, self).__init__(**kwargs)
         self.attended_dim = attended_dim
@@ -118,7 +118,7 @@ def main(mode, save_path, num_batches, from_dump):
         targets_mask = tensor.matrix("targets_mask")
 
         encoder = Bidirectional(
-            GatedRecurrent(dim=dimension, activation=Tanh()),
+            SimpleRecurrent(dim=dimension, activation=Tanh()),
             weights_init=Orthogonal())
         encoder.initialize()
         fork = Fork([name for name in encoder.prototype.apply.sequences
