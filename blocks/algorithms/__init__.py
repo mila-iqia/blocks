@@ -309,8 +309,8 @@ class CompositeRule(StepRule):
 class Scale(StepRule):
     """A step in the direction proportional to the previous step.
 
-    If the previous step is the gradient itself, this step rule is
-    equivalent to steepest ascent.
+    If used in :class:`GradientDescent` alone, this step rule implements
+    steepest descent.
 
     Parameters
     ----------
