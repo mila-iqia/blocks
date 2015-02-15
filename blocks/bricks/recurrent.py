@@ -215,18 +215,11 @@ def recurrent(*args, **kwargs):
         return wrap_application
 
 
-class Recurrent(BaseRecurrent, Initializable):
-    """Simple recurrent layer with optional activation.
+class SimpleRecurrent(BaseRecurrent, Initializable):
+    """The traditional recurrent transition.
 
-    .. todo::
-
-       Implement deep transitions (by using other bricks). Currently, this
-       probably re-implements too much from the Linear brick.
-
-       Other important features:
-
-       * Carrying over hidden state between batches
-       * Return k last hidden states
+    The most well-known recurrent transition: a matrix multiplication,
+    optionally followed by a non-linearity.
 
     Parameters
     ----------
@@ -242,7 +235,7 @@ class Recurrent(BaseRecurrent, Initializable):
     """
     @lazy
     def __init__(self, dim, activation=None, **kwargs):
-        super(Recurrent, self).__init__(**kwargs)
+        super(SimpleRecurrent, self).__init__(**kwargs)
         if activation is None:
             activation = Identity()
         self.dim = dim
@@ -257,9 +250,10 @@ class Recurrent(BaseRecurrent, Initializable):
     def get_dim(self, name):
         if name == 'mask':
             return 0
-        if name in Recurrent.apply.sequences + Recurrent.apply.states:
+        if name in (SimpleRecurrent.apply.sequences +
+                    SimpleRecurrent.apply.states):
             return self.dim
-        return super(Recurrent, self).get_dim(name)
+        return super(SimpleRecurrent, self).get_dim(name)
 
     def _allocate(self):
         self.params.append(shared_floatx_zeros((self.dim, self.dim)))
@@ -267,38 +261,29 @@ class Recurrent(BaseRecurrent, Initializable):
     def _initialize(self):
         self.weights_init.initialize(self.W, self.rng)
 
-    @recurrent(sequences=['input_', 'mask'], states=['state'],
-               outputs=['state'], contexts=[])
-    def apply(self, input_=None, state=None, mask=None):
-        """Given data and mask, apply recurrent layer.
+    @recurrent(sequences=['inputs', 'mask'], states=['states'],
+               outputs=['states'], contexts=[])
+    def apply(self, inputs=None, states=None, mask=None):
+        """Apply the simple transition.
 
         Parameters
         ----------
-        input_ : :class:`~tensor.TensorVariable`
-            The 2 dimensional input, in the shape (batch, features).
-        state : :class:`~tensor.TensorVariable`
-            The 2 dimensional state, in the shape (batch, features).
+        inputs : :class:`~tensor.TensorVariable`
+            The 2D inputs, in the shape (batch, features).
+        states : :class:`~tensor.TensorVariable`
+            The 2D states, in the shape (batch, features).
         mask : :class:`~tensor.TensorVariable`
             A 1D binary array in the shape (batch,) which is 1 if
             there is data available, 0 if not. Assumed to be 1-s
             only if not given.
 
-        .. todo::
-
-           * Mask should become part of ``MaskedTensorVariable`` type so
-             that it can be passed around transparently.
-           * We should stop assuming that batches are the second dimension,
-             in order to support nested RNNs i.e. where the first n axes
-             are time, n + 1 is the batch, and n + 2, ... are features.
-             Masks will become n + 1 dimensional as well then.
-
         """
-        next_state = input_ + tensor.dot(state, self.W)
-        next_state = self.activation.apply(next_state)
+        next_states = inputs + tensor.dot(states, self.W)
+        next_states = self.activation.apply(next_states)
         if mask:
-            next_state = (mask[:, None] * next_state +
-                          (1 - mask[:, None]) * state)
-        return next_state
+            next_states = (mask[:, None] * next_states +
+                           (1 - mask[:, None]) * states)
+        return next_states
 
 
 class LSTM(BaseRecurrent, Initializable):
