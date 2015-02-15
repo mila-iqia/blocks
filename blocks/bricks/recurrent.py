@@ -180,9 +180,9 @@ def recurrent(*args, **kwargs):
                 kwargs = dict(zip(arg_names, args))
                 kwargs.update(rest_kwargs)
                 return application_function(brick, **kwargs)
-            outputs_info = (list(states_given.values())
-                            + [None] * (len(application.outputs) -
-                                        len(application.states)))
+            outputs_info = (list(states_given.values()) +
+                            [None] * (len(application.outputs) -
+                                      len(application.states)))
             result, updates = theano.scan(
                 scan_function, sequences=list(sequences_given.values()),
                 outputs_info=outputs_info,
@@ -544,12 +544,12 @@ class GatedRecurrent(BaseRecurrent, Initializable):
         if self.use_update_gate:
             update_values = self.gate_activation.apply(
                 states.dot(self.state_to_update) + update_inputs)
-            next_states = (next_states * update_values
-                           + states * (1 - update_values))
+            next_states = (next_states * update_values +
+                           states * (1 - update_values))
 
         if mask:
-            next_states = (mask[:, None] * next_states
-                           + (1 - mask[:, None]) * states)
+            next_states = (mask[:, None] * next_states +
+                           (1 - mask[:, None]) * states)
 
         return next_states
 

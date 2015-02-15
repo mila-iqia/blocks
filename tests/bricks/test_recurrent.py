@@ -168,8 +168,8 @@ class TestGatedRecurrent(unittest.TestCase):
 
         z_val = numpy.tanh(h0_val.dot(W_val) + zi_val)
         r_val = numpy.tanh(h0_val.dot(W_val) + ri_val)
-        h1_val = (z_val * numpy.tanh((r_val * h0_val).dot(W_val) + x_val)
-                  + (1 - z_val) * h0_val)
+        h1_val = (z_val * numpy.tanh((r_val * h0_val).dot(W_val) + x_val) +
+                  (1 - z_val) * h0_val)
         assert_allclose(h1_val, next_h(h0_val, x_val, zi_val, ri_val)[0],
                         rtol=1e-6)
 
@@ -192,8 +192,8 @@ class TestGatedRecurrent(unittest.TestCase):
 
         for i in range(1, 25):
             r_val = numpy.tanh(h_val[i - 1].dot(U) + ri_val[i - 1])
-            h_val[i] = numpy.tanh((r_val * h_val[i - 1]).dot(W)
-                                  + x_val[i - 1])
+            h_val[i] = numpy.tanh((r_val * h_val[i - 1]).dot(W) +
+                                  x_val[i - 1])
             h_val[i] = (mask_val[i - 1, :, None] * h_val[i] +
                         (1 - mask_val[i - 1, :, None]) * h_val[i - 1])
         h_val = h_val[1:]
@@ -214,8 +214,8 @@ class TestBidirectional(unittest.TestCase):
         self.x_val = 0.1 * numpy.asarray(
             list(itertools.permutations(range(4))),
             dtype=floatX)
-        self.x_val = (numpy.ones((24, 4, 3), dtype=floatX)
-                      * self.x_val[..., None])
+        self.x_val = (numpy.ones((24, 4, 3), dtype=floatX) *
+                      self.x_val[..., None])
         self.mask_val = numpy.ones((24, 4), dtype=floatX)
         self.mask_val[12:24, 3] = 0
 

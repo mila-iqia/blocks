@@ -34,8 +34,8 @@ def test_training_data_monitoring():
 
         def before_batch(self, data):
             self.main_loop.log.current_row.true_cost = (
-                ((W.get_value() * data["features"]).sum()
-                 - data["targets"]) ** 2)
+                ((W.get_value() * data["features"]).sum() -
+                 data["targets"]) ** 2)
 
     main_loop = MainLoop(
         model=None, data_stream=dataset.get_default_stream(),

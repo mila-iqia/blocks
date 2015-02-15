@@ -36,9 +36,9 @@ def test_text():
     assert_raises(StopIteration, next, epoch)
 
     # Test character level.
-    dictionary = dict([(chr(ord('a') + i), i) for i in range(26)]
-                      + [(' ', 26)] + [('<S>', 27)]
-                      + [('</S>', 28)] + [('<UNK>', 29)])
+    dictionary = dict([(chr(ord('a') + i), i) for i in range(26)] +
+                      [(' ', 26)] + [('<S>', 27)] +
+                      [('</S>', 28)] + [('<UNK>', 29)])
     text_data = TextFile(files=[sentences1, sentences2],
                          dictionary=dictionary, preprocess=str.lower,
                          level="character")
