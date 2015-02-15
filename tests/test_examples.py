@@ -4,12 +4,15 @@ import tempfile
 import dill
 import theano
 
+import blocks
 from blocks.extensions.saveload import SAVED_TO
 from examples.sqrt import main as sqrt_test
 from examples.mnist import main as mnist_test
 from examples.markov_chain.main import main as markov_chain_test
 from examples.reverse_words import main as reverse_words_test
 from tests import silence_printing
+
+theano.config.optimizer = 'fast_compile'
 
 
 @silence_printing
@@ -25,7 +28,8 @@ def test_mnist():
         mnist_test(f.name, 1)
         with open(f.name, "rb") as source:
             main_loop = dill.load(source)
-        main_loop.find_extension("FinishAfter").set_conditions(after_n_epochs=2)
+        main_loop.find_extension("FinishAfter").set_conditions(
+            after_n_epochs=1)
         main_loop.run()
         assert main_loop.log.status.epochs_done == 2
 
@@ -38,10 +42,12 @@ def test_markov_chain():
 
 @silence_printing
 def test_reverse_words():
-    theano.config.optimizer = 'fast_compile'
+    old_limit = blocks.config.recursion_limit
+    blocks.config.recursion_limit = 100000
     with tempfile.NamedTemporaryFile() as f_save,\
-         tempfile.NamedTemporaryFile() as f_data:
+            tempfile.NamedTemporaryFile() as f_data:
         with open(f_data.name, 'wt') as data:
             for i in range(10):
                 print("A line.", file=data)
         reverse_words_test("train", f_save.name, 1, False, [f_data.name])
+    blocks.config.recursion_limit = old_limit
