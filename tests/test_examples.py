@@ -23,6 +23,7 @@ def test_sqrt():
     assert main_loop.log[7][SAVED_TO] == save_path
 
 
+@silence_printing
 def test_mnist():
     with tempfile.NamedTemporaryFile() as f:
         mnist_test(f.name, 1)
