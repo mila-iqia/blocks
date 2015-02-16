@@ -2,7 +2,6 @@ from __future__ import print_function
 import tempfile
 
 import dill
-import theano
 
 import blocks
 from blocks.extensions.saveload import SAVED_TO
@@ -11,8 +10,6 @@ from examples.mnist import main as mnist_test
 from examples.markov_chain.main import main as markov_chain_test
 from examples.reverse_words import main as reverse_words_test
 from tests import silence_printing
-
-theano.config.optimizer = 'fast_compile'
 
 
 @silence_printing
