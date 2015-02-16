@@ -235,9 +235,9 @@ class Distribute(Fork):
         r"""Distribute the source across the targets.
 
         Parameters
-        -----------
-            **kwargs : dict
-                The source and the target variables.
+        ----------
+        \*\*kwargs : dict
+            The source and the target variables.
 
         Returns
         -------

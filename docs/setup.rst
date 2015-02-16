@@ -1,24 +1,32 @@
 Installation
 ============
 
-The easiest way to install Blocks using the Python package manager pip.  Blocks
-isn't listed yet on the Python Package Index (PyPI), so you will have to grab
-it directly from GitHub.
+The easiest way to install Blocks using the Python package manager pip. Blocks
+isn't listed yet on the Python Package Index (PyPI), so you will have to grab it
+directly from GitHub.
 
 .. code-block:: bash
 
-   $ pip install --upgrade git+git://github.com/bartvm/blocks.git#egg=blocks --user
+   $ pip install --process-dependency-links --upgrade git+git://github.com/bartvm/blocks.git#egg=blocks
+
+.. note::
+
+   Blocks relies on `picklable_itertools`_, a library which is not listed
+   on the Python Package Index (PyPI) yet, so it must be installed directly
+   from GitHub. Pip only does this when the ``--process-dependency-links``
+   argument is passed.
 
 If you want to make sure that you can use the plotting integration with Bokeh_,
 install that extra requirements as well.
 
 .. code-block:: bash
 
-   $ pip install --upgrade git+git://github.com/bartvm/blocks.git#egg=blocks[plot] --user
+   $ pip install --process-dependency-links --upgrade git+git://github.com/bartvm/blocks.git#egg=blocks[plot]
 
-If you have administrative rights, remove ``--user`` to install the package
-system-wide. If you want to update Blocks, simply repeat one of the commands
-above to pull the latest version from GitHub.
+If you don't have administrative rights, add the ``--user`` switch to the
+install command to install the package in your home folder. If you want to
+update Blocks, simply repeat one of the commands above to pull the latest
+version from GitHub.
 
 .. warning::
 
@@ -28,6 +36,8 @@ above to pull the latest version from GitHub.
    when installing Blocks and install the dependencies manually, making sure
    that you install NumPy and SciPy using your system's package manager (e.g.
    ``apt-get`` or ``yum``), or use a Python distribution like Anaconda_.
+
+.. _picklable_itertools: https://github.com/dwf/picklable_itertools
 
 Requirements
 ------------
