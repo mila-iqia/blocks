@@ -20,13 +20,9 @@ for dumps, such as for instance .npz files.
 import logging
 import os
 import os.path
-from collections import OrderedDict
 
 import dill
 import numpy
-
-from blocks.bricks.base import Brick
-from blocks.select import Selector
 
 logger = logging.getLogger(__name__)
 
@@ -77,10 +73,9 @@ class MainLoopDumpManager(object):
     """Main loop dumping implementation.
 
     This class provides saving and loading logic that circumvents
-    serialization of the most problematic parts: the model (which is
-    typically a brick hierarchy) and the training algorithm (which
-    typically has Theano functions as attributes). The on-disk
-    representation used is a folder with a few files containing
+    serialization of the most problematic parts: the model and the training
+    algorithm (which typically has Theano functions as attributes). The
+    on-disk representation used is a folder with a few files containing
     model parameters, log and state of the data iteration.
 
     Also see the module-level documentation.

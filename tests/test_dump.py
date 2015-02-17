@@ -4,7 +4,6 @@ import numpy
 import theano
 
 from examples.sqrt import main as sqrt_example
-from blocks.bricks import MLP, Identity
 from blocks.dump import (
     load_parameter_values, save_parameter_values,
     MainLoopDumpManager)
