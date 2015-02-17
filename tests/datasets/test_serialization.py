@@ -7,9 +7,11 @@ import numpy
 from blocks.datasets.streams import DataStream
 from blocks.datasets.mnist import MNIST
 from blocks.datasets.schemes import SequentialScheme
+from tests import skip_if_not_available
 
 
 def test_in_memory():
+    skip_if_not_available(datasets=['mnist'])
     # Load MNIST and get two batches
     mnist = MNIST('train')
     data_stream = DataStream(mnist, iteration_scheme=SequentialScheme(
