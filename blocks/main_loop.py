@@ -7,15 +7,33 @@ from blocks import config
 from blocks.log import TrainingLog
 from blocks.utils import reraise_as, unpack, change_recursion_limit
 
+logging.basicConfig()
 logger = logging.getLogger(__name__)
 
-error_message = (
-    """An error occurred during the training.
+error_message = """
 
-Attempting to run `on_error` extensions before exiting...""")
+Blocks will attempt to run `on_error` extensions, potentially saving data, \
+before exiting and reraising the error. Note that the usual `after_training` \
+extensions will *not* be run. The original error will be re-raised and also \
+stored in the training log. Press CTRL + C to halt Blocks immediately."""
 
-error_in_error_handling_message = (
-    """While calling `on_error` extension another error occured.""")
+error_in_error_handling_message = """
+
+Blocks will now exit. The remaining `on_error` extensions will not be run."""
+
+
+epoch_interrupt_message = """
+
+Blocks will complete this epoch iteration of training and run extensions \
+before exiting. If you do not want to complete this epoch, press CTRL + C \
+again to stop training after the current batch."""
+
+batch_interrupt_message = """
+
+Blocks will complete the current batch and run extensions before exiting. If \
+you do not want to complete this batch, press CTRL + C again. WARNING: Note \
+that this will end training immediately, and extensions that e.g. save your \
+training progress won't be run."""
 
 
 class MainLoop(object):
@@ -96,8 +114,10 @@ class MainLoop(object):
 
         """
         with change_recursion_limit(config.recursion_limit):
-            self.original_handler = signal.signal(
-                signal.SIGINT, self._handle_keyboard_interrupt)
+            self.original_sigint_handler = signal.signal(
+                signal.SIGINT, self._handle_epoch_interrupt)
+            self.original_sigterm_handler = signal.signal(
+                signal.SIGTERM, self._handle_batch_interrupt)
             try:
                 logger.info("Entered the main loop")
                 if not self.status._training_started:
@@ -107,7 +127,7 @@ class MainLoop(object):
                     self._run_extensions('before_training')
                     self.algorithm.initialize()
                     self.status._training_started = True
-                # We can not write "else:" here because extension
+                # We can not write "else:" here because extensions
                 # called "before_training" could have changed the status
                 # of the main loop.
                 if self.log.status.iterations_done > 0:
@@ -117,18 +137,20 @@ class MainLoop(object):
             except TrainingFinish:
                 self.log.current_row.training_finished = True
             except Exception as e:
+                self._restore_signal_handlers()
                 self.log.current_row.got_exception = traceback.format_exc(e)
-                logger.info(error_message)
+                logger.error("Error occured during training." + error_message)
                 try:
                     self._run_extensions('on_error')
                 except Exception as inner_e:
                     logger.error(traceback.format_exc(inner_e))
-                    logger.info(error_in_error_handling_message)
+                    logger.error("Error occured when running extensions." +
+                                 error_in_error_handling_message)
                 reraise_as(e)
             finally:
-                if not self.log.current_row.got_exception:
+                if self.log.current_row.training_finished:
                     self._run_extensions('after_training')
-                signal.signal(signal.SIGINT, self.original_handler)
+                self._restore_signal_handlers()
 
     def find_extension(self, name):
         """Find an extension with a given name.
@@ -160,10 +182,9 @@ class MainLoop(object):
             pass
         self.status._epoch_started = False
         self.status.epochs_done += 1
-        self.status._epoch_ends.append(
-            self.status.iterations_done)
+        self.status._epoch_ends.append(self.status.iterations_done)
         self._run_extensions('after_epoch')
-        self._check_finish_training()
+        self._check_finish_training('epoch')
         return True
 
     def _run_iteration(self):
@@ -178,28 +199,52 @@ class MainLoop(object):
         self.algorithm.process_batch(batch)
         self.status.iterations_done += 1
         self._run_extensions('after_batch', batch)
-        self._check_finish_training()
+        self._check_finish_training('batch')
         return True
 
     def _run_extensions(self, method_name, *args):
         for extension in self.extensions:
             extension.dispatch(method_name, *args)
 
-    def _check_finish_training(self):
+    def _check_finish_training(self, level):
+        """Checks whether the current training should be terminated.
+
+        Parameters
+        ----------
+        level : {'epoch', 'batch'}
+            The level at which this check was performed. In some cases, we
+            only want to quit after completing the remained of the epoch.
+
+        """
         # In case when keyboard interrupt is handled right at the end of
         # the iteration the corresponding log record can be found only in
         # the previous row.
         if (self.log.current_row.training_finish_requested or
-                self.log.current_row.keyboard_interrupt_received or
-                self.log.previous_row.keyboard_interrupt_received):
+                self.log.current_row.batch_interrupt_received or
+                self.log.previous_row.batch_interrupt_received):
+            raise TrainingFinish
+        if (level == 'epoch' and
+                (self.log.current_row.epoch_interrupt_received or
+                 self.log.previous_row.epoch_interrupt_received)):
             raise TrainingFinish
 
-    def _handle_keyboard_interrupt(self, signal_number, frame):
-        # After receiving a first keyboard interrupt signal,
-        # ignore all following ones.
-        signal.signal(signal.SIGINT, self.original_handler)
-        self._run_extensions('on_interrupt')
-        self.log.current_row.keyboard_interrupt_received = True
+    def _handle_epoch_interrupt(self, signal_number, frame):
+        # Try to complete the current epoch if user presses CTRL + C
+        logger.warning('Received epoch interrupt signal.' +
+                       epoch_interrupt_message)
+        signal.signal(signal.SIGINT, self._handle_batch_interrupt)
+        self.log.current_row.epoch_interrupt_received = True
+
+    def _handle_batch_interrupt(self, signal_number, frame):
+        # After 2nd CTRL + C or SIGTERM signal (from cluster) finish batch
+        self._restore_signal_handlers()
+        logger.warning('Received batch interrupt signal.' +
+                       batch_interrupt_message)
+        self.log.current_row.batch_interrupt_received = True
+
+    def _restore_signal_handlers(self):
+        signal.signal(signal.SIGINT, self.original_sigint_handler)
+        signal.signal(signal.SIGTERM, self.original_sigterm_handler)
 
 
 class TrainingFinish(Exception):
