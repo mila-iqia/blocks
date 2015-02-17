@@ -154,7 +154,7 @@ class GradientDescent(DifferentiableCostMinimizer):
             for param in params:
                 param -= steps[param]
 
-    Note, that the step is _subtracted, not added_! This is done in order
+    Note, that the step is *subtracted, not added*! This is done in order
     to make step rule chaining possible.
 
     Parameters
@@ -477,7 +477,11 @@ class RMSProp(CompositeRule):
     """Scales the step size by a running average of the recent step norms.
 
     Combines :class:`BasicRMSProp` and :class:`Scale` to form the step rule
-    described in [RMSProp]_.
+    described in [Hint2014]_.
+
+    .. [Hint2014] Geoff Hinton, *Neural Networks for Machine Learning*,
+       lecture 6a,
+       http://cs.toronto.edu/~tijmen/csc321/slides/lecture_slides_lec6.pdf
 
     Parameters
     ----------
@@ -489,14 +493,6 @@ class RMSProp(CompositeRule):
     max_scaling : float, optional
         Maximum scaling of the step size, in case the running average is
         really small. Defaults to 1e5.
-
-    Notes
-    -----
-    For more information, see [RMSProp]_.
-
-    .. [RMSProp] Geoff Hinton, *Neural Networks for Machine Learning*,
-       lecture 6a, <http://www.cs.toronto.edu/~tijmen/csc321/slides/
-       lecture_slides_lec6.pdf>
 
     """
     def __init__(self, learning_rate=1.0, decay_rate=0.9, max_scaling=1e5):
