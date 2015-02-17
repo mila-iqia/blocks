@@ -1,0 +1,252 @@
+#!/usr/bin/env python 
+
+from __future__ import division, print_function
+
+import dill
+import pickle
+import fnmatch
+import logging
+import readline
+import argparse
+import numpy 
+import pandas
+
+from six import iteritems
+from six.moves import input
+from collections import OrderedDict, defaultdict
+
+from blocks import config
+from blocks.utils import change_recursion_limit
+
+
+def log_channels(log):
+    """Return all channels contained in blocks.Log object
+    """
+    channels = set()
+    for t, channel, value in log:
+        channels.add(channel)
+    return channels
+
+def log_to_dataframe(log, channels=None, epochs_only=True):
+    """ Convert the content of a blocks.Log into a panda.DataFrame
+
+    Iterates over al log-records and creates a DataFrame. The time of
+    each log-record will be the row index. Each channels will create
+    a column in the DataFrame.
+
+    Parameters
+    ----------
+    channels: 
+        Which channels 
+
+    epochs_only: bool
+        If True, all; log-records which do not correspond to a full epoch w
+        be filtered out. Full epochs are identified by having a 'epoch-took'
+        record, or by having a time of 0.
+
+    Returns
+    -------
+    DataFrame
+    """
+    channels = defaultdict(dict)
+    for t, channel, value in log:
+        # TODO: ensure value is something we actually want to keep.
+        # We probably have to discard all non-scalars as they can not
+        # be stored in a DataFrame.
+        # TODO: ensure that the channels have "homogeneous" data types
+        channels[channel] [t] = value
+
+    df = pandas.DataFrame(channels)
+
+    if epochs_only:
+        if 'epoch_took' not in df.columns:
+            raise ValueError("Can't filter for epochs: "\
+                        "Log does not contain 'epoch_took'")
+        mask = pandas.notnull(df.epoch_took) | (df.index == 0)
+        df = df[mask]
+
+    return df
+
+def match_channel_specs(experiments, channel_specs):
+    """
+    Parameters
+    ----------
+    experiments : OrderedDict of (str: DataFrames)
+    channel_specs : list of str
+
+    Returns
+    -------
+    a DataFrame with the specified channels`
+    """
+    df = pandas.DataFrame()
+
+    # This is not pretty...
+    #  We iterate over all channel_specs and match each spec to the
+    #  channels of all experiments.
+    for spec in channel_specs:
+        if ":" in spec:
+            exp_spec, channel_spec = spec.split(":")
+        else:
+            exp_spec, channel_spec = None, spec
+
+        for i, exp in enumerate(experiments.values()):
+            for channel in fnmatch.filter(exp.columns, channel_spec):
+                if exp_spec and exp_spec != i:
+                    # We are looking for a specific experiment..
+                    #  ... and it's not this one.
+                    continue
+
+                column_name = "{}:{}".format(i, channel)
+                df[column_name] = exp[channel]
+
+    return df
+
+
+PROMPT_HEADER = """
+
+Type a comma separated list of channels to plot or [q]uit.
+
+Channels may be prefixed by <number>: to refer to a specific experiment and my
+contain '*' or '?' characters to match multiple channels at once.
+
+"""
+
+def main(args):
+    # Load and convert experiments into DataFrames...
+    experiments = OrderedDict()
+    for fname in args.experiments:
+        logging.info("Loading '{0}'...".format(fname))
+        try:
+            with change_recursion_limit(config.recursion_limit):
+                main_loop = dill.load(open(fname, "rb"))
+        except EnvironmentError as e:
+            logging.error("Could not open '{}'".format(fname))
+        experiments[fname] = log_to_dataframe(main_loop.log, epochs_only=True)
+        del main_loop
+    
+
+    # Gain some overview...
+    n_experiments = len(experiments)
+
+    channels_per_experiment = OrderedDict(
+        [(fname, set(df.columns)) for fname, df in iteritems(experiments)]
+    )
+    all_channels = reduce(set.union, channels_per_experiment.values())
+        
+
+    if args.list:
+        # Nicely print all channels contained in the specified experiments
+        print()
+        print("Loaded {} experiment(s):".format(n_experiments))
+        for i, fname in enumerate(experiments):
+            print("    {}: {}".format(i, fname))
+        print()
+        print("Containing the following channels:")
+        for ch in sorted(all_channels):
+            # create a string indicating which experiments contain which 
+            #  channels
+            indicator = []
+            for i, channels in enumerate(channels_per_experiment.values()):
+                if ch in channels:
+                    indicator.append(str(i))
+                else:
+                    indicator.append(" ")
+            indicator = ",".join(indicator)
+            print("    {}: {}".format(indicator, ch))
+        print()
+        return
+
+    if args.channels:
+        # We want to plot something...
+        import pylab
+        import matplotlib as mpl
+        
+        matched = match_channel_specs(experiments, args.channels.split(','))
+        t = matched.index
+        for cname, series in iteritems(matched):
+            pylab.plot(t, series, label=cname)
+        pylab.legend()
+        pylab.show(block=True)
+    else:
+        import pylab
+        import matplotlib as mpl
+
+        # Interactive mode
+        def completer(text, state):
+            """Completion callback function for readline library"""
+            options = []
+            if text == "":
+                options += [str(i)+":" for i in range(n_experiments)]
+            if ":" in text:
+                exp_id, text = text.split(":")
+                channels = channels_per_experiment.values()[int(exp_id)]
+                options += [
+                    exp_id+":"+ch for ch in channels if ch.startswith(text)
+                ]
+            else:
+                options += [
+                    ch for ch in all_channels if ch.startswith(text)
+                ]
+
+            if state >= len(options):
+                return None
+            return sorted(options)[state]
+
+        readline.parse_and_bind("tab: complete")
+        readline.set_completer_delims(" \t,;")
+        readline.set_completer(completer)
+
+        print()
+        print("Experiments loaded:")
+        for i, exp_name in enumerate(experiments.keys()):
+            print("    {}: {}".format(i, exp_name))
+        print(PROMPT_HEADER)
+        while 1:
+            # Note: input() uses python3 sematics (provided by six)
+            channel_spec = input("blocks-plot> ") 
+            if channel_spec in ["q", "quit", "exit", "e"]:
+                break
+
+            channel_spec = channel_spec.split(',')
+            matched = match_channel_specs(experiments, channel_spec)
+
+            n_matched = len(matched.columns)
+            if n_matched == 0:
+                print("Your specification did not match any channels.")
+                continue
+
+            t = matched.index
+            print("Plotting {} channels:".format(len(matched.columns)))
+            for cname, series in iteritems(matched):
+                print("    {}".format(cname))
+                pylab.plot(t, series, label=cname)
+            pylab.legend()
+            pylab.show(block=True)
+            print()
+        
+    if args.ipython:
+        print("!!")
+        print("!! panda.DataFrames for the experiments can be found in the experiments[fname] dictionary")
+        print("!!")
+        from IPython import embed
+        embed()
+        return
+
+
+if __name__ == "__main__":
+    import argparse
+    
+    logging.basicConfig()
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--list", "-l", action="store_true", 
+        help="List all channels contained in the experiments and exit")
+    parser.add_argument("--channels", "-c", type=str, 
+        help="A comma separated list of channels to plot")
+    parser.add_argument("--ipython", action="store_true", 
+        help="Drop into a IPython session after loading experiments")
+    parser.add_argument("experiments", type=str, nargs="+")
+    args = parser.parse_args()
+
+    main(args)
+
