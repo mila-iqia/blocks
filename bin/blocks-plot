@@ -19,54 +19,6 @@ from blocks import config
 from blocks.utils import change_recursion_limit
 
 
-def log_channels(log):
-    """Return all channels contained in blocks.Log object
-    """
-    channels = set()
-    for t, channel, value in log:
-        channels.add(channel)
-    return channels
-
-def log_to_dataframe(log, channels=None, epochs_only=True):
-    """ Convert the content of a blocks.Log into a panda.DataFrame
-
-    Iterates over al log-records and creates a DataFrame. The time of
-    each log-record will be the row index. Each channels will create
-    a column in the DataFrame.
-
-    Parameters
-    ----------
-    channels: 
-        Which channels 
-
-    epochs_only: bool
-        If True, all; log-records which do not correspond to a full epoch w
-        be filtered out. Full epochs are identified by having a 'epoch-took'
-        record, or by having a time of 0.
-
-    Returns
-    -------
-    DataFrame
-    """
-    channels = defaultdict(dict)
-    for t, channel, value in log:
-        # TODO: ensure value is something we actually want to keep.
-        # We probably have to discard all non-scalars as they can not
-        # be stored in a DataFrame.
-        # TODO: ensure that the channels have "homogeneous" data types
-        channels[channel] [t] = value
-
-    df = pandas.DataFrame(channels)
-
-    if epochs_only:
-        if 'epoch_took' not in df.columns:
-            raise ValueError("Can't filter for epochs: "\
-                        "Log does not contain 'epoch_took'")
-        mask = pandas.notnull(df.epoch_took) | (df.index == 0)
-        df = df[mask]
-
-    return df
-
 def match_channel_specs(experiments, channel_specs):
     """
     Parameters
@@ -101,7 +53,6 @@ def match_channel_specs(experiments, channel_specs):
 
     return df
 
-
 def plot_dataframe(dataframe):
     import pylab
     import matplotlib as mpl
@@ -113,6 +64,7 @@ def plot_dataframe(dataframe):
         pylab.plot(t, series, label=cname)
     pylab.legend()
     pylab.show(block=True)
+
 
 PROMPT_HEADER = """
 
@@ -137,17 +89,20 @@ def main(args):
     for fname in args.experiments:
         logging.info("Loading '{0}'...".format(fname))
         try:
+            # TODO: Load "dumped" experiments
             with change_recursion_limit(config.recursion_limit):
                 main_loop = dill.load(open(fname, "rb"))
         except EnvironmentError as e:
             logging.error("Could not open '{}'".format(fname))
-        experiments[fname] = log_to_dataframe(main_loop.log, epochs_only=True)
+
+        rows_to_keep = [0] + main_loop.log._status._epoch_ends
+        data_frame = main_loop.log.to_dataframe()
+        data_frame = data_frame.iloc[rows_to_keep]
+        experiments[fname] = data_frame
         del main_loop
-    
 
     # Gain some overview...
     n_experiments = len(experiments)
-
     channels_per_experiment = OrderedDict(
         [(fname, set(df.columns)) for fname, df in iteritems(experiments)]
     )
