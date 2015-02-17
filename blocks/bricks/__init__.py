@@ -455,14 +455,18 @@ class Sequence(Brick):
         self.children = [app.brick for app in application_methods
                          if not (app.brick in seen or seen.add(app.brick))]
 
-    @application(inputs=['input_'])
-    def apply(self, input_):
-        child_input = input_
+    @application
+    def apply(self, *args):
+        child_input = args
         for _, application_method in zip(self.children,
                                          self.application_methods):
             output = application_method(*pack(child_input))
             child_input = output
         return output
+
+    @apply.property('inputs')
+    def apply_inputs(self):
+        return self.application_methods[0].inputs
 
     @apply.property('outputs')
     def apply_outputs(self):
