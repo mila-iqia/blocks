@@ -455,7 +455,7 @@ class Sequence(Brick):
         self.children = [app.brick for app in application_methods
                          if not (app.brick in seen or seen.add(app.brick))]
 
-    @application(inputs=['input_'], outputs=['output'])
+    @application(inputs=['input_'])
     def apply(self, input_):
         child_input = input_
         for _, application_method in zip(self.children,
