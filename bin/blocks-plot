@@ -102,12 +102,32 @@ def match_channel_specs(experiments, channel_specs):
     return df
 
 
+def plot_dataframe(dataframe):
+    import pylab
+    import matplotlib as mpl
+
+    t = dataframe.index
+    print("Plotting {} channels:".format(len(dataframe.columns)))
+    for cname, series in iteritems(dataframe):
+        print("    {}".format(cname))
+        pylab.plot(t, series, label=cname)
+    pylab.legend()
+    pylab.show(block=True)
+
 PROMPT_HEADER = """
 
 Type a comma separated list of channels to plot or [q]uit.
 
-Channels may be prefixed by <number>: to refer to a specific experiment and my
+Channels may be prefixed by <number>: to refer to a specific experiment and may
 contain '*' or '?' characters to match multiple channels at once.
+
+"""
+
+IPYTHON_HEADER = """
+
+Complete DataFrames for all experiments can be found in the 'experiments[fname]'
+dictionary. The DataFrame containing only the selected channels can be access
+as 'matched'
 
 """
 
@@ -157,20 +177,18 @@ def main(args):
         return
 
     if args.channels:
-        # We want to plot something...
-        import pylab
-        import matplotlib as mpl
-        
-        matched = match_channel_specs(experiments, args.channels.split(','))
-        t = matched.index
-        for cname, series in iteritems(matched):
-            pylab.plot(t, series, label=cname)
-        pylab.legend()
-        pylab.show(block=True)
-    else:
-        import pylab
-        import matplotlib as mpl
+        channel_specs = args.channels.split(',')
+        matched = match_channel_specs(experiments, channel_specs)
 
+        if args.ipython:
+            from IPython import embed
+            print(IPYTHON_HEADER)
+            embed()
+            return
+
+        plot_dataframe(matched)
+        return
+    else:
         # Interactive mode
         def completer(text, state):
             """Completion callback function for readline library"""
@@ -210,28 +228,14 @@ def main(args):
             channel_spec = channel_spec.split(',')
             matched = match_channel_specs(experiments, channel_spec)
 
-            n_matched = len(matched.columns)
-            if n_matched == 0:
+            if len(matched.columns) == 0:
                 print("Your specification did not match any channels.")
                 continue
 
-            t = matched.index
-            print("Plotting {} channels:".format(len(matched.columns)))
-            for cname, series in iteritems(matched):
-                print("    {}".format(cname))
-                pylab.plot(t, series, label=cname)
-            pylab.legend()
-            pylab.show(block=True)
+            plot_dataframe(matched)
             print()
-        
-    if args.ipython:
-        print("!!")
-        print("!! panda.DataFrames for the experiments can be found in the experiments[fname] dictionary")
-        print("!!")
-        from IPython import embed
-        embed()
-        return
 
+       
 
 if __name__ == "__main__":
     import argparse
@@ -244,7 +248,7 @@ if __name__ == "__main__":
     parser.add_argument("--channels", "-c", type=str, 
         help="A comma separated list of channels to plot")
     parser.add_argument("--ipython", action="store_true", 
-        help="Drop into a IPython session after loading experiments")
+        help="Drop into a IPython session after channels have been loaded")
     parser.add_argument("experiments", type=str, nargs="+")
     args = parser.parse_args()
 
