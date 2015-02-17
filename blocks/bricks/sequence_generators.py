@@ -286,26 +286,6 @@ class AbstractReadout(AbstractEmitter, AbstractFeedback):
 
 
 @add_metaclass(ABCMeta)
-class AbstractAttentionTransition(BaseRecurrent):
-    """A base class for a transition component of a sequence generator.
-
-    A recurrent transition combined with an attention mechanism.
-
-    """
-    @abstractmethod
-    def apply(self, **kwargs):
-        pass
-
-    @abstractmethod
-    def compute_states(self, **kwargs):
-        pass
-
-    @abstractmethod
-    def take_look(self, **kwargs):
-        pass
-
-
-@add_metaclass(ABCMeta)
 class Readout(AbstractReadout):
     """Readout brick with separated emitting and feedback parts.
 
