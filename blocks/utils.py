@@ -406,7 +406,7 @@ def ipdb_breakpoint(x):
     ipdb.set_trace()
 
 
-def secure_dill_dump(object_, path):
+def secure_pickle_dump(object_, path):
     """Robust serialization - does not corrupt your files when failed.
 
     Parameters
