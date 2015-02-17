@@ -73,62 +73,6 @@ def load_parameter_values(path):
     return param_values
 
 
-def extract_parameter_values(bricks):
-    """Extract parameter values from a bricks hierarchy.
-
-    Parameters
-    ----------
-    bricks : (list of) :class:`.Brick`, or :class:`.Selector`
-        The top bricks.
-
-    Returns
-    -------
-    A dictionary of (parameter name, numpy array) pairs.
-
-    """
-    if isinstance(bricks, Brick):
-        bricks = Selector([bricks])
-    if not isinstance(bricks, Selector):
-        bricks = Selector(bricks)
-    return OrderedDict([(name, variable.get_value(borrow=True))
-                        for name, variable in bricks.get_params().items()])
-
-
-def inject_parameter_values(bricks, param_values):
-    """Inject parameter values into a bricks hierarchy.
-
-    Parameters
-    ----------
-    bricks : :class:`.Brick` or :class:`.Selector or list of :class:`Brick`
-        The top bricks.
-    param_values : dict of (parameter name, :class:`~numpy.ndarray`) pairs
-        The parameter values.
-
-    """
-    if isinstance(bricks, Brick):
-        bricks = Selector([bricks])
-    if not isinstance(bricks, Selector):
-        bricks = Selector(bricks)
-
-    for name, value in param_values.items():
-        selected = bricks.select(name)
-        if len(selected) == 0:
-            logger.error("Unknown parameter {}".format(name))
-        if not len(selected) == 1:
-            raise ValueError
-        selected = selected[0]
-
-        assert selected.get_value(
-            borrow=True, return_internal_type=True).shape == value.shape
-        selected.set_value(value)
-
-    params = bricks.get_params()
-    for name in params.keys():
-        if name not in param_values:
-            logger.error("No value is provided for the parameter {}"
-                         .format(name))
-
-
 class MainLoopDumpManager(object):
     """Main loop dumping implementation.
 
