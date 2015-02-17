@@ -373,24 +373,6 @@ def test_sequence():
             3 * numpy.ones((8, 4))) + 4 * numpy.ones((4, 4)))
 
 
-def test_sequence():
-    x = tensor.matrix()
-
-    linear_1 = Linear(input_dim=16, output_dim=8, weights_init=Constant(2),
-                      biases_init=Constant(1))
-
-    linear_2 = Linear(input_dim=8, output_dim=4, weights_init=Constant(3),
-                      biases_init=Constant(4))
-    sequence = Sequence([linear_1.apply, linear_2.apply])
-    sequence.initialize()
-    y = sequence.apply(x)
-    x_val = numpy.ones((4, 16), dtype=theano.config.floatX)
-    assert_allclose(
-        y.eval({x: x_val}),
-        (x_val.dot(2 * numpy.ones((16, 8))) + numpy.ones((4, 8))).dot(
-            3 * numpy.ones((8, 4))) + 4 * numpy.ones((4, 4)))
-
-
 def test_sequence_variable_outputs():
     x = tensor.matrix()
 
