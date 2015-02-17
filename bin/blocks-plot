@@ -23,18 +23,17 @@ def match_channel_specs(experiments, channel_specs):
     """
     Parameters
     ----------
-    experiments : OrderedDict of (str: DataFrames)
+    experiments : OrderedDict of {str: DataFrames}
     channel_specs : list of str
 
     Returns
     -------
-    a DataFrame with the specified channels`
+        Returns a single DataFrame containing the specified
+        channels as columns.
     """
+    # We iterate over all channel_specs and match each spec to the
+    # channels of all experiments.
     df = pandas.DataFrame()
-
-    # This is not pretty...
-    #  We iterate over all channel_specs and match each spec to the
-    #  channels of all experiments.
     for spec in channel_specs:
         if ":" in spec:
             exp_spec, channel_spec = spec.split(":")
@@ -101,7 +100,7 @@ def main(args):
         experiments[fname] = data_frame
         del main_loop
 
-    # Gain some overview...
+    # Gain some overview
     n_experiments = len(experiments)
     channels_per_experiment = OrderedDict(
         [(fname, set(df.columns)) for fname, df in iteritems(experiments)]
@@ -110,9 +109,8 @@ def main(args):
         
 
     if args.list:
-        # Nicely print all channels contained in the specified experiments
-        print()
-        print("Loaded {} experiment(s):".format(n_experiments))
+        # Print all channels contained in the specified experiments
+        print("\nLoaded {} experiment(s):".format(n_experiments))
         for i, fname in enumerate(experiments):
             print("    {}: {}".format(i, fname))
         print()
@@ -175,7 +173,7 @@ def main(args):
             print("    {}: {}".format(i, exp_name))
         print(PROMPT_HEADER)
         while 1:
-            # Note: input() uses python3 sematics (provided by six)
+            # Note: input() uses python3 semantics (provided by six)
             channel_spec = input("blocks-plot> ") 
             if channel_spec in ["q", "quit", "exit", "e"]:
                 break
@@ -203,7 +201,7 @@ if __name__ == "__main__":
     parser.add_argument("--channels", "-c", type=str, 
         help="A comma separated list of channels to plot")
     parser.add_argument("--ipython", action="store_true", 
-        help="Drop into a IPython session after channels have been loaded")
+        help="Drop into an IPython session after channels have been loaded")
     parser.add_argument("experiments", type=str, nargs="+")
     args = parser.parse_args()
 
