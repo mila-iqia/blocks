@@ -46,7 +46,6 @@ Requirements
 Blocks' requirements are
 
 * Theano_, for pretty much everything
-* dill_, for training progress serialization
 * PyYAML_, to parse the configuration file
 * six_, to support both Python 2 and 3 with a single codebase
 
@@ -61,7 +60,6 @@ up to date if you didn't install it through Blocks.
 .. _nose2: https://nose2.readthedocs.org/en/latest/
 .. _PyYAML: http://pyyaml.org/wiki/PyYAML
 .. _Bokeh: http://bokeh.pydata.org/
-.. _dill: https://github.com/uqfoundation/dill
 .. _Theano: http://deeplearning.net/software/theano/
 .. _six: http://pythonhosted.org/six/
 .. _relevant installation instructions: http://deeplearning.net/software/theano/install.html#bleeding-edge-install-instructions

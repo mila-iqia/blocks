@@ -34,8 +34,6 @@ class SerializeMainLoop(SimpleExtension):
 
     Notes
     -----
-    Instead of the standard pickling library, the dill package is used.
-
     Using pickling for saving the whole main loop object comes with
     certain limitations:
 
