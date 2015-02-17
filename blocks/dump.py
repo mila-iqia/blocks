@@ -146,10 +146,6 @@ class MainLoopDumpManager(object):
     folder : str
         The path to the dump root folder.
 
-    Notes
-    -----
-    Requires the model to be a Brick or a list of Bricks.
-
     """
     def __init__(self, folder):
         self.folder = folder
@@ -172,7 +168,7 @@ class MainLoopDumpManager(object):
         return os.path.join(self.folder, 'log')
 
     def dump_parameters(self, main_loop):
-        save_parameter_values(extract_parameter_values(main_loop.model),
+        save_parameter_values(main_loop.model.get_param_values(),
                               self.path_to_parameters)
 
     def dump_iteration_state(self, main_loop):
@@ -216,6 +212,6 @@ class MainLoopDumpManager(object):
     def load_to(self, main_loop):
         """Loads the dump from the root folder into the main loop."""
         parameters, iteration_state, log = self.load()
-        inject_parameter_values(main_loop.model, parameters)
+        main_loop.model.set_param_values(parameters)
         main_loop.iteration_state = iteration_state
         main_loop.log = log

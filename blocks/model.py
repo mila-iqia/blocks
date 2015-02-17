@@ -9,6 +9,7 @@ from blocks.select import Selector
 from blocks.filter import VariableFilter, get_brick
 from blocks.roles import PARAMETER
 
+
 @add_metaclass(ABCMeta)
 class Model(object):
     """A parameterized entity trained in the main loop.
@@ -30,7 +31,6 @@ class Model(object):
     a subclass, e.g. the :class:`DifferentiableCostModel`.
 
     """
-
     @abstractmethod
     def get_params(self):
         """Return the model parameters.
@@ -58,7 +58,6 @@ class Model(object):
         return OrderedDict((name, param.get_value())
                            for name, param in self.get_params().items())
 
-
     def set_param_values(self, param_values):
         """Set the values of model parameters.
 
@@ -72,9 +71,8 @@ class Model(object):
 
         """
         params = self.get_params()
-        for name, value in param_values:
+        for name, value in param_values.items():
             params[name].set_value(value)
-
 
     @abstractmethod
     def get_criterion(self):
@@ -94,7 +92,7 @@ class Model(object):
         pass
 
 
-class DifferentibleCostModel(Model):
+class DifferentiableCostModel(Model):
     """A model for which a differentiable Theano cost is available.
 
     This model covers the most common case when the criterion is Theano
@@ -130,7 +128,7 @@ class DifferentibleCostModel(Model):
         # top-level bricks.
         self.top_bricks = []
         for brick in bricks:
-            if not brick in children and not brick in self.top_bricks:
+            if brick not in children and brick not in self.top_bricks:
                 self.top_bricks.append(brick)
 
         brick_param_names = {
@@ -143,7 +141,7 @@ class DifferentibleCostModel(Model):
                 self.params.append((brick_param_names[param], param))
             else:
                 self.params.append((param.name, param))
-        self.param = OrderedDict(self.params)
+        self.params = OrderedDict(self.params)
 
     def get_criterion(self):
         return self.cost
@@ -151,9 +149,9 @@ class DifferentibleCostModel(Model):
     def get_params(self):
         """Get model parameters.
 
-        The parameter names are formed from positions of their owner bricks in
-        the bricks hierarchy. The variable names are used for the parameters
-        that do not belong to any brick.
+        The parameter names are formed from positions of their owner bricks
+        in the bricks hierarchy. The variable names are used for the
+        parameters that do not belong to any brick.
 
         """
         return self.params

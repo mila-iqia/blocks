@@ -17,6 +17,7 @@ from blocks.algorithms import GradientDescent, Scale
 from blocks.bricks import MLP, Tanh, Identity
 from blocks.bricks.cost import SquaredError
 from blocks.initialization import IsotropicGaussian, Constant
+from blocks.model import DifferentiableCostModel
 from blocks.datasets import ContainerDataset
 from blocks.datasets.streams import BatchDataStream, DataStreamMapping
 from blocks.datasets.schemes import ConstantScheme
@@ -51,7 +52,7 @@ def main(save_to, num_batches, continue_=False):
     cost.name = "cost"
 
     main_loop = MainLoop(
-        mlp,
+        DifferentiableCostModel(cost),
         get_data_stream(range(100)),
         GradientDescent(
             cost=cost, step_rule=Scale(learning_rate=0.001)),
