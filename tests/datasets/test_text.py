@@ -1,10 +1,11 @@
 import tempfile
 
-from six.moves import cPickle
 from numpy.testing import assert_raises
 from six import BytesIO
+from six.moves import cPickle
 
 from blocks.datasets.text import TextFile
+from blocks.utils import pickle_dump
 
 
 def lower(s):
@@ -32,7 +33,7 @@ def test_text():
     for sentence in zip(range(3), epoch):
         pass
     f = BytesIO()
-    cPickle.dump(epoch, f)
+    pickle_dump(epoch, f)
     sentence = next(epoch)
     f.seek(0)
     epoch = cPickle.load(f)

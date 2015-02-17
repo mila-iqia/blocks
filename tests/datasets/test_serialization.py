@@ -1,12 +1,13 @@
 import os
 import tempfile
 
-from six.moves import cPickle
 import numpy
+from six.moves import cPickle
 
 from blocks.datasets.streams import DataStream
 from blocks.datasets.mnist import MNIST
 from blocks.datasets.schemes import SequentialScheme
+from blocks.utils import pickle_dump
 
 
 def test_in_memory():
@@ -23,7 +24,7 @@ def test_in_memory():
     # Pickle the epoch and make sure that the data wasn't dumped
     with tempfile.NamedTemporaryFile(delete=False) as f:
         filename = f.name
-        cPickle.dump(epoch, f)
+        pickle_dump(epoch, f)
     assert os.path.getsize(filename) < 1024 * 1024  # Less than 1MB
 
     # Reload the epoch and make sure that the state was maintained

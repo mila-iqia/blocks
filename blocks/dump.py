@@ -22,11 +22,12 @@ import os
 import os.path
 from collections import OrderedDict
 
-from six.moves import cPickle
 import numpy
+from six.moves import cPickle
 
 from blocks.bricks.base import Brick
 from blocks.select import Selector
+from blocks.utils import pickle_dump
 
 logger = logging.getLogger(__name__)
 
@@ -177,11 +178,11 @@ class MainLoopDumpManager(object):
 
     def dump_iteration_state(self, main_loop):
         with open(self.path_to_iteration_state, "wb") as destination:
-            cPickle.dump(main_loop.iteration_state, destination)
+            pickle_dump(main_loop.iteration_state, destination)
 
     def dump_log(self, main_loop):
         with open(self.path_to_log, "wb") as destination:
-            cPickle.dump(main_loop.log, destination)
+            pickle_dump(main_loop.log, destination)
 
     def dump(self, main_loop):
         """Dumps the main loop to the root folder.
