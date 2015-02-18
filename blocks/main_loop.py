@@ -6,6 +6,7 @@ import traceback
 from blocks import config
 from blocks.log import TrainingLog
 from blocks.utils import reraise_as, unpack, change_recursion_limit
+from blocks.algorithms import DifferentiableCostMinimizer
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
@@ -35,6 +36,11 @@ you do not want to complete this batch, press CTRL + C again. WARNING: Note \
 that this will end training immediately, and extensions that e.g. save your \
 training progress won't be run."""
 
+no_model_message = """
+
+A possible reason: one of your extensions requires the main loop to have \
+a model. Check documentation of your extensions."""
+
 
 class MainLoop(object):
     """The standard main loop of Blocks.
@@ -62,35 +68,43 @@ class MainLoop(object):
 
     Parameters
     ----------
-    model : object
-        The model object. It is entirely transparent for the main loop
-        but may be used by extensions.
-    data_stream : instance of :class:`.DataStream`.
-        The data stream.
     algorithm : object
         The training algorithm.
-    log : instance of :class:`.TrainingLog`
+    data_stream : instance of :class:`.DataStream`.
+        The data stream.
+    model : :class:`.AbstractModel` instance, optional
+        The model object. It is entirely transparent for the main loop
+        but may be used by extensions.
+    log : instance of :class:`.TrainingLog`, optional
         The log. When not given, a :class:`.TrainingLog` is created.
     extensions : list of :class:`.TrainingExtension` instances
         The training extensions. Will be called in the same order as given
         here.
 
     """
-    def __init__(self, model, data_stream, algorithm,
-                 log=None, extensions=None):
-        self.model = model
-        self.data_stream = data_stream
-        self.algorithm = algorithm
-
+    def __init__(self, algorithm, data_stream,
+                 model=None, log=None, extensions=None):
         if not log:
             log = TrainingLog()
         if not extensions:
             extensions = []
+
+        self.data_stream = data_stream
+        self.algorithm = algorithm
         self.log = log
         self.extensions = extensions
 
+        self._model = model
+
         self.status._training_started = False
         self.status._epoch_started = False
+
+    @property
+    def model(self):
+        if not self._model:
+            raise AttributeError("no model in this main loop" +
+                                 no_model_message)
+        return self._model
 
     @property
     def iteration_state(self):
@@ -113,6 +127,20 @@ class MainLoop(object):
         a `training_finish_requested` record in the log.
 
         """
+        # This should do nothing if the user has already configured
+        # logging, and will it least enable error messages otherwise.
+        logging.basicConfig()
+
+        if self._model and isinstance(self.algorithm,
+                                      DifferentiableCostMinimizer):
+            # Sanity check: model and algorithm should be configured
+            # similarly.
+            if not self._model.get_objective() == self.algorithm.cost:
+                logger.warning("different costs for model and algorithm")
+            if not (set(self._model.get_params().values()) ==
+                    set(self.algorithm.params)):
+                logger.warning("different params for model and algorithm")
+
         with change_recursion_limit(config.recursion_limit):
             self.original_sigint_handler = signal.signal(
                 signal.SIGINT, self._handle_epoch_interrupt)
@@ -123,7 +151,6 @@ class MainLoop(object):
                 if not self.status._training_started:
                     for extension in self.extensions:
                         extension.main_loop = self
-                    self.algorithm.log = self.log
                     self._run_extensions('before_training')
                     self.algorithm.initialize()
                     self.status._training_started = True

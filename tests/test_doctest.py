@@ -8,9 +8,13 @@ import pkgutil
 
 import blocks
 import blocks.bricks
+from tests import skip_if_not_available
 
 
 def setup(testobj):
+    skip_if_not_available(modules=['nose2'])
+    if testobj.name == 'blocks.datasets.InMemoryDataset':
+        skip_if_not_available(datasets=['mnist'])
     # Not importing unicode_literal because it gives problems
     # If needed, see https://dirkjan.ochtman.nl/writing/2014/07/06/
     # single-source-python-23-doctests.html for a solution
@@ -19,6 +23,7 @@ def setup(testobj):
 
 
 def load_tests(loader, tests, ignore):
+
     # This function loads doctests from all submodules and runs them
     # with the __future__ imports necessary for Python 2
     for _, module, _ in pkgutil.walk_packages(path=blocks.__path__,
