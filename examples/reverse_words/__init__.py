@@ -90,19 +90,19 @@ class Transition(SimpleRecurrent):
         return super(Transition, self).get_dim(name)
 
 
-def lower(s):
+def _lower(s):
     return s.lower()
 
 
-def transpose(data):
+def _transpose(data):
     return tuple(array.T for array in data)
 
 
-def filter_long(data):
+def _filter_long(data):
     return len(data[0]) <= 100
 
 
-def is_nan(log):
+def _is_nan(log):
     return math.isnan(log.current_row.total_gradient_norm)
 
 
@@ -114,13 +114,13 @@ def main(mode, save_path, num_batches, from_dump, data_path=None):
 
         # Data processing pipeline
         dataset_options = dict(dictionary=char2code, level="character",
-                               preprocess=lower)
+                               preprocess=_lower)
         if data_path:
             dataset = TextFile(data_path, **dataset_options)
         else:
             dataset = OneBillionWord("training", [99], **dataset_options)
         data_stream = DataStreamMapping(
-            mapping=transpose,
+            mapping=_transpose,
             data_stream=PaddingDataStream(
                 BatchDataStream(
                     iteration_scheme=ConstantScheme(10),
@@ -128,7 +128,7 @@ def main(mode, save_path, num_batches, from_dump, data_path=None):
                         mapping=reverse_words,
                         add_sources=("targets",),
                         data_stream=DataStreamFilter(
-                            predicate=filter_long,
+                            predicate=_filter_long,
                             data_stream=dataset
                             .get_default_stream())))))
 
@@ -237,7 +237,7 @@ def main(mode, save_path, num_batches, from_dump, data_path=None):
                 TrainingDataMonitoring(observables, after_every_batch=True),
                 average_monitoring,
                 FinishAfter(after_n_batches=num_batches)
-                .add_condition("after_batch", is_nan),
+                .add_condition("after_batch", _is_nan),
                 Plot(os.path.basename(save_path),
                      [[average_monitoring.record_name(cost)],
                       [average_monitoring.record_name(cost_per_character)]],

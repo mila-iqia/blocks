@@ -5,7 +5,7 @@ from six import BytesIO
 from six.moves import cPickle
 
 from blocks.datasets.text import TextFile
-from blocks.utils import pickle_dump
+from blocks.serialization import pickle_dump
 
 
 def lower(s):

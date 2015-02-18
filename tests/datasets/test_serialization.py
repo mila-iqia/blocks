@@ -7,7 +7,7 @@ from six.moves import cPickle
 from blocks.datasets.streams import DataStream
 from blocks.datasets.mnist import MNIST
 from blocks.datasets.schemes import SequentialScheme
-from blocks.utils import pickle_dump
+from blocks.serialization import pickle_dump
 
 
 def test_in_memory():

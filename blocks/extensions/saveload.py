@@ -4,7 +4,8 @@ import logging
 
 from blocks.extensions import SimpleExtension, TrainingExtension
 from blocks.dump import MainLoopDumpManager
-from blocks.utils import reraise_as, secure_pickle_dump
+from blocks.utils import reraise_as
+from blocks.serialization import secure_pickle_dump
 
 logger = logging.getLogger(__name__)
 

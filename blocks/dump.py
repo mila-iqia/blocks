@@ -27,7 +27,7 @@ from six.moves import cPickle
 
 from blocks.bricks.base import Brick
 from blocks.select import Selector
-from blocks.utils import pickle_dump
+from blocks.serialization import pickle_dump
 
 logger = logging.getLogger(__name__)
 
