@@ -17,6 +17,9 @@ directly from GitHub.
    through a ``requirements.txt`` file, which is why this installation command
    might look slightly different from what you're used to.
 
+   Installing requirements from GitHub requires pip 1.5 or higher; you can
+   update with ``pip update pip``.
+
 If you want to make sure that you can use the plotting integration with Bokeh_,
 run this command after installing the main framework.
 
@@ -38,6 +41,9 @@ added to pull the latest version from GitHub.
    ``yum``), or use a Python distribution like Anaconda_, before installing
    Blocks. You can also pass the ``--no-deps`` switch and install all the
    requirements manually.
+
+   If the installation crashes with ``ImportError: No module named
+   numpy.distutils.core``, install NumPy and try again again.
 
 .. _picklable_itertools: https://github.com/dwf/picklable_itertools
 
@@ -74,7 +80,7 @@ with your own GitHub user name:
 
 .. code-block:: bash
 
-   $ pip install -e git+git://github.com/USER/blocks.git#egg=blocks[test,plot,docs] --src=$HOME \
+   $ pip install -e git+git@github.com:USER/blocks.git#egg=blocks[test,plot,docs] --src=$HOME \
      -r https://raw.githubusercontent.com/bartvm/blocks/install_again/requirements.txt
 
 As with the usual installation, you can use ``--user`` or ``--no-deps`` if you
