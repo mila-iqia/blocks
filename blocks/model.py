@@ -20,6 +20,13 @@ from blocks.roles import PARAMETER
 
 logger = logging.getLogger()
 
+multiple_message = """
+
+Model with multiple outputs are currently only partially supported \
+in Blocks. For instance a call of 'get_objective' will crash. \
+Contact Blocks developers for more details.
+"""
+
 
 @add_metaclass(ABCMeta)
 class AbstractModel(object):
@@ -135,6 +142,8 @@ class Model(AbstractModel, ComputationGraph):
     """
     def __init__(self, outputs):
         super(Model, self).__init__(outputs)
+        if len(self.outputs) > 1:
+            logger.warning("model with multiple output " + multiple_message)
 
         bricks = [get_brick(var) for var in self if get_brick(var)]
         children = set(chain(*(brick.children for brick in bricks)))

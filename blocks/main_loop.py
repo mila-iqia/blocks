@@ -102,7 +102,8 @@ class MainLoop(object):
     @property
     def model(self):
         if not self._model:
-            raise ValueError("no model in this main loop" + no_model_message)
+            raise AttributeError("no model in this main loop"
+                                 + no_model_message)
         return self._model
 
     @property
