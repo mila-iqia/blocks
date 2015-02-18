@@ -4,9 +4,10 @@ import blocks.scripts.plot as plot
 
 from collections import OrderedDict
 from tests import silence_printing, skip_if_not_available
-from six.moves import cPickle
 
 from blocks.log import TrainingLog
+from blocks.main_loop import MainLoop
+from blocks.serialization import pickle_dump
 
 try:
     from pandas import DataFrame
@@ -31,8 +32,23 @@ def test_load_log():
     log = TrainingLog()
     log[0].channel0 = 0
 
+    # test simple TrainingLog pickles
     with tempfile.NamedTemporaryFile() as f:
-        cPickle.dump(log, f)
+        pickle_dump(log, f)
+        f.flush()
+
+        log2 = plot.load_log(f.name)
+        assert log2[0].channel0 == 0
+
+    # test MainLoop pickles
+    main_loop = MainLoop(
+                    model=None,
+                    data_stream=None,
+                    algorithm=None,
+                    log=log)
+
+    with tempfile.NamedTemporaryFile() as f:
+        pickle_dump(main_loop, f)
         f.flush()
 
         log2 = plot.load_log(f.name)

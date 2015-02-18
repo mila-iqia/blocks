@@ -21,6 +21,20 @@ the selected channels can be access as 'matched'
 
 """
 
+
+
+def plot_dataframe(dataframe):
+    import pylab
+
+    t = dataframe.index
+    print("Plotting {} channels:".format(len(dataframe.columns)))
+    for cname, series in iteritems(dataframe):
+        print("    {}".format(cname))
+        pylab.plot(t, series, label=cname)
+    pylab.legend()
+    pylab.show(block=True)
+
+
 def main(args):
     import readline
     import blocks.scripts.plot as plot

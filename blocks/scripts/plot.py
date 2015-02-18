@@ -115,15 +115,3 @@ def match_column_specs(experiments, column_specs):
                 df[column_name] = exp[column]
 
     return df
-
-
-def plot_dataframe(dataframe):
-    import pylab
-
-    t = dataframe.index
-    print("Plotting {} channels:".format(len(dataframe.columns)))
-    for cname, series in iteritems(dataframe):
-        print("    {}".format(cname))
-        pylab.plot(t, series, label=cname)
-    pylab.legend()
-    pylab.show(block=True)
