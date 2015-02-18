@@ -86,9 +86,9 @@ class AbstractModel(object):
         unknown = set(param_values) - set(params)
         missing = set(params) - set(param_values)
         if len(unknown):
-            logger.error("unknown parameter names:\n".format(unknown))
+            logger.error("unknown parameter names: {}\n".format(unknown))
         if len(missing):
-            logger.error("missing values for parameters:\n".format(missing))
+            logger.error("missing values for parameters: {}\n".format(missing))
 
         for name, value in param_values.items():
             if name in params:
