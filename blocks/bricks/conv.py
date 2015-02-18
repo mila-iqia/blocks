@@ -24,7 +24,8 @@ class Convolutional(Initializable):
         channels.
     batch_size : int, optional
         Number of examples per batch. If given, this will be passed to
-        Theano convolution operator, resulting in possibly faster execution.
+        Theano convolution operator, possibly resulting in faster
+        execution.
     image_size : tuple, optional
         The height and width of the input (image or feature map). If given,
         this will be passed to the Theano convolution operator, resulting
@@ -38,10 +39,8 @@ class Convolutional(Initializable):
 
     """
     @lazy
-
-    def __init__(self, filter_size, num_filters, batch_size=None,
-                 num_channels=None, image_size=None, step=(1, 1),
-                 border_mode='valid', **kwargs):
+    def __init__(self, filter_size, num_filters, num_channels, batch_size=None,
+                 image_size=None, step=(1, 1), border_mode='valid', **kwargs):
         super(Convolutional, self).__init__(**kwargs)
 
         self.filter_size = filter_size
@@ -101,14 +100,12 @@ class Convolutional(Initializable):
 
         output = conv2d(
             input_, W,
-            image_shape=(None, self.num_channels) +
-                        (self.image_size if self.image_size else (None,
-                                                                    None)),
+            image_shape=(self.batch_size, self.num_channels) +
+                        (self.image_size if self.image_size else (None, None)),
             subsample=self.step,
             border_mode=self.border_mode,
             filter_shape=((self.num_filters, self.num_channels) +
                           self.filter_size))
-
         if self.use_bias:
             output += b.dimshuffle('x', 0, 'x', 'x')
         return output
@@ -121,8 +118,6 @@ class Convolutional(Initializable):
                     ConvOp.getOutputShape(self.image_size, self.filter_size,
                                           self.step, self.border_mode))
         return super(Convolutional, self).get_dim(name)
-
-     
 
 
 class MaxPooling(Initializable, Feedforward):
@@ -137,20 +132,18 @@ class MaxPooling(Initializable, Feedforward):
         The vertical and horizontal shift (stride) between pooling regions.
         By default this is equal to `pooling_size`. Setting this to a lower
         number results in overlapping pooling regions.
-    image_size : tuple, optional
-        A tuple of integers representing the shape of the image. The last
+    input_dim : tuple, optional
+        A tuple of integers representing the shape of the input. The last
         two dimensions will be used to calculate the output dimension.
+
     """
     @lazy
-    def __init__(self, pooling_size, step=None, batch_size=None,
-                 num_channels=None, image_size=None, **kwargs):
+    def __init__(self, pooling_size, step=None, input_dim=None, **kwargs):
         super(MaxPooling, self).__init__(**kwargs)
 
+        self.input_dim = input_dim
         self.pooling_size = pooling_size
         self.step = step
-        self.batch_size = batch_size
-        self.num_channels = num_channels
-        self.image_size = image_size
 
     @application(inputs=['input_'], outputs=['output'])
     def apply(self, input_):
@@ -176,12 +169,11 @@ class MaxPooling(Initializable, Feedforward):
 
     def get_dim(self, name):
         if name == 'input_':
-            return ((self.num_channels,) + self.image_size)
+            return self.input_dim
         if name == 'output':
-            return ((self.num_channels,) +
-                    tuple(DownsampleFactorMax.out_shape(self.image_size,
-                                                        self.pooling_size,
-                                                        st=self.step)))
+            return tuple(DownsampleFactorMax.out_shape(self.input_dim,
+                                                       self.pooling_size,
+                                                       st=self.step))
 
 
 class ConvolutionalActivation(Sequence, Initializable):
@@ -192,29 +184,34 @@ class ConvolutionalActivation(Sequence, Initializable):
     activation : :class:`.BoundApplication`
         The application method to apply after convolution (i.e.
         the nonlinear activation function)
-    See :class:`Convolutional` for explanation of other parameters.
-    """
 
-    def __init__(self, filter_size, num_filters, activation,
-                 step=(1, 1), border_mode='valid', batch_size=None,
-                 num_channels=None, image_size=None, **kwargs):
-        self.convolution = Convolutional(filter_size, num_filters,
-                                         batch_size=batch_size,
-                                         num_channels=num_channels,
-                                         image_size=image_size,
-                                         step=step,
-                                         border_mode=border_mode)
+    See :class:`Convolutional` for explanation of other parameters.
+
+    """
+    def __init__(self, filter_size, num_filters, num_channels, activation,
+                 batch_size=None, image_size=None, step=(1, 1),
+                 border_mode='valid', **kwargs):
+        self.convolution = Convolutional()
+
+        self.filter_size = filter_size
+        self.num_filters = num_filters
+        self.num_channels = num_channels
+        self.batch_size = batch_size
+        self.image_size = image_size
+        self.step = step
+        self.border_mode = border_mode
 
         super(ConvolutionalActivation, self).__init__(
             application_methods=[self.convolution.apply, activation],
             **kwargs)
 
     def _push_allocation_config(self):
-        self.convolution.batch_size = self.batch_size
-        self.convolution.num_channels = self.num_channels
-        self.convolution.image_size = self.image_size
+        for attr in ['filter_size', 'num_filters', 'step', 'border_mode',
+                     'batch_size', 'num_channels', 'image_size']:
+            setattr(self.convolution, attr, getattr(self, attr))
 
     def get_dim(self, name):
+        # TODO The name of the activation output doesn't need to be `output`
         return self.convolution.get_dim(name)
 
 
@@ -245,14 +242,8 @@ class ConvolutionalLayer(Sequence, Initializable):
                  pooling_size, conv_step=(1, 1), pooling_step=None,
                  batch_size=None, num_channels=None, image_size=None,
                  border_mode='valid', **kwargs):
-        self.convolution = ConvolutionalActivation(filter_size, num_filters,
-                                                   activation=activation,
-                                                   batch_size=batch_size,
-                                                   num_channels=num_channels,
-                                                   image_size=image_size,
-                                                   step=conv_step,
-                                                   border_mode=border_mode)
-        self.pooling = MaxPooling(pooling_size, step=pooling_step)
+        self.convolution = ConvolutionalActivation()
+        self.pooling = MaxPooling()
         super(ConvolutionalLayer, self).__init__(
             application_methods=[self.convolution.apply,
                                  self.pooling.apply], **kwargs)
@@ -294,35 +285,32 @@ class ConvolutionalSequence(Sequence, Initializable, Feedforward):
     Parameters
     ----------
     layers : list
-        List of convolutional layers
-        (e.g. ConvolutionalActivation or ConvolutionalLayer)
-    batch_size : int, opt
+        List of convolutional bricks (i.e. :class:`ConvolutionalActivation`
+        or :class:`ConvolutionalLayer`)
+    batch_size : int, optional
         Number of images in batch. If given, will be passed to
         theano's convolution operator resulting in possibly faster
         execution.
-    num_channels : int, opt
+    num_channels : int, optional
         Number of input channels in the image. For the first layer this is
         normally 1 for grayscale images and 3 for color (RGB) images. For
         subsequent layers this is equal to the number of filters output by
         the previous convolutional layer. If given, will be passed to
         theano's convolution operator resulting in possibly faster
         execution.
-    image_size : tuple, opt
+    image_size : tuple, optional
         Width and height of the input (image/featuremap). If given,
         will be passed to theano's convolution operator resulting in
         possibly faster execution.
 
     Notes
     -----
-    The passed convolutional operators should be 'lazy' constructed, that is,
-    without specifying the batch_size, num_channels and image_size.
-    The main feature of ConvolutionalSequence is that it will set
-    the input dimensions of a layer to the output dimensions of
-    the previous layer by the _push_allocation_config method.
+    The passed convolutional operators should be 'lazy' constructed, that
+    is, without specifying the batch_size, num_channels and image_size. The
+    main feature of :class:`ConvolutionalSequence` is that it will set the
+    input dimensions of a layer to the output dimensions of the previous
+    layer by the :meth:`~.Brick.push_allocation_config` method.
 
-    Example
-    -------
-    TODO
     """
 
     def __init__(self, layers, batch_size=None, num_channels=None,
@@ -367,6 +355,7 @@ class Flattener(Brick):
     It may be used to pass multidimensional objects like images or feature
     maps of convolutional bricks into bricks which allow only two
     dimensional input (batch, features) like MLP.
+
     """
     @application(inputs=['input_'], outputs=['output'])
     def apply(self, input_):
