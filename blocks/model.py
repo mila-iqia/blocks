@@ -127,17 +127,18 @@ class Model(AbstractModel, ComputationGraph):
     Due to frequency of this case this class is called simply 'Model'
     and not 'ComputationGraphModel'.
 
-    Parameters
-    ----------
-    outputs : (list of) :class:`~theano.Variable`
-        The output variables of the computation graph.
-
     .. todo::
 
         Overriding the automatically found parameters and bricks might
         be needed.
 
-        If there top bricks in scan inner graphs, those will not be found.
+        If there are top bricks in scan inner graphs, those will not be
+        found.
+
+    Parameters
+    ----------
+    outputs : (list of) :class:`~theano.Variable`
+        The output variables of the computation graph.
 
     """
     def __init__(self, outputs):
