@@ -1,7 +1,7 @@
 import numpy
 import theano
 from theano import tensor
-from numpy.testing import assert_allclose
+from numpy.testing import assert_allclose, assert_raises
 
 from blocks.bricks import MLP, Tanh
 from blocks.model import Model
@@ -42,3 +42,9 @@ def test_model():
     assert len(got_param_values) == len(param_values)
     for name, value in param_values.items():
         assert_allclose(value, got_param_values[name])
+
+    # Test name conflict handling
+    mlp4 = MLP([Tanh()], [10, 10])
+    def helper():
+        Model(mlp4.apply(mlp3.apply(x)))
+    assert_raises(ValueError, helper)

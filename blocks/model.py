@@ -144,6 +144,8 @@ class Model(AbstractModel, ComputationGraph):
         for brick in bricks:
             if brick not in children and brick not in self.top_bricks:
                 self.top_bricks.append(brick)
+        if len(set(b.name for b in self.top_bricks)) < len(self.top_bricks):
+            raise ValueError("top bricks with the same name")
 
         brick_param_names = {
             v: k for k, v in Selector(self.top_bricks).get_params().items()}
