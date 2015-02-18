@@ -448,7 +448,6 @@ class BasicRMSProp(StepRule):
 
     For more information, see [Hint2014]_.
 
-
     .. [Hint2014] Geoff Hinton, *Neural Networks for Machine Learning*,
        lecture 6a,
        http://cs.toronto.edu/~tijmen/csc321/slides/lecture_slides_lec6.pdf
