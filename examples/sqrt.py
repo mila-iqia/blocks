@@ -30,14 +30,19 @@ from blocks.main_loop import MainLoop
 floatX = theano.config.floatX
 
 
+def _data_sqrt(data):
+    return (math.sqrt(data[0]),)
+
+
+def _array_tuple(data):
+    return tuple((numpy.asarray(d, dtype=floatX) for d in data))
+
+
 def get_data_stream(iterable):
     dataset = ContainerDataset({'numbers': iterable})
     data_stream = DataStreamMapping(dataset.get_default_stream(),
-                                    lambda data: (math.sqrt(data[0]),),
-                                    add_sources=('roots',))
-    data_stream = DataStreamMapping(
-        data_stream,
-        lambda data: tuple((numpy.asarray(d, dtype=floatX) for d in data)))
+                                    _data_sqrt, add_sources=('roots',))
+    data_stream = DataStreamMapping(data_stream, _array_tuple)
     return BatchDataStream(data_stream, ConstantScheme(20))
 
 
