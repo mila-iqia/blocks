@@ -1,9 +1,10 @@
 from __future__ import print_function
-import time
 
+import time
 from abc import ABCMeta, abstractmethod
 
 from six import add_metaclass
+from toolz import first
 
 
 class TrainingExtension(object):
@@ -108,6 +109,30 @@ class TrainingExtension(object):
         pass
 
 
+class Predicate(object):
+    def __init__(self, condition, num):
+        self.condition = condition
+        self.num = num
+
+    def __call__(self, log):
+        if self.condition.endswith('epochs'):
+            entry = log.status.epochs_done
+        else:
+            entry = log.status.iterations_done
+        if self.condition.startswith('every'):
+            return entry % self.num == 0
+        else:
+            return entry == self.num
+
+
+def has_done_epochs(log):
+    return log.status.epochs_done == 0
+
+
+def always_true(log):
+    return True
+
+
 @add_metaclass(ABCMeta)
 class SimpleExtension(TrainingExtension):
     """A base class for simple extensions.
@@ -179,18 +204,7 @@ class SimpleExtension(TrainingExtension):
 
         """
         self._conditions[:] = []
-        predicates = {'before_first_epoch':
-                      lambda log: log.status.epochs_done == 0}
-        predicate_factories = {
-            'every_n_batches': lambda n_batches:
-                lambda log: log.status.iterations_done % n_batches == 0,
-            'after_n_batches': lambda n_batches:
-                lambda log: log.status.iterations_done == n_batches,
-            'every_n_epochs': lambda n_epochs:
-                lambda log: log.status.epochs_done % n_epochs == 0,
-            'after_n_epochs': lambda n_epochs:
-                lambda log: log.status.epochs_done == n_epochs,
-        }
+        predicates = {'before_first_epoch': has_done_epochs}
         conditions = {
             'before_first_epoch': 'before_epoch',
             'after_every_epoch': 'after_epoch',
@@ -206,7 +220,7 @@ class SimpleExtension(TrainingExtension):
                 self.add_condition(conditions.get(key, key),
                                    predicate=predicates.get(key, None))
             elif key in self.INTEGER_TRIGGERS and value:
-                predicate = predicate_factories.get(key, lambda: None)(value)
+                predicate = Predicate(key, value)
                 self.add_condition(conditions.get(key, key),
                                    predicate=predicate)
             else:
@@ -238,7 +252,7 @@ class SimpleExtension(TrainingExtension):
         if not arguments:
             arguments = []
         if not predicate:
-            self._conditions.append((callback_name, lambda log: True,
+            self._conditions.append((callback_name, always_true,
                                      arguments))
         else:
             self._conditions.append((callback_name, predicate,
@@ -298,7 +312,7 @@ class Printing(SimpleExtension):
         super(Printing, self).__init__(**kwargs)
 
     def _print_attributes(self, attribute_tuples):
-        for attr, value in sorted(attribute_tuples, key=lambda t: t[0]):
+        for attr, value in sorted(attribute_tuples, key=first):
             if not attr.startswith("_"):
                 print("\t", "{}:".format(attr), value)
 

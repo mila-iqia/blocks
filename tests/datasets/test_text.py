@@ -1,10 +1,15 @@
 import tempfile
 
-import dill
 from numpy.testing import assert_raises
 from six import BytesIO
+from six.moves import cPickle
 
 from blocks.datasets.text import TextFile
+from blocks.serialization import pickle_dump
+
+
+def lower(s):
+    return s.lower()
 
 
 def test_text():
@@ -20,7 +25,7 @@ def test_text():
     dictionary = {'<UNK>': 0, '</S>': 1, 'this': 2, 'a': 3, 'one': 4}
     text_data = TextFile(files=[sentences1, sentences2],
                          dictionary=dictionary, bos_token=None,
-                         preprocess=str.lower)
+                         preprocess=lower)
     stream = text_data.get_default_stream()
     epoch = stream.get_epoch_iterator()
     assert len(list(epoch)) == 4
@@ -28,10 +33,10 @@ def test_text():
     for sentence in zip(range(3), epoch):
         pass
     f = BytesIO()
-    dill.dump(epoch, f, fmode=dill.CONTENTS_FMODE)
+    pickle_dump(epoch, f)
     sentence = next(epoch)
     f.seek(0)
-    epoch = dill.load(f)
+    epoch = cPickle.load(f)
     assert next(epoch) == sentence
     assert_raises(StopIteration, next, epoch)
 
@@ -40,7 +45,7 @@ def test_text():
                       [(' ', 26)] + [('<S>', 27)] +
                       [('</S>', 28)] + [('<UNK>', 29)])
     text_data = TextFile(files=[sentences1, sentences2],
-                         dictionary=dictionary, preprocess=str.lower,
+                         dictionary=dictionary, preprocess=lower,
                          level="character")
     sentence = next(text_data.get_default_stream().get_epoch_iterator())[0]
     assert sentence[:3] == [27, 19, 7]

@@ -3,9 +3,10 @@ import logging
 import pprint
 import sys
 import math
-import dill
+from six.moves import cPickle
 import numpy
 import os
+import operator
 
 import theano
 from six.moves import input
@@ -89,6 +90,22 @@ class Transition(SimpleRecurrent):
         return super(Transition, self).get_dim(name)
 
 
+def _lower(s):
+    return s.lower()
+
+
+def _transpose(data):
+    return tuple(array.T for array in data)
+
+
+def _filter_long(data):
+    return len(data[0]) <= 100
+
+
+def _is_nan(log):
+    return math.isnan(log.current_row.total_gradient_norm)
+
+
 def main(mode, save_path, num_batches, from_dump, data_path=None):
     if mode == "train":
         # Experiment configuration
@@ -97,13 +114,13 @@ def main(mode, save_path, num_batches, from_dump, data_path=None):
 
         # Data processing pipeline
         dataset_options = dict(dictionary=char2code, level="character",
-                               preprocess=str.lower)
+                               preprocess=_lower)
         if data_path:
             dataset = TextFile(data_path, **dataset_options)
         else:
             dataset = OneBillionWord("training", [99], **dataset_options)
         data_stream = DataStreamMapping(
-            mapping=lambda data: tuple(array.T for array in data),
+            mapping=_transpose,
             data_stream=PaddingDataStream(
                 BatchDataStream(
                     iteration_scheme=ConstantScheme(10),
@@ -111,7 +128,7 @@ def main(mode, save_path, num_batches, from_dump, data_path=None):
                         mapping=reverse_words,
                         add_sources=("targets",),
                         data_stream=DataStreamFilter(
-                            predicate=lambda data: len(data[0]) <= 100,
+                            predicate=_filter_long,
                             data_stream=dataset
                             .get_default_stream())))))
 
@@ -220,10 +237,7 @@ def main(mode, save_path, num_batches, from_dump, data_path=None):
                 TrainingDataMonitoring(observables, after_every_batch=True),
                 average_monitoring,
                 FinishAfter(after_n_batches=num_batches)
-                .add_condition(
-                    "after_batch",
-                    lambda log:
-                        math.isnan(log.current_row.total_gradient_norm)),
+                .add_condition("after_batch", _is_nan),
                 Plot(os.path.basename(save_path),
                      [[average_monitoring.record_name(cost)],
                       [average_monitoring.record_name(cost_per_character)]],
@@ -234,7 +248,7 @@ def main(mode, save_path, num_batches, from_dump, data_path=None):
         main_loop.run()
     elif mode == "test":
         with open(save_path, "rb") as source:
-            encoder, fork, lookup, generator = dill.load(source)
+            encoder, fork, lookup, generator = cPickle.load(source)
         logger.info("Model is loaded")
         chars = tensor.lmatrix("features")
         generated = generator.generate(
@@ -275,6 +289,6 @@ def main(mode, save_path, num_batches, from_dump, data_path=None):
                 if sample == target:
                     message += " CORRECT!"
                 messages.append((cost, message))
-            messages.sort(key=lambda tuple_: -tuple_[0])
+            messages.sort(key=operator.itemgetter(0), reverse=True)
             for _, message in messages:
                 print(message)

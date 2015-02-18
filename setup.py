@@ -33,7 +33,7 @@ setup(
     packages=find_packages(exclude=['examples', 'docs', 'tests']),
     scripts=['bin/blocks-continue', 'bin/blocks-dump', 'bin/blocks-plot'],
     setup_requires=['numpy'],
-    install_requires=['dill', 'numpy', 'six', 'pyyaml', 'pandas', 'toolz',
+    install_requires=['numpy', 'six', 'pyyaml', 'pandas', 'toolz',
                       'theano', 'picklable-itertools'],
     extras_require={
         'test': ['nose', 'nose2'],

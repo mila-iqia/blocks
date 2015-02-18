@@ -17,6 +17,9 @@ directly from GitHub.
    through a ``requirements.txt`` file, which is why this installation command
    might look slightly different from what you're used to.
 
+   Installing requirements from GitHub requires pip 1.5 or higher; you can
+   update with ``pip update pip``.
+
 If you want to make sure that you can use the plotting integration with Bokeh_,
 run this command after installing the main framework.
 
@@ -39,6 +42,9 @@ added to pull the latest version from GitHub.
    Blocks. You can also pass the ``--no-deps`` switch and install all the
    requirements manually.
 
+   If the installation crashes with ``ImportError: No module named
+   numpy.distutils.core``, install NumPy and try again again.
+
 .. _picklable_itertools: https://github.com/dwf/picklable_itertools
 
 Requirements
@@ -46,9 +52,9 @@ Requirements
 Blocks' requirements are
 
 * Theano_, for pretty much everything
-* dill_, for training progress serialization
 * PyYAML_, to parse the configuration file
 * six_, to support both Python 2 and 3 with a single codebase
+* Toolz_, to add a bit of functional programming where it is needed
 
 Bokeh_ is an optional requirement for if you want to use live plotting of your
 training progress.
@@ -58,12 +64,12 @@ We develop using the bleeding-edge version of Theano, so be sure to follow the
 up to date if you didn't install it through Blocks.
 
 .. _Anaconda: https://store.continuum.io/cshop/anaconda/
-.. _nose2: https://nose2.readthedocs.org/en/latest/
+.. _nose2: https://nose2.readthedocs.org/
 .. _PyYAML: http://pyyaml.org/wiki/PyYAML
 .. _Bokeh: http://bokeh.pydata.org/
-.. _dill: https://github.com/uqfoundation/dill
 .. _Theano: http://deeplearning.net/software/theano/
 .. _six: http://pythonhosted.org/six/
+.. _Toolz: http://toolz.readthedocs.org/
 .. _relevant installation instructions: http://deeplearning.net/software/theano/install.html#bleeding-edge-install-instructions
 
 Development
@@ -76,7 +82,7 @@ with your own GitHub user name:
 
 .. code-block:: bash
 
-   $ pip install -e git+git://github.com/USER/blocks.git#egg=blocks[test,plot,docs] --src=$HOME \
+   $ pip install -e git+git@github.com:USER/blocks.git#egg=blocks[test,plot,docs] --src=$HOME \
      -r https://raw.githubusercontent.com/bartvm/blocks/install_again/requirements.txt
 
 As with the usual installation, you can use ``--user`` or ``--no-deps`` if you

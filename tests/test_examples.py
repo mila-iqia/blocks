@@ -1,7 +1,7 @@
 from __future__ import print_function
 import tempfile
 
-import dill
+from six.moves import cPickle
 
 import blocks
 from blocks.extensions.saveload import SAVED_TO
@@ -9,7 +9,7 @@ from examples.sqrt import main as sqrt_test
 from examples.mnist import main as mnist_test
 from examples.markov_chain.main import main as markov_chain_test
 from examples.reverse_words import main as reverse_words_test
-from tests import silence_printing
+from tests import silence_printing, skip_if_not_available
 
 
 @silence_printing
@@ -22,10 +22,11 @@ def test_sqrt():
 
 @silence_printing
 def test_mnist():
+    skip_if_not_available(modules=['bokeh'])
     with tempfile.NamedTemporaryFile() as f:
         mnist_test(f.name, 1)
         with open(f.name, "rb") as source:
-            main_loop = dill.load(source)
+            main_loop = cPickle.load(source)
         main_loop.find_extension("FinishAfter").set_conditions(
             after_n_epochs=2)
         main_loop.run()
@@ -40,6 +41,7 @@ def test_markov_chain():
 
 @silence_printing
 def test_reverse_words():
+    skip_if_not_available(modules=['bokeh'])
     old_limit = blocks.config.recursion_limit
     blocks.config.recursion_limit = 100000
     with tempfile.NamedTemporaryFile() as f_save,\
