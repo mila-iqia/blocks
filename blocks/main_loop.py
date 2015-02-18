@@ -35,6 +35,11 @@ you do not want to complete this batch, press CTRL + C again. WARNING: Note \
 that this will end training immediately, and extensions that e.g. save your \
 training progress won't be run."""
 
+no_model_message = """
+
+A possible reason: one of your extensions requires the main loop to have \
+a model. Check documentation of your extensions."""
+
 
 class MainLoop(object):
     """The standard main loop of Blocks.
@@ -78,19 +83,26 @@ class MainLoop(object):
     """
     def __init__(self, algorithm, data_stream,
                  model=None, log=None, extensions=None):
-        self.model = model
-        self.data_stream = data_stream
-        self.algorithm = algorithm
-
         if not log:
             log = TrainingLog()
         if not extensions:
             extensions = []
+
+        self.data_stream = data_stream
+        self.algorithm = algorithm
         self.log = log
         self.extensions = extensions
 
+        self._model = model
+
         self.status._training_started = False
         self.status._epoch_started = False
+
+    @property
+    def model(self):
+        if not self._model:
+            raise ValueError("no model in this main loop" + no_model_message)
+        return self._model
 
     @property
     def iteration_state(self):
