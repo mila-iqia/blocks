@@ -161,9 +161,6 @@ def test_adam():
         OrderedDict([(a, tensor.grad(cost, a))]))
     f = theano.function([], [steps[a]], updates=updates)
 
-    assert_allclose(f()[0], [0.00105409, 0.00079056])
-    assert_allclose(f()[0], [0.00392387, 0.0029429])
-    assert_allclose(f()[0], [0.0022468, 0.0016851])
-
-if __name__ == "__main__":
-    test_adam()
+    assert_allclose(f()[0], [0.0002, 0.0002], rtol=1e-5)
+    assert_allclose(f()[0], [0.00105263, 0.00105263], rtol=1e-5)
+    assert_allclose(f()[0], [0.00073801, 0.00073801], rtol=1e-5)

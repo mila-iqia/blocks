@@ -558,6 +558,7 @@ class Adam(StepRule):
         Default value is set to 1e-8.
     decay_factor: float, optional
         Default value is set to 1e-8.
+
     """
     def __init__(self, learning_rate=0.0002,
                  beta1=0.1, beta2=0.001, epsilon=1e-8,
@@ -574,14 +575,15 @@ class Adam(StepRule):
         time = shared_floatx(0., 'time')
 
         t1 = time + 1
-        learning_rate = self.learning_rate * \
-            tensor.sqrt((1. - (1. - self.beta2)**t1)) / \
-            (1. - (1. - self.beta1)**t1)
+        learning_rate = (self.learning_rate *
+                         tensor.sqrt((1. - (1. - self.beta2)**t1)) /
+                         (1. - (1. - self.beta1)**t1))
         beta_1t = 1 - (1 - self.beta1) * self.decay_factor ** (t1 - 1)
         mean_t = beta_1t * previous_step + (1. - beta_1t) * mean
-        variance_t = self.beta2 * tensor.sqr(previous_step) + \
-            (1. - self.beta2) * variance
-        step = learning_rate * mean_t / (variance_t + self.epsilon)
+        variance_t = (self.beta2 * tensor.sqr(previous_step) +
+                      (1. - self.beta2) * variance)
+        step = (learning_rate * mean_t /
+                (tensor.sqrt(variance_t) + self.epsilon))
 
         updates = [(mean, mean_t),
                    (variance, variance_t),
