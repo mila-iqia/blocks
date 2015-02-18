@@ -45,6 +45,7 @@ def test_model():
 
     # Test name conflict handling
     mlp4 = MLP([Tanh()], [10, 10])
+
     def helper():
         Model(mlp4.apply(mlp3.apply(x)))
     assert_raises(ValueError, helper)

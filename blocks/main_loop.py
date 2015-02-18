@@ -6,6 +6,7 @@ import traceback
 from blocks import config
 from blocks.log import TrainingLog
 from blocks.utils import reraise_as, unpack, change_recursion_limit
+from blocks.algorithms import DifferentiableCostMinimizer
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
@@ -128,6 +129,17 @@ class MainLoop(object):
         # This should do nothing if the user has already configured
         # logging, and will it least enable error messages otherwise.
         logging.basicConfig()
+
+        if self._model and isinstance(self.algorithm,
+                                      DifferentiableCostMinimizer):
+            # Sanity check: model and algorithm should be configured
+            # similarly.
+            if not self._model.get_objective() == self.algorithm.cost:
+                raise ValueError("different costs for model and algorithm")
+            if not (set(self._model.get_params().values()) ==
+                    set(self.algorithm.params)):
+                raise ValueError("different params for model and algorithm")
+
         with change_recursion_limit(config.recursion_limit):
             self.original_sigint_handler = signal.signal(
                 signal.SIGINT, self._handle_epoch_interrupt)
