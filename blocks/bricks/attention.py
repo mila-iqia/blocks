@@ -88,7 +88,7 @@ class SequenceContentAttention(Initializable):
         if not sequence_transformer:
             sequence_transformer = MLP([Identity()], name="seq_trans")
         if not energy_computer:
-            energy_computer = EnergyComputer(name="energy_comp")
+            energy_computer = ShallowEnergyComputer(name="energy_comp")
         self.sequence_transformer = sequence_transformer
         self.energy_computer = energy_computer
 
@@ -182,10 +182,11 @@ class SequenceContentAttention(Initializable):
         return super(SequenceContentAttention, self).get_dim(name)
 
 
-class EnergyComputer(Sequence, Initializable, Feedforward):
+class ShallowEnergyComputer(Sequence, Initializable, Feedforward):
+    """A simple energy computer: First tanh, then weighted sum."""
     @lazy
     def __init__(self, **kwargs):
-        super(EnergyComputer, self).__init__(
+        super(ShallowEnergyComputer, self).__init__(
             [Tanh().apply, MLP([Identity()]).apply], **kwargs)
 
     @property
