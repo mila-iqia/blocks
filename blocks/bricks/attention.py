@@ -17,7 +17,7 @@ from blocks.bricks import (MLP, Identity, Initializable, Sequence,
                            Feedforward, Tanh)
 from blocks.bricks.base import lazy, application
 from blocks.bricks.parallel import Parallel, Distribute
-from blocks.bricks.recurrent import BaseRecurrent
+from blocks.bricks.recurrent import recurrent, BaseRecurrent
 from blocks.utils import dict_union, dict_subset
 
 
@@ -344,6 +344,9 @@ class AttentionRecurrent(AbstractAttentionRecurrent, Initializable):
     def take_look(self, **kwargs):
         r"""Compute glimpses with the attention mechanism.
 
+        A thin wrapper over `self.attention.take_look`: takes care
+        of choosing and renaming the necessary arguments.
+
         Parameters
         ----------
         \*\*kwargs
@@ -358,7 +361,7 @@ class AttentionRecurrent(AbstractAttentionRecurrent, Initializable):
         return self.attention.take_look(
             kwargs[self.attended_name],
             kwargs.get(self.preprocessed_attended_name),
-            mask=kwargs.get("mask"),
+            mask=kwargs.get(self.attended_mask_name),
             **dict_subset(kwargs,
                           self.state_names + self.previous_glimpses_needed))
 
@@ -369,6 +372,10 @@ class AttentionRecurrent(AbstractAttentionRecurrent, Initializable):
     @application
     def compute_states(self, **kwargs):
         r"""Compute current states when glimpses have already been computed.
+
+        Combines an application of the `distribute` that alter the
+        sequential inputs of the wrapped transition and an application of
+        the wrapped transition.
 
         Parameters
         ----------
@@ -382,8 +389,9 @@ class AttentionRecurrent(AbstractAttentionRecurrent, Initializable):
             Current states computed by `self.transition`.
 
         """
-        sequences = dict_subset(kwargs, self.sequence_names, pop=True,
-                                must_have=False)
+        # Masks are not mandatory, that's why 'must_have=False'
+        sequences = dict_subset(kwargs, self.sequence_names,
+                                pop=True, must_have=False)
         states = dict_subset(kwargs, self.state_names, pop=True)
         glimpses = dict_subset(kwargs, self.glimpse_names, pop=True)
         sequences.update(self.distribute.apply(
@@ -403,6 +411,10 @@ class AttentionRecurrent(AbstractAttentionRecurrent, Initializable):
     def do_apply(self, **kwargs):
         r"""Process a sequence attending the attended context every step.
 
+        In addition to the original sequence this method also requires
+        its preprocessed version, the one computed by the `preprocess`
+        method of the attention mechanism.
+
         Parameters
         ----------
         \*\*kwargs
@@ -418,17 +430,17 @@ class AttentionRecurrent(AbstractAttentionRecurrent, Initializable):
         attended = kwargs[self.attended_name]
         preprocessed_attended = kwargs.pop(self.preprocessed_attended_name)
         attended_mask = kwargs.get(self.attended_mask_name)
-
         sequences = dict_subset(kwargs, self.sequence_names, pop=True,
                                 must_have=False)
         states = dict_subset(kwargs, self.state_names, pop=True)
         glimpses = dict_subset(kwargs, self.glimpse_names, pop=True)
 
         current_glimpses = self.take_look(
-            mask=attended_mask, return_dict=True,
+            return_dict=True,
             **dict_union(
                 states, glimpses,
                 {self.attended_name: attended,
+                 self.attended_mask_name: attended_mask,
                  self.preprocessed_attended_name: preprocessed_attended}))
         current_states = self.compute_states(
             return_list=True,

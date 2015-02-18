@@ -7,10 +7,11 @@ from blocks.bricks import Tanh
 from blocks.bricks.base import application
 from blocks.bricks.parallel import Distribute
 from blocks.bricks.recurrent import SimpleRecurrent, GatedRecurrent
-from blocks.bricks.attention import SequenceContentAttention
+from blocks.bricks.attention import (
+    SequenceContentAttention, AttentionRecurrent)
 from blocks.bricks.sequence_generators import (
     SequenceGenerator, LinearReadout, TrivialEmitter,
-    SoftmaxEmitter, LookupFeedback, AttentionTransition)
+    SoftmaxEmitter, LookupFeedback)
 from blocks.graph import ComputationGraph
 from blocks.initialization import Orthogonal, IsotropicGaussian, Constant
 
@@ -142,8 +143,8 @@ def test_attention_transition():
     distribute = Distribute([name for name in transition.apply.sequences
                              if name != 'mask'],
                             attention.take_look.outputs[0])
-    att_trans = AttentionTransition(transition, attention, distribute,
-                                    name="att_trans")
+    att_trans = AttentionRecurrent(transition, attention, distribute,
+                                   name="att_trans")
     att_trans.weights_init = IsotropicGaussian(0.01)
     att_trans.biases_init = Constant(0)
     att_trans.initialize()
