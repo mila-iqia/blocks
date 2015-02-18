@@ -7,7 +7,7 @@ import logging
 import pprint
 import sys
 
-import dill
+from six.moves import cPickle
 import numpy
 import theano
 from theano import tensor
@@ -96,7 +96,7 @@ def main(mode, save_path, steps, num_batches):
                         Printing(every_n_batches=100)])
         main_loop.run()
     elif mode == "sample":
-        main_loop = dill.load(open(save_path, "rb"))
+        main_loop = cPickle.load(open(save_path, "rb"))
         generator = main_loop.model
 
         sample = ComputationGraph(generator.generate(

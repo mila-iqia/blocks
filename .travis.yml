@@ -35,12 +35,11 @@ before_install:
 install:
   # Install all Python dependencies
   - |
-      conda install -q --yes python=$TRAVIS_PYTHON_VERSION mkl bokeh nose numpy pip coverage six scipy
-      pip install -q --no-deps git+git://github.com/Theano/Theano.git # Development version
+      conda install -q --yes python=$TRAVIS_PYTHON_VERSION mkl bokeh nose numpy pip coverage six scipy toolz
       pip install -q nose2[coverage-plugin] coveralls
 script:
   - |
-      python setup.py install # Tests setup.py (should also install dill)
+      pip install . -r requirements.txt # Tests setup.py
       # Must export environment variable so that the subprocess is aware of it
       export THEANO_FLAGS=floatX=$TESTS,optimizer=fast_compile
       # Running nose2 within coverage makes imports count towards coverage

@@ -1,12 +1,13 @@
 import os
 import tempfile
 
-import dill
 import numpy
+from six.moves import cPickle
 
 from blocks.datasets.streams import DataStream
 from blocks.datasets.mnist import MNIST
 from blocks.datasets.schemes import SequentialScheme
+from blocks.serialization import pickle_dump
 
 
 def test_in_memory():
@@ -23,12 +24,12 @@ def test_in_memory():
     # Pickle the epoch and make sure that the data wasn't dumped
     with tempfile.NamedTemporaryFile(delete=False) as f:
         filename = f.name
-        dill.dump(epoch, f, fmode=dill.CONTENTS_FMODE)
+        pickle_dump(epoch, f)
     assert os.path.getsize(filename) < 1024 * 1024  # Less than 1MB
 
     # Reload the epoch and make sure that the state was maintained
     del epoch
     with open(filename, 'rb') as f:
-        epoch = dill.load(f)
+        epoch = cPickle.load(f)
     features, targets = next(epoch)
     assert numpy.all(features == mnist.features[512:768])

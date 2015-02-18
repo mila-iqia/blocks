@@ -1,6 +1,4 @@
-from six import BytesIO
-
-import dill
+from six.moves import cPickle
 
 from blocks.main_loop import MainLoop
 from blocks.datasets import ContainerDataset
@@ -68,10 +66,7 @@ def test_training_resumption():
         assert main_loop.log.status.iterations_done == 14
 
         if with_serialization:
-            string_io = BytesIO()
-            dill.dump(main_loop, string_io, fmode=dill.CONTENTS_FMODE)
-            string_io.seek(0)
-            main_loop = dill.load(string_io)
+            main_loop = cPickle.loads(cPickle.dumps(main_loop))
 
         finish_after = unpack(
             [ext for ext in main_loop.extensions

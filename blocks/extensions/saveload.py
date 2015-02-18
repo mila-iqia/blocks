@@ -4,7 +4,8 @@ import logging
 
 from blocks.extensions import SimpleExtension, TrainingExtension
 from blocks.dump import MainLoopDumpManager
-from blocks.utils import reraise_as, secure_dill_dump
+from blocks.utils import reraise_as
+from blocks.serialization import secure_pickle_dump
 
 logger = logging.getLogger(__name__)
 
@@ -34,8 +35,6 @@ class SerializeMainLoop(SimpleExtension):
 
     Notes
     -----
-    Instead of the standard pickling library, the dill package is used.
-
     Using pickling for saving the whole main loop object comes with
     certain limitations:
 
@@ -60,11 +59,11 @@ class SerializeMainLoop(SimpleExtension):
         """Pickle the main loop object to the disk."""
         try:
             self.main_loop.log.current_row[SAVED_TO] = self.path
-            secure_dill_dump(self.main_loop, self.path)
+            secure_pickle_dump(self.main_loop, self.path)
             for attribute in self.save_separately:
                 root, ext = os.path.splitext(self.path)
                 path = root + "_" + attribute + ext
-                secure_dill_dump(getattr(self.main_loop, attribute), path)
+                secure_pickle_dump(getattr(self.main_loop, attribute), path)
         except Exception:
             self.main_loop.log.current_row[SAVED_TO] = None
             raise

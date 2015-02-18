@@ -1,14 +1,10 @@
 import sys
-import os
-import shutil
-import tempfile
 import contextlib
 from collections import OrderedDict
 
 import numpy
 import six
 import theano
-import dill
 from theano import tensor
 from theano import printing
 from theano.gof.graph import Constant
@@ -404,27 +400,6 @@ def ipdb_breakpoint(x):
     """
     import ipdb
     ipdb.set_trace()
-
-
-def secure_dill_dump(object_, path):
-    """Robust serialization - does not corrupt your files when failed.
-
-    Parameters
-    ----------
-    object_ : object
-        The object to be saved to the disk.
-    path : str
-        The destination path.
-
-    """
-    try:
-        with tempfile.NamedTemporaryFile(delete=False) as temp:
-            dill.dump(object_, temp, fmode=dill.CONTENTS_FMODE)
-        shutil.move(temp.name, path)
-    except:
-        if "temp" in locals():
-            os.remove(temp.name)
-        raise
 
 
 @contextlib.contextmanager

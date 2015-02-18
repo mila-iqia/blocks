@@ -142,19 +142,17 @@ Serialization
 To ensure the reproducibility of scientific experiments Blocks tries to make
 sure that stopping and resuming training doesn't affect the final results. In
 order to do so it takes a radical approach, serializing the entire training
-state using Dill_ (an extension of Python's native pickle_). Some things cannot
-be pickled, so their use should be avoided:
+state using pickle_. Some things cannot be pickled, so their use should be
+avoided when the object will be pickled as part of the main loop:
 
-* Generators
+* Iterators and generators (use picklable_itertools_)
+* References to methods as attributes
+* Any variable that lies outside of the global namespace e.g. nested functions
 * Dynamically generated classes (possible_ but complicated)
-* Most iterators (Python 2), but not custom iterator types
 
-For a more detailed list, refer to `Dill's source code`_.
-
-.. _Dill: http://trac.mystic.cacr.caltech.edu/project/pathos/wiki/dill
 .. _pickle: https://docs.python.org/3/library/pickle.html
 .. _possible: https://stackoverflow.com/questions/4647566/pickle-a-dynamically-parameterized-sub-class
-.. _Dill's source code: https://github.com/uqfoundation/dill/blob/master/dill/_objects.py
+.. _picklable_itertools: https://github.com/dwf/picklable_itertools
 
 Mutable types as keyword argument defaults
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
