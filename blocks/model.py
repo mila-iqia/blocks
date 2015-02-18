@@ -6,6 +6,7 @@ the basic :class:`AbstractModel` interface as well as its implementations
 (currently only :class:`Model`).
 
 """
+import logging
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 from itertools import chain
@@ -16,6 +17,8 @@ from blocks.graph import ComputationGraph
 from blocks.select import Selector
 from blocks.filter import VariableFilter, get_brick
 from blocks.roles import PARAMETER
+
+logger = logging.getLogger()
 
 
 @add_metaclass(ABCMeta)
@@ -79,8 +82,17 @@ class AbstractModel(object):
 
         """
         params = self.get_params()
+
+        unknown = set(param_values) - set(params)
+        missing = set(params) - set(param_values)
+        if len(unknown):
+            logger.error("unknown parameter names:\n".format(unknown))
+        if len(missing):
+            logger.error("missing values for parameters:\n".format(missing))
+
         for name, value in param_values.items():
-            params[name].set_value(value)
+            if name in params:
+                params[name].set_value(value)
 
     @abstractmethod
     def get_criterion(self):
