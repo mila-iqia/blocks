@@ -1,10 +1,10 @@
 
 from __future__ import division, print_function
 
-import dill
 import fnmatch
 
 from six import iteritems
+from six.moves import cPickle
 from collections import OrderedDict
 from functools import reduce
 
@@ -30,7 +30,7 @@ def load_log(fname):
     """
     with change_recursion_limit(config.recursion_limit):
         with open(fname, 'rb') as f:
-            from_disk = dill.load(f)
+            from_disk = cPickle.load(f)
         # TODO: Load "dumped" experiments
 
     if isinstance(from_disk, AbstractTrainingLog):

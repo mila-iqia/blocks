@@ -1,9 +1,12 @@
 
-
+import tempfile
 import blocks.scripts.plot as plot
 
 from collections import OrderedDict
 from tests import silence_printing, skip_if_not_available
+from six.moves import cPickle
+
+from blocks.log import TrainingLog
 
 try:
     from pandas import DataFrame
@@ -22,6 +25,18 @@ def some_experiments():
     experiments['exp1']['col0'] = (6, 7, 8)
     experiments['exp1']['col1'] = (9, 9, 9)
     return experiments
+
+
+def test_load_log():
+    log = TrainingLog()
+    log[0].channel0 = 0
+
+    with tempfile.NamedTemporaryFile() as f:
+        cPickle.dump(log, f)
+        f.flush()
+
+        log2 = plot.load_log(f.name)
+        assert log2[0].channel0 == 0
 
 
 @silence_printing
