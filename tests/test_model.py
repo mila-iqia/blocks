@@ -42,6 +42,3 @@ def test_model():
     assert len(got_param_values) == len(param_values)
     for name, value in param_values.items():
         assert_allclose(value, got_param_values[name])
-
-
-
