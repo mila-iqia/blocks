@@ -1,3 +1,11 @@
+"""Defines models.
+
+A model is a thin layer of abstraction between the user-defined computation
+graph, bricks, parameters and main loop extensions. This module provides
+the basic :class:`AbstractModel` interface as well as its implementations
+(currently only :class:`Model`).
+
+"""
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 from itertools import chain
@@ -11,7 +19,7 @@ from blocks.roles import PARAMETER
 
 
 @add_metaclass(ABCMeta)
-class Model(object):
+class AbstractModel(object):
     """A parameterized entity trained in the main loop.
 
     A model is a parameterized entity the user trains a in a main loop.
@@ -28,7 +36,7 @@ class Model(object):
     * It might have bricks as its components.
 
     This class provides an interface for models. For experiments use
-    a subclass, e.g. the :class:`DifferentiableCostModel`.
+    a subclass, e.g. the :class:`Model`.
 
     """
     @abstractmethod
@@ -92,22 +100,19 @@ class Model(object):
         pass
 
 
-class DifferentiableCostModel(Model):
-    """A model for which a differentiable Theano cost is available.
+class Model(AbstractModel, ComputationGraph):
+    """Wraps a computation graph to support model interface.
 
-    This model covers the most common case when the criterion is Theano
-    variable, the parameter are shared Theano variables. In such case
-    the parameters can be typically extracted from the computation graph,
-    as well as bricks.
-
-    The parameter names are formed from positions
-    of their owner brick in the bricks hierarchy. The variable names are
-    used for the parameters that do not belong to any brick.
+    This model covers the most common case when all information
+    about the model is contained in an annotated computation graph:
+    parameters are identified by the roles, bricks found by annotations.
+    Due to frequency of this case this class is called simply 'Model'
+    and not 'ComputationGraphModel'.
 
     Parameters
     ----------
-    cost : `~theano.Varible`
-        The cost variable.
+    outputs : (list of) :class:`~theano.Variable`
+        The output variables of the computation graph.
 
     .. todo::
 
@@ -117,12 +122,10 @@ class DifferentiableCostModel(Model):
         If there top bricks in scan inner graphs, those will not be found.
 
     """
-    def __init__(self, cost):
-        self.cost = cost
+    def __init__(self, outputs):
+        super(Model, self).__init__(outputs)
 
-        self._cg = ComputationGraph(cost)
-
-        bricks = [get_brick(var) for var in self._cg if get_brick(var)]
+        bricks = [get_brick(var) for var in self if get_brick(var)]
         children = set(chain(*(brick.children for brick in bricks)))
         # Quadratic complexity: we should not have thousands of
         # top-level bricks.
@@ -133,10 +136,8 @@ class DifferentiableCostModel(Model):
 
         brick_param_names = {
             v: k for k, v in Selector(self.top_bricks).get_params().items()}
-
         self.params = []
-        for param in VariableFilter(roles=[PARAMETER])(
-                self._cg.shared_variables):
+        for param in VariableFilter(roles=[PARAMETER])(self.shared_variables):
             if param in brick_param_names:
                 self.params.append((brick_param_names[param], param))
             else:
@@ -144,7 +145,15 @@ class DifferentiableCostModel(Model):
         self.params = OrderedDict(self.params)
 
     def get_criterion(self):
-        return self.cost
+        """Return the output variable, if there is a single one.
+
+        If there is only one output variable, it is a reasonable default
+        setting to assume that it is the optimization objective.
+
+        """
+        if len(self.outputs) == 1:
+            return self.outputs[0]
+        raise NotImplementedError
 
     def get_params(self):
         """Get model parameters.

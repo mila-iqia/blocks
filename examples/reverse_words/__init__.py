@@ -28,6 +28,7 @@ from blocks.datasets.schemes import ConstantScheme
 from blocks.algorithms import (GradientDescent, Scale,
                                StepClipping, CompositeRule)
 from blocks.initialization import Orthogonal, IsotropicGaussian, Constant
+from blocks.model import Model
 from blocks.monitoring import aggregation
 from blocks.extensions import FinishAfter, Printing, Timing
 from blocks.extensions.saveload import SerializeMainLoop, LoadFromDump
@@ -229,7 +230,7 @@ def main(mode, save_path, num_batches, from_dump, data_path=None):
         average_monitoring = TrainingDataMonitoring(
             observables, prefix="average", every_n_batches=10)
         main_loop = MainLoop(
-            model=bricks,
+            model=Model(cost),
             data_stream=data_stream,
             algorithm=algorithm,
             extensions=([LoadFromDump(from_dump)] if from_dump else []) +

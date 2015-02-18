@@ -1,17 +1,17 @@
 from theano import tensor
 
 from blocks.bricks import MLP, Tanh
-from blocks.model import DifferentiableCostModel
+from blocks.model import Model
 
 
-def test_differentiable_cost_model():
+def test_model():
     x = tensor.matrix('x')
     mlp1 = MLP([Tanh(), Tanh()], [10, 20, 30], name="mlp1")
     mlp2 = MLP([Tanh()], [30, 40], name="mlp2")
     h1 = mlp1.apply(x)
     h2 = mlp2.apply(h1)
 
-    model = DifferentiableCostModel(h2.sum())
+    model = Model(h2.sum())
     assert model.get_top_bricks() == [mlp1, mlp2]
     # The order of parameters returned is deterministic but
     # not sensible.

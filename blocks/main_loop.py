@@ -62,22 +62,22 @@ class MainLoop(object):
 
     Parameters
     ----------
-    model : object
-        The model object. It is entirely transparent for the main loop
-        but may be used by extensions.
-    data_stream : instance of :class:`.DataStream`.
-        The data stream.
     algorithm : object
         The training algorithm.
-    log : instance of :class:`.TrainingLog`
+    data_stream : instance of :class:`.DataStream`.
+        The data stream.
+    model : :class:`.AbstractModel` instance, optional
+        The model object. It is entirely transparent for the main loop
+        but may be used by extensions.
+    log : instance of :class:`.TrainingLog`, optional
         The log. When not given, a :class:`.TrainingLog` is created.
     extensions : list of :class:`.TrainingExtension` instances
         The training extensions. Will be called in the same order as given
         here.
 
     """
-    def __init__(self, model, data_stream, algorithm,
-                 log=None, extensions=None):
+    def __init__(self, algorithm, data_stream,
+                 model=None, log=None, extensions=None):
         self.model = model
         self.data_stream = data_stream
         self.algorithm = algorithm
@@ -123,7 +123,6 @@ class MainLoop(object):
                 if not self.status._training_started:
                     for extension in self.extensions:
                         extension.main_loop = self
-                    self.algorithm.log = self.log
                     self._run_extensions('before_training')
                     self.algorithm.initialize()
                     self.status._training_started = True

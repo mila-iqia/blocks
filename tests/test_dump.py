@@ -25,7 +25,7 @@ def test_save_load_parameter_values():
 
 
 @silence_printing
-def test_main_loop_state_manager():
+def test_main_loop_dump_manager():
     def assert_equal(main_loop1, main_loop2, check_log=True):
         """Check if two main loop objects are equal.
 

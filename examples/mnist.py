@@ -14,6 +14,7 @@ from blocks.datasets.mnist import MNIST
 from blocks.datasets.schemes import SequentialScheme
 from blocks.filter import VariableFilter
 from blocks.graph import ComputationGraph
+from blocks.model import Model
 from blocks.monitoring import aggregation
 from blocks.extensions import FinishAfter, Timing, Printing
 from blocks.extensions.saveload import SerializeMainLoop
@@ -45,11 +46,11 @@ def main(save_to, num_epochs):
     algorithm = GradientDescent(
         cost=cost, step_rule=Scale(learning_rate=0.1))
     main_loop = MainLoop(
-        mlp,
+        algorithm,
         DataStream(mnist_train,
                    iteration_scheme=SequentialScheme(
                        mnist_train.num_examples, 50)),
-        algorithm,
+        model=Model(cost),
         extensions=[Timing(),
                     FinishAfter(after_n_epochs=num_epochs),
                     DataStreamMonitoring(
