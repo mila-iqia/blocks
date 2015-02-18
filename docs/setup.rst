@@ -54,6 +54,7 @@ Blocks' requirements are
 * Theano_, for pretty much everything
 * PyYAML_, to parse the configuration file
 * six_, to support both Python 2 and 3 with a single codebase
+* Toolz_, to add a bit of functional programming where it is needed
 
 Bokeh_ is an optional requirement for if you want to use live plotting of your
 training progress.
@@ -63,11 +64,12 @@ We develop using the bleeding-edge version of Theano, so be sure to follow the
 up to date if you didn't install it through Blocks.
 
 .. _Anaconda: https://store.continuum.io/cshop/anaconda/
-.. _nose2: https://nose2.readthedocs.org/en/latest/
+.. _nose2: https://nose2.readthedocs.org/
 .. _PyYAML: http://pyyaml.org/wiki/PyYAML
 .. _Bokeh: http://bokeh.pydata.org/
 .. _Theano: http://deeplearning.net/software/theano/
 .. _six: http://pythonhosted.org/six/
+.. _Toolz: http://toolz.readthedocs.org/
 .. _relevant installation instructions: http://deeplearning.net/software/theano/install.html#bleeding-edge-install-instructions
 
 Development
