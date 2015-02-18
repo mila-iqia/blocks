@@ -446,11 +446,12 @@ class BasicRMSProp(StepRule):
     For instance, it should be applied first when used in conjunction
     with :class:`Scale`.
 
-    For more information, see [RMSProp]_.
+    For more information, see [Hint2014]_.
 
-    .. [RMSProp] Geoff Hinton, *Neural Networks for Machine Learning*,
-       lecture 6a, <http://www.cs.toronto.edu/~tijmen/csc321/slides/
-       lecture_slides_lec6.pdf>
+
+    .. [Hint2014] Geoff Hinton, *Neural Networks for Machine Learning*,
+       lecture 6a,
+       http://cs.toronto.edu/~tijmen/csc321/slides/lecture_slides_lec6.pdf
 
     """
     def __init__(self, decay_rate=0.9, max_scaling=1e5):
