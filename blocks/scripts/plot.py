@@ -3,7 +3,6 @@ from __future__ import division, print_function
 
 import dill
 import fnmatch
-import pandas
 
 from six import iteritems
 from collections import OrderedDict
@@ -13,6 +12,12 @@ from blocks import config
 from blocks.utils import change_recursion_limit
 from blocks.log import AbstractTrainingLog
 from blocks.main_loop import MainLoop
+
+try:
+    from pandas import DataFrame
+    PANDAS_AVAILABLE = True
+except ImportError:
+    PANDAS_AVAILABLE = False
 
 
 def load_log(fname):
@@ -45,7 +50,7 @@ def print_column_summary(experiments):
     Parameters
     ----------
     experiments : OrderedDict of {str: DataFrame}
-        The key is expected to be an experiment identifier 
+        The key is expected to be an experiment identifier
         (e.g. a filename) and the value a pandas.DataFrame.
 
     """
@@ -86,24 +91,28 @@ def match_column_specs(experiments, column_specs):
         channels as columns.
 
     """
+    if not PANDAS_AVAILABLE:
+        raise ImportError("The pandas library was not found. You can"
+                          " install it with pip.")
     # We iterate over all column and match each spec to the
     # channels of all experiments.
-    df = pandas.DataFrame()
+    df = DataFrame()
     for spec in column_specs:
         if ":" in spec:
-            exp_spec, channel_spec = spec.split(":")
+            exp_spec, column_spec = spec.split(":")
+            exp_spec = int(exp_spec)
         else:
-            exp_spec, channel_spec = None, spec
+            exp_spec, column_spec = None, spec
 
         for i, exp in enumerate(experiments.values()):
-            for channel in fnmatch.filter(exp.columns, channel_spec):
-                if exp_spec and exp_spec != i:
+            for column in fnmatch.filter(exp.columns, column_spec):
+                if exp_spec is not None and exp_spec != i:
                     # We are looking for a specific experiment..
                     #  ... and it's not this one.
                     continue
 
-                column_name = "{}:{}".format(i, channel)
-                df[column_name] = exp[channel]
+                column_name = "{}:{}".format(i, column)
+                df[column_name] = exp[column]
 
     return df
 
