@@ -96,7 +96,7 @@ class Convolutional(Initializable):
         if self.use_bias:
             W, b = self.params
         else:
-            W = self.params
+            W, = self.params
 
         output = conv2d(
             input_, W,
@@ -188,7 +188,8 @@ class ConvolutionalActivation(Sequence, Initializable):
     See :class:`Convolutional` for explanation of other parameters.
 
     """
-    def __init__(self, filter_size, num_filters, num_channels, activation,
+    @lazy
+    def __init__(self, activation, filter_size, num_filters, num_channels,
                  batch_size=None, image_size=None, step=(1, 1),
                  border_mode='valid', **kwargs):
         self.convolution = Convolutional()
@@ -236,13 +237,12 @@ class ConvolutionalLayer(Sequence, Initializable):
     Uses max pooling.
 
     """
-
     @lazy
-    def __init__(self, filter_size, num_filters, activation,
-                 pooling_size, conv_step=(1, 1), pooling_step=None,
-                 batch_size=None, num_channels=None, image_size=None,
-                 border_mode='valid', **kwargs):
-        self.convolution = ConvolutionalActivation()
+    def __init__(self, activation, filter_size, num_filters, pooling_size,
+                 num_channels, conv_step=(1, 1), pooling_step=None,
+                 batch_size=None, image_size=None, border_mode='valid',
+                 **kwargs):
+        self.convolution = ConvolutionalActivation(activation)
         self.pooling = MaxPooling()
         super(ConvolutionalLayer, self).__init__(
             application_methods=[self.convolution.apply,
@@ -287,15 +287,13 @@ class ConvolutionalSequence(Sequence, Initializable, Feedforward):
     layers : list
         List of convolutional bricks (i.e. :class:`ConvolutionalActivation`
         or :class:`ConvolutionalLayer`)
-    batch_size : int, optional
-        Number of images in batch. If given, will be passed to
-        theano's convolution operator resulting in possibly faster
-        execution.
-    num_channels : int, optional
+    num_channels : int
         Number of input channels in the image. For the first layer this is
         normally 1 for grayscale images and 3 for color (RGB) images. For
         subsequent layers this is equal to the number of filters output by
-        the previous convolutional layer. If given, will be passed to
+        the previous convolutional layer.
+    batch_size : int, optional
+        Number of images in batch. If given, will be passed to
         theano's convolution operator resulting in possibly faster
         execution.
     image_size : tuple, optional
@@ -312,9 +310,9 @@ class ConvolutionalSequence(Sequence, Initializable, Feedforward):
     layer by the :meth:`~.Brick.push_allocation_config` method.
 
     """
-
-    def __init__(self, layers, batch_size=None, num_channels=None,
-                 image_size=None, **kwargs):
+    @lazy
+    def __init__(self, layers, num_channels, batch_size=None, image_size=None,
+                 **kwargs):
         self.layers = layers
         self.image_size = image_size
         self.num_channels = num_channels
@@ -344,9 +342,10 @@ class ConvolutionalSequence(Sequence, Initializable, Feedforward):
 
             # Retrieve output dimensions
             # and set it for next layer
-            output_shape = layer.get_dim('output')
-            num_channels = output_shape[0]
-            image_size = output_shape[1:]
+            if layer.image_size is not None:
+                output_shape = layer.get_dim('output')
+                image_size = output_shape[1:]
+            num_channels = layer.num_filters
 
 
 class Flattener(Brick):
@@ -359,4 +358,4 @@ class Flattener(Brick):
     """
     @application(inputs=['input_'], outputs=['output'])
     def apply(self, input_):
-        return input_.flatten(outdim=2)
+        return input_.flatten(ndim=2)
