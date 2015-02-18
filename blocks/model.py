@@ -99,7 +99,6 @@ class AbstractModel(object):
         """Return the optimization objective."""
         pass
 
-    @abstractmethod
     def get_top_bricks(self):
         """Return the top-level bricks that are used in the model.
 
@@ -109,7 +108,7 @@ class AbstractModel(object):
             List of bricks.
 
         """
-        pass
+        raise NotImplementedError()
 
 
 class Model(AbstractModel, ComputationGraph):
