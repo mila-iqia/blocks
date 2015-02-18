@@ -32,7 +32,7 @@ class AbstractModel(object):
     to returning handles to parameter objects it can return their values
     as numpy arrays and set their values to given numpy arrays.
 
-    * It has an optimality criterion.
+    * It has an optimality objective.
 
     * It can be serialized and deserialized by mean of pickling.
 
@@ -95,8 +95,8 @@ class AbstractModel(object):
                 params[name].set_value(value)
 
     @abstractmethod
-    def get_criterion(self):
-        """Return the optimization criterion."""
+    def get_objective(self):
+        """Return the optimization objective."""
         pass
 
     @abstractmethod
@@ -156,7 +156,7 @@ class Model(AbstractModel, ComputationGraph):
                 self.params.append((param.name, param))
         self.params = OrderedDict(self.params)
 
-    def get_criterion(self):
+    def get_objective(self):
         """Return the output variable, if there is a single one.
 
         If there is only one output variable, it is a reasonable default
