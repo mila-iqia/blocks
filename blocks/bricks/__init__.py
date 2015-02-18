@@ -205,6 +205,14 @@ class Linear(Initializable, Feedforward):
         self.input_dim = input_dim
         self.output_dim = output_dim
 
+    @property
+    def W(self):
+        return self.params[0]
+
+    @property
+    def b(self):
+        return self.params[1]
+
     def _allocate(self):
         W = shared_floatx_zeros((self.input_dim, self.output_dim), name='W')
         add_role(W, WEIGHTS)
@@ -458,8 +466,7 @@ class Sequence(Brick):
     @application
     def apply(self, *args):
         child_input = args
-        for _, application_method in zip(self.children,
-                                         self.application_methods):
+        for application_method in self.application_methods:
             output = application_method(*pack(child_input))
             child_input = output
         return output

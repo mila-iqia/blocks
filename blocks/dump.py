@@ -20,13 +20,10 @@ for dumps, such as for instance .npz files.
 import logging
 import os
 import os.path
-from collections import OrderedDict
 
 import numpy
 from six.moves import cPickle
 
-from blocks.bricks.base import Brick
-from blocks.select import Selector
 from blocks.serialization import pickle_dump
 
 logger = logging.getLogger(__name__)
@@ -74,70 +71,13 @@ def load_parameter_values(path):
     return param_values
 
 
-def extract_parameter_values(bricks):
-    """Extract parameter values from a bricks hierarchy.
-
-    Parameters
-    ----------
-    bricks : (list of) :class:`.Brick`, or :class:`.Selector`
-        The top bricks.
-
-    Returns
-    -------
-    A dictionary of (parameter name, numpy array) pairs.
-
-    """
-    if isinstance(bricks, Brick):
-        bricks = Selector([bricks])
-    if not isinstance(bricks, Selector):
-        bricks = Selector(bricks)
-    return OrderedDict([(name, variable.get_value(borrow=True))
-                        for name, variable in bricks.get_params().items()])
-
-
-def inject_parameter_values(bricks, param_values):
-    """Inject parameter values into a bricks hierarchy.
-
-    Parameters
-    ----------
-    bricks : :class:`.Brick` or :class:`.Selector or list of :class:`Brick`
-        The top bricks.
-    param_values : dict of (parameter name, :class:`~numpy.ndarray`) pairs
-        The parameter values.
-
-    """
-    if isinstance(bricks, Brick):
-        bricks = Selector([bricks])
-    if not isinstance(bricks, Selector):
-        bricks = Selector(bricks)
-
-    for name, value in param_values.items():
-        selected = bricks.select(name)
-        if len(selected) == 0:
-            logger.error("Unknown parameter {}".format(name))
-        if not len(selected) == 1:
-            raise ValueError
-        selected = selected[0]
-
-        assert selected.get_value(
-            borrow=True, return_internal_type=True).shape == value.shape
-        selected.set_value(value)
-
-    params = bricks.get_params()
-    for name in params.keys():
-        if name not in param_values:
-            logger.error("No value is provided for the parameter {}"
-                         .format(name))
-
-
 class MainLoopDumpManager(object):
     """Main loop dumping implementation.
 
     This class provides saving and loading logic that circumvents
-    serialization of the most problematic parts: the model (which is
-    typically a brick hierarchy) and the training algorithm (which
-    typically has Theano functions as attributes). The on-disk
-    representation used is a folder with a few files containing
+    serialization of the most problematic parts: the model and the training
+    algorithm (which typically has Theano functions as attributes). The
+    on-disk representation used is a folder with a few files containing
     model parameters, log and state of the data iteration.
 
     Also see the module-level documentation.
@@ -146,10 +86,6 @@ class MainLoopDumpManager(object):
     ----------
     folder : str
         The path to the dump root folder.
-
-    Notes
-    -----
-    Requires the model to be a Brick or a list of Bricks.
 
     """
     def __init__(self, folder):
@@ -173,7 +109,7 @@ class MainLoopDumpManager(object):
         return os.path.join(self.folder, 'log')
 
     def dump_parameters(self, main_loop):
-        save_parameter_values(extract_parameter_values(main_loop.model),
+        save_parameter_values(main_loop.model.get_param_values(),
                               self.path_to_parameters)
 
     def dump_iteration_state(self, main_loop):
@@ -217,6 +153,6 @@ class MainLoopDumpManager(object):
     def load_to(self, main_loop):
         """Loads the dump from the root folder into the main loop."""
         parameters, iteration_state, log = self.load()
-        inject_parameter_values(main_loop.model, parameters)
+        main_loop.model.set_param_values(parameters)
         main_loop.iteration_state = iteration_state
         main_loop.log = log

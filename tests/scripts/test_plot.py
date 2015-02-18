@@ -41,11 +41,8 @@ def test_load_log():
         assert log2[0].channel0 == 0
 
     # test MainLoop pickles
-    main_loop = MainLoop(
-                    model=None,
-                    data_stream=None,
-                    algorithm=None,
-                    log=log)
+    main_loop = MainLoop(model=None, data_stream=None,
+                         algorithm=None, log=log)
 
     with tempfile.NamedTemporaryFile() as f:
         pickle_dump(main_loop, f)
