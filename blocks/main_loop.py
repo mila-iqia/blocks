@@ -125,6 +125,9 @@ class MainLoop(object):
         a `training_finish_requested` record in the log.
 
         """
+        # This should do nothing if the user has already configured
+        # logging, and will it least enable error messages otherwise.
+        logging.basicConfig()
         with change_recursion_limit(config.recursion_limit):
             self.original_sigint_handler = signal.signal(
                 signal.SIGINT, self._handle_epoch_interrupt)
