@@ -416,12 +416,12 @@ def test_sequence_variable_inputs():
     x_val = numpy.ones((4, 4), dtype=theano.config.floatX)
     y_val = numpy.ones((4, 5), dtype=theano.config.floatX)
     assert_allclose(
-        new_x.eval({x: x_val, y: y_val}),
+        new_x.eval({x: x_val}),
         (x_val.dot(2 * numpy.ones((4, 3))) + numpy.ones((4, 3))).dot(
             2 * numpy.ones((3, 5))) + numpy.ones((4, 5)))
     assert_allclose(
-        new_y.eval({x: x_val, y: y_val}),
-        (x_val.dot(2 * numpy.ones((5, 2))) + numpy.ones((4, 2))).dot(
+        new_y.eval({y: y_val}),
+        (y_val.dot(2 * numpy.ones((5, 2))) + numpy.ones((4, 2))).dot(
             2 * numpy.ones((2, 4))) + numpy.ones((4, 4)))
 
 
