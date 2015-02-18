@@ -16,7 +16,7 @@ from six import add_metaclass
 from blocks.bricks import (MLP, Identity, Initializable, Sequence,
                            Feedforward, Tanh)
 from blocks.bricks.base import lazy, application
-from blocks.bricks.parallel import Parallel
+from blocks.bricks.parallel import Parallel, Distribute
 from blocks.bricks.recurrent import BaseRecurrent
 from blocks.utils import dict_union, dict_subset
 
@@ -206,7 +206,7 @@ class EnergyComputer(Sequence, Initializable, Feedforward):
 
 
 @add_metaclass(ABCMeta)
-class AbstractAttentionTransition(BaseRecurrent):
+class AbstractAttentionRecurrent(BaseRecurrent):
     """The interface for attention-equipped recurrent transitions.
 
     When a recurrent network is equipped with an attention mechanism its
@@ -234,18 +234,27 @@ class AbstractAttentionTransition(BaseRecurrent):
         pass
 
 
-class AttentionTransition(AbstractAttentionTransition, Initializable):
+class AttentionRecurrent(AbstractAttentionRecurrent, Initializable):
     """Combines an attention mechanism and a recurrent transition.
 
     This brick equips a recurrent transition with an attention mechanism.
-    A prerequisite for doing this is that the recurrent transition should
-    have at least two contexts: one to be attended and a mask for it.
+    In order to do this two more contexts are added: one to be attended and
+    a mask for it. It is also possible to use the contexts of the given
+    recurrent transition for these purposes and not add any new ones,
+    see `add_context` parameter.
+
     At the beginning of each step attention mechanism produces glimpses;
-    these glimpses together with the current states are used to compute
-    the next state and finish the transition. To let the user control
-    the way glimpses are used, this brick also takes a "merge" brick as
-    parameter that merges the glimpses into the sequential inputs of
-    the transition.
+    these glimpses together with the current states are used to compute the
+    next state and finish the transition. In some cases glimpses from the
+    previous steps are also necessary for the attention mechanism, e.g.
+    in order to focus on an area close to the one from the previous step.
+    This is also supported: such glimpses become states of the new
+    transition.
+
+    To let the user control the way glimpses are used, this brick also
+    takes a "distribute" brick as parameter that distributes the
+    information from glimpses across the sequential inputs of the wrapped
+    recurrent transition.
 
     Parameters
     ----------
@@ -253,38 +262,58 @@ class AttentionTransition(AbstractAttentionTransition, Initializable):
         The recurrent transition.
     attention : :class:`.Brick`
         The attention mechanism.
-    merge : :class:`.Brick`
-        Merges the glimpses into the input sequence of the transition.
+    distribute : :class:`.Brick`, optional
+        Distributes the information from glimpses across the input
+        sequence of the transition. By default a :class:`.Distribute` is
+        used, and those inputs containing the "mask" substring in their
+        name are not affected.
+    add_contexts : bool, optional
+        If ``True``, new contexts for the attended and the attended mask
+        are added to this transition. ``True`` by default.
     attended_name : str
-        The name of the attended context. If ``None``, the first context is
-        used.
+        The name of the attended context. If ``None``, "attended"
+        or the first context of the recurrent transition is used,
+        depending on the value of `add_contents` flag.
     attended_mask_name : str
-        The name of the mask for the attended context. If ``None``, the
-        second context is used.
+        The name of the mask for the attended context. If ``None``,
+        "attended_mask" or the second context of the recurrent transition
+        is used depending on the value of `add_contents` flag.
 
     Notes
     -----
     See :class:`.Initializable` for initialization parameters.
 
-    Currently lazy-only.
+    Those coming to Blocks from Groundhog might recognize that this is
+    a `RecurrentLayerWithSearch`, but on steroids :)
 
     """
     def __init__(self, transition, attention, distribute,
+                 add_contexts=True,
                  attended_name=None, attended_mask_name=None,
                  **kwargs):
-        super(AttentionTransition, self).__init__(**kwargs)
+        super(AttentionRecurrent, self).__init__(**kwargs)
+        self.sequence_names = transition.apply.sequences
+        self.state_names = transition.apply.states
+        self.context_names = transition.apply.contexts
+        if not attended_name:
+            if add_contexts:
+                attended_name = 'attended'
+            else:
+                attended_name = self.context_names[0]
+        if not attended_mask_name:
+            if add_contexts:
+                attended_mask_name = 'attended_mask'
+            else:
+                attended_mask_name = self.context_names[1]
+        if not distribute:
+            normal_inputs = [name for name in self.sequence_names
+                             if not 'mask' in name]
+            distribute = Distribute(normal_inputs,
+                                    attention.take_look.outputs[0])
+
         self.transition = transition
         self.attention = attention
         self.distribute = distribute
-
-        self.sequence_names = self.transition.apply.sequences
-        self.state_names = self.transition.apply.states
-        self.context_names = self.transition.apply.contexts
-
-        if not attended_name:
-            attended_name = self.context_names[0]
-        if not attended_mask_name:
-            attended_mask_name = self.context_names[1]
         self.attended_name = attended_name
         self.attended_mask_name = attended_mask_name
 
