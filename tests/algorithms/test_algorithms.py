@@ -7,7 +7,7 @@ from theano import tensor
 
 from blocks.algorithms import (GradientDescent, StepClipping, CompositeRule,
                                Scale, StepRule, BasicMomentum, Momentum,
-                               AdaDelta, BasicRMSProp, RMSProp)
+                               AdaDelta, BasicRMSProp, RMSProp, Adam)
 from blocks.utils import shared_floatx
 
 
@@ -152,3 +152,18 @@ def test_composite_rule():
     rule = CompositeRule([RuleWithUpdates([(1, 2)]),
                           RuleWithUpdates([(3, 4)])])
     assert rule.compute_steps(None)[1] == [(1, 2), (3, 4)]
+
+
+def test_adam():
+    a = shared_floatx([3, 4])
+    cost = (a ** 2).sum()
+    steps, updates = Adam().compute_steps(
+        OrderedDict([(a, tensor.grad(cost, a))]))
+    f = theano.function([], [steps[a]], updates=updates)
+
+    assert_allclose(f()[0], [0.00105409, 0.00079056])
+    assert_allclose(f()[0], [0.00392387, 0.0029429])
+    assert_allclose(f()[0], [0.0022468, 0.0016851])
+
+if __name__ == "__main__":
+    test_adam()

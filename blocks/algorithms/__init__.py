@@ -575,11 +575,12 @@ class Adam(StepRule):
 
         t1 = time + 1
         learning_rate = self.learning_rate * \
-                        tensor.sqrt((1. - (1. - self.beta2)**t1)) / \
-                        (1. - (1. - self.beta1)**t1)
-        beta_1t = 1 - (1 - self.beta1) * self.decay_factor**(t1 -1)
-        mean_t = beta_1t * previous_step + (1.- beta_1t) * mean
-        variance_t = self.beta2 * tensor.sqr(previous_step) + (1. - self.beta2) * variance
+            tensor.sqrt((1. - (1. - self.beta2)**t1)) / \
+            (1. - (1. - self.beta1)**t1)
+        beta_1t = 1 - (1 - self.beta1) * self.decay_factor ** (t1 - 1)
+        mean_t = beta_1t * previous_step + (1. - beta_1t) * mean
+        variance_t = self.beta2 * tensor.sqr(previous_step) + \
+            (1. - self.beta2) * variance
         step = learning_rate * mean_t / (variance_t + self.epsilon)
 
         updates = [(mean, mean_t),
@@ -587,4 +588,3 @@ class Adam(StepRule):
                    (time, t1)]
 
         return step, updates
-
