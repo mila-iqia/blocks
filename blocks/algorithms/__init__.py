@@ -534,3 +534,59 @@ class StepClipping(StepRule):
             (param, step * multiplier)
             for param, step in previous_steps.items())
         return steps, []
+
+
+class Adam(StepRule):
+    """Adam optimizer as described in [King2014]_.
+
+    .. [King2014] Diederik Kingma, Jimmy Ba,
+       * Adam: A Method for Stochastic Optimization *,
+       http://arxiv.org/abs/1412.6980
+
+    Parameters
+    ----------
+    learning_rate: float, optional
+        Step size.
+        Default value is set to 0.0002.
+    beta_1: float, optional
+        Exponential decay rate for the first moment estimates.
+        Default value is set to 0.1.
+    beta_2: float, optional
+        Exponential decay rate for the second moment estimates.
+        Default value is set to 0.001.
+    epsilon: float, optional
+        Default value is set to 1e-8.
+    decay_factor: float, optional
+        Default value is set to 1e-8.
+
+    """
+    def __init__(self, learning_rate=0.0002,
+                 beta1=0.1, beta2=0.001, epsilon=1e-8,
+                 decay_factor=1e-8):
+        self.learning_rate = learning_rate
+        self.beta1 = beta1
+        self.beta2 = beta2
+        self.epsilon = epsilon
+        self.decay_factor = decay_factor
+
+    def compute_step(self, param, previous_step):
+        mean = shared_floatx(param.get_value() * 0., 'mean')
+        variance = shared_floatx(param.get_value() * 0., 'variance')
+        time = shared_floatx(0., 'time')
+
+        t1 = time + 1
+        learning_rate = (self.learning_rate *
+                         tensor.sqrt((1. - (1. - self.beta2)**t1)) /
+                         (1. - (1. - self.beta1)**t1))
+        beta_1t = 1 - (1 - self.beta1) * self.decay_factor ** (t1 - 1)
+        mean_t = beta_1t * previous_step + (1. - beta_1t) * mean
+        variance_t = (self.beta2 * tensor.sqr(previous_step) +
+                      (1. - self.beta2) * variance)
+        step = (learning_rate * mean_t /
+                (tensor.sqrt(variance_t) + self.epsilon))
+
+        updates = [(mean, mean_t),
+                   (variance, variance_t),
+                   (time, t1)]
+
+        return step, updates
