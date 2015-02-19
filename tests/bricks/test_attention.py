@@ -87,7 +87,8 @@ def test_attention_recurrent():
     assert weights.ndim == 3
 
     # For values.
-    rand = lambda size: rng.uniform(size=size).astype(floatX)
+    def rand(size):
+        return rng.uniform(size=size).astype(floatX)
 
     # For masks.
     def generate_mask(length, batch_size):
