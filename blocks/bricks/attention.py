@@ -13,7 +13,7 @@ from abc import ABCMeta, abstractmethod
 from theano import tensor
 from six import add_metaclass
 
-from blocks.bricks import (MLP, Identity, Initializable, Sequence,
+from blocks.bricks import (MLP, Identity, Brick, Initializable, Sequence,
                            Feedforward, Tanh)
 from blocks.bricks.base import lazy, application
 from blocks.bricks.parallel import Parallel, Distribute
@@ -21,7 +21,127 @@ from blocks.bricks.recurrent import recurrent, BaseRecurrent
 from blocks.utils import dict_union, dict_subset
 
 
-class SequenceContentAttention(Initializable):
+@add_metaclass(ABCMeta)
+class AbstractAttention(Brick):
+    """The common interface for attention bricks.
+
+    A generic attention mechanism functions as follows. Its inputs are the
+    state of the agent and the object of attention, which we call here
+    *attended*. Given these two it produces so-called *glimpses*, that is
+    it extracts information from the attended which is necessary for the
+    agent in its current state.
+
+    For computational reasons we separate the process described above into
+    two stages:
+
+    1. The preprocessing stage, :meth:`preprocess`, includes computation
+       that do not involve the state. Those can be often performed in
+       advance. The outcome of this stage is called
+       *preprocessed_attended*.
+
+    2. The main stage, :meth:`take_look`, includes all the rest.
+
+    When an attention mechanism is applied sequentially, some glimpses from
+    the previous step might be necessary to compute the new ones.  A
+    typical example for that is when the focus position from the previous
+    step is required. In such cases :meth:`take_look` should specify such
+    need in its interface. In addition :meth:`initial_glimpses` should
+    specify some sensible initialization for the glimpses to be carried
+    over.
+
+    For technical convenience a composite state of the agent, consisting
+    of *states* is allowed.
+
+    .. todo::
+
+        Only single attended is currently allowed.
+
+        :meth:`preprocess` and :meth:`initial_glimpses` might end up
+        needing masks, which are currently not provided for them.
+
+    Attributes
+    ----------
+    state_names : list of str
+        The names of the agent's states.
+
+    """
+    def preprocess(self, attended):
+        """Perform the preprocessing of the attended.
+
+        Stage 1 of the attention mechanism, see :class:`AbstractAttention`
+        for an explanation of stages.
+
+        Parameters
+        ----------
+        attended : :class:`~theano.Variable`
+            The attended.
+
+        Returns
+        -------
+        preprocessed_attended : :class:`~theano.Variable`
+            The preprocessed attended.
+
+        """
+        pass
+
+    def take_look(self, attended, preprocessed_attended=None,
+                  attended_mask=None, **kwargs):
+        r"""Extract glimpses from the attended given the current states.
+
+        Stage 2 of the attention mechanism, see :class:`AbstractAttention`
+        for an explanation of stages. If `preprocessed_attended` is not
+        given, should trigger the stage 1.
+
+        This application method *must* declare its inputs and outputs.
+        The glimpses to be carried over are identified by their presence
+        in both inputs and outputs list. The attended *must* be the first
+        input, the preprocessed attended *must* be the second one.
+
+        Parameters
+        ----------
+        attended : :class:`~theano.Variable`
+            The attended.
+        preprocessed_attended : :class:`~theano.Variable`, optional
+            The preprocessed attended computed by :meth:`preprocess`.  When
+            not given, :meth:`preprocess` should be called.
+        attended_mask : :class:`~theano.Variable`, optional
+            The mask for the attended. This is required in the case of
+            padded structured output, e.g. when a number of sequences are
+            force to be the same length. The mask identifies position of
+            the `attended` that actually contain information.
+        **kwargs : dict
+            Includes the states and the glimpses to be carried over from
+            the previous step in the case when the attention mechanism is
+            applied sequentially.
+
+        """
+        pass
+
+    def initial_glimpses(self, name, batch_size, attended):
+        """Return sensible initial values for carried over glimpses.
+
+        Parameters
+        ----------
+        name : str
+            The name of the glimpse for which an initial value is
+            requested.
+        batch_size : int or :class:`~theano.Variable`
+            The batch size.
+        attended : :class:`~theano.Variable`
+            The attended.
+
+        Returns
+        -------
+        initial_glimpses : (list of) :class:`~theano.Variable`
+            The initial value for the requested glimpses. This might
+            simply consist of zeros or be somehow extracted from
+            the attended.
+
+        """
+        pass
+
+
+class SequenceContentAttention(AbstractAttention, Initializable):
     """Attention mechanism that looks for relevant content in a sequence.
 
     This is the attention mechanism used in [BCB]_. The idea in a nutshell:
@@ -40,9 +160,10 @@ class SequenceContentAttention(Initializable):
     5. Linear combination of the sequence elements with attention weights
        is computed.
 
-    This linear combinations from 5 and the attention weights from 4 form
-    the set of glimpses produced by this attention mechanism. The former
-    will be referred to as *glimpses* in method documentation.
+    In terms of the :class:`AbstractAttention` documentation, the sequence
+    is the attended. This linear combinations from 5 and the attention
+    weights from 4 form the set of glimpses produced by this attention
+    mechanism.
 
     Parameters
     ----------
@@ -86,7 +207,7 @@ class SequenceContentAttention(Initializable):
                                            prototype=state_transformer,
                                            name="state_trans")
         if not sequence_transformer:
-            sequence_transformer = MLP([Identity()], name="seq_trans")
+            sequence_transformer = MLP([Identity()], name="preprocess")
         if not energy_computer:
             energy_computer = ShallowEnergyComputer(name="energy_comp")
         self.sequence_transformer = sequence_transformer
@@ -124,10 +245,10 @@ class SequenceContentAttention(Initializable):
 
         Returns
         -------
-        glimpses : theano variable
+        glimpses : :class:`~theano.Variable`
             Linear combinations of sequence elements with the attention
             weights.
-        weights : theano variable
+        weights : :class:`~theano.Variable`
             The attention weights. The first dimension is batch, the second
             is time.
 
@@ -265,15 +386,12 @@ class AttentionRecurrent(AbstractAttentionRecurrent, Initializable):
         The attention mechanism.
     distribute : :class:`.Brick`, optional
         Distributes the information from glimpses across the input
-        sequence of the transition. By default a :class:`.Distribute` is
+        sequences of the transition. By default a :class:`.Distribute` is
         used, and those inputs containing the "mask" substring in their
         name are not affected.
     add_contexts : bool, optional
         If ``True``, new contexts for the attended and the attended mask
         are added to this transition. ``True`` by default.
-    attended_dim : int, optional
-        The dimension of the attended context. Must be specified if and
-        only if `add_contexts` is ``True``.
     attended_name : str
         The name of the attended context. If ``None``, "attended"
         or the first context of the recurrent transition is used,
@@ -292,7 +410,7 @@ class AttentionRecurrent(AbstractAttentionRecurrent, Initializable):
 
     """
     def __init__(self, transition, attention, distribute=None,
-                 add_contexts=True, attended_dim=None,
+                 add_contexts=True,
                  attended_name=None, attended_mask_name=None,
                  **kwargs):
         super(AttentionRecurrent, self).__init__(**kwargs)
@@ -318,7 +436,6 @@ class AttentionRecurrent(AbstractAttentionRecurrent, Initializable):
         self.attention = attention
         self.distribute = distribute
         self.add_contexts = add_contexts
-        self.attended_dim = attended_dim
         self.attended_name = attended_name
         self.attended_mask_name = attended_mask_name
 
@@ -400,7 +517,8 @@ class AttentionRecurrent(AbstractAttentionRecurrent, Initializable):
 
         """
         # Masks are not mandatory, that's why 'must_have=False'
-        sequences = dict_subset(kwargs, self.sequence_names, must_have=False)
+        sequences = dict_subset(kwargs, self.sequence_names,
+                                pop=True, must_have=False)
         glimpses = dict_subset(kwargs, self.glimpse_names, pop=True)
         if self.add_contexts:
             kwargs.pop(self.attended_name)
@@ -410,7 +528,8 @@ class AttentionRecurrent(AbstractAttentionRecurrent, Initializable):
             return_dict=True, **dict_subset(dict_union(sequences, glimpses),
                                             self.distribute.apply.inputs)))
         current_states = self.transition.apply(
-            iterate=False, return_list=True, **kwargs)
+            iterate=False, return_list=True,
+            **dict_union(sequences, kwargs))
         return current_states
 
     @compute_states.property('outputs')
@@ -514,7 +633,8 @@ class AttentionRecurrent(AbstractAttentionRecurrent, Initializable):
             return self.attention.get_dim(original_name)
         if self.add_contexts:
             if name == self.attended_name:
-                return self.attended_dim
+                return self.attention.get_dim(
+                    self.attention.take_look.inputs[0])
             if name == self.attended_mask_name:
                 return 0
         return self.transition.get_dim(name)

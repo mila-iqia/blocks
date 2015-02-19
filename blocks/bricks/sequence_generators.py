@@ -563,6 +563,10 @@ class SequenceGenerator(BaseSequenceGenerator):
     attention : :class:`.Brick`
         The attention mechanism to be added to ``transition``. Can be
         ``None``, in which case no attention mechanism is used.
+    add_contexts : bool
+        If ``True``, the :class:`AttentionRecurrent` wrapping the
+        `transition` will add additional contexts for the attended and
+        its mask.
 
     Notes
     -----
@@ -571,7 +575,7 @@ class SequenceGenerator(BaseSequenceGenerator):
 
     """
     def __init__(self, readout, transition, attention=None,
-                 fork_inputs=None, **kwargs):
+                 fork_inputs=None, add_contexts=True, **kwargs):
         if not fork_inputs:
             fork_inputs = [name for name in transition.apply.sequences
                            if name != 'mask']
@@ -580,8 +584,9 @@ class SequenceGenerator(BaseSequenceGenerator):
         if attention:
             distribute = Distribute(fork_inputs,
                                     attention.take_look.outputs[0])
-            transition = AttentionRecurrent(transition, attention, distribute,
-                                             name="att_trans")
+            transition = AttentionRecurrent(
+                transition, attention, distribute,
+                add_contexts=add_contexts, name="att_trans")
         else:
             transition = FakeAttentionRecurrent(transition,
                                                  name="with_fake_attention")

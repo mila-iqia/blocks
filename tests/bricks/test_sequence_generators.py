@@ -128,7 +128,7 @@ class TestTransition(SimpleRecurrent):
         return super(TestTransition, self).get_dim(name)
 
 
-def test_attention_transition():
+def test_with_attention():
     inp_dim = 2
     inp_len = 10
     attended_dim = 3
@@ -136,15 +136,11 @@ def test_attention_transition():
     batch_size = 4
     n_steps = 30
 
-    transition = TestTransition(dim=inp_dim, attended_dim=attended_dim,
-                                name="transition")
-    attention = SequenceContentAttention(transition.apply.states,
-                                         match_dim=inp_dim, name="attention")
-    distribute = Distribute([name for name in transition.apply.sequences
-                             if name != 'mask'],
-                            attention.take_look.outputs[0])
-    att_trans = AttentionRecurrent(transition, attention, distribute,
-                                   name="att_trans")
+    transition = TestTransition(dim=inp_dim, attended_dim=attended_dim)
+    attention = SequenceContentAttention(
+        transition.apply.states, match_dim=inp_dim, name="attention")
+    att_trans = AttentionRecurrent(
+        transition, attention, add_contexts=False)
     att_trans.weights_init = IsotropicGaussian(0.01)
     att_trans.biases_init = Constant(0)
     att_trans.initialize()
@@ -187,7 +183,7 @@ def test_attention_transition():
         transition=transition,
         attention=attention,
         weights_init=IsotropicGaussian(0.01), biases_init=Constant(0),
-        name="generator")
+        add_contexts=False, name="generator")
 
     outputs = tensor.tensor3('outputs')
     costs = generator.cost(outputs, attended=attended,

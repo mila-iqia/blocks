@@ -167,7 +167,7 @@ def main(mode, save_path, num_batches, from_dump, data_path=None):
         generator = SequenceGenerator(
             readout=readout, transition=transition, attention=attention,
             weights_init=IsotropicGaussian(0.1), biases_init=Constant(0),
-            name="generator")
+            add_contexts=False, name="generator")
         generator.push_initialization_config()
         transition.weights_init = Orthogonal()
         generator.initialize()

@@ -8,6 +8,8 @@ from blocks.bricks.attention import (
     SequenceContentAttention, AttentionRecurrent)
 from blocks.bricks.recurrent import SimpleRecurrent
 from blocks.initialization import IsotropicGaussian, Constant
+from blocks.graph import ComputationGraph
+from blocks.select import Selector
 
 floatX = theano.config.floatX
 
@@ -62,9 +64,9 @@ def test_attention_recurrent():
 
     wrapped = SimpleRecurrent(dim)
     attention = SequenceContentAttention(
-        state_names=wrapped.apply.states, match_dim=attended_dim)
-    recurrent = AttentionRecurrent(
-        wrapped, attention, attended_dim=attended_dim)
+        state_names=wrapped.apply.states,
+        sequence_dim=attended_dim, match_dim=attended_dim)
+    recurrent = AttentionRecurrent(wrapped, attention)
     recurrent.weights_init = IsotropicGaussian(0.5)
     recurrent.biases_init = Constant(0)
     recurrent.initialize()
@@ -73,9 +75,10 @@ def test_attention_recurrent():
     attended_mask = tensor.matrix("attended_mask")
     inputs = tensor.tensor3("inputs")
     inputs_mask = tensor.matrix("inputs_mask")
-    states, glimpses, weights = recurrent.apply(
+    outputs = recurrent.apply(
         inputs=inputs, mask=inputs_mask,
         attended=attended, attended_mask=attended_mask)
+    states, glimpses, weights = outputs
     assert states.ndim == 3
     assert glimpses.ndim == 3
     assert weights.ndim == 3
@@ -102,6 +105,11 @@ def test_attention_recurrent():
     states_vals, glimpses_vals, weight_vals = func(
         input_vals, input_mask_vals,
         attended_vals, attended_mask_vals)
+    assert states_vals.shape == (input_length, batch_size, dim)
+    assert glimpses_vals.shape == (input_length, batch_size, attended_dim)
+
+    assert (len(ComputationGraph(outputs).shared_variables) ==
+            len(Selector(recurrent).get_params()))
 
     # weights for not masked position must be zero
     assert numpy.all(weight_vals * (1 - attended_mask_vals.T) == 0)
@@ -117,5 +125,5 @@ def test_attention_recurrent():
 
     # freeze sums
     assert_allclose(weight_vals.sum(), input_length * batch_size, 1e-5)
-    assert_allclose(states_vals.sum(), 68.112, rtol=1e-5)
-    assert_allclose(glimpses_vals.sum(), 416.316, rtol=1e-5)
+    assert_allclose(states_vals.sum(), 69.313, rtol=1e-5)
+    assert_allclose(glimpses_vals.sum(), 424.26, rtol=1e-5)
