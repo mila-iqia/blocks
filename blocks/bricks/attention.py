@@ -271,6 +271,9 @@ class AttentionRecurrent(AbstractAttentionRecurrent, Initializable):
     add_contexts : bool, optional
         If ``True``, new contexts for the attended and the attended mask
         are added to this transition. ``True`` by default.
+    attended_dim : int, optional
+        The dimension of the attended context. Must be specified if and
+        only if `add_contexts` is ``True``.
     attended_name : str
         The name of the attended context. If ``None``, "attended"
         or the first context of the recurrent transition is used,
@@ -288,24 +291,23 @@ class AttentionRecurrent(AbstractAttentionRecurrent, Initializable):
     a `RecurrentLayerWithSearch`, but on steroids :)
 
     """
-    def __init__(self, transition, attention, distribute,
-                 add_contexts=True,
+    def __init__(self, transition, attention, distribute=None,
+                 add_contexts=True, attended_dim=None,
                  attended_name=None, attended_mask_name=None,
                  **kwargs):
         super(AttentionRecurrent, self).__init__(**kwargs)
         self.sequence_names = transition.apply.sequences
         self.state_names = transition.apply.states
         self.context_names = transition.apply.contexts
-        if not attended_name:
-            if add_contexts:
+        if add_contexts:
+            if not attended_name:
                 attended_name = 'attended'
-            else:
-                attended_name = self.context_names[0]
-        if not attended_mask_name:
-            if add_contexts:
+            if not attended_mask_name:
                 attended_mask_name = 'attended_mask'
-            else:
-                attended_mask_name = self.context_names[1]
+            self.context_names += [attended_name, attended_mask_name]
+        else:
+            attended_name = self.context_names[0]
+            attended_mask_name = self.context_names[1]
         if not distribute:
             normal_inputs = [name for name in self.sequence_names
                              if not 'mask' in name]
@@ -315,6 +317,8 @@ class AttentionRecurrent(AbstractAttentionRecurrent, Initializable):
         self.transition = transition
         self.attention = attention
         self.distribute = distribute
+        self.add_contexts = add_contexts
+        self.attended_dim = attended_dim
         self.attended_name = attended_name
         self.attended_mask_name = attended_mask_name
 
@@ -331,14 +335,12 @@ class AttentionRecurrent(AbstractAttentionRecurrent, Initializable):
 
     def _push_allocation_config(self):
         self.attention.state_dims = self.transition.get_dims(self.state_names)
-        self.attention.sequence_dim = self.transition.get_dim(
-            self.attended_name)
-        self.distribute.target_dims = dict_subset(
-            dict_union(
-                self.transition.get_dims(self.sequence_names)),
-            self.distribute.target_names)
+        self.attention.sequence_dim = self.get_dim(self.attended_name)
         self.distribute.source_dim = self.attention.get_dim(
             self.distribute.source_name)
+        self.distribute.target_dims = dict_subset(
+            self.transition.get_dims(self.sequence_names),
+            self.distribute.target_names)
 
     @application
     def take_look(self, **kwargs):
@@ -350,7 +352,9 @@ class AttentionRecurrent(AbstractAttentionRecurrent, Initializable):
         Parameters
         ----------
         \*\*kwargs
-            Should contain contexts, previous step states and glimpses.
+            Must contain the attended, previous step states and glimpses.
+            Can optionaly contain the attended mask and the preprocessed
+            attended.
 
         Returns
         -------
@@ -358,12 +362,17 @@ class AttentionRecurrent(AbstractAttentionRecurrent, Initializable):
             Current step glimpses.
 
         """
-        return self.attention.take_look(
-            kwargs[self.attended_name],
-            kwargs.get(self.preprocessed_attended_name),
-            mask=kwargs.get(self.attended_mask_name),
-            **dict_subset(kwargs,
-                          self.state_names + self.previous_glimpses_needed))
+        states = dict_subset(kwargs, self.state_names, pop=True)
+        glimpses = dict_subset(kwargs, self.glimpse_names, pop=True)
+        glimpses_needed = dict_subset(glimpses, self.previous_glimpses_needed)
+        result = self.attention.take_look(
+            kwargs.pop(self.attended_name),
+            kwargs.pop(self.preprocessed_attended_name, None),
+            mask=kwargs.pop(self.attended_mask_name, None),
+            **dict_union(states, glimpses_needed))
+        if kwargs:
+            raise ValueError("extra args to take_look: {}".format(kwargs))
+        return result
 
     @take_look.property('outputs')
     def take_look_outputs(self):
@@ -375,13 +384,14 @@ class AttentionRecurrent(AbstractAttentionRecurrent, Initializable):
 
         Combines an application of the `distribute` that alter the
         sequential inputs of the wrapped transition and an application of
+        the wrapped transition. All unknown keyword arguments go to
         the wrapped transition.
 
         Parameters
         ----------
         \*\*kwargs
             Should contain everything what `self.transition` needs
-            and in addition current glimpses.
+            and in addition the current glimpses.
 
         Returns
         -------
@@ -390,17 +400,17 @@ class AttentionRecurrent(AbstractAttentionRecurrent, Initializable):
 
         """
         # Masks are not mandatory, that's why 'must_have=False'
-        sequences = dict_subset(kwargs, self.sequence_names,
-                                pop=True, must_have=False)
-        states = dict_subset(kwargs, self.state_names, pop=True)
+        sequences = dict_subset(kwargs, self.sequence_names, must_have=False)
         glimpses = dict_subset(kwargs, self.glimpse_names, pop=True)
+        if self.add_contexts:
+            kwargs.pop(self.attended_name)
+            kwargs.pop(self.attended_mask_name)
+
         sequences.update(self.distribute.apply(
-            return_dict=True,
-            **dict_subset(dict_union(sequences, glimpses),
-                          self.distribute.apply.inputs)))
+            return_dict=True, **dict_subset(dict_union(sequences, glimpses),
+                                            self.distribute.apply.inputs)))
         current_states = self.transition.apply(
-            iterate=False, return_list=True,
-            **dict_union(sequences, states, kwargs))
+            iterate=False, return_list=True, **kwargs)
         return current_states
 
     @compute_states.property('outputs')
@@ -413,7 +423,8 @@ class AttentionRecurrent(AbstractAttentionRecurrent, Initializable):
 
         In addition to the original sequence this method also requires
         its preprocessed version, the one computed by the `preprocess`
-        method of the attention mechanism.
+        method of the attention mechanism. Unknown keyword arguments
+        are passed to the wrapped transition.
 
         Parameters
         ----------
@@ -501,4 +512,9 @@ class AttentionRecurrent(AbstractAttentionRecurrent, Initializable):
         if name == self.preprocessed_attended_name:
             (original_name,) = self.attention.preprocess.outputs
             return self.attention.get_dim(original_name)
+        if self.add_contexts:
+            if name == self.attended_name:
+                return self.attended_dim
+            if name == self.attended_mask_name:
+                return 0
         return self.transition.get_dim(name)
