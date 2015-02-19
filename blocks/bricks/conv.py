@@ -58,7 +58,7 @@ class Convolutional(Initializable):
         self.params.append(W)
         self.add_auxiliary_variable(W.norm(2), name='W_norm')
         if self.use_bias:
-            b = shared_floatx_zeros((self.num_filters,), name='b')
+            b = shared_floatx_zeros(self.get_dim('output'), name='b')
             add_role(b, BIASES)
             self.params.append(b)
             self.add_auxiliary_variable(b.norm(2), name='b_norm')
@@ -107,7 +107,7 @@ class Convolutional(Initializable):
             filter_shape=((self.num_filters, self.num_channels) +
                           self.filter_size))
         if self.use_bias:
-            output += b.dimshuffle('x', 0, 'x', 'x')
+            output += b.dimshuffle('x', 0, 1, 2)
         return output
 
     def get_dim(self, name):
