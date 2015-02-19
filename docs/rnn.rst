@@ -83,7 +83,7 @@ as well set it explicitly.
 We will modify the starting example so that it accumulates the input it
 receives, but starting from one instead of zero:
 
-.. math:: \mathbf{h}_t = \mathbf{h}_{t-1} + 2 \cdot \mathbf{x}_t, \quad \mathbf{h}_0 = 1
+.. math:: \mathbf{h}_t = \mathbf{h}_{t-1} + \mathbf{x}_t, \quad \mathbf{h}_0 = 1
 
 >>> h0 = tensor.matrix('h0')
 >>> h = recurrent.apply(inputs=x, states=h0)
