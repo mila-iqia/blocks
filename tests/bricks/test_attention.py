@@ -4,6 +4,7 @@ from numpy.testing import assert_allclose
 import theano
 from theano import tensor
 
+from blocks import config
 from blocks.bricks.attention import (
     SequenceContentAttention, AttentionRecurrent)
 from blocks.bricks.recurrent import SimpleRecurrent
@@ -55,6 +56,8 @@ def test_sequence_content_attention():
 
 
 def test_attention_recurrent():
+    rng = numpy.random.RandomState(1234)
+
     dim = 5
     batch_size = 4
     input_length = 20
@@ -67,6 +70,7 @@ def test_attention_recurrent():
         state_names=wrapped.apply.states,
         sequence_dim=attended_dim, match_dim=attended_dim)
     recurrent = AttentionRecurrent(wrapped, attention)
+    recurrent.rng = rng
     recurrent.weights_init = IsotropicGaussian(0.5)
     recurrent.biases_init = Constant(0)
     recurrent.initialize()
@@ -84,7 +88,6 @@ def test_attention_recurrent():
     assert weights.ndim == 3
 
     # For values.
-    rng = numpy.random.RandomState(1234)
     rand = lambda size: rng.uniform(size=size).astype(floatX)
 
     # For masks.
@@ -125,5 +128,5 @@ def test_attention_recurrent():
 
     # freeze sums
     assert_allclose(weight_vals.sum(), input_length * batch_size, 1e-5)
-    assert_allclose(states_vals.sum(), 69.313, rtol=1e-5)
-    assert_allclose(glimpses_vals.sum(), 424.26, rtol=1e-5)
+    assert_allclose(states_vals.sum(), 117.116, rtol=1e-5)
+    assert_allclose(glimpses_vals.sum(), 404.272, rtol=1e-5)
