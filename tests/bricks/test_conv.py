@@ -18,7 +18,7 @@ def test_convolutional():
     batch_size = 5
     filter_size = (3, 3)
     conv = Convolutional(filter_size, num_filters, num_channels,
-                         weights_init=Constant(1.),
+                         image_size=(17, 13), weights_init=Constant(1.),
                          biases_init=Constant(5.))
     conv.initialize()
     y = conv.apply(x)
@@ -67,7 +67,8 @@ def test_convolutional_layer():
 
     conv = ConvolutionalLayer(activation, filter_size, num_filters,
                               (pooling_size, pooling_size),
-                              num_channels, weights_init=Constant(1.),
+                              num_channels, image_size=(17, 13),
+                              weights_init=Constant(1.),
                               biases_init=Constant(5.))
     conv.initialize()
 
@@ -94,7 +95,8 @@ def test_convolutional_sequence():
     conv2 = ConvolutionalActivation(activation, (2, 2), 4,
                                     weights_init=Constant(1.))
 
-    seq = ConvolutionalSequence([conv, conv2], num_channels)
+    seq = ConvolutionalSequence([conv, conv2], num_channels,
+                                image_size=(17, 13))
     seq.push_allocation_config()
     assert conv.num_channels == 4
     assert conv2.num_channels == 5
