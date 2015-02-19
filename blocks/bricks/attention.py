@@ -428,7 +428,7 @@ class AttentionRecurrent(AbstractAttentionRecurrent, Initializable):
             attended_mask_name = self.context_names[1]
         if not distribute:
             normal_inputs = [name for name in self.sequence_names
-                             if not 'mask' in name]
+                             if 'mask' not in name]
             distribute = Distribute(normal_inputs,
                                     attention.take_look.outputs[0])
 

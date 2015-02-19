@@ -5,7 +5,6 @@ from theano import tensor
 
 from blocks.bricks import Tanh
 from blocks.bricks.base import application
-from blocks.bricks.parallel import Distribute
 from blocks.bricks.recurrent import SimpleRecurrent, GatedRecurrent
 from blocks.bricks.attention import (
     SequenceContentAttention, AttentionRecurrent)

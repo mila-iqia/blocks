@@ -589,6 +589,6 @@ class SequenceGenerator(BaseSequenceGenerator):
                 add_contexts=add_contexts, name="att_trans")
         else:
             transition = FakeAttentionRecurrent(transition,
-                                                 name="with_fake_attention")
+                                                name="with_fake_attention")
         super(SequenceGenerator, self).__init__(
             readout, transition, fork, **kwargs)

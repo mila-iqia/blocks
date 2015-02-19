@@ -4,7 +4,6 @@ from numpy.testing import assert_allclose
 import theano
 from theano import tensor
 
-from blocks import config
 from blocks.bricks.attention import (
     SequenceContentAttention, AttentionRecurrent)
 from blocks.bricks.recurrent import SimpleRecurrent
