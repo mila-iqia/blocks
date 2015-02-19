@@ -11,6 +11,7 @@ from toolz import first
 
 logger = logging.getLogger()
 
+
 class TrainingExtension(object):
     """The base class for training extensions.
 
@@ -350,9 +351,9 @@ class Printing(SimpleExtension):
 class ProgressBar(TrainingExtension):
     """Display a progress bar during training.
 
-    This extension tries to obtain the number of mini-batches processed per
-    epoch and will display progress bar. Not all :class:`IterationScheme`
-    classes provide the necessary attributes.
+    This extension tries to obtain the number of mini-batches processed
+    per epoch and will display progress bar. Not all
+    :class:`IterationScheme` classes provide the necessary attributes.
 
     Notes
     -----
@@ -374,21 +375,24 @@ class ProgressBar(TrainingExtension):
         iter_scheme = self.main_loop.data_stream.iteration_scheme
         if hasattr(iter_scheme, 'num_batches'):
             iter_per_epoch = iter_scheme.num_batches
-        elif (hasattr(iter_scheme, 'num_examples') and 
+        elif (hasattr(iter_scheme, 'num_examples') and
                 hasattr(iter_scheme, 'batch_size')):
             iter_per_epoch = \
                 iter_scheme.num_examples // iter_scheme.batch_size
         else:
             logger.warning("Disabling ProgressBar: The iteration scheme "
-                "does not provide the necessary attributes to calculate "
-                "iterations_per_epoch")
+                           "does not provide the necessary attributes to "
+                           "calculate iterations_per_epoch")
             return
 
         status = self.main_loop.log._status
-        widgets = [ "Epoch {}, step ".format(status.epochs_done),
-                    progressbar.Counter(), ' (', progressbar.Percentage(), ') ',
-                    progressbar.Bar(), ' ', progressbar.Timer(), ' ', progressbar.ETA()]
-        self.bar = progressbar.ProgressBar(widgets=widgets, maxval=iter_per_epoch)
+        widgets = ["Epoch {}, step ".format(status.epochs_done),
+                   progressbar.Counter(),
+                   ' (', progressbar.Percentage(), ') ',
+                   progressbar.Bar(), ' ',
+                   progressbar.Timer(), ' ', progressbar.ETA()]
+        self.bar = progressbar.ProgressBar(widgets=widgets,
+                                           maxval=iter_per_epoch)
 
     def after_epoch(self):
         if self.bar:
