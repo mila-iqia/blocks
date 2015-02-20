@@ -127,5 +127,5 @@ def test_attention_recurrent():
 
     # freeze sums
     assert_allclose(weight_vals.sum(), input_length * batch_size, 1e-5)
-    assert_allclose(states_vals.sum(), 117.116, rtol=1e-5)
-    assert_allclose(glimpses_vals.sum(), 404.272, rtol=1e-5)
+    assert_allclose(states_vals.sum(), 113.429, rtol=1e-5)
+    assert_allclose(glimpses_vals.sum(), 415.901, rtol=1e-5)
