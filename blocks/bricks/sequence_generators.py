@@ -34,8 +34,8 @@ class BaseSequenceGenerator(Initializable):
     * *Glimpses* are intermediate entities computed at every generation
       step from states, contexts and the previous step glimpses. They are
       computed in the transition's `apply` method when not given or by
-      explicitly calling the transition's `take_look` method. The set of
-      glimpses considered is specified in `transition.glimpse_names`.
+      explicitly calling the transition's `take_glimpses` method. The set
+      of glimpses considered is specified in `transition.glimpse_names`.
 
     The generation algorithm description follows.
 
@@ -48,7 +48,7 @@ class BaseSequenceGenerator(Initializable):
 
     2. Given the contexts, the current state and the glimpses from the
        previous step the attention mechanism hidden in the transition
-       produces current step glimpses. This happens in the `take_look`
+       produces current step glimpses. This happens in the `take_glimpses`
        method of the transition.
 
     3. Using the contexts, the fed back output from the previous step, the
@@ -102,7 +102,7 @@ class BaseSequenceGenerator(Initializable):
 
         self.state_names = transition.compute_states.outputs
         self.context_names = transition.apply.contexts
-        self.glimpse_names = transition.take_look.outputs
+        self.glimpse_names = transition.take_glimpses.outputs
         self.children = [self.readout, self.fork, self.transition]
 
     def _push_allocation_config(self):
@@ -200,7 +200,7 @@ class BaseSequenceGenerator(Initializable):
         contexts = {name: kwargs[name] for name in self.context_names}
         glimpses = {name: kwargs[name] for name in self.glimpse_names}
 
-        next_glimpses = self.transition.take_look(
+        next_glimpses = self.transition.take_glimpses(
             return_dict=True, **dict_union(states, glimpses, contexts))
         next_readouts = self.readout.readout(
             feedback=self.readout.feedback(outputs),
@@ -538,7 +538,7 @@ class FakeAttentionRecurrent(AbstractAttentionRecurrent, Initializable):
         return self.transition.apply
 
     @application(outputs=[])
-    def take_look(self, *args, **kwargs):
+    def take_glimpses(self, *args, **kwargs):
         return None
 
     @application
@@ -583,7 +583,7 @@ class SequenceGenerator(BaseSequenceGenerator):
         fork = Fork(fork_inputs)
         if attention:
             distribute = Distribute(fork_inputs,
-                                    attention.take_look.outputs[0])
+                                    attention.take_glimpses.outputs[0])
             transition = AttentionRecurrent(
                 transition, attention, distribute,
                 add_contexts=add_contexts, name="att_trans")

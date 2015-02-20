@@ -32,8 +32,8 @@ def test_sequence_content_attention():
     sequences = tensor.tensor3('sequences')
     states = tensor.matrix('states')
     mask = tensor.matrix('mask')
-    glimpses, weights = attention.take_look(sequences, states=states,
-                                            mask=mask)
+    glimpses, weights = attention.take_glimpses(sequences, states=states,
+                                                mask=mask)
     assert glimpses.ndim == 2
     assert weights.ndim == 2
 

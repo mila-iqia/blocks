@@ -1,8 +1,13 @@
 """Attention mechanisms.
 
-We consider a hypothetical agent that wants to concentrate on particular
-parts of a structured input. To do that the agent needs an *attention
-mechanism* that given the *state* of the agent and the input signal outputs
+This module defines the interface of attention mechanisms and a few
+concrete implementations. For a gentle introduction and usage examples see
+the tutorial TODO.
+
+The general setting in which we define the attention mechanism is: we
+consider a hypothetical agent that wants to concentrate on particular parts
+of a structured input. To do that the agent needs an *attention mechanism*
+that given the *state* of the agent and the input signal outputs
 *glimpses*.  For technical reasons we permit an agent to have a composite
 state consisting of several components, to which we will refer as *states
 of the agent* or simply *states*.
@@ -14,7 +19,7 @@ from theano import tensor
 from six import add_metaclass
 
 from blocks.bricks import (MLP, Identity, Brick, Initializable, Sequence,
-                           Feedforward, Tanh)
+                           Feedforward, Linear, Tanh)
 from blocks.bricks.base import lazy, application
 from blocks.bricks.parallel import Parallel, Distribute
 from blocks.bricks.recurrent import recurrent, BaseRecurrent
@@ -24,6 +29,8 @@ from blocks.utils import dict_union, dict_subset
 @add_metaclass(ABCMeta)
 class AbstractAttention(Brick):
     """The common interface for attention bricks.
+
+    First, see the module-level docstring for terminology.
 
     A generic attention mechanism functions as follows. Its inputs are the
     state of the agent and the object of attention, which we call here
@@ -39,15 +46,15 @@ class AbstractAttention(Brick):
        advance. The outcome of this stage is called
        *preprocessed_attended*.
 
-    2. The main stage, :meth:`take_look`, includes all the rest.
+    2. The main stage, :meth:`take_glimpses`, includes all the rest.
 
     When an attention mechanism is applied sequentially, some glimpses from
     the previous step might be necessary to compute the new ones.  A
     typical example for that is when the focus position from the previous
-    step is required. In such cases :meth:`take_look` should specify such
-    need in its interface. In addition :meth:`initial_glimpses` should
-    specify some sensible initialization for the glimpses to be carried
-    over.
+    step is required. In such cases :meth:`take_glimpses` should specify
+    such need in its interface (its docstring explains how to do that). In
+    addition :meth:`initial_glimpses` should specify some sensible
+    initialization for the glimpses to be carried over.
 
     For technical convenience a composite state of the agent, consisting
     of *states* is allowed.
@@ -69,7 +76,7 @@ class AbstractAttention(Brick):
         """Perform the preprocessing of the attended.
 
         Stage 1 of the attention mechanism, see :class:`AbstractAttention`
-        for an explanation of stages.
+        docstring for an explanation of stages.
 
         Parameters
         ----------
@@ -84,8 +91,8 @@ class AbstractAttention(Brick):
         """
         pass
 
-    def take_look(self, attended, preprocessed_attended=None,
-                  attended_mask=None, **kwargs):
+    def take_glimpses(self, attended, preprocessed_attended=None,
+                      attended_mask=None, **kwargs):
         r"""Extract glimpses from the attended given the current states.
 
         Stage 2 of the attention mechanism, see :class:`AbstractAttention`
@@ -176,12 +183,12 @@ class SequenceContentAttention(AbstractAttention, Initializable):
     state_transformer : :class:`.Brick`
         A prototype for state transformations. If ``None``, the default
         transformation from :class:`.Parallel` is used.
-    sequence_transformer : :class:`.Brick`
+    sequence_transformer : :class:`.Feedforward`
         The transformation to be applied to the sequence. If ``None`` an
         affine transformation is used.
-    energy_computer : :class:`.Brick`
+    energy_computer : :class:`.Feedforward`
         Computes energy from the match vector. If ``None``, an affine
-        transformations is used.
+        transformations preceeded by :math:`tanh` is used.
 
     Notes
     -----
@@ -207,7 +214,7 @@ class SequenceContentAttention(AbstractAttention, Initializable):
                                            prototype=state_transformer,
                                            name="state_trans")
         if not sequence_transformer:
-            sequence_transformer = MLP([Identity()], name="preprocess")
+            sequence_transformer = Linear(name="preprocess")
         if not energy_computer:
             energy_computer = ShallowEnergyComputer(name="energy_comp")
         self.sequence_transformer = sequence_transformer
@@ -220,14 +227,14 @@ class SequenceContentAttention(AbstractAttention, Initializable):
         self.state_transformers.input_dims = self.state_dims
         self.state_transformers.output_dims = {name: self.match_dim
                                                for name in self.state_names}
-        self.sequence_transformer.dims[0] = self.sequence_dim
-        self.sequence_transformer.dims[-1] = self.match_dim
+        self.sequence_transformer.input_dim = self.sequence_dim
+        self.sequence_transformer.output_dim = self.match_dim
         self.energy_computer.input_dim = self.match_dim
         self.energy_computer.output_dim = 1
 
     @application(outputs=['glimpses', 'weights'])
-    def take_look(self, sequence, preprocessed_sequence=None, mask=None,
-                  **states):
+    def take_glimpses(self, sequence, preprocessed_sequence=None, mask=None,
+                      **states):
         r"""Compute attention weights and produce glimpses.
 
         Parameters
@@ -269,8 +276,8 @@ class SequenceContentAttention(AbstractAttention, Initializable):
         glimpses = (tensor.shape_padright(weights) * sequence).sum(axis=0)
         return glimpses, weights.dimshuffle(1, 0)
 
-    @take_look.property('inputs')
-    def take_look_inputs(self):
+    @take_glimpses.property('inputs')
+    def take_glimpses_inputs(self):
         return (['sequence', 'preprocessed_sequence', 'mask'] +
                 self.state_names)
 
@@ -304,7 +311,7 @@ class SequenceContentAttention(AbstractAttention, Initializable):
 
 
 class ShallowEnergyComputer(Sequence, Initializable, Feedforward):
-    """A simple energy computer: First tanh, then weighted sum."""
+    """A simple energy computer: first tanh, then weighted sum."""
     @lazy
     def __init__(self, **kwargs):
         super(ShallowEnergyComputer, self).__init__(
@@ -346,7 +353,7 @@ class AbstractAttentionRecurrent(BaseRecurrent):
         pass
 
     @abstractmethod
-    def take_look(self, **kwargs):
+    def take_glimpses(self, **kwargs):
         """Compute glimpses given the current states."""
         pass
 
@@ -391,10 +398,11 @@ class AttentionRecurrent(AbstractAttentionRecurrent, Initializable):
         name are not affected.
     add_contexts : bool, optional
         If ``True``, new contexts for the attended and the attended mask
-        are added to this transition. ``True`` by default.
+        are added to this transition, otherwise existing contexts of the
+        wrapped transition are used. ``True`` by default.
     attended_name : str
         The name of the attended context. If ``None``, "attended"
-        or the first context of the recurrent transition is used,
+        or the first context of the recurrent transition is used
         depending on the value of `add_contents` flag.
     attended_mask_name : str
         The name of the mask for the attended context. If ``None``,
@@ -430,7 +438,7 @@ class AttentionRecurrent(AbstractAttentionRecurrent, Initializable):
             normal_inputs = [name for name in self.sequence_names
                              if 'mask' not in name]
             distribute = Distribute(normal_inputs,
-                                    attention.take_look.outputs[0])
+                                    attention.take_glimpses.outputs[0])
 
         self.transition = transition
         self.attention = attention
@@ -441,12 +449,12 @@ class AttentionRecurrent(AbstractAttentionRecurrent, Initializable):
 
         self.preprocessed_attended_name = "preprocessed_" + self.attended_name
 
-        self.glimpse_names = self.attention.take_look.outputs
+        self.glimpse_names = self.attention.take_glimpses.outputs
         # We need to determine which glimpses are fed back.
-        # Currently we extract it from `take_look` signature.
+        # Currently we extract it from `take_glimpses` signature.
         self.previous_glimpses_needed = [
             name for name in self.glimpse_names
-            if name in self.attention.take_look.inputs]
+            if name in self.attention.take_glimpses.inputs]
 
         self.children = [self.transition, self.attention, self.distribute]
 
@@ -460,10 +468,10 @@ class AttentionRecurrent(AbstractAttentionRecurrent, Initializable):
             self.distribute.target_names)
 
     @application
-    def take_look(self, **kwargs):
+    def take_glimpses(self, **kwargs):
         r"""Compute glimpses with the attention mechanism.
 
-        A thin wrapper over `self.attention.take_look`: takes care
+        A thin wrapper over `self.attention.take_glimpses`: takes care
         of choosing and renaming the necessary arguments.
 
         Parameters
@@ -482,17 +490,17 @@ class AttentionRecurrent(AbstractAttentionRecurrent, Initializable):
         states = dict_subset(kwargs, self.state_names, pop=True)
         glimpses = dict_subset(kwargs, self.glimpse_names, pop=True)
         glimpses_needed = dict_subset(glimpses, self.previous_glimpses_needed)
-        result = self.attention.take_look(
+        result = self.attention.take_glimpses(
             kwargs.pop(self.attended_name),
             kwargs.pop(self.preprocessed_attended_name, None),
             mask=kwargs.pop(self.attended_mask_name, None),
             **dict_union(states, glimpses_needed))
         if kwargs:
-            raise ValueError("extra args to take_look: {}".format(kwargs))
+            raise ValueError("extra args to take_glimpses: {}".format(kwargs))
         return result
 
-    @take_look.property('outputs')
-    def take_look_outputs(self):
+    @take_glimpses.property('outputs')
+    def take_glimpses_outputs(self):
         return self.glimpse_names
 
     @application
@@ -565,7 +573,7 @@ class AttentionRecurrent(AbstractAttentionRecurrent, Initializable):
         states = dict_subset(kwargs, self.state_names, pop=True)
         glimpses = dict_subset(kwargs, self.glimpse_names, pop=True)
 
-        current_glimpses = self.take_look(
+        current_glimpses = self.take_glimpses(
             return_dict=True,
             **dict_union(
                 states, glimpses,
@@ -634,7 +642,7 @@ class AttentionRecurrent(AbstractAttentionRecurrent, Initializable):
         if self.add_contexts:
             if name == self.attended_name:
                 return self.attention.get_dim(
-                    self.attention.take_look.inputs[0])
+                    self.attention.take_glimpses.inputs[0])
             if name == self.attended_mask_name:
                 return 0
         return self.transition.get_dim(name)
