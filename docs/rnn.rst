@@ -97,3 +97,101 @@ receives, but starting from one instead of zero:
 <BLANKLINE>
  [[ 4.  4.  4.]
   [ 4.  4.  4.]]]
+
+Iterate (or not)
+----------------
+
+The ``apply`` method of a recurrent brick accepts an ``iterate`` argument,
+which defaults to ``True``. Setting it to ``False`` causes the ``apply`` method
+to compute only one step in the sequence.
+
+This is very useful when you're trying to combine multiple recurrent layers in
+a network.
+
+Imagine you'd like to build a network with two recurrent layers. The second
+layer accumulates the output of the first layer, while the first layer
+accumulates the input of the network and the output of the second layer (see
+figure below).
+
+.. figure:: _static/feedback_rnn.svg
+   :align: center
+
+   A two-layer RNN with non-trivial recurrent connections
+
+Here's how you can create a recurrent brick that encapsulate the two layers:
+
+>>> from blocks.bricks.recurrent import BaseRecurrent, recurrent
+>>> class FeedbackRNN(BaseRecurrent):
+...     def __init__(self, dim, **kwargs):
+...         super(FeedbackRNN, self).__init__(**kwargs)
+...         self.dim = dim
+...         self.first_recurrent_layer = SimpleRecurrent(
+...             dim=self.dim, activation=Identity(), name='first_recurrent_layer',
+...             weights_init=initialization.Identity())
+...         self.second_recurrent_layer = SimpleRecurrent(
+...             dim=self.dim, activation=Identity(), name='second_recurrent_layer',
+...             weights_init=initialization.Identity())
+...         self.children = [self.first_recurrent_layer,
+...                          self.second_recurrent_layer]
+...
+...     @recurrent(sequences=['inputs'], contexts=[],
+...                states=['first_states', 'second_states'],
+...                outputs=['first_states', 'second_states'])
+...     def apply(self, inputs, first_states=None, second_states=None):
+...         first_h = self.first_recurrent_layer.apply(
+...             inputs=inputs, states=first_states + second_states, iterate=False)
+...         second_h = self.second_recurrent_layer.apply(
+...             inputs=first_h, states=second_states, iterate=False)
+...         return first_h, second_h
+...
+...     def get_dim(self, name):
+...         return (self.dim if name in ('inputs', 'first_states', 'second_states')
+...                 else super(FeedbackRNN, self).get_dim(name))
+...
+>>> x = tensor.tensor3('x')
+>>> feedback = FeedbackRNN(dim=3)
+>>> feedback.initialize()
+>>> first_h, second_h = feedback.apply(inputs=x)
+>>> f = theano.function([x], [first_h, second_h])
+>>> for states in f(numpy.ones((3, 1, 3))):
+...     print states # doctest: +SKIP
+[[[ 1.  1.  1.]]
+<BLANKLINE>
+ [[ 3.  3.  3.]]
+<BLANKLINE>
+ [[ 8.  8.  8.]]]
+[[[  1.   1.   1.]]
+<BLANKLINE>
+ [[  4.   4.   4.]]
+<BLANKLINE>
+ [[ 12.  12.  12.]]]
+
+There's a lot of things going on here!
+
+We defined a recurrent brick class called ``FeedbackRNN`` whose constructor
+initializes two :class:`.bricks.recurrent.SimpleRecurrent` bricks as its
+children.
+
+The class has a ``get_dim`` method whose purpose is to tell the dimensionality
+of each input to the brick's ``apply`` method.
+
+The core of the class resides in its ``apply`` method. The ``@recurrent``
+decorator is used to specify which of the arguments to the method are sequences
+to iterate over, which are recurrent states and which are returned when the
+method is called.
+
+Notice how no call to ``theano.scan`` is being made. This is because the
+implementation of ``apply`` is responsible for computing one time step of the
+recurrent application of the brick. It takes states at time :math:`t - 1` and
+inputs at time :math:`t` and produces the output for time :math:`t`. The rest is
+all handled by the ``@recurrent`` decorator behind the scenes.
+
+This is why the ``iterate`` argument of the ``apply`` method is so useful: it
+allows to combine multiple recurrent brick applications within another ``apply``
+implementation.
+
+.. tip::
+
+    When looking at a recurrent brick's documentation, keep in mind that the
+    parameters to its ``apply`` method are explained in terms of a single
+    iteration, *i.e.* with the assumption that ``iterate = False``.
