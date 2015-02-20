@@ -205,12 +205,15 @@ class TestBidirectional(unittest.TestCase):
     def setUp(self):
         self.bidir = Bidirectional(weights_init=Orthogonal(),
                                    prototype=SimpleRecurrent(
-                                       dim=3, activation=Tanh()),
-                                   seed=1)
+                                       dim=3, activation=Tanh()))
         self.simple = SimpleRecurrent(dim=3, weights_init=Orthogonal(),
                                       activation=Tanh(), seed=1)
-        self.bidir.initialize()
+        self.bidir.allocate()
         self.simple.initialize()
+        self.bidir.children[0].params[0].set_value(
+            self.simple.params[0].get_value())
+        self.bidir.children[1].params[0].set_value(
+            self.simple.params[0].get_value())
         self.x_val = 0.1 * numpy.asarray(
             list(itertools.permutations(range(4))),
             dtype=floatX)

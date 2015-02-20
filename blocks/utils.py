@@ -1,3 +1,4 @@
+from __future__ import print_function
 import sys
 import contextlib
 from collections import OrderedDict
@@ -371,8 +372,8 @@ def repr_attrs(instance, *attrs):
         return orig_repr_template.format(instance, id(instance))
 
 
-def put_hook(variable, hook_fn):
-    """Put a hook on a Theano variables.
+def put_hook(variable, hook_fn, *args):
+    r"""Put a hook on a Theano variables.
 
     Ensures that the hook function is executed every time when the value
     of the Theano variable is available.
@@ -384,9 +385,11 @@ def put_hook(variable, hook_fn):
     hook_fn : function
         The hook function. Should take a single argument: the variable's
         value.
+    *args : list
+        Positional arguments to pass to the hook function.
 
     """
-    return printing.Print(global_fn=lambda _, x: hook_fn(x))(variable)
+    return printing.Print(global_fn=lambda _, x: hook_fn(x, *args))(variable)
 
 
 def ipdb_breakpoint(x):
@@ -400,6 +403,12 @@ def ipdb_breakpoint(x):
     """
     import ipdb
     ipdb.set_trace()
+
+
+def print_sum(x, header=None):
+    if not header:
+        header = 'print_sum'
+    print(header + ':', x.sum())
 
 
 @contextlib.contextmanager
