@@ -22,10 +22,10 @@ receives. The equation describing that RNN is
 >>> from blocks.bricks import Identity
 >>> from blocks.bricks.recurrent import SimpleRecurrent
 >>> x = tensor.tensor3('x')
->>> recurrent = SimpleRecurrent(
+>>> rnn = SimpleRecurrent(
 ...     dim=3, activation=Identity(), weights_init=initialization.Identity())
->>> recurrent.initialize()
->>> h = recurrent.apply(x)
+>>> rnn.initialize()
+>>> h = rnn.apply(x)
 >>> f = theano.function([x], h)
 >>> print f(numpy.ones((3, 2, 3)))
 [[[ 1.  1.  1.]
@@ -47,7 +47,7 @@ receives:
 ...     input_dim=3, output_dim=3, weights_init=initialization.Identity(2),
 ...     biases_init=initialization.Constant(0))
 >>> doubler.initialize()
->>> h_doubler = recurrent.apply(doubler.apply(x))
+>>> h_doubler = rnn.apply(doubler.apply(x))
 >>> f = theano.function([x], h_doubler)
 >>> print f(numpy.ones((3, 2, 3)))
 [[[ 2.  2.  2.]
@@ -86,7 +86,7 @@ receives, but starting from one instead of zero:
 .. math:: \mathbf{h}_t = \mathbf{h}_{t-1} + \mathbf{x}_t, \quad \mathbf{h}_0 = 1
 
 >>> h0 = tensor.matrix('h0')
->>> h = recurrent.apply(inputs=x, states=h0)
+>>> h = rnn.apply(inputs=x, states=h0)
 >>> f = theano.function([x, h0], h)
 >>> print f(numpy.ones((3, 2, 3)), numpy.ones((2, 3)))
 [[[ 2.  2.  2.]
