@@ -256,7 +256,7 @@ class SimpleRecurrent(BaseRecurrent, Initializable):
         return super(SimpleRecurrent, self).get_dim(name)
 
     def _allocate(self):
-        self.params.append(shared_floatx_zeros((self.dim, self.dim)))
+        self.params.append(shared_floatx_zeros((self.dim, self.dim), name="W"))
 
     def _initialize(self):
         self.weights_init.initialize(self.W, self.rng)
