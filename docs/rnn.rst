@@ -27,7 +27,7 @@ receives. The equation describing that RNN is
 >>> rnn.initialize()
 >>> h = rnn.apply(x)
 >>> f = theano.function([x], h)
->>> print f(numpy.ones((3, 2, 3))) # doctest: +SKIP
+>>> print f(numpy.ones((3, 2, 3))) # doctest: +ELLIPSIS
 [[[ 1.  1.  1.]
   [ 1.  1.  1.]]
 <BLANKLINE>
@@ -35,7 +35,7 @@ receives. The equation describing that RNN is
   [ 2.  2.  2.]]
 <BLANKLINE>
  [[ 3.  3.  3.]
-  [ 3.  3.  3.]]]
+  [ 3.  3.  3.]]]...
 
 Let's modify that example so that the RNN accumulates two times the input it
 receives:
@@ -49,7 +49,7 @@ receives:
 >>> doubler.initialize()
 >>> h_doubler = rnn.apply(doubler.apply(x))
 >>> f = theano.function([x], h_doubler)
->>> print f(numpy.ones((3, 2, 3))) # doctest: +SKIP
+>>> print f(numpy.ones((3, 2, 3))) # doctest: +ELLIPSIS
 [[[ 2.  2.  2.]
   [ 2.  2.  2.]]
 <BLANKLINE>
@@ -57,7 +57,7 @@ receives:
   [ 4.  4.  4.]]
 <BLANKLINE>
  [[ 6.  6.  6.]
-  [ 6.  6.  6.]]]
+  [ 6.  6.  6.]]]...
 
 Note that in order to double the input we had to apply a :class:`.bricks.Linear`
 brick to ``x``, even though
@@ -88,7 +88,7 @@ receives, but starting from one instead of zero:
 >>> h0 = tensor.matrix('h0')
 >>> h = rnn.apply(inputs=x, states=h0)
 >>> f = theano.function([x, h0], h)
->>> print f(numpy.ones((3, 2, 3)), numpy.ones((2, 3))) # doctest: +SKIP
+>>> print f(numpy.ones((3, 2, 3)), numpy.ones((2, 3))) # doctest: +ELLIPSIS
 [[[ 2.  2.  2.]
   [ 2.  2.  2.]]
 <BLANKLINE>
@@ -96,7 +96,7 @@ receives, but starting from one instead of zero:
   [ 3.  3.  3.]]
 <BLANKLINE>
  [[ 4.  4.  4.]
-  [ 4.  4.  4.]]]
+  [ 4.  4.  4.]]]...
 
 Reverse
 -------
@@ -168,7 +168,7 @@ Here's how you can create a recurrent brick that encapsulate the two layers:
 >>> first_h, second_h = feedback.apply(inputs=x)
 >>> f = theano.function([x], [first_h, second_h])
 >>> for states in f(numpy.ones((3, 1, 3))):
-...     print states # doctest: +SKIP
+...     print states # doctest: +ELLIPSIS
 [[[ 1.  1.  1.]]
 <BLANKLINE>
  [[ 3.  3.  3.]]
@@ -178,7 +178,7 @@ Here's how you can create a recurrent brick that encapsulate the two layers:
 <BLANKLINE>
  [[  4.   4.   4.]]
 <BLANKLINE>
- [[ 12.  12.  12.]]]
+ [[ 12.  12.  12.]]]...
 
 There's a lot of things going on here!
 
