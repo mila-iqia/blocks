@@ -68,8 +68,7 @@ def test_attention_recurrent():
     attention = SequenceContentAttention(
         state_names=wrapped.apply.states,
         sequence_dim=attended_dim, match_dim=attended_dim)
-    recurrent = AttentionRecurrent(wrapped, attention)
-    recurrent.rng = rng
+    recurrent = AttentionRecurrent(wrapped, attention, seed=1234)
     recurrent.weights_init = IsotropicGaussian(0.5)
     recurrent.biases_init = Constant(0)
     recurrent.initialize()

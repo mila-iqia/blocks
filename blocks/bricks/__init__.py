@@ -131,7 +131,8 @@ class Initializable(Brick):
         if getattr(self, '_rng', None) is not None:
             return self._rng
         else:
-            return numpy.random.RandomState(self.seed)
+            self._rng = numpy.random.RandomState(self.seed)
+            return self._rng
 
     @rng.setter
     def rng(self, rng):

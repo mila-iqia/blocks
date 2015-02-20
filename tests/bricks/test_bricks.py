@@ -353,6 +353,7 @@ def test_mlp():
     mlp.initialize()
     assert_allclose(x_val.dot(numpy.ones((16, 8))),
                     y.eval({x: x_val}), rtol=1e-06)
+    assert mlp.rng == mlp.linear_transformations[0].rng
 
 
 def test_sequence():
