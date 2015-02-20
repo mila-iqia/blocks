@@ -5,7 +5,9 @@ Recurrent neural networks
 
     This section is very much work in progress!
 
-Blocks offers native support for recurrent neural networks (RNNs).
+This tutorial explains recurrent bricks in Blocks. Readers unfamiliar with
+bricks should start with the :doc:`bricks overview <bricks_overview>` first
+and continue with this tutorial afterwards.
 
 Quickstart example
 ------------------
