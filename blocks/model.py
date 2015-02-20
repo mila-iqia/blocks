@@ -146,7 +146,8 @@ class Model(AbstractModel, ComputationGraph):
         if len(self.outputs) > 1:
             logger.warning("model with multiple output " + multiple_message)
 
-        bricks = [get_brick(var) for var in self if get_brick(var)]
+        bricks = [get_brick(var) for var
+                  in self.variables + self.scan_variables if get_brick(var)]
         children = set(chain(*(brick.children for brick in bricks)))
         # Quadratic complexity: we should not have thousands of
         # top-level bricks.
