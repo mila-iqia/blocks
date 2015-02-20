@@ -129,10 +129,33 @@ layer accumulates the output of the first layer, while the first layer
 accumulates the input of the network and the output of the second layer (see
 figure below).
 
-.. figure:: _static/feedback_rnn.svg
-   :align: center
+.. digraph:: feedback_rnn
 
-   A two-layer RNN with non-trivial recurrent connections
+   node [shape=plaintext,label="(1, 1, 1)"];
+   x_1; x_2; x_3;
+
+   node [shape=plaintext];
+   h1_0 [label="(0, 0, 0)"]; h1_1 [label="(1, 1, 1)"];
+   h1_2 [label="(4, 4, 4)"]; h1_3 [label="(12, 12, 12)"];
+   h2_0 [label="(0, 0, 0)"]; h2_1 [label="(1, 1, 1)"];
+   h2_2 [label="(3, 3, 3)"]; h2_3 [label="(8, 8, 8)"];
+
+   node [shape=diamond,regular=1,label="+"];
+   plus_1_1; plus_1_2; plus_1_3; plus_2_1; plus_2_2; plus_2_3;
+
+   x_1 -> plus_1_1; x_2 -> plus_1_2; x_3 -> plus_1_3;
+   h1_0 -> plus_1_1 -> h1_1 -> plus_1_2 -> h1_2 -> plus_1_3 -> h1_3;
+   h2_0 -> plus_2_1 -> h2_1 -> plus_2_2 -> h2_2 -> plus_2_3 -> h2_3;
+   h2_0 -> plus_1_1; h2_1 -> plus_1_2; h2_2 -> plus_1_3;
+
+   edge [style=invis];
+   h2_0 -> h1_0; h2_1 -> h1_1; h2_2 -> h1_2; h2_3 -> h1_3;
+   plus_2_1 -> plus_1_1; plus_2_2 -> plus_1_2; plus_2_3 -> plus_1_3;
+
+   { rank=source; h2_0, h2_1, h2_2, h2_3, plus_2_1, plus_2_2, plus_2_3 }
+   { rank=same; h1_0, h1_1, h1_2, h1_3, plus_1_1, plus_1_2, plus_1_3 }
+   { rank=sink; x_1, x_2, x_3}
+
 
 Here's how you can create a recurrent brick that encapsulate the two layers:
 
