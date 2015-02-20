@@ -35,7 +35,6 @@ from blocks.extensions.saveload import SerializeMainLoop, LoadFromDump
 from blocks.extensions.monitoring import TrainingDataMonitoring
 from blocks.extensions.plot import Plot
 from blocks.main_loop import MainLoop
-from blocks.select import Selector
 from blocks.filter import VariableFilter
 from blocks.utils import named_copy, dict_union
 
@@ -148,15 +147,6 @@ def main(mode, save_path, num_batches, from_dump, data_path=None):
         generator.push_initialization_config()
         transition.weights_init = Orthogonal()
         generator.initialize()
-        bricks = [encoder, fork, lookup, generator]
-
-        # Give an idea of what's going on
-        params = Selector(bricks).get_params()
-        logger.info("Parameters:\n" +
-                    pprint.pformat(
-                        [(key, value.get_value().shape) for key, value
-                         in params.items()],
-                        width=120))
 
         # Build the cost computation graph
         batch_cost = generator.cost(
@@ -170,6 +160,15 @@ def main(mode, save_path, num_batches, from_dump, data_path=None):
         cost = aggregation.mean(batch_cost,  batch_size)
         cost.name = "sequence_log_likelihood"
         logger.info("Cost graph is built")
+
+        # Give an idea of what's going on
+        model = Model(cost)
+        params = model.get_params()
+        logger.info("Parameters:\n" +
+                    pprint.pformat(
+                        [(key, value.get_value().shape) for key, value
+                         in params.items()],
+                        width=120))
 
         # Fetch variables useful for debugging
         max_length = named_copy(chars.shape[0], "max_length")
@@ -205,7 +204,7 @@ def main(mode, save_path, num_batches, from_dump, data_path=None):
         average_monitoring = TrainingDataMonitoring(
             observables, prefix="average", every_n_batches=10)
         main_loop = MainLoop(
-            model=Model(cost),
+            model=model,
             data_stream=data_stream,
             algorithm=algorithm,
             extensions=([LoadFromDump(from_dump)] if from_dump else []) +
