@@ -98,6 +98,20 @@ receives, but starting from one instead of zero:
  [[ 4.  4.  4.]
   [ 4.  4.  4.]]]
 
+Reverse
+-------
+
+.. todo::
+
+    Say something about the ``reverse`` argument
+
+Getting initial states back
+---------------------------
+
+.. todo::
+
+    Say something about the ``return_initial_states`` argument
+
 Iterate (or not)
 ----------------
 
