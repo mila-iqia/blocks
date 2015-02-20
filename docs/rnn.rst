@@ -12,8 +12,26 @@ and continue with this tutorial afterwards.
 Quickstart example
 ------------------
 
+.. digraph:: accumulator
+
+   node [shape=plaintext,label="(1, 1, 1)"];
+   x_1; x_2; x_3;
+
+   node [shape=plaintext];
+   h_0 [label="(0, 0, 0)"]; h_1 [label="(1, 1, 1)"];
+   h_2 [label="(2, 2, 2)"]; h_3 [label="(3, 3, 3)"];
+
+   node [shape=diamond,regular=1,label="+"];
+   plus_1; plus_2; plus_3;
+
+   x_1 -> plus_1; x_2 -> plus_2; x_3 -> plus_3;
+   h_0 -> plus_1 -> h_1 -> plus_2 -> h_2 -> plus_3 -> h_3;
+
+   { rank=source; h_0, h_1, h_2, h_3, plus_1, plus_2, plus_3 }
+   { rank=sink; x_1, x_2, x_3}
+
 As a starting example, we'll be building an RNN which accumulates the input it
-receives. The equation describing that RNN is
+receives (figure above). The equation describing that RNN is
 
 .. math:: \mathbf{h}_t = \mathbf{h}_{t-1} + \mathbf{x}_t
 
@@ -29,18 +47,37 @@ receives. The equation describing that RNN is
 >>> rnn.initialize()
 >>> h = rnn.apply(x)
 >>> f = theano.function([x], h)
->>> print f(numpy.ones((3, 2, 3))) # doctest: +ELLIPSIS
-[[[ 1.  1.  1.]
-  [ 1.  1.  1.]]
+>>> print f(numpy.ones((3, 1, 3))) # doctest: +ELLIPSIS
+[[[ 1.  1.  1.]]
 <BLANKLINE>
- [[ 2.  2.  2.]
-  [ 2.  2.  2.]]
+ [[ 2.  2.  2.]]
 <BLANKLINE>
- [[ 3.  3.  3.]
-  [ 3.  3.  3.]]]...
+ [[ 3.  3.  3.]]]...
 
 Let's modify that example so that the RNN accumulates two times the input it
-receives:
+receives (figure below).
+
+.. digraph:: accumulator
+
+   node [shape=plaintext,label="(1, 1, 1)"];
+   x_1; x_2; x_3;
+
+   node [shape=plaintext];
+   h_0 [label="(0, 0, 0)"]; h_1 [label="(1, 1, 1)"];
+   h_2 [label="(2, 2, 2)"]; h_3 [label="(3, 3, 3)"];
+
+   node [shape=diamond,regular=1,label="+"];
+   plus_1; plus_2; plus_3;
+
+   h_0 -> plus_1 -> h_1 -> plus_2 -> h_2 -> plus_3 -> h_3;
+
+   edge [label=" x2"];
+   x_1 -> plus_1; x_2 -> plus_2; x_3 -> plus_3;
+
+   { rank=source; h_0, h_1, h_2, h_3, plus_1, plus_2, plus_3 }
+   { rank=sink; x_1, x_2, x_3}
+
+The equation for the RNN is
 
 .. math:: \mathbf{h}_t = \mathbf{h}_{t-1} + 2 \cdot \mathbf{x}_t
 
@@ -51,15 +88,12 @@ receives:
 >>> doubler.initialize()
 >>> h_doubler = rnn.apply(doubler.apply(x))
 >>> f = theano.function([x], h_doubler)
->>> print f(numpy.ones((3, 2, 3))) # doctest: +ELLIPSIS
-[[[ 2.  2.  2.]
-  [ 2.  2.  2.]]
+>>> print f(numpy.ones((3, 1, 3))) # doctest: +ELLIPSIS
+[[[ 2.  2.  2.]]
 <BLANKLINE>
- [[ 4.  4.  4.]
-  [ 4.  4.  4.]]
+ [[ 4.  4.  4.]]
 <BLANKLINE>
- [[ 6.  6.  6.]
-  [ 6.  6.  6.]]]...
+ [[ 6.  6.  6.]]]...
 
 Note that in order to double the input we had to apply a :class:`.bricks.Linear`
 brick to ``x``, even though
@@ -74,6 +108,24 @@ want.
 Initial states
 --------------
 
+.. digraph:: accumulator
+
+   node [shape=plaintext,label="(1, 1, 1)"];
+   x_1; x_2; x_3;
+
+   node [shape=plaintext];
+   h_0 [label="(1, 1, 1)"]; h_1 [label="(2, 2, 2)"];
+   h_2 [label="(3, 3, 3)"]; h_3 [label="(4, 4, 4)"];
+
+   node [shape=diamond,regular=1,label="+"];
+   plus_1; plus_2; plus_3;
+
+   x_1 -> plus_1; x_2 -> plus_2; x_3 -> plus_3;
+   h_0 -> plus_1 -> h_1 -> plus_2 -> h_2 -> plus_3 -> h_3;
+
+   { rank=source; h_0, h_1, h_2, h_3, plus_1, plus_2, plus_3 }
+   { rank=sink; x_1, x_2, x_3}
+
 Recurrent models all have in common that their initial state has to be
 specified. However, in constructing our toy examples, we omitted to pass
 :math:`\mathbf{h}_0` when applying the recurrent brick. What happened?
@@ -83,22 +135,19 @@ passed as argument, which is a good sane default in most cases, but we can just
 as well set it explicitly.
 
 We will modify the starting example so that it accumulates the input it
-receives, but starting from one instead of zero:
+receives, but starting from one instead of zero (figure above):
 
 .. math:: \mathbf{h}_t = \mathbf{h}_{t-1} + \mathbf{x}_t, \quad \mathbf{h}_0 = 1
 
 >>> h0 = tensor.matrix('h0')
 >>> h = rnn.apply(inputs=x, states=h0)
 >>> f = theano.function([x, h0], h)
->>> print f(numpy.ones((3, 2, 3)), numpy.ones((2, 3))) # doctest: +ELLIPSIS
-[[[ 2.  2.  2.]
-  [ 2.  2.  2.]]
+>>> print f(numpy.ones((3, 1, 3)), numpy.ones((1, 3))) # doctest: +ELLIPSIS
+[[[ 2.  2.  2.]]
 <BLANKLINE>
- [[ 3.  3.  3.]
-  [ 3.  3.  3.]]
+ [[ 3.  3.  3.]]
 <BLANKLINE>
- [[ 4.  4.  4.]
-  [ 4.  4.  4.]]]...
+ [[ 4.  4.  4.]]]...
 
 Reverse
 -------
