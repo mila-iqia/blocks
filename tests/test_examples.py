@@ -49,5 +49,5 @@ def test_reverse_words():
         with open(f_data.name, 'wt') as data:
             for i in range(10):
                 print("A line.", file=data)
-        reverse_words_test("train", f_save.name, 1, False, [f_data.name])
+        reverse_words_test("train", f_save.name, 1, [f_data.name])
     blocks.config.recursion_limit = old_limit
