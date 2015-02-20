@@ -31,7 +31,7 @@ from blocks.initialization import Orthogonal, IsotropicGaussian, Constant
 from blocks.model import Model
 from blocks.monitoring import aggregation
 from blocks.extensions import FinishAfter, Printing, Timing
-from blocks.extensions.saveload import SerializeMainLoop, Dump
+from blocks.extensions.saveload import SerializeMainLoop
 from blocks.extensions.monitoring import TrainingDataMonitoring
 from blocks.extensions.plot import Plot
 from blocks.main_loop import MainLoop
@@ -83,7 +83,7 @@ def _is_nan(log):
     return math.isnan(log.current_row.total_gradient_norm)
 
 
-def main(mode, save_path, num_batches, from_dump, data_path=None):
+def main(mode, save_path, num_batches, data_path=None):
     # Experiment configuration
     dimension = 100
     readout_dimension = len(char2code)
@@ -93,13 +93,13 @@ def main(mode, save_path, num_batches, from_dump, data_path=None):
         SimpleRecurrent(dim=dimension, activation=Tanh()),
         weights_init=Orthogonal())
     fork = Fork([name for name in encoder.prototype.apply.sequences
-                    if name != 'mask'],
+                 if name != 'mask'],
                 weights_init=IsotropicGaussian(0.1),
                 biases_init=Constant(0))
     fork.input_dim = dimension
     fork.output_dims = {name: dimension for name in fork.input_names}
     lookup = LookupTable(readout_dimension, dimension,
-                            weights_init=IsotropicGaussian(0.1))
+                         weights_init=IsotropicGaussian(0.1))
     transition = SimpleRecurrent(
         activation=Tanh(),
         dim=dimension, name="transition")
@@ -220,7 +220,6 @@ def main(mode, save_path, num_batches, from_dump, data_path=None):
                      every_n_batches=10),
                 SerializeMainLoop(save_path, every_n_batches=500,
                                   save_separately=["model", "log"]),
-                Dump(os.path.splitext(save_path)[0]),
                 Printing(every_n_batches=1)])
         main_loop.run()
     elif mode == "test":
