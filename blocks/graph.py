@@ -91,7 +91,7 @@ class ComputationGraph(object):
     @property
     def scan_variables(self):
         """Variables of Scan ops."""
-        return chain(*[g.variables for g in self._scan_graphs])
+        return list(chain(*[g.variables for g in self._scan_graphs]))
 
     def _get_variables(self):
         """Collect variables, updates and auxiliary variables.
