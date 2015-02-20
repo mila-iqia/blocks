@@ -1,9 +1,7 @@
 from __future__ import print_function
 import logging
 import pprint
-import sys
 import math
-from six.moves import cPickle
 import numpy
 import os
 import operator
@@ -19,26 +17,28 @@ from blocks.bricks.attention import SequenceContentAttention
 from blocks.bricks.parallel import Fork
 from blocks.bricks.sequence_generators import (
     SequenceGenerator, LinearReadout, SoftmaxEmitter, LookupFeedback)
+from blocks.config_parser import config
 from blocks.graph import ComputationGraph
 from blocks.datasets.streams import (
     DataStreamMapping, BatchDataStream, PaddingDataStream,
     DataStreamFilter)
 from blocks.datasets.text import OneBillionWord, TextFile
 from blocks.datasets.schemes import ConstantScheme
+from blocks.dump import load_parameter_values
 from blocks.algorithms import (GradientDescent, Scale,
                                StepClipping, CompositeRule)
 from blocks.initialization import Orthogonal, IsotropicGaussian, Constant
 from blocks.model import Model
 from blocks.monitoring import aggregation
 from blocks.extensions import FinishAfter, Printing, Timing
-from blocks.extensions.saveload import SerializeMainLoop, LoadFromDump
+from blocks.extensions.saveload import SerializeMainLoop, Dump
 from blocks.extensions.monitoring import TrainingDataMonitoring
 from blocks.extensions.plot import Plot
 from blocks.main_loop import MainLoop
 from blocks.filter import VariableFilter
 from blocks.utils import named_copy, dict_union
 
-sys.setrecursionlimit(100000)
+config.recursion_limit = 100000
 floatX = theano.config.floatX
 logger = logging.getLogger(__name__)
 
@@ -84,11 +84,41 @@ def _is_nan(log):
 
 
 def main(mode, save_path, num_batches, from_dump, data_path=None):
-    if mode == "train":
-        # Experiment configuration
-        dimension = 100
-        readout_dimension = len(char2code)
+    # Experiment configuration
+    dimension = 100
+    readout_dimension = len(char2code)
 
+    # Build bricks
+    encoder = Bidirectional(
+        SimpleRecurrent(dim=dimension, activation=Tanh()),
+        weights_init=Orthogonal())
+    fork = Fork([name for name in encoder.prototype.apply.sequences
+                    if name != 'mask'],
+                weights_init=IsotropicGaussian(0.1),
+                biases_init=Constant(0))
+    fork.input_dim = dimension
+    fork.output_dims = {name: dimension for name in fork.input_names}
+    lookup = LookupTable(readout_dimension, dimension,
+                            weights_init=IsotropicGaussian(0.1))
+    transition = SimpleRecurrent(
+        activation=Tanh(),
+        dim=dimension, name="transition")
+    attention = SequenceContentAttention(
+        state_names=transition.apply.states,
+        sequence_dim=2 * dimension, match_dim=dimension, name="attention")
+    readout = LinearReadout(
+        readout_dim=readout_dimension, source_names=["states"],
+        emitter=SoftmaxEmitter(name="emitter"),
+        feedbacker=LookupFeedback(readout_dimension, dimension),
+        name="readout")
+    generator = SequenceGenerator(
+        readout=readout, transition=transition, attention=attention,
+        weights_init=IsotropicGaussian(0.1), biases_init=Constant(0),
+        name="generator")
+    generator.push_initialization_config()
+    transition.weights_init = Orthogonal()
+
+    if mode == "train":
         # Data processing pipeline
         dataset_options = dict(dictionary=char2code, level="character",
                                preprocess=_lower)
@@ -109,46 +139,11 @@ def main(mode, save_path, num_batches, from_dump, data_path=None):
                             data_stream=dataset
                             .get_default_stream())))))
 
-        # Build the model
+        # Build the cost computation graph
         chars = tensor.lmatrix("features")
         chars_mask = tensor.matrix("features_mask")
         targets = tensor.lmatrix("targets")
         targets_mask = tensor.matrix("targets_mask")
-
-        encoder = Bidirectional(
-            SimpleRecurrent(dim=dimension, activation=Tanh()),
-            weights_init=Orthogonal())
-        encoder.initialize()
-        fork = Fork([name for name in encoder.prototype.apply.sequences
-                     if name != 'mask'],
-                    weights_init=IsotropicGaussian(0.1),
-                    biases_init=Constant(0))
-        fork.input_dim = dimension
-        fork.output_dims = {name: dimension for name in fork.input_names}
-        fork.initialize()
-        lookup = LookupTable(readout_dimension, dimension,
-                             weights_init=IsotropicGaussian(0.1))
-        lookup.initialize()
-        transition = SimpleRecurrent(
-            activation=Tanh(),
-            dim=dimension, name="transition")
-        attention = SequenceContentAttention(
-            state_names=transition.apply.states,
-            sequence_dim=2 * dimension, match_dim=dimension, name="attention")
-        readout = LinearReadout(
-            readout_dim=readout_dimension, source_names=["states"],
-            emitter=SoftmaxEmitter(name="emitter"),
-            feedbacker=LookupFeedback(readout_dimension, dimension),
-            name="readout")
-        generator = SequenceGenerator(
-            readout=readout, transition=transition, attention=attention,
-            weights_init=IsotropicGaussian(0.1), biases_init=Constant(0),
-            name="generator")
-        generator.push_initialization_config()
-        transition.weights_init = Orthogonal()
-        generator.initialize()
-
-        # Build the cost computation graph
         batch_cost = generator.cost(
             targets, targets_mask,
             attended=encoder.apply(
@@ -169,6 +164,10 @@ def main(mode, save_path, num_batches, from_dump, data_path=None):
                         [(key, value.get_value().shape) for key, value
                          in params.items()],
                         width=120))
+
+        # Initialize parameters
+        for brick in model.get_top_bricks():
+            brick.initialize()
 
         # Fetch variables useful for debugging
         max_length = named_copy(chars.shape[0], "max_length")
@@ -191,6 +190,7 @@ def main(mode, save_path, num_batches, from_dump, data_path=None):
             cost=cost, step_rule=CompositeRule([StepClipping(10.0),
                                                 Scale(0.01)]))
 
+        # More variables for debugging
         observables = [
             cost, min_energy, max_energy, mean_activation,
             batch_size, max_length, cost_per_character,
@@ -201,14 +201,15 @@ def main(mode, save_path, num_batches, from_dump, data_path=None):
             observables.append(named_copy(
                 algorithm.gradients[param].norm(2), name + "_grad_norm"))
 
+        # Construct the main loop and start training!
         average_monitoring = TrainingDataMonitoring(
             observables, prefix="average", every_n_batches=10)
         main_loop = MainLoop(
             model=model,
             data_stream=data_stream,
             algorithm=algorithm,
-            extensions=([LoadFromDump(from_dump)] if from_dump else []) +
-            [Timing(),
+            extensions=[
+                Timing(),
                 TrainingDataMonitoring(observables, after_every_batch=True),
                 average_monitoring,
                 FinishAfter(after_n_batches=num_batches)
@@ -219,11 +220,10 @@ def main(mode, save_path, num_batches, from_dump, data_path=None):
                      every_n_batches=10),
                 SerializeMainLoop(save_path, every_n_batches=500,
                                   save_separately=["model", "log"]),
+                Dump(os.path.splitext(save_path)[0]),
                 Printing(every_n_batches=1)])
         main_loop.run()
     elif mode == "test":
-        with open(save_path, "rb") as source:
-            encoder, fork, lookup, generator = cPickle.load(source)
         logger.info("Model is loaded")
         chars = tensor.lmatrix("features")
         generated = generator.generate(
@@ -232,7 +232,9 @@ def main(mode, save_path, num_batches, from_dump, data_path=None):
                 **dict_union(fork.apply(lookup.lookup(chars),
                              return_dict=True))),
             attended_mask=tensor.ones(chars.shape))
-        sample_function = ComputationGraph(generated).get_theano_function()
+        model = Model(generated)
+        model.set_param_values(load_parameter_values(save_path))
+        sample_function = model.get_theano_function()
         logging.info("Sampling function is compiled")
 
         while True:
