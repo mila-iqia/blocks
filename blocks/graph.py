@@ -53,7 +53,7 @@ class ComputationGraph(object):
     scans : list of :class:`~theano.scan_module.scan_op.Scan`
         All Scan ops used in this computation graph.
     scan_variables : list of :class:`~tensor.TensorVariable`
-        All variables of inner graphs of Scan op.
+        All variables of the inner graphs of Scan ops.
     updates : :class:`~tensor.TensorSharedVariable` updates
         All the updates found attached to the annotations.
 
