@@ -51,7 +51,9 @@ def main(args):
     for fname in args.experiments:
         log = plot.load_log(fname)
 
-        rows_to_keep = [0] + log._status._epoch_ends
+        rows_to_keep = ([0] + log.status._epoch_ends
+                        if args.every == "epochs"
+                        else range(log.status.iterations_done))
         data_frame = log.to_dataframe()
         data_frame = data_frame.iloc[rows_to_keep]
 
@@ -131,16 +133,17 @@ if __name__ == "__main__":
     logging.basicConfig()
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--list", "-l", action="store_true", 
+    parser.add_argument("--list", "-l", action="store_true",
         help="List all channels contained in the experiments and exit")
-    parser.add_argument("--channels", "-c", type=str, 
+    parser.add_argument("--channels", "-c", type=str,
         help="A comma separated list of channels to plot. " + \
              "The wildcards '*' and '?' can be used to select multiple " + \
              "channels at once. Prefix a channel name with <num>: to " + \
              "refer to a channel of a particular experiment")
-    #parser.add_argument("--xaxis", "-x", choices=['iterations', 'epochs', 'time'],
-    #    default='iterations', help="Label/scale to use on the x-axis of the plot")
-    parser.add_argument("--ipython", action="store_true", 
+    parser.add_argument("--every", "-e",
+        choices=["epochs", "iters"], default="iters",
+        help="Plot values at every epoch or at every iteration")
+    parser.add_argument("--ipython", action="store_true",
         help="Drop into an IPython session after the channels have been loaded")
     parser.add_argument("experiments", type=str, nargs="+")
     args = parser.parse_args()
