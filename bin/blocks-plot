@@ -1,28 +1,23 @@
-#!/usr/bin/env python 
-
+#!/usr/bin/env python
 from __future__ import print_function, division
 
-import logging
 import argparse
+import logging
 
-from  six import iteritems
+from six import iteritems
 
 PROMPT_HEADER = """
 
 Type a comma separated list of channels to plot or [q]uit.
 
 Channels may be prefixed by <number>: to refer to a specific experiment \
-and may contain '*' or '?' characters to match multiple channels at once.
-
-"""
+and may contain '*' or '?' characters to match multiple channels at once."""
 
 IPYTHON_HEADER = """
 
 Complete DataFrames for all experiments can be found in the \
 'experiments[fname]' dictionary. The DataFrame containing only \
-the selected channels can be access as 'matched'
-
-"""
+the selected channels can be access as 'matched'."""
 
 
 def plot_dataframe(dataframe):
@@ -131,17 +126,18 @@ if __name__ == "__main__":
     logging.basicConfig()
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--list", "-l", action="store_true", 
+    parser.add_argument(
+        "--list", "-l", action="store_true",
         help="List all channels contained in the experiments and exit")
-    parser.add_argument("--channels", "-c", type=str, 
-        help="A comma separated list of channels to plot. " + \
-             "The wildcards '*' and '?' can be used to select multiple " + \
-             "channels at once. Prefix a channel name with <num>: to " + \
+    parser.add_argument(
+        "--channels", "-c", type=str,
+        help="A comma separated list of channels to plot. "
+             "The wildcards '*' and '?' can be used to select multiple "
+             "channels at once. Prefix a channel name with <num>: to "
              "refer to a channel of a particular experiment")
-    #parser.add_argument("--xaxis", "-x", choices=['iterations', 'epochs', 'time'],
-    #    default='iterations', help="Label/scale to use on the x-axis of the plot")
-    parser.add_argument("--ipython", action="store_true", 
-        help="Drop into an IPython session after the channels have been loaded")
+    parser.add_argument(
+        "--ipython", action="store_true",
+        help="Drop into an IPython session after channels have been loaded")
     parser.add_argument("experiments", type=str, nargs="+")
     args = parser.parse_args()
 
