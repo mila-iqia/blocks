@@ -8,7 +8,6 @@ from blocks.log import TrainingLog
 from blocks.utils import reraise_as, unpack, change_recursion_limit
 from blocks.algorithms import DifferentiableCostMinimizer
 
-logging.basicConfig()
 logger = logging.getLogger(__name__)
 
 error_message = """
