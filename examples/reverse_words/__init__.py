@@ -12,7 +12,7 @@ import theano
 from six.moves import input
 from theano import tensor
 
-from blocks.bricks import Tanh, application
+from blocks.bricks import Tanh
 from blocks.bricks.lookup import LookupTable
 from blocks.bricks.recurrent import SimpleRecurrent, Bidirectional
 from blocks.bricks.attention import SequenceContentAttention
@@ -37,7 +37,7 @@ from blocks.extensions.plot import Plot
 from blocks.main_loop import MainLoop
 from blocks.select import Selector
 from blocks.filter import VariableFilter
-from blocks.utils import named_copy, unpack, dict_union
+from blocks.utils import named_copy, dict_union
 
 sys.setrecursionlimit(100000)
 floatX = theano.config.floatX
@@ -66,29 +66,6 @@ def reverse_words(sample):
             if word_start == -1:
                 word_start = i
     return (result,)
-
-
-class Transition(SimpleRecurrent):
-    def __init__(self, attended_dim, **kwargs):
-        super(Transition, self).__init__(**kwargs)
-        self.attended_dim = attended_dim
-
-    @application(contexts=['attended', 'attended_mask'])
-    def apply(self, *args, **kwargs):
-        for context in Transition.apply.contexts:
-            kwargs.pop(context)
-        return super(Transition, self).apply(*args, **kwargs)
-
-    @apply.delegate
-    def apply_delegate(self):
-        return super(Transition, self).apply
-
-    def get_dim(self, name):
-        if name == 'attended':
-            return self.attended_dim
-        if name == 'attended_mask':
-            return 0
-        return super(Transition, self).get_dim(name)
 
 
 def _lower(s):
@@ -153,12 +130,12 @@ def main(mode, save_path, num_batches, from_dump, data_path=None):
         lookup = LookupTable(readout_dimension, dimension,
                              weights_init=IsotropicGaussian(0.1))
         lookup.initialize()
-        transition = Transition(
+        transition = SimpleRecurrent(
             activation=Tanh(),
-            dim=dimension, attended_dim=2 * dimension, name="transition")
+            dim=dimension, name="transition")
         attention = SequenceContentAttention(
             state_names=transition.apply.states,
-            match_dim=dimension, name="attention")
+            sequence_dim=2 * dimension, match_dim=dimension, name="attention")
         readout = LinearReadout(
             readout_dim=readout_dimension, source_names=["states"],
             emitter=SoftmaxEmitter(name="emitter"),
@@ -167,7 +144,7 @@ def main(mode, save_path, num_batches, from_dump, data_path=None):
         generator = SequenceGenerator(
             readout=readout, transition=transition, attention=attention,
             weights_init=IsotropicGaussian(0.1), biases_init=Constant(0),
-            add_contexts=False, name="generator")
+            name="generator")
         generator.push_initialization_config()
         transition.weights_init = Orthogonal()
         generator.initialize()
@@ -200,10 +177,8 @@ def main(mode, save_path, num_batches, from_dump, data_path=None):
             aggregation.mean(batch_cost, batch_size * max_length),
             "character_log_likelihood")
         cg = ComputationGraph(cost)
-        energies = unpack(
-            VariableFilter(application=readout.readout, name="output")(
-                cg.variables),
-            singleton=True)
+        (energies,) = VariableFilter(
+            application=readout.readout, name="output")(cg.variables)
         min_energy = named_copy(energies.min(), "min_energy")
         max_energy = named_copy(energies.max(), "max_energy")
         (activations,) = VariableFilter(
