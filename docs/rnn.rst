@@ -27,7 +27,7 @@ receives. The equation describing that RNN is
 >>> rnn.initialize()
 >>> h = rnn.apply(x)
 >>> f = theano.function([x], h)
->>> print f(numpy.ones((3, 2, 3)))
+>>> print f(numpy.ones((3, 2, 3))) # doctest: +SKIP
 [[[ 1.  1.  1.]
   [ 1.  1.  1.]]
 <BLANKLINE>
@@ -49,7 +49,7 @@ receives:
 >>> doubler.initialize()
 >>> h_doubler = rnn.apply(doubler.apply(x))
 >>> f = theano.function([x], h_doubler)
->>> print f(numpy.ones((3, 2, 3)))
+>>> print f(numpy.ones((3, 2, 3))) # doctest: +SKIP
 [[[ 2.  2.  2.]
   [ 2.  2.  2.]]
 <BLANKLINE>
@@ -60,7 +60,7 @@ receives:
   [ 6.  6.  6.]]]
 
 Note that in order to double the input we had to apply a :class:`.bricks.Linear`
-brick to `x`, even though
+brick to ``x``, even though
 
 .. math:: \mathbf{h}_t = f(\mathbf{V}\mathbf{h}_{t-1} + \mathbf{W}\mathbf{x}_t + \mathbf{b})
 
@@ -88,7 +88,7 @@ receives, but starting from one instead of zero:
 >>> h0 = tensor.matrix('h0')
 >>> h = rnn.apply(inputs=x, states=h0)
 >>> f = theano.function([x, h0], h)
->>> print f(numpy.ones((3, 2, 3)), numpy.ones((2, 3)))
+>>> print f(numpy.ones((3, 2, 3)), numpy.ones((2, 3))) # doctest: +SKIP
 [[[ 2.  2.  2.]
   [ 2.  2.  2.]]
 <BLANKLINE>
