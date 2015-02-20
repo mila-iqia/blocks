@@ -265,9 +265,16 @@ of each input to the brick's ``apply`` method.
 
 The core of the class resides in its ``apply`` method. The ``@recurrent``
 decorator is used to specify which of the arguments to the method are sequences
-to iterate over, which are recurrent states and which are returned when the
-method is called. The ``apply`` implementation must return, in that order, the
-states and the outputs that are declared in the decorator.
+to iterate over, what is returned when the method is called and which of those
+returned values correspond to recurrent states. Its
+relationship with the ``inputs`` and ``outputs`` arguments to the
+``@application`` decorator is as follows:
+
+* ``outputs``, like in ``@application``, defines everything that's returned
+  by ``apply``, including recurrent outputs
+* ``states`` is a subset of ``outputs`` that corresponds to recurrent outputs,
+  which means that the union of ``sequences`` and ``states`` forms what would
+  be ``inputs`` in ``@application``
 
 Notice how no call to :func:`theano.scan` is being made. This is because the
 implementation of ``apply`` is responsible for computing one time step of the
