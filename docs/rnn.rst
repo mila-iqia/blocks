@@ -194,7 +194,8 @@ of each input to the brick's ``apply`` method.
 The core of the class resides in its ``apply`` method. The ``@recurrent``
 decorator is used to specify which of the arguments to the method are sequences
 to iterate over, which are recurrent states and which are returned when the
-method is called.
+method is called. The ``apply`` implementation must return, in that order, the
+states and the outputs that are declared in the decorator.
 
 Notice how no call to :func:`theano.scan` is being made. This is because the
 implementation of ``apply`` is responsible for computing one time step of the
