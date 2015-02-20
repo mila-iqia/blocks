@@ -1,4 +1,4 @@
-#!/usr/bin/env python 
+#!/usr/bin/env python
 
 from __future__ import print_function, division
 
@@ -32,7 +32,7 @@ def plot_dataframe(dataframe):
     print("Plotting {} channels:".format(len(dataframe.columns)))
     for cname, series in iteritems(dataframe):
         print("    {}".format(cname))
-        pylab.plot(t, series, label=cname)
+        pylab.plot(t, series.interpolate(), label=cname)
     pylab.legend()
     pylab.show(block=True)
 
