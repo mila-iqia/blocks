@@ -194,7 +194,7 @@ decorator is used to specify which of the arguments to the method are sequences
 to iterate over, which are recurrent states and which are returned when the
 method is called.
 
-Notice how no call to ``theano.scan`` is being made. This is because the
+Notice how no call to :func:`theano.scan` is being made. This is because the
 implementation of ``apply`` is responsible for computing one time step of the
 recurrent application of the brick. It takes states at time :math:`t - 1` and
 inputs at time :math:`t` and produces the output for time :math:`t`. The rest is
