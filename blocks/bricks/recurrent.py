@@ -8,7 +8,7 @@ from functools import wraps
 import theano
 from theano import tensor, Variable
 
-from blocks.bricks import Initializable, Identity, Sigmoid
+from blocks.bricks import Initializable, Sigmoid, Tanh
 from blocks.bricks.base import Application, application, Brick, lazy
 from blocks.initialization import NdarrayInitialization
 from blocks.roles import add_role, WEIGHTS, BIASES
@@ -237,7 +237,7 @@ class SimpleRecurrent(BaseRecurrent, Initializable):
     def __init__(self, dim, activation=None, **kwargs):
         super(SimpleRecurrent, self).__init__(**kwargs)
         if activation is None:
-            activation = Identity()
+            activation = Tanh()
         self.dim = dim
         self.activation = activation
 
@@ -450,7 +450,7 @@ class GatedRecurrent(BaseRecurrent, Initializable):
         self.use_reset_gate = use_reset_gate
 
         if not activation:
-            activation = Identity()
+            activation = Tanh()
         if not gate_activation:
             gate_activation = Sigmoid()
         self.activation = activation
