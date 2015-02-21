@@ -27,7 +27,7 @@ def plot_dataframe(dataframe):
     print("Plotting {} channels:".format(len(dataframe.columns)))
     for cname, series in iteritems(dataframe):
         print("    {}".format(cname))
-        pylab.plot(t, series, label=cname)
+        pylab.plot(t, series.interpolate(), label=cname)
     pylab.legend()
     pylab.show(block=True)
 
@@ -46,7 +46,9 @@ def main(args):
     for fname in args.experiments:
         log = plot.load_log(fname)
 
-        rows_to_keep = [0] + log._status._epoch_ends
+        rows_to_keep = ([0] + log.status._epoch_ends
+                        if args.every == "epoch"
+                        else range(log.status.iterations_done))
         data_frame = log.to_dataframe()
         data_frame = data_frame.iloc[rows_to_keep]
 
@@ -135,6 +137,10 @@ if __name__ == "__main__":
              "The wildcards '*' and '?' can be used to select multiple "
              "channels at once. Prefix a channel name with <num>: to "
              "refer to a channel of a particular experiment")
+    parser.add_argument(
+        "--every", "-e", choices=["epoch", "iter"],
+        default="iter",
+        help="Plot values at every epoch or at every iteration")
     parser.add_argument(
         "--ipython", action="store_true",
         help="Drop into an IPython session after channels have been loaded")
