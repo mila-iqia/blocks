@@ -372,6 +372,17 @@ class ProgressBar(TrainingExtension):
         self.bar = None
         self.iter_count = 0
 
+    def __getstate__(self):
+        # Ensure we won't pickle the actual progress bar.
+        # (It might contain unpicklable file handles)
+        state = dict(self.__dict__)
+        del state['bar']
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self.bar = None
+
     def get_iter_per_epoch(self):
         iter_scheme = self.main_loop.data_stream.iteration_scheme
         if hasattr(iter_scheme, 'num_batches'):
