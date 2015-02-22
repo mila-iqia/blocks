@@ -177,9 +177,16 @@ def recurrent(*args, **kwargs):
                 args = list(args)
                 arg_names = (list(sequences_given) + list(states_given) +
                              list(contexts_given))
-                kwargs = dict(zip(arg_names, args))
+                kwargs = OrderedDict(zip(arg_names, args))
                 kwargs.update(rest_kwargs)
-                return application_function(brick, **kwargs)
+                outputs = application_function(brick, **kwargs)
+                # We want to save the computation graph returned by the
+                # `application_function` when it is called inside the
+                # `theano.scan`.
+                application_call.inner_inputs = kwargs
+                application_call.inner_outputs = OrderedDict(
+                    zip(application.outputs, pack(outputs)))
+                return outputs
             outputs_info = (list(states_given.values()) +
                             [None] * (len(application.outputs) -
                                       len(application.states)))
@@ -199,6 +206,7 @@ def recurrent(*args, **kwargs):
             if updates:
                 application_call.updates = dict_union(application_call.updates,
                                                       updates)
+
             return result
 
         return recurrent_apply

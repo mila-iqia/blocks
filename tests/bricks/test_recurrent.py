@@ -10,6 +10,7 @@ from blocks.bricks import Tanh
 from blocks.bricks.recurrent import (
     GatedRecurrent, SimpleRecurrent, Bidirectional, LSTM)
 from blocks.initialization import Constant, IsotropicGaussian, Orthogonal
+from blocks.filter import get_application_call
 
 
 floatX = theano.config.floatX
@@ -235,3 +236,17 @@ class TestBidirectional(unittest.TestCase):
 
         assert_allclose(h_simple, h_bidir[..., :3], rtol=1e-04)
         assert_allclose(h_simple_rev, h_bidir[::-1, ...,  3:], rtol=1e-04)
+
+
+def test_saved_inner_graph():
+    """Make sure that the original inner graph is saved."""
+    x = tensor.tensor3()
+    recurrent = SimpleRecurrent(dim=3, activation=Tanh())
+    y = recurrent.apply(x)
+
+    application_call = get_application_call(y)
+    assert list(application_call.inner_inputs) == ["inputs", "states"]
+    assert list(application_call.inner_outputs) == ["states"]
+    # TODO before merge: test equivalence of the saved CG
+    # and the one obtained by an explicit `iterate=False` call.
+    # Need to consult Theano gurus for that.
