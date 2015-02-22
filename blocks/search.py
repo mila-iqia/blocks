@@ -106,7 +106,7 @@ class BeamSearch(Search):
         init_cg = ComputationGraph(init_generated.values())
         init_readouts = VariableFilter(application=generator.readout.emit,
                                        name='readouts')(init_cg.variables)[-1]
-        init_probs = generator.readout.emitter._probs(init_readouts)
+        init_probs = generator.readout.emitter.probs(init_readouts)
 
         # Create theano function for initial values
         self.init_computer = function(self.inputs_dict.values(),
@@ -134,7 +134,7 @@ class BeamSearch(Search):
         cg_step = ComputationGraph(next_generated.values())
         readouts_step = VariableFilter(application=generator.readout.emit,
                                        name='readouts')(cg_step.variables)[-1]
-        next_probs = generator.readout.emitter._probs(readouts_step)
+        next_probs = generator.readout.emitter.probs(readouts_step)
         # Create theano function for next values
         self.next_computer = function(self.inputs_dict.values() +
                                       [cur_variables['states']],
