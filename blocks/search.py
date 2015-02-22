@@ -1,7 +1,7 @@
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 
-import numpy as np
+import numpy
 
 from theano import config
 from theano import function
@@ -135,12 +135,12 @@ class BeamSearch(Search):
         super(BeamSearch, self).compile(*args, **kwargs)
 
     def compute_initial(self, inputs_dict):
-        inits = self.init_computer(inputs_dict.values())
+        inits = self.init_computer(*inputs_dict.values())
         return OrderedDict(zip(self.generate_names + ['probs'], inits))
 
     def compute_next(self, inputs_dict, cur_vals):
-        next_val = self.next_computer(inputs_dict.values() +
-                                      [cur_vals['states']])
+        next_val = self.next_computer(*(inputs_dict.values() +
+                                        [cur_vals['states']]))
         return OrderedDict(zip(self.generate_names + ['probs'], next_val))
 
     @classmethod
@@ -154,17 +154,17 @@ class BeamSearch(Search):
         """
         flatten = probs.flatten()
         if unique:
-            args = np.unique(np.argpartition(-flatten, beam_size))[:beam_size]
+            args = numpy.unique(numpy.argpartition(-flatten, beam_size))[:beam_size]
         else:
-            args = np.argpartition(-flatten, beam_size)[:beam_size]
-        args = args[np.argsort(-flatten[args])]
+            args = numpy.argpartition(-flatten, beam_size)[:beam_size]
+        args = args[numpy.argsort(-flatten[args])]
         if unique:
             # append best if needed
             if args.shape[0] < beam_size:
-                args = np.append(args,
-                                 np.tile(args[0], beam_size - args.shape[0]))
+                args = numpy.append(args,
+                                 numpy.tile(args[0], beam_size - args.shape[0]))
         # convert args back
-        indexes = np.unravel_index(args, probs.shape)
+        indexes = numpy.unravel_index(args, probs.shape)
         return indexes, probs[indexes]
 
     @classmethod
@@ -198,19 +198,23 @@ class BeamSearch(Search):
         # input batch size
         n_chunks = list(inputs_val_dict.values())[0].shape[1]
 
-        aux_inputs = {name: np.tile(val, self.beam_size)
+        aux_inputs = {name: numpy.tile(val, self.beam_size)
                       for name, val in inputs_val_dict.iteritems()}
 
-        current_outputs = np.zeros((0, n_chunks, self.beam_size),
+        current_outputs = numpy.zeros((0, n_chunks, self.beam_size),
                                    dtype='int64')
-        curr_out_mask = np.ones((0, n_chunks, self.beam_size), dtype=floatX)
+        curr_out_mask = numpy.ones((0, n_chunks, self.beam_size), dtype=floatX)
 
         for i in xrange(max_length):
+            flat_aux_inputs = OrderedDict()
+            for name, value in aux_inputs.iteritems():
+                flat_aux_inputs[name] = \
+                    value.reshape((-1, self.real_batch_size))
             if i == 0:
-                cur_values = self.compute_initial(aux_inputs)
+                cur_values = self.compute_initial(flat_aux_inputs)
                 next_probs = cur_values['probs']
             else:
-                cur_values = self.compute_next(aux_inputs, cur_values)
+                cur_values = self.compute_next(flat_aux_inputs, cur_values)
                 next_probs = cur_values['probs']
 
             # Choose top beam_size
@@ -219,7 +223,7 @@ class BeamSearch(Search):
             indexes, top_probs = zip(*[self._top_probs(batch, self.beam_size,
                                                        unique=i == 0)
                                        for batch in prob_batches])
-            indexes = np.array(indexes)  # chunk, 2, beam
+            indexes = numpy.array(indexes)  # chunk, 2, beam
             # current_outputs.
             # here we suppose, that we have 2d outputs
             outputs = indexes[:, 1, :].copy()
@@ -237,17 +241,17 @@ class BeamSearch(Search):
 
             # construct next output
             outputs = outputs.reshape((1, n_chunks, self.beam_size))
-            current_outputs = np.append(current_outputs,
+            current_outputs = numpy.append(current_outputs,
                                         outputs.copy(), axis=0)
             # check if we meet eol
-            next_out_mask = np.ones((1, n_chunks, self.beam_size),
+            next_out_mask = numpy.ones((1, n_chunks, self.beam_size),
                                     dtype=floatX)
 
             next_out_mask[0, :, :] = (outputs[0, :, :] != eol_symbol)
-            curr_out_mask = np.append(curr_out_mask, next_out_mask.copy(),
+            curr_out_mask = numpy.append(curr_out_mask, next_out_mask.copy(),
                                       axis=0)
 
-            if np.all(current_outputs[-1, :, 0] == eol_symbol):
+            if numpy.all(current_outputs[-1, :, 0] == eol_symbol):
                 break
 
         # Select only best
