@@ -24,10 +24,10 @@ class Softmax(Brick):
         return tensor.nnet.softmax(x)
 
     @application
-    def categorical_cross_entropy(self, x, y_hat):
+    def categorical_cross_entropy(self, x, y):
         x =  x - x.max(axis=1).dimshuffle(0, 'x')
-        log_prob = x - T.log(T.exp(x).sum(axis=1).dimshuffle(0, 'x'))
-        cost = tensor.nnet.categorical_crossentropy(log_prob, y_hat).mean()
+        log_prob = x - tensor.log(tensor.exp(x).sum(axis=1).dimshuffle(0, 'x'))
+        cost = tensor.nnet.categorical_crossentropy(log_prob, y).mean()
         return cost
 
 @add_metaclass(ABCMeta)
