@@ -1,5 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
+from six.moves import range
 
 import numpy
 
@@ -56,16 +57,23 @@ class GreedySearch(Search):
 
 
 class BeamSearch(Search):
-    """Beam search
+    """Beam search.
 
     Parameters
     ----------
     beam_size : int
-        Size of beam
+        Size of beam.
     batch_size : int
-        Size of input batch
+        Size of input batch.
     sequence_generator : sequence generator
-        Sequence generator brick
+        Sequence generator brick.
+    attended : theano variable
+        Theano variable for attended in sequence generator.
+    attended_mask : theano variable
+        Theano variable for attended mask in sequence generator.
+    inputs_dict : dict
+        Dictionary of inputs {name: theano variable for input}. The
+        functions will be constructed with these inputs.
 
     """
     def __init__(self, beam_size, batch_size, sequence_generator, attended,
@@ -83,17 +91,13 @@ class BeamSearch(Search):
         self.real_batch_size = batch_size * beam_size
 
     def compile(self, *args, **kwargs):
-        """Compiles functions for beamsearch
-
-        Parameters
-        ----------
-        inputs : dict
-            Dictionary of named inputs
+        """Compiles functions for beam search.
 
         """
         generator = self.sequence_generator
         attended = self.attended
         attended_mask = self.attended_mask
+        # Construct initial values
         init_generated = generator.generate(attended=attended,
                                             attended_mask=attended_mask,
                                             iterate=False, n_steps=1,
@@ -104,9 +108,11 @@ class BeamSearch(Search):
                                        name='readouts')(init_cg.variables)[-1]
         init_probs = generator.readout.emitter._probs(init_readouts)
 
+        # Create theano function for initial values
         self.init_computer = function(self.inputs_dict.values(),
                                       init_generated.values() + [init_probs])
 
+        # Define inputs for next values computer
         cur_variables = OrderedDict()
         for name, value in init_generated.iteritems():
             cur_value = tensor.zeros_like(value)
@@ -129,12 +135,28 @@ class BeamSearch(Search):
         readouts_step = VariableFilter(application=generator.readout.emit,
                                        name='readouts')(cg_step.variables)[-1]
         next_probs = generator.readout.emitter._probs(readouts_step)
+        # Create theano function for next values
         self.next_computer = function(self.inputs_dict.values() +
                                       [cur_variables['states']],
                                       next_generated.values() + [next_probs])
         super(BeamSearch, self).compile(*args, **kwargs)
 
     def compute_next(self, inputs_dict, cur_vals=None):
+        """Computes next states, glimpses, outputs, and probabilities.
+
+        Parameters
+        ----------
+        inputs_dict : dict
+            Dictionary of inputs divided by chunks.
+        cur_vals : dict
+            Dictionary of current states, glimpses, and outputs.
+
+        Returns
+        -------
+        Dictionary of next state, glimpe, output, probabilities values
+        with names as returned by `generate_outputs`.
+
+        """
         inputs = [self.merge_chunks(input) for input
                   in inputs_dict.itervalues()]
         if cur_vals is None:
@@ -148,7 +170,7 @@ class BeamSearch(Search):
 
     @classmethod
     def _top_probs(cls, probs, beam_size, unique=False):
-        """Returns indexes of elements with highest probabilities
+        """Returns indexes of elements with highest probabilities.
 
         Parameters
         ----------
@@ -218,8 +240,8 @@ class BeamSearch(Search):
         Parameters
         ----------
         array : numpy array
-            2D or 3D (sequence length, beam size * batch size [, readout dim])
-            aray
+            2D or 3D (sequence length, beam size * batch size
+            [, readout dim]) aray
 
         Returns
         -------
@@ -240,18 +262,21 @@ class BeamSearch(Search):
         reshaped = reshaped.reshape(reshape)
         return reshaped.transpose(back_transpose)
 
-    def search(self, inputs_val_dict, start_symbol, eol_symbol=-1,
-               max_length=512, **kwargs):
-        """Performs beam search
+    def search(self, inputs_val_dict, eol_symbol=-1, max_length=512, **kwargs):
+        """Performs beam search.
 
         Parameters
         ----------
+        inputs_val_dict : dict
+            Dictionary of input values {name: value}. Input values may
+            be in a batch of size greater than 1, in this case, several
+            beam searches will be performed in parallel.
         eol_symbol : int
-            End of line symbol, the search stops when the
-            symbol is generated
+            End of sequence symbol, the search stops when the
+            symbol is generated.
         max_length : int
             Maximum sequence length, the search stops when it
-            is reached
+            is reached.
 
         Returns
         -------
@@ -259,20 +284,19 @@ class BeamSearch(Search):
 
         """
         super(BeamSearch, self).search(**kwargs)
-        # input batch size
-        n_chunks = list(inputs_val_dict.values())[0].shape[1]
-
+        # Inputs repeated beam_size times
         aux_inputs = OrderedDict(
             [(name,
               self.divide_by_chunks(numpy.tile(val, (1, self.beam_size))))
              for name, val in inputs_val_dict.iteritems()])
 
-        current_outputs = numpy.zeros((0, n_chunks, self.beam_size),
+        current_outputs = numpy.zeros((0, self.beam_size, self.batch_size),
                                       dtype='int64')
-        curr_out_mask = numpy.ones((0, n_chunks, self.beam_size), dtype=floatX)
+        curr_out_mask = numpy.ones((0, self.beam_size, self.batch_size),
+                                   dtype=floatX)
 
         cur_values = None
-        for i in xrange(max_length):
+        for i in range(max_length):
             cur_values = self.compute_next(aux_inputs, cur_values)
             next_probs = cur_values['probs']
 
@@ -280,7 +304,7 @@ class BeamSearch(Search):
             indexes, top_probs = zip(*[self._top_probs(next_probs[:, :, j],
                                                        self.beam_size,
                                                        unique=i == 0)
-                                       for j in xrange(self.batch_size)])
+                                       for j in range(self.batch_size)])
             indexes = numpy.array(indexes)  # chunk, 2, beam
             # current_outputs.
             # here we suppose, that we have 2d outputs
