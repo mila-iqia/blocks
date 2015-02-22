@@ -30,6 +30,7 @@ class Softmax(Brick):
         cost = tensor.nnet.categorical_crossentropy(log_prob, y).mean()
         return cost
 
+
 @add_metaclass(ABCMeta)
 class CostMatrix(Cost):
     """Base class for costs which can be calculated element-wise.
