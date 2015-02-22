@@ -1,20 +1,15 @@
-import logging
+from __future__ import print_function
 import tempfile
 
-import dill
+from six.moves import cPickle
 
 import blocks
 from blocks.extensions.saveload import SAVED_TO
 from examples.sqrt import main as sqrt_test
 from examples.mnist import main as mnist_test
 from examples.markov_chain.main import main as markov_chain_test
-from tests import silence_printing
-
-
-def setup():
-    # Silence Block's logger
-    logger = logging.getLogger(blocks.__name__)
-    logger.setLevel(logging.ERROR)
+from examples.reverse_words import main as reverse_words_test
+from tests import silence_printing, skip_if_not_available
 
 
 @silence_printing
@@ -27,22 +22,32 @@ def test_sqrt():
 
 @silence_printing
 def test_mnist():
-    f = tempfile.NamedTemporaryFile(delete=False)
-    filename = f.name
-    mnist_test(filename, 1)
-    with open(filename, "rb") as source:
-        main_loop = dill.load(source)
-    main_loop.find_extension("FinishAfter").set_conditions(after_n_epochs=2)
-    main_loop.run()
-    assert main_loop.log.status.epochs_done == 2
-
-test_mnist.setup = setup
+    skip_if_not_available(modules=['bokeh'])
+    with tempfile.NamedTemporaryFile() as f:
+        mnist_test(f.name, 1)
+        with open(f.name, "rb") as source:
+            main_loop = cPickle.load(source)
+        main_loop.find_extension("FinishAfter").set_conditions(
+            after_n_epochs=2)
+        main_loop.run()
+        assert main_loop.log.status.epochs_done == 2
 
 
 @silence_printing
 def test_markov_chain():
-    f = tempfile.NamedTemporaryFile(delete=False)
-    filename = f.name
-    markov_chain_test("train", filename, None, 10)
+    with tempfile.NamedTemporaryFile() as f:
+        markov_chain_test("train", f.name, None, 10)
 
-test_mnist.setup = setup
+
+@silence_printing
+def test_reverse_words():
+    skip_if_not_available(modules=['bokeh'])
+    old_limit = blocks.config.recursion_limit
+    blocks.config.recursion_limit = 100000
+    with tempfile.NamedTemporaryFile() as f_save,\
+            tempfile.NamedTemporaryFile() as f_data:
+        with open(f_data.name, 'wt') as data:
+            for i in range(10):
+                print("A line.", file=data)
+        reverse_words_test("train", f_save.name, 1, [f_data.name])
+    blocks.config.recursion_limit = old_limit

@@ -7,7 +7,7 @@ import logging
 import pprint
 import sys
 
-import dill
+from six.moves import cPickle
 import numpy
 import theano
 from theano import tensor
@@ -19,8 +19,9 @@ from blocks.bricks.sequence_generators import (
 from blocks.graph import ComputationGraph
 from blocks.datasets.streams import DataStream
 from blocks.datasets.schemes import ConstantScheme
-from blocks.algorithms import GradientDescent, SteepestDescent
+from blocks.algorithms import GradientDescent, Scale
 from blocks.initialization import Orthogonal, IsotropicGaussian, Constant
+from blocks.model import Model
 from blocks.monitoring import aggregation
 from blocks.extensions import FinishAfter, Printing
 from blocks.extensions.saveload import SerializeMainLoop
@@ -80,13 +81,13 @@ def main(mode, save_path, steps, num_batches):
 
         algorithm = GradientDescent(
             cost=cost, params=list(Selector(generator).get_params().values()),
-            step_rule=SteepestDescent(0.001))
+            step_rule=Scale(0.001))
         main_loop = MainLoop(
-            model=generator,
+            algorithm=algorithm,
             data_stream=DataStream(
                 MarkovChainDataset(rng, seq_len),
                 iteration_scheme=ConstantScheme(batch_size)),
-            algorithm=algorithm,
+            model=Model(cost),
             extensions=[FinishAfter(after_n_batches=num_batches),
                         TrainingDataMonitoring([cost], prefix="this_step",
                                                after_every_batch=True),
@@ -96,7 +97,7 @@ def main(mode, save_path, steps, num_batches):
                         Printing(every_n_batches=100)])
         main_loop.run()
     elif mode == "sample":
-        main_loop = dill.load(open(save_path, "rb"))
+        main_loop = cPickle.load(open(save_path, "rb"))
         generator = main_loop.model
 
         sample = ComputationGraph(generator.generate(

@@ -7,6 +7,8 @@ from six import add_metaclass
 
 from blocks.datasets.iterator import DataIterator
 
+floatX = theano.config.floatX
+
 
 @add_metaclass(ABCMeta)
 class AbstractDataStream(object):
@@ -223,6 +225,26 @@ class DataStreamMapping(DataStreamWrapper):
         if not self.add_sources:
             return image
         return data + image
+
+
+class ForceFloatX(DataStreamWrapper):
+    """Force all floating point numpy arrays to be floatX."""
+    def __init__(self, data_stream):
+        super(ForceFloatX, self).__init__(data_stream)
+
+    def get_data(self, request=None):
+        if request is not None:
+            raise ValueError
+        data = next(self.child_epoch_iterator)
+        result = []
+        for piece in data:
+            if (isinstance(piece, numpy.ndarray) and
+                    piece.dtype.kind == "f" and
+                    piece.dtype != floatX):
+                result.append(piece.astype(floatX))
+            else:
+                result.append(piece)
+        return tuple(result)
 
 
 class DataStreamFilter(DataStreamWrapper):

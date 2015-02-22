@@ -60,6 +60,15 @@ def test_computation_graph():
     assert W in cg5.variables
     assert w1 in cg5.variables
 
+    # Test scan
+    s, _ = theano.scan(lambda inp, accum: accum + inp,
+                       sequences=x,
+                       outputs_info=tensor.zeros_like(x[0]))
+    scan = s.owner.inputs[0].owner.op
+    cg6 = ComputationGraph(s)
+    assert cg6.scans == [scan]
+    assert all(v in cg6.scan_variables for v in scan.inputs + scan.outputs)
+
 
 def test_apply_noise():
     x = tensor.scalar()

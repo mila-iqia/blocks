@@ -1,43 +1,44 @@
 from __future__ import print_function
 import logging
 import pprint
-import sys
 import math
-import dill
 import numpy
 import os
+import operator
 
 import theano
 from six.moves import input
 from theano import tensor
 
-from blocks.bricks import Tanh, application
+from blocks.bricks import Tanh
 from blocks.bricks.lookup import LookupTable
-from blocks.bricks.recurrent import GatedRecurrent, Bidirectional
+from blocks.bricks.recurrent import SimpleRecurrent, Bidirectional
 from blocks.bricks.attention import SequenceContentAttention
 from blocks.bricks.parallel import Fork
 from blocks.bricks.sequence_generators import (
     SequenceGenerator, LinearReadout, SoftmaxEmitter, LookupFeedback)
+from blocks.config_parser import config
 from blocks.graph import ComputationGraph
 from blocks.datasets.streams import (
     DataStreamMapping, BatchDataStream, PaddingDataStream,
     DataStreamFilter)
-from blocks.datasets.text import OneBillionWord
+from blocks.datasets.text import OneBillionWord, TextFile
 from blocks.datasets.schemes import ConstantScheme
-from blocks.algorithms import (GradientDescent, SteepestDescent,
-                               GradientClipping, CompositeRule)
+from blocks.dump import load_parameter_values
+from blocks.algorithms import (GradientDescent, Scale,
+                               StepClipping, CompositeRule)
 from blocks.initialization import Orthogonal, IsotropicGaussian, Constant
+from blocks.model import Model
 from blocks.monitoring import aggregation
 from blocks.extensions import FinishAfter, Printing, Timing
-from blocks.extensions.saveload import SerializeMainLoop, LoadFromDump
+from blocks.extensions.saveload import SerializeMainLoop
 from blocks.extensions.monitoring import TrainingDataMonitoring
 from blocks.extensions.plot import Plot
 from blocks.main_loop import MainLoop
-from blocks.select import Selector
 from blocks.filter import VariableFilter
-from blocks.utils import named_copy, unpack, dict_union
+from blocks.utils import named_copy, dict_union
 
-sys.setrecursionlimit(100000)
+config.recursion_limit = 100000
 floatX = theano.config.floatX
 logger = logging.getLogger(__name__)
 
@@ -66,38 +67,67 @@ def reverse_words(sample):
     return (result,)
 
 
-class Transition(GatedRecurrent):
-    def __init__(self, attended_dim, **kwargs):
-        super(Transition, self).__init__(**kwargs)
-        self.attended_dim = attended_dim
-
-    @application(contexts=['attended', 'attended_mask'])
-    def apply(self, *args, **kwargs):
-        for context in Transition.apply.contexts:
-            kwargs.pop(context)
-        return super(Transition, self).apply(*args, **kwargs)
-
-    @apply.delegate
-    def apply_delegate(self):
-        return super(Transition, self).apply
-
-    def get_dim(self, name):
-        if name == 'attended':
-            return self.attended_dim
-        if name == 'attended_mask':
-            return 0
-        return super(Transition, self).get_dim(name)
+def _lower(s):
+    return s.lower()
 
 
-def main(mode, save_path, num_batches, from_dump):
+def _transpose(data):
+    return tuple(array.T for array in data)
+
+
+def _filter_long(data):
+    return len(data[0]) <= 100
+
+
+def _is_nan(log):
+    return math.isnan(log.current_row.total_gradient_norm)
+
+
+def main(mode, save_path, num_batches, data_path=None):
+    # Experiment configuration
+    dimension = 100
+    readout_dimension = len(char2code)
+
+    # Build bricks
+    encoder = Bidirectional(
+        SimpleRecurrent(dim=dimension, activation=Tanh()),
+        weights_init=Orthogonal())
+    fork = Fork([name for name in encoder.prototype.apply.sequences
+                 if name != 'mask'],
+                weights_init=IsotropicGaussian(0.1),
+                biases_init=Constant(0))
+    fork.input_dim = dimension
+    fork.output_dims = {name: dimension for name in fork.input_names}
+    lookup = LookupTable(readout_dimension, dimension,
+                         weights_init=IsotropicGaussian(0.1))
+    transition = SimpleRecurrent(
+        activation=Tanh(),
+        dim=dimension, name="transition")
+    attention = SequenceContentAttention(
+        state_names=transition.apply.states,
+        sequence_dim=2 * dimension, match_dim=dimension, name="attention")
+    readout = LinearReadout(
+        readout_dim=readout_dimension, source_names=["states"],
+        emitter=SoftmaxEmitter(name="emitter"),
+        feedbacker=LookupFeedback(readout_dimension, dimension),
+        name="readout")
+    generator = SequenceGenerator(
+        readout=readout, transition=transition, attention=attention,
+        weights_init=IsotropicGaussian(0.1), biases_init=Constant(0),
+        name="generator")
+    generator.push_initialization_config()
+    transition.weights_init = Orthogonal()
+
     if mode == "train":
-        # Experiment configuration
-        dimension = 100
-        readout_dimension = len(char2code)
-
         # Data processing pipeline
+        dataset_options = dict(dictionary=char2code, level="character",
+                               preprocess=_lower)
+        if data_path:
+            dataset = TextFile(data_path, **dataset_options)
+        else:
+            dataset = OneBillionWord("training", [99], **dataset_options)
         data_stream = DataStreamMapping(
-            mapping=lambda data: tuple(array.T for array in data),
+            mapping=_transpose,
             data_stream=PaddingDataStream(
                 BatchDataStream(
                     iteration_scheme=ConstantScheme(10),
@@ -105,61 +135,15 @@ def main(mode, save_path, num_batches, from_dump):
                         mapping=reverse_words,
                         add_sources=("targets",),
                         data_stream=DataStreamFilter(
-                            predicate=lambda data: len(data[0]) <= 100,
-                            data_stream=OneBillionWord(
-                                "training", [99], char2code,
-                                level="character", preprocess=str.lower)
+                            predicate=_filter_long,
+                            data_stream=dataset
                             .get_default_stream())))))
 
-        # Build the model
+        # Build the cost computation graph
         chars = tensor.lmatrix("features")
         chars_mask = tensor.matrix("features_mask")
         targets = tensor.lmatrix("targets")
         targets_mask = tensor.matrix("targets_mask")
-
-        encoder = Bidirectional(
-            GatedRecurrent(dim=dimension, activation=Tanh()),
-            weights_init=Orthogonal())
-        encoder.initialize()
-        fork = Fork([name for name in encoder.prototype.apply.sequences
-                     if name != 'mask'],
-                    weights_init=IsotropicGaussian(0.1),
-                    biases_init=Constant(0))
-        fork.input_dim = dimension
-        fork.output_dims = {name: dimension for name in fork.input_names}
-        fork.initialize()
-        lookup = LookupTable(readout_dimension, dimension,
-                             weights_init=IsotropicGaussian(0.1))
-        lookup.initialize()
-        transition = Transition(
-            activation=Tanh(),
-            dim=dimension, attended_dim=2 * dimension, name="transition")
-        attention = SequenceContentAttention(
-            state_names=transition.apply.states,
-            match_dim=dimension, name="attention")
-        readout = LinearReadout(
-            readout_dim=readout_dimension, source_names=["states"],
-            emitter=SoftmaxEmitter(name="emitter"),
-            feedbacker=LookupFeedback(readout_dimension, dimension),
-            name="readout")
-        generator = SequenceGenerator(
-            readout=readout, transition=transition, attention=attention,
-            weights_init=IsotropicGaussian(0.1), biases_init=Constant(0),
-            name="generator")
-        generator.push_initialization_config()
-        transition.weights_init = Orthogonal()
-        generator.initialize()
-        bricks = [encoder, fork, lookup, generator]
-
-        # Give an idea of what's going on
-        params = Selector(bricks).get_params()
-        logger.info("Parameters:\n" +
-                    pprint.pformat(
-                        [(key, value.get_value().shape) for key, value
-                         in params.items()],
-                        width=120))
-
-        # Build the cost computation graph
         batch_cost = generator.cost(
             targets, targets_mask,
             attended=encoder.apply(
@@ -172,16 +156,27 @@ def main(mode, save_path, num_batches, from_dump):
         cost.name = "sequence_log_likelihood"
         logger.info("Cost graph is built")
 
+        # Give an idea of what's going on
+        model = Model(cost)
+        params = model.get_params()
+        logger.info("Parameters:\n" +
+                    pprint.pformat(
+                        [(key, value.get_value().shape) for key, value
+                         in params.items()],
+                        width=120))
+
+        # Initialize parameters
+        for brick in model.get_top_bricks():
+            brick.initialize()
+
         # Fetch variables useful for debugging
         max_length = named_copy(chars.shape[0], "max_length")
         cost_per_character = named_copy(
             aggregation.mean(batch_cost, batch_size * max_length),
             "character_log_likelihood")
         cg = ComputationGraph(cost)
-        energies = unpack(
-            VariableFilter(application=readout.readout, name="output")(
-                cg.variables),
-            singleton=True)
+        (energies,) = VariableFilter(
+            application=readout.readout, name="output")(cg.variables)
         min_energy = named_copy(energies.min(), "min_energy")
         max_energy = named_copy(energies.max(), "max_energy")
         (activations,) = VariableFilter(
@@ -192,9 +187,10 @@ def main(mode, save_path, num_batches, from_dump):
 
         # Define the training algorithm.
         algorithm = GradientDescent(
-            cost=cost, step_rule=CompositeRule([GradientClipping(10.0),
-                                                SteepestDescent(0.01)]))
+            cost=cost, step_rule=CompositeRule([StepClipping(10.0),
+                                                Scale(0.01)]))
 
+        # More variables for debugging
         observables = [
             cost, min_energy, max_energy, mean_activation,
             batch_size, max_length, cost_per_character,
@@ -205,31 +201,28 @@ def main(mode, save_path, num_batches, from_dump):
             observables.append(named_copy(
                 algorithm.gradients[param].norm(2), name + "_grad_norm"))
 
+        # Construct the main loop and start training!
+        average_monitoring = TrainingDataMonitoring(
+            observables, prefix="average", every_n_batches=10)
         main_loop = MainLoop(
-            model=bricks,
+            model=model,
             data_stream=data_stream,
             algorithm=algorithm,
-            extensions=([LoadFromDump(from_dump)] if from_dump else []) +
-            [Timing(),
+            extensions=[
+                Timing(),
                 TrainingDataMonitoring(observables, after_every_batch=True),
-                TrainingDataMonitoring(observables, prefix="average",
-                                       every_n_batches=10),
+                average_monitoring,
                 FinishAfter(after_n_batches=num_batches)
-                .add_condition(
-                    "after_batch",
-                    lambda log:
-                        math.isnan(log.current_row.total_gradient_norm)),
+                .add_condition("after_batch", _is_nan),
                 Plot(os.path.basename(save_path),
-                     [["average_" + cost.name],
-                      ["average_" + cost_per_character.name]],
+                     [[average_monitoring.record_name(cost)],
+                      [average_monitoring.record_name(cost_per_character)]],
                      every_n_batches=10),
                 SerializeMainLoop(save_path, every_n_batches=500,
                                   save_separately=["model", "log"]),
                 Printing(every_n_batches=1)])
         main_loop.run()
     elif mode == "test":
-        with open(save_path, "rb") as source:
-            encoder, fork, lookup, generator = dill.load(source)
         logger.info("Model is loaded")
         chars = tensor.lmatrix("features")
         generated = generator.generate(
@@ -238,7 +231,9 @@ def main(mode, save_path, num_batches, from_dump):
                 **dict_union(fork.apply(lookup.lookup(chars),
                              return_dict=True))),
             attended_mask=tensor.ones(chars.shape))
-        sample_function = ComputationGraph(generated).get_theano_function()
+        model = Model(generated)
+        model.set_param_values(load_parameter_values(save_path))
+        sample_function = model.get_theano_function()
         logging.info("Sampling function is compiled")
 
         while True:
@@ -270,6 +265,6 @@ def main(mode, save_path, num_batches, from_dump):
                 if sample == target:
                     message += " CORRECT!"
                 messages.append((cost, message))
-            messages.sort(key=lambda tuple_: -tuple_[0])
+            messages.sort(key=operator.itemgetter(0), reverse=True)
             for _, message in messages:
                 print(message)

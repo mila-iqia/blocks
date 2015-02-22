@@ -5,10 +5,9 @@ import theano
 from numpy.testing import assert_allclose, assert_raises
 from theano import tensor
 
-from blocks.algorithms import (GradientDescent, GradientClipping,
-                               CompositeRule, SteepestDescent,
-                               StepRule, Momentum, AdaDelta, BasicRMSProp,
-                               RMSProp)
+from blocks.algorithms import (GradientDescent, StepClipping, CompositeRule,
+                               Scale, StepRule, BasicMomentum, Momentum,
+                               AdaDelta, BasicRMSProp, RMSProp, Adam)
 from blocks.utils import shared_floatx
 
 
@@ -38,15 +37,26 @@ def test_gradient_descent_with_gradients():
     assert_allclose(W.get_value(), -0.5 * W_start_value)
 
 
-def test_momentum():
+def test_basic_momentum():
     a = shared_floatx([3, 4])
     cost = (a ** 2).sum()
-    steps, updates = Momentum(0.5).compute_steps(
+    steps, updates = BasicMomentum(0.5).compute_steps(
         OrderedDict([(a, tensor.grad(cost, a))]))
     f = theano.function([], [steps[a]], updates=updates)
     assert_allclose(f()[0], [6., 8.])
     assert_allclose(f()[0], [9., 12.])
     assert_allclose(f()[0], [10.5, 14.])
+
+
+def test_momentum():
+    a = shared_floatx([3, 4])
+    cost = (a ** 2).sum()
+    steps, updates = Momentum(0.1, 0.5).compute_steps(
+        OrderedDict([(a, tensor.grad(cost, a))]))
+    f = theano.function([], [steps[a]], updates=updates)
+    assert_allclose(f()[0], [0.6, 0.8])
+    assert_allclose(f()[0], [0.9, 1.2])
+    assert_allclose(f()[0], [1.05, 1.4])
 
 
 def test_adadelta():
@@ -112,9 +122,9 @@ def test_rmsprop():
     assert_allclose(f()[0], [0.06172134, 0.064699664])
 
 
-def test_gradient_clipping():
-    rule1 = GradientClipping(4)
-    rule2 = GradientClipping(5)
+def test_step_clipping():
+    rule1 = StepClipping(4)
+    rule2 = StepClipping(5)
 
     gradients = {0: shared_floatx(3.0), 1: shared_floatx(4.0)}
     clipped1, _ = rule1.compute_steps(gradients)
@@ -126,7 +136,7 @@ def test_gradient_clipping():
 
 
 def test_composite_rule():
-    rule = CompositeRule([GradientClipping(4), SteepestDescent(0.1)])
+    rule = CompositeRule([StepClipping(4), Scale(0.1)])
     gradients = {0: shared_floatx(3.0), 1: shared_floatx(4.0)}
     result, _ = rule.compute_steps(gradients)
     assert_allclose(result[0].eval(), 12 / 50.0)
@@ -136,9 +146,21 @@ def test_composite_rule():
         def __init__(self, updates):
             self.updates = updates
 
-        def compute_steps(self, gradients):
-            return gradients, self.updates
+        def compute_steps(self, previous_steps):
+            return previous_steps, self.updates
 
     rule = CompositeRule([RuleWithUpdates([(1, 2)]),
                           RuleWithUpdates([(3, 4)])])
     assert rule.compute_steps(None)[1] == [(1, 2), (3, 4)]
+
+
+def test_adam():
+    a = shared_floatx([3, 4])
+    cost = (a ** 2).sum()
+    steps, updates = Adam().compute_steps(
+        OrderedDict([(a, tensor.grad(cost, a))]))
+    f = theano.function([], [steps[a]], updates=updates)
+
+    assert_allclose(f()[0], [0.0002, 0.0002], rtol=1e-5)
+    assert_allclose(f()[0], [0.00105263, 0.00105263], rtol=1e-5)
+    assert_allclose(f()[0], [0.00073801, 0.00073801], rtol=1e-5)

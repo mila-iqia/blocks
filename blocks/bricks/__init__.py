@@ -131,7 +131,8 @@ class Initializable(Brick):
         if getattr(self, '_rng', None) is not None:
             return self._rng
         else:
-            return numpy.random.RandomState(self.seed)
+            self._rng = numpy.random.RandomState(self.seed)
+            return self._rng
 
     @rng.setter
     def rng(self, rng):
@@ -204,6 +205,14 @@ class Linear(Initializable, Feedforward):
         super(Linear, self).__init__(**kwargs)
         self.input_dim = input_dim
         self.output_dim = output_dim
+
+    @property
+    def W(self):
+        return self.params[0]
+
+    @property
+    def b(self):
+        return self.params[1]
 
     def _allocate(self):
         W = shared_floatx_zeros((self.input_dim, self.output_dim), name='W')
@@ -299,8 +308,8 @@ class Maxout(Brick):
         """
         last_dim = input_.shape[-1]
         output_dim = last_dim // self.num_pieces
-        new_shape = ([input_.shape[i] for i in range(input_.ndim - 1)]
-                     + [output_dim, self.num_pieces])
+        new_shape = ([input_.shape[i] for i in range(input_.ndim - 1)] +
+                     [output_dim, self.num_pieces])
         output = tensor.max(input_.reshape(new_shape, ndim=input_.ndim + 1),
                             axis=input_.ndim)
         return output
@@ -455,14 +464,21 @@ class Sequence(Brick):
         self.children = [app.brick for app in application_methods
                          if not (app.brick in seen or seen.add(app.brick))]
 
-    @application(inputs=['input_'], outputs=['output'])
-    def apply(self, input_):
-        child_input = input_
-        for _, application_method in zip(self.children,
-                                         self.application_methods):
+    @application
+    def apply(self, *args):
+        child_input = args
+        for application_method in self.application_methods:
             output = application_method(*pack(child_input))
             child_input = output
         return output
+
+    @apply.property('inputs')
+    def apply_inputs(self):
+        return self.application_methods[0].inputs
+
+    @apply.property('outputs')
+    def apply_outputs(self):
+        return self.application_methods[-1].outputs
 
 
 class MLP(Sequence, Initializable, Feedforward):

@@ -5,12 +5,12 @@ from theano import tensor
 
 from blocks.bricks import Tanh
 from blocks.bricks.base import application
-from blocks.bricks.parallel import Distribute
-from blocks.bricks.recurrent import Recurrent, GatedRecurrent
-from blocks.bricks.attention import SequenceContentAttention
+from blocks.bricks.recurrent import SimpleRecurrent, GatedRecurrent
+from blocks.bricks.attention import (
+    SequenceContentAttention, AttentionRecurrent)
 from blocks.bricks.sequence_generators import (
     SequenceGenerator, LinearReadout, TrivialEmitter,
-    SoftmaxEmitter, LookupFeedback, AttentionTransition)
+    SoftmaxEmitter, LookupFeedback)
 from blocks.graph import ComputationGraph
 from blocks.initialization import Orthogonal, IsotropicGaussian, Constant
 
@@ -104,7 +104,7 @@ def test_integer_sequence_generator():
     assert costs_val.shape == (n_steps, batch_size)
 
 
-class TestTransition(Recurrent):
+class TestTransition(SimpleRecurrent):
     def __init__(self, attended_dim, **kwargs):
         super(TestTransition, self).__init__(**kwargs)
         self.attended_dim = attended_dim
@@ -127,7 +127,7 @@ class TestTransition(Recurrent):
         return super(TestTransition, self).get_dim(name)
 
 
-def test_attention_transition():
+def test_with_attention():
     inp_dim = 2
     inp_len = 10
     attended_dim = 3
@@ -135,15 +135,11 @@ def test_attention_transition():
     batch_size = 4
     n_steps = 30
 
-    transition = TestTransition(dim=inp_dim, attended_dim=attended_dim,
-                                name="transition")
-    attention = SequenceContentAttention(transition.apply.states,
-                                         match_dim=inp_dim, name="attention")
-    distribute = Distribute([name for name in transition.apply.sequences
-                             if name != 'mask'],
-                            attention.take_look.outputs[0])
-    att_trans = AttentionTransition(transition, attention, distribute,
-                                    name="att_trans")
+    transition = TestTransition(dim=inp_dim, attended_dim=attended_dim)
+    attention = SequenceContentAttention(
+        transition.apply.states, match_dim=inp_dim, name="attention")
+    att_trans = AttentionRecurrent(
+        transition, attention, add_contexts=False)
     att_trans.weights_init = IsotropicGaussian(0.01)
     att_trans.biases_init = Constant(0)
     att_trans.initialize()
@@ -153,7 +149,7 @@ def test_attention_transition():
     inputs = tensor.tensor3("inputs")
     inputs_mask = tensor.matrix("inputs_mask")
     states, glimpses, weights = att_trans.apply(
-        input_=inputs, mask=inputs_mask,
+        inputs=inputs, mask=inputs_mask,
         attended=attended, attended_mask=attended_mask)
     assert states.ndim == 3
     assert glimpses.ndim == 3
@@ -180,13 +176,13 @@ def test_attention_transition():
 
     # Test SequenceGenerator using AttentionTransition
     generator = SequenceGenerator(
-        LinearReadout(readout_dim=inp_dim, source_names=["state"],
+        LinearReadout(readout_dim=inp_dim, source_names=["states"],
                       emitter=TestEmitter(name="emitter"),
                       name="readout"),
         transition=transition,
         attention=attention,
         weights_init=IsotropicGaussian(0.01), biases_init=Constant(0),
-        name="generator")
+        add_contexts=False, name="generator")
 
     outputs = tensor.tensor3('outputs')
     costs = generator.cost(outputs, attended=attended,

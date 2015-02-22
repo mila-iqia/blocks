@@ -7,6 +7,8 @@ import theano
 from theano import Variable
 from theano.gof import graph
 from theano.sandbox.rng_mrg import MRG_RandomStreams
+from theano.scan_module.scan_op import Scan
+from toolz import unique
 
 from blocks import config
 from blocks.roles import add_role, AUXILIARY
@@ -48,6 +50,10 @@ class ComputationGraph(object):
         Any variable that is not part of :attr:`inputs` or :attr:`outputs`.
     variables : list of :class:`~tensor.TensorVariable`
         All variables (including auxiliary) in the managed graph.
+    scans : list of :class:`~theano.scan_module.scan_op.Scan`
+        All Scan ops used in this computation graph.
+    scan_variables : list of :class:`~tensor.TensorVariable`
+        All variables of the inner graphs of Scan ops.
     updates : :class:`~tensor.TensorSharedVariable` updates
         All the updates found attached to the annotations.
 
@@ -82,8 +88,18 @@ class ComputationGraph(object):
         return [var for var in self.variables if hasattr(var.tag, 'roles') and
                 AUXILIARY in var.tag.roles]
 
+    @property
+    def scan_variables(self):
+        """Variables of Scan ops."""
+        return list(chain(*[g.variables for g in self._scan_graphs]))
+
     def _get_variables(self):
-        """Collect variables, updates and auxiliary variables."""
+        """Collect variables, updates and auxiliary variables.
+
+        In addition collects all :class:`.Scan` ops and recurses in the
+        respective inner Theano graphs.
+
+        """
         updates = OrderedDict()
 
         shared_outputs = [o for o in self.outputs if is_shared_variable(o)]
@@ -95,6 +111,10 @@ class ComputationGraph(object):
             # duplicates
             inputs = graph.inputs(self.outputs)
             sorted_apply_nodes = graph.io_toposort(inputs, usual_outputs)
+            self.scans = list(unique([node.op for node in sorted_apply_nodes
+                                     if isinstance(node.op, Scan)]))
+            self._scan_graphs = [ComputationGraph(scan.outputs)
+                                 for scan in self.scans]
 
             seen = set()
             main_vars = [var for var in list(chain(
@@ -160,8 +180,8 @@ class ComputationGraph(object):
 
         """
         role_variables = [var for var in self.variables
-                          if hasattr(var.tag, "roles")
-                          and not is_shared_variable(var)]
+                          if hasattr(var.tag, "roles") and
+                          not is_shared_variable(var)]
         value_holders = [shared_like(var) for var in role_variables]
         function = self.get_theano_function(zip(value_holders, role_variables))
         function(*(data[input_.name] for input_ in self.inputs))

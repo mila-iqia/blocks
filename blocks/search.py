@@ -1,17 +1,14 @@
-
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 
 import numpy as np
 
-from theano import function
 from theano import config
+from theano import function
 from theano import tensor
 
-from blocks.bricks.sequence_generators import BaseSequenceGenerator
 from blocks.filter import VariableFilter
 from blocks.graph import ComputationGraph
-from blocks.utils import dict_union
 
 floatX = config.floatX
 
@@ -21,7 +18,9 @@ class Search(object):
 
     Parameters
     ----------
-        :param sequence_generator : sequence generator to be used
+    sequence_generator : sequence generator
+        Sequence generator to be used
+
     """
     __metaclass__ = ABCMeta
 
@@ -35,13 +34,16 @@ class Search(object):
 
     @abstractmethod
     def search(self, beam_size, **kwargs):
-        """Performs search
+        r"""Performs search
 
         Parameters
         ----------
-            **kwargs : Arguments needed by sequence generator
+        \*\*kwargs :
+            Arguments needed by sequence generator
 
-        outputs : Generated sequence
+        Returns
+        -------
+        Generated sequences
         """
         if not self.compiled:
             self.compile()
@@ -58,9 +60,12 @@ class BeamSearch(Search):
 
     Parameters
     ----------
-    beam_size : int, size of beam
-    batch_size : int, size of batch, should be dividable by `beam_size`
-    sequence_generator : a sequence generator brick
+    beam_size : int
+        Size of beam
+    batch_size : int
+        Size of input batch
+    sequence_generator : sequence generator
+        Sequence generator brick
 
     """
     def __init__(self, beam_size, batch_size, sequence_generator, attended,
@@ -131,13 +136,13 @@ class BeamSearch(Search):
                                       next_generated.values() + [next_probs])
         super(BeamSearch, self).compile(*args, **kwargs)
 
-    def compute_initial(self, attended, attended_mask):
-        inits = self.init_computer(attended, attended_mask)
+    def compute_initial(self, inputs_dict):
+        inits = self.init_computer(inputs_dict.values())
         return OrderedDict(zip(self.generate_names + ['probs'], inits))
 
-    def compute_next(self, attended, attended_mask, cur_vals):
-        next_val = self.next_computer([attended, attended_mask,
-                                       cur_vals['states']])
+    def compute_next(self, inputs_dict, cur_vals):
+        next_val = self.next_computer(inputs_dict.values() +
+                                      [cur_vals['states']])
         return OrderedDict(zip(self.generate_names + ['probs'], next_val))
 
     @classmethod
@@ -173,33 +178,31 @@ class BeamSearch(Search):
         new_outputs = new_outputs.reshape(outputs.shape)
         return new_outputs.copy()
 
-    def search(self, start_symbol, eol_symbol=-1, max_length=512,
-               **kwargs):
+    def search(self, inputs_val_dict, start_symbol, eol_symbol=-1,
+               max_length=512, **kwargs):
         """Performs greedy search
 
         Parameters
         ----------
-        eol_symbol: End of line symbol, the search stops when the
-               symbol is generated
-        max_length: Maximum sequence length, the search stops when it
-               is reached
+        eol_symbol : int
+            End of line symbol, the search stops when the
+            symbol is generated
+        max_length : int
+            Maximum sequence length, the search stops when it
+            is reached
 
         Returns
         -------
-        Most probable sequence, corresponding probabilities and costs
-
-        .. note: Contexts are expected as keyword arguments
+        Most probable sequences, corresponding probabilities and costs
 
         """
         super(BeamSearch, self).search(**kwargs)
-        attended_vals = kwargs['attended']
-        attended_mask_vals = kwargs['attended_mask']
-
-        n_chunks = attended_vals.shape[1] # input batch size
+        # input batch size
+        n_chunks = list(inputs_val_dict.values())[0].shape[1]
         real_batch_size = n_chunks * self.beam_size
 
-        aux_attended = np.tile(attended_vals, self.beam_size)
-        aux_attended_mask = np.tile(attended_mask_vals, self.beam_size)
+        aux_inputs = {name: np.tile(val, self.beam_size)
+                      for name, val in inputs_val_dict.iteritems()}
 
         current_outputs = np.zeros((0, n_chunks, self.beam_size),
                                    dtype='int64')
@@ -207,12 +210,10 @@ class BeamSearch(Search):
 
         for i in xrange(max_length):
             if i == 0:
-                cur_values = self.compute_initial(aux_attended,
-                                                  aux_attended_mask)
+                cur_values = self.compute_initial(aux_inputs)
                 next_probs = cur_values['probs']
             else:
-                cur_values = self.compute_next(aux_attended, aux_attended_mask,
-                                               cur_values)
+                cur_values = self.compute_next(aux_inputs, cur_values)
                 next_probs = cur_values['probs']
 
             # Choose top beam_size
@@ -232,6 +233,9 @@ class BeamSearch(Search):
             curr_out_mask = self._rearrange(curr_out_mask, rearrange_ind)
             for name in cur_values:
                 cur_values[name] = self._rearrange(cur_values[name],
+                                                   rearrange_ind)
+            for name in aux_inputs:
+                aux_inputs[name] = self._rearrange(aux_inputs[name],
                                                    rearrange_ind)
 
             # construct next output

@@ -41,6 +41,9 @@ def add_role(var, role):
 
 class VariableRole(object):
     """Base class for all variable roles."""
+    def __eq__(self, other):
+        return self.__class__ == other.__class__
+
     def __repr__(self):
         return self.__class__.__name__[:-4].upper()
 

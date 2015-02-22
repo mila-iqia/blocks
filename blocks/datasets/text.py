@@ -51,9 +51,11 @@ class TextFile(Dataset):
     ...     _ = f.write("This is a sentence\n")
     ...     _ = f.write("This another one")
     >>> dictionary = {'<UNK>': 0, '</S>': 1, 'this': 2, 'a': 3, 'one': 4}
+    >>> def lower(s):
+    ...     return s.lower()
     >>> text_data = TextFile(files=['sentences.txt'],
     ...                      dictionary=dictionary, bos_token=None,
-    ...                      preprocess=str.lower)
+    ...                      preprocess=lower)
     >>> for data in text_data.get_default_stream().get_epoch_iterator():
     ...     print(data)
     ([2, 0, 3, 0, 1],)

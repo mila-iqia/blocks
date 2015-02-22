@@ -172,8 +172,8 @@ of size 256.
 
 As our algorithm we will use straightforward SGD with a fixed learning rate.
 
->>> from blocks.algorithms import GradientDescent, SteepestDescent
->>> algorithm = GradientDescent(cost=cost, step_rule=SteepestDescent(learning_rate=0.1))
+>>> from blocks.algorithms import GradientDescent, Scale
+>>> algorithm = GradientDescent(cost=cost, step_rule=Scale(learning_rate=0.1))
 
 During training we will want to monitor the performance of our model on
 a separate set of examples. Let's create a new data stream for that.
