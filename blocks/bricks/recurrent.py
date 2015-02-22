@@ -98,8 +98,11 @@ def recurrent(*args, **kwargs):
                     problem.
 
             """
-            # Extract arguments related to iteration.
+            # Extract arguments related to iteration and immediately relay the
+            # call to the wrapped function if `iterate=False`
             iterate = kwargs.pop('iterate', True)
+            if not iterate:
+                return application_function(brick, *args, **kwargs)
             reverse = kwargs.pop('reverse', False)
             return_initial_states = kwargs.pop('return_initial_states', False)
 
@@ -169,17 +172,14 @@ def recurrent(*args, **kwargs):
                 states_given[name] = tensor.unbroadcast(state,
                                                         *range(state.ndim))
 
-            # Apply methods
-            if not iterate:
-                return application_function(brick, **kwargs)
-
             def scan_function(*args):
                 args = list(args)
                 arg_names = (list(sequences_given) + list(states_given) +
                              list(contexts_given))
                 kwargs = OrderedDict(zip(arg_names, args))
                 kwargs.update(rest_kwargs)
-                outputs = application_function(brick, **kwargs)
+                outputs = getattr(brick, application_function.__name__)(
+                    iterate=False, **kwargs)
                 # We want to save the computation graph returned by the
                 # `application_function` when it is called inside the
                 # `theano.scan`.
