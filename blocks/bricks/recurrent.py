@@ -176,7 +176,7 @@ def recurrent(*args, **kwargs):
                 args = list(args)
                 arg_names = (list(sequences_given) + list(states_given) +
                              list(contexts_given))
-                kwargs = OrderedDict(zip(arg_names, args))
+                kwargs = dict(zip(arg_names, args))
                 kwargs.update(rest_kwargs)
                 outputs = getattr(brick, application_function.__name__)(
                     iterate=False, **kwargs)
