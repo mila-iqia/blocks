@@ -33,7 +33,7 @@ class Search(object):
         self.compiled = True
 
     @abstractmethod
-    def search(self, beam_size, **kwargs):
+    def search(self, **kwargs):
         r"""Performs search
 
         Parameters
@@ -69,20 +69,18 @@ class BeamSearch(Search):
 
     """
     def __init__(self, beam_size, batch_size, sequence_generator, attended,
-                 y, attended_mask, y_mask, inputs_dict, inputs):
+                 attended_mask, inputs_dict):
         super(BeamSearch, self).__init__(sequence_generator)
         self.beam_size = beam_size
         self.batch_size = batch_size
         self.sequence_generator = sequence_generator
         self.attended = attended
-        self.y = y
         self.attended_mask = attended_mask
-        self.y_mask = y_mask
         self.inputs_dict = inputs_dict
-        self.inputs = inputs
         self.generate_names = sequence_generator.generate_outputs()
         self.init_computer = None
         self.next_computer = None
+        self.real_batch_size = batch_size * beam_size
 
     def compile(self, *args, **kwargs):
         """Compiles functions for beamsearch
@@ -99,14 +97,14 @@ class BeamSearch(Search):
         init_generated = generator.generate(attended=attended,
                                             attended_mask=attended_mask,
                                             iterate=False, n_steps=1,
-                                            batch_size=self.batch_size)
+                                            batch_size=self.real_batch_size)
         init_generated = OrderedDict(zip(self.generate_names, init_generated))
         init_cg = ComputationGraph(init_generated.values())
         init_readouts = VariableFilter(application=generator.readout.emit,
                                        name='readouts')(init_cg.variables)[-1]
         init_probs = generator.readout.emitter._probs(init_readouts)
 
-        self.init_computer = function(self.inputs,
+        self.init_computer = function(self.inputs_dict.values(),
                                       init_generated.values() + [init_probs])
 
         cur_variables = OrderedDict()
@@ -124,14 +122,14 @@ class BeamSearch(Search):
                                             attended_mask=attended_mask,
                                             iterate=False,
                                             n_steps=1,
-                                            batch_size=self.batch_size,
+                                            batch_size=self.real_batch_size,
                                             **generator_inputs)
         next_generated = OrderedDict(zip(self.generate_names, next_generated))
         cg_step = ComputationGraph(next_generated.values())
         readouts_step = VariableFilter(application=generator.readout.emit,
                                        name='readouts')(cg_step.variables)[-1]
         next_probs = generator.readout.emitter._probs(readouts_step)
-        self.next_computer = function(self.inputs.values() +
+        self.next_computer = function(self.inputs_dict.values() +
                                       [cur_variables['states']],
                                       next_generated.values() + [next_probs])
         super(BeamSearch, self).compile(*args, **kwargs)
@@ -199,7 +197,6 @@ class BeamSearch(Search):
         super(BeamSearch, self).search(**kwargs)
         # input batch size
         n_chunks = list(inputs_val_dict.values())[0].shape[1]
-        real_batch_size = n_chunks * self.beam_size
 
         aux_inputs = {name: np.tile(val, self.beam_size)
                       for name, val in inputs_val_dict.iteritems()}
@@ -258,4 +255,3 @@ class BeamSearch(Search):
         curr_out_mask = curr_out_mask[:, :, 0]
 
         return current_outputs, curr_out_mask
-        raise NotImplementedError()  # TODO: remove when implemented
