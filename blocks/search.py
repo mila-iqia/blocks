@@ -134,24 +134,27 @@ class BeamSearch(Search):
                                       next_generated.values() + [next_probs])
         super(BeamSearch, self).compile(*args, **kwargs)
 
-    def compute_initial(self, inputs_dict):
-        inits = self.init_computer(*inputs_dict.values())
-        return OrderedDict(zip(self.generate_names + ['probs'], inits))
-
-    def compute_next(self, inputs_dict, cur_vals):
-        next_val = self.next_computer(*(inputs_dict.values() +
-                                        [cur_vals['states']]))
-        return OrderedDict(zip(self.generate_names + ['probs'], next_val))
+    def compute_next(self, inputs_dict, cur_vals=None):
+        inputs = [self.merge_chunks(input) for input
+                  in inputs_dict.itervalues()]
+        if cur_vals is None:
+            next_values = self.init_computer(*inputs)
+        else:
+            states = self.merge_chunks(cur_vals['states'])
+            next_values = self.next_computer(*(inputs + [states[0]]))
+        next_values = [self.divide_by_chunks(value.reshape((1,) + value.shape))
+                       for value in next_values]
+        return OrderedDict(zip(self.generate_names + ['probs'], next_values))
 
     @classmethod
     def _top_probs(cls, probs, beam_size, unique=False):
-        """
-        Returns indexes of elements with highest probabilities
+        """Returns indexes of elements with highest probabilities
 
         Parameters
         ----------
         probs : numpy array
-            A 3d array of probabilities (time, batch, readout_dim)
+            A 3d array of probabilities (length of sequence, batch,
+            readout_dim)
         beam_size : int
             Beam size, number of top probs to return
 
@@ -175,18 +178,71 @@ class BeamSearch(Search):
         indexes = numpy.unravel_index(args, probs.shape)
         return indexes, probs[indexes]
 
-    @classmethod
-    def _rearrange(cls, outputs, indexes):
-        n_chunks = indexes.shape[0]
-        beam_size = indexes.shape[1]
-        new_outputs = outputs.reshape((-1, n_chunks * beam_size))
+    def _rearrange(self, outputs, indexes):
+        new_outputs = self.merge_chunks(outputs)
         new_outputs = new_outputs[:, indexes.flatten()]
-        new_outputs = new_outputs.reshape(outputs.shape)
+        new_outputs = self.divide_by_chunks(new_outputs)
         return new_outputs.copy()
+
+    def merge_chunks(self, array):
+        """Merges chunks
+
+        Parameters
+        ----------
+        array : numpy array
+            3D or 4D (sequence length, beam size, batch size [, readout dim])
+            array
+
+        Returns
+        -------
+        2D or 3D (sequence length, beam size * batch size [, readout_dim])
+        array
+
+        """
+        if len(array.shape) == 3:
+            trans = (1, 2, 0)
+            trans_back = (1, 0)
+            out_shape = (self.beam_size * self.batch_size, array.shape[0])
+        else:
+            trans = (1, 2, 0, 3)
+            trans_back = (1, 0, 2)
+            out_shape = (self.beam_size * self.batch_size, array.shape[0],
+                         array.shape[-1])
+        array = array.transpose(trans)
+        array = array.reshape(out_shape)
+        return array.transpose(trans_back)
+
+    def divide_by_chunks(self, array):
+        """Divides input to chunks
+
+        Parameters
+        ----------
+        array : numpy array
+            2D or 3D (sequence length, beam size * batch size [, readout dim])
+            aray
+
+        Returns
+        -------
+        3D or 4D (sequence length, beam size, batch size [, readout dim])
+        array
+
+        """
+        if len(array.shape) == 2:
+            first_transpose = (1, 0)
+            reshape = (self.beam_size, self.batch_size, array.shape[0])
+            back_transpose = (2, 0, 1)
+        else:
+            first_transpose = (1, 0, 2)
+            reshape = (self.beam_size, self.batch_size, array.shape[0],
+                       array.shape[2])
+            back_transpose = (2, 0, 1, 3)
+        reshaped = array.transpose(first_transpose)
+        reshaped = reshaped.reshape(reshape)
+        return reshaped.transpose(back_transpose)
 
     def search(self, inputs_val_dict, start_symbol, eol_symbol=-1,
                max_length=512, **kwargs):
-        """Performs greedy search
+        """Performs beam search
 
         Parameters
         ----------
@@ -206,31 +262,25 @@ class BeamSearch(Search):
         # input batch size
         n_chunks = list(inputs_val_dict.values())[0].shape[1]
 
-        aux_inputs = {name: numpy.tile(val, self.beam_size)
-                      for name, val in inputs_val_dict.iteritems()}
+        aux_inputs = OrderedDict(
+            [(name,
+              self.divide_by_chunks(numpy.tile(val, (1, self.beam_size))))
+             for name, val in inputs_val_dict.iteritems()])
 
         current_outputs = numpy.zeros((0, n_chunks, self.beam_size),
                                       dtype='int64')
         curr_out_mask = numpy.ones((0, n_chunks, self.beam_size), dtype=floatX)
 
+        cur_values = None
         for i in xrange(max_length):
-            flat_aux_inputs = OrderedDict()
-            for name, value in aux_inputs.iteritems():
-                flat_aux_inputs[name] = \
-                    value.reshape((-1, self.real_batch_size))
-            if i == 0:
-                cur_values = self.compute_initial(flat_aux_inputs)
-                next_probs = cur_values['probs']
-            else:
-                cur_values = self.compute_next(flat_aux_inputs, cur_values)
-                next_probs = cur_values['probs']
+            cur_values = self.compute_next(aux_inputs, cur_values)
+            next_probs = cur_values['probs']
 
-            # Choose top beam_size
-            prob_batches = next_probs.reshape((n_chunks, self.beam_size, -1))
             # Top probs
-            indexes, top_probs = zip(*[self._top_probs(batch, self.beam_size,
+            indexes, top_probs = zip(*[self._top_probs(next_probs[:, :, j],
+                                                       self.beam_size,
                                                        unique=i == 0)
-                                       for batch in prob_batches])
+                                       for j in xrange(self.batch_size)])
             indexes = numpy.array(indexes)  # chunk, 2, beam
             # current_outputs.
             # here we suppose, that we have 2d outputs
@@ -248,11 +298,11 @@ class BeamSearch(Search):
                                                    rearrange_ind)
 
             # construct next output
-            outputs = outputs.reshape((1, n_chunks, self.beam_size))
+            outputs = outputs.reshape((1, self.beam_size, self.batch_size))
             current_outputs = numpy.append(current_outputs,
                                            outputs.copy(), axis=0)
             # check if we meet eol
-            next_out_mask = numpy.ones((1, n_chunks, self.beam_size),
+            next_out_mask = numpy.ones((1, self.beam_size, self.batch_size),
                                        dtype=floatX)
 
             next_out_mask[0, :, :] = (outputs[0, :, :] != eol_symbol)
