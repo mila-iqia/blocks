@@ -351,15 +351,14 @@ class Printing(SimpleExtension):
 class ProgressBar(TrainingExtension):
     """Display a progress bar during training.
 
-    This extension tries to calculate the number of iterations per
-    epoch by querying the `num_batches`, `num_examples` and `batch_size`
+    This extension tries to infer the number of iterations per epoch
+    by querying the `num_batches`, `num_examples` and `batch_size`
     attributes from the :class:`IterationScheme`. When this information is
     not available it will display a simplified progress bar that does not
     include the estimated time until the end of this epoch.
 
     Notes
     -----
-
     This extension should be run before other extensions that print to
     the screen at the end or at the beginning of the epoch (e.g. the
     :class:`Printing` extension). Placing ProgressBar before these
@@ -384,6 +383,7 @@ class ProgressBar(TrainingExtension):
         self.bar = None
 
     def get_iter_per_epoch(self):
+        """Try to infer the number of iterations per epoch."""
         iter_scheme = self.main_loop.data_stream.iteration_scheme
         if hasattr(iter_scheme, 'num_batches'):
             return iter_scheme.num_batches
@@ -391,9 +391,14 @@ class ProgressBar(TrainingExtension):
                 hasattr(iter_scheme, 'batch_size')):
             return iter_scheme.num_examples // iter_scheme.batch_size
         return None
- 
+
     def create_bar(self):
-        """Create a new progress bar"""
+        """Create a new progress bar.
+
+        Calls `self.get_iter_per_epoch()`, selects an appropriate
+        set of widgets and creates a ProgressBar.
+
+        """
         iter_per_epoch = self.get_iter_per_epoch()
         epochs_done = self.main_loop.log._status.epochs_done
 
@@ -411,7 +416,7 @@ class ProgressBar(TrainingExtension):
                        progressbar.Timer(), ' ', progressbar.ETA()]
 
         return progressbar.ProgressBar(widgets=widgets,
-                                      maxval=iter_per_epoch)
+                                       maxval=iter_per_epoch)
 
     def before_epoch(self):
         self.iter_count = 0

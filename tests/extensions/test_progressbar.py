@@ -22,15 +22,16 @@ def setup_mainloop(extension):
     dataset = ContainerDataset(dict(features=features))
 
     W = shared_floatx([0, 0], name='W')
-    x = tensor.fvector('features')
+    x = tensor.vector('features')
     cost = tensor.sum((x-W)**2)
+    cost.name = "cost"
 
     algorithm = GradientDescent(cost=cost, params=[W],
                                 step_rule=Scale(1e-3))
 
     main_loop = MainLoop(
-        model=None, algorithm=algorithm,
-        data_stream=dataset.get_default_stream(),
+        model=None, data_stream=dataset.get_default_stream(),
+        algorithm=algorithm,
         extensions=[
             FinishAfter(after_n_epochs=1),
             extension])
