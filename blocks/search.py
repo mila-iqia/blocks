@@ -148,9 +148,17 @@ class BeamSearch(Search):
         """
         Returns indexes of elements with highest probabilities
 
-        :param probs: a 3d array of probabilities (time, batch, readout_dim)
-        :param beam_size: beam size, number of top probs to return
-        :return: tuple of (indexes, top probabilities)
+        Parameters
+        ----------
+        probs : numpy array
+            A 3d array of probabilities (time, batch, readout_dim)
+        beam_size : int
+            Beam size, number of top probs to return
+
+        Returns
+        -------
+        Tuple of (indexes, top probabilities)
+
         """
         flatten = probs.flatten()
         if unique:
@@ -202,7 +210,7 @@ class BeamSearch(Search):
                       for name, val in inputs_val_dict.iteritems()}
 
         current_outputs = numpy.zeros((0, n_chunks, self.beam_size),
-                                   dtype='int64')
+                                      dtype='int64')
         curr_out_mask = numpy.ones((0, n_chunks, self.beam_size), dtype=floatX)
 
         for i in xrange(max_length):
@@ -242,14 +250,14 @@ class BeamSearch(Search):
             # construct next output
             outputs = outputs.reshape((1, n_chunks, self.beam_size))
             current_outputs = numpy.append(current_outputs,
-                                        outputs.copy(), axis=0)
+                                           outputs.copy(), axis=0)
             # check if we meet eol
             next_out_mask = numpy.ones((1, n_chunks, self.beam_size),
-                                    dtype=floatX)
+                                       dtype=floatX)
 
             next_out_mask[0, :, :] = (outputs[0, :, :] != eol_symbol)
             curr_out_mask = numpy.append(curr_out_mask, next_out_mask.copy(),
-                                      axis=0)
+                                         axis=0)
 
             if numpy.all(current_outputs[-1, :, 0] == eol_symbol):
                 break
