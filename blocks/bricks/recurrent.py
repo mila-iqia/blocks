@@ -237,8 +237,6 @@ class SimpleRecurrent(BaseRecurrent, Initializable):
     def __init__(self, dim, activation, **kwargs):
         super(SimpleRecurrent, self).__init__(**kwargs)
         self.dim = dim
-        self.activation = activation
-
         self.children = [activation]
 
     @property
@@ -277,7 +275,7 @@ class SimpleRecurrent(BaseRecurrent, Initializable):
 
         """
         next_states = inputs + tensor.dot(states, self.W)
-        next_states = self.activation.apply(next_states)
+        next_states = self.children[0].apply(next_states)
         if mask:
             next_states = (mask[:, None] * next_states +
                            (1 - mask[:, None]) * states)
@@ -325,6 +323,9 @@ class LSTM(BaseRecurrent, Initializable):
     def __init__(self, dim, activation=None, **kwargs):
         super(LSTM, self).__init__(**kwargs)
         self.dim = dim
+
+        if not activation:
+            activation = Tanh()
         self.children = [activation]
 
     def get_dim(self, name):
