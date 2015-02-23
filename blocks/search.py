@@ -104,8 +104,10 @@ class BeamSearch(Search):
 
         initial_states = OrderedDict()
         for name in self.state_names:
-            initial_states[name] = generator.initial_state(name,
-                                                           attended=attended)
+            initial_states[name] = generator.initial_state(
+                name,
+                self.real_batch_size,
+                attended=attended)
 
         self.initial_state_computer = function(self.inputs_dict.values(),
                                                initial_states.values())
@@ -352,9 +354,8 @@ class BeamSearch(Search):
             next_out_mask = numpy.ones((1, self.beam_size, self.batch_size),
                                        dtype=floatX)
 
-            next_out_mask[0, :, :] = ((outputs[0, :, :] != eol_symbol)
-                                      * (curr_out_mask[-1, :, :] == 1))
-
+            next_out_mask[0, :, :] = ((outputs[0, :, :] != eol_symbol) *
+                                      curr_out_mask[-1, :, :])
             curr_out_mask = numpy.append(curr_out_mask, next_out_mask.copy(),
                                          axis=0)
 
