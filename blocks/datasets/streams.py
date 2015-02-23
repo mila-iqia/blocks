@@ -314,6 +314,28 @@ class CachedDataStream(DataStreamWrapper):
             cache.extend(data)
 
 
+class DataStreamSort(DataStreamMapping):
+    """Sorts the contents of the batches of the wrapped data stream.
+
+    Parameters
+    ----------
+    data_stream : instance of :class:`DataStream`
+        The wrapped data stream.
+    key : callable
+        The mapping that returns the value to sort on
+
+    """
+    def __init__(self, data_stream, key=None):
+
+        def mapping(x):
+            indices = [i for (v, i) in
+                       sorted(((v, i) for (i, v) in enumerate(x[0])), key=key)]
+            return tuple([[i[j] for j in indices] for i in x])
+
+        super(DataStreamSort, self).__init__(data_stream, mapping=mapping)
+        self.key = key
+
+
 class BatchDataStream(DataStreamWrapper):
     """Creates minibatches from data streams providing single examples.
 

@@ -8,7 +8,7 @@ from nose.tools import assert_raises
 from blocks.datasets import ContainerDataset
 from blocks.datasets.streams import (
     CachedDataStream, DataStream, DataStreamMapping, BatchDataStream,
-    PaddingDataStream, DataStreamFilter, ForceFloatX)
+    PaddingDataStream, DataStreamFilter, ForceFloatX, DataStreamSort)
 from blocks.datasets.schemes import BatchSizeScheme, ConstantScheme
 
 floatX = theano.config.floatX
@@ -40,6 +40,19 @@ def test_data_stream_mapping():
         stream, lambda d: (2 * d[0],), add_sources=("doubled",))
     assert wrapper2.sources == ("data", "doubled")
     assert list(wrapper2.get_epoch_iterator()) == list(zip(data, data_doubled))
+
+
+def test_data_stream_sort():
+    data = [[1, 2, 3],
+            [2, 3, 1],
+            [3, 2, 1]]
+    data_sorted = [[1, 2, 3]] * 3
+    data_sorted_rev = [[3, 2, 1]] * 3
+    stream = ContainerDataset(data).get_default_stream()
+    wrapper1 = DataStreamSort(stream, lambda x: x[0])
+    assert list(wrapper1.get_epoch_iterator()) == list(zip(data_sorted))
+    wrapper2 = DataStreamSort(stream, lambda x: -x[0])
+    assert list(wrapper2.get_epoch_iterator()) == list(zip(data_sorted_rev))
 
 
 def test_data_stream_filter():
