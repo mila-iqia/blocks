@@ -71,7 +71,7 @@ def test_data_stream_mapping_multisource():
                    ([1, 2, 3], [4, 5, 6])]
     stream = ContainerDataset(data).get_default_stream()
     wrapper = DataStreamMapping(stream,
-                                 mapping=SortMapping(operator.itemgetter(0)))
+                                mapping=SortMapping(operator.itemgetter(0)))
     assert list(wrapper.get_epoch_iterator()) == data_sorted
 
 
