@@ -299,13 +299,13 @@ def main(mode, save_path, num_batches, data_path=None):
         model = Model(generated)
         model.set_param_values(load_parameter_values(save_path))
         batch_size = 20
-        beam_search = BeamSearch(3, batch_size, generator, attended,
+        beam_search = BeamSearch(20, batch_size, generator, attended,
                                  chars_mask,
                                  OrderedDict([('chars', chars),
                                               ('chars_mask', chars_mask)]))
         beam_search.compile()
 
-        line = "Enter a sentence"
+        line = "Enter a sentence ."
         encoded_input = [char2code.get(char, char2code["<UNK>"])
                          for char in line.lower().strip()]
         encoded_input = ([char2code['<S>']] + encoded_input +
@@ -315,8 +315,7 @@ def main(mode, save_path, num_batches, data_path=None):
         print("Target: ", target)
         numpy_inputs = numpy.repeat(numpy.array(encoded_input)[:, None],
                                     batch_size, axis=1)
-        print(numpy_inputs.shape)
-        samples, masks = beam_search.search(
+        samples, masks, probs = beam_search.search(
             OrderedDict([('chars', numpy_inputs),
                          ('chars_mask', numpy.ones_like(numpy_inputs))]),
             char2code['</S>'])
@@ -329,7 +328,8 @@ def main(mode, save_path, num_batches, data_path=None):
             except ValueError:
                 true_length = len(sample)
             sample = sample[:true_length]
-            message = "".join(code2char[code] for code in sample)
+            message = "(%.2e)" % probs[i]
+            message += "".join(code2char[code] for code in sample)
             if sample == target:
                 message += " CORRECT!"
             messages.append((0, message))

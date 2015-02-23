@@ -310,15 +310,15 @@ class BeamSearch(Search):
               self.divide_by_chunks(numpy.tile(val, (1, self.beam_size))))
              for name, val in inputs_val_dict.iteritems()])
 
-        init_states = self.compute_initial_states(aux_inputs)
+        cur_states = self.compute_initial_states(aux_inputs)
 
-        current_outputs = init_states['outputs']
-        curr_out_mask = numpy.ones_like(current_outputs)
-        cur_values = init_states
+        cur_states['cur_outputs'] = cur_states['outputs']
+        cur_states['cur_outputs_mask'] = numpy.ones_like(
+            cur_states['cur_outputs'])
 
         for i in range(max_length):
-            cur_values = self.compute_next(aux_inputs, cur_values)
-            next_probs = cur_values['probs']
+            cur_states.update(self.compute_next(aux_inputs, cur_states))
+            next_probs = cur_states['probs']
 
             # Top probs
             indexes, top_probs = zip(*[self._top_probs(next_probs[:, :, j],
@@ -332,10 +332,8 @@ class BeamSearch(Search):
 
             # rearrange outputs
             rearrange_ind = indexes[:, 0, :]
-            current_outputs = self._rearrange(current_outputs, rearrange_ind)
-            curr_out_mask = self._rearrange(curr_out_mask, rearrange_ind)
-            for name in cur_values:
-                cur_values[name] = self._rearrange(cur_values[name],
+            for name in cur_states:
+                cur_states[name] = self._rearrange(cur_states[name],
                                                    rearrange_ind)
             for name in aux_inputs:
                 aux_inputs[name] = self._rearrange(aux_inputs[name],
@@ -343,22 +341,24 @@ class BeamSearch(Search):
 
             # construct next output
             outputs = outputs.T[None, :, :]
-            current_outputs = numpy.append(current_outputs,
-                                           outputs.copy(), axis=0)
+            cur_states['cur_outputs'] = numpy.append(cur_states['cur_outputs'],
+                                                     outputs.copy(), axis=0)
             # check if we meet eol
             next_out_mask = numpy.ones((1, self.beam_size, self.batch_size),
                                        dtype=floatX)
 
             next_out_mask[0, :, :] = ((outputs[0, :, :] != eol_symbol) *
-                                      curr_out_mask[-1, :, :])
-            curr_out_mask = numpy.append(curr_out_mask, next_out_mask.copy(),
-                                         axis=0)
+                                      cur_states['cur_outputs_mask'][-1, :, :])
+            cur_states['cur_outputs_mask'] = numpy.append(
+                cur_states['cur_outputs_mask'],
+                next_out_mask.copy(),
+                axis=0)
 
-            if numpy.all(current_outputs[-1, :, 0] == eol_symbol):
+            if numpy.all(cur_states['cur_outputs'][-1, :, 0] == eol_symbol):
                 break
 
         # Select only best
-        current_outputs = current_outputs[:, 0, :]
-        curr_out_mask = curr_out_mask[:, 0, :]
+        best_outputs = cur_states['cur_outputs'][:, 0, :]
+        best_out_mask = cur_states['cur_outputs_mask'][:, 0, :]
 
-        return current_outputs, curr_out_mask
+        return best_outputs, best_out_mask
