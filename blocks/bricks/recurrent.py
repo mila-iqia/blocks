@@ -234,10 +234,8 @@ class SimpleRecurrent(BaseRecurrent, Initializable):
 
     """
     @lazy
-    def __init__(self, dim, activation=None, **kwargs):
+    def __init__(self, dim, activation, **kwargs):
         super(SimpleRecurrent, self).__init__(**kwargs)
-        if activation is None:
-            activation = Tanh()
         self.dim = dim
         self.activation = activation
 
@@ -314,6 +312,9 @@ class LSTM(BaseRecurrent, Initializable):
     ----------
     dim : int
         The dimension of the hidden state.
+    activation : :class:`.Brick`, optional
+        The activation function. The default and by far the most popular
+        is :class:`.Tanh`.
 
     Notes
     -----
@@ -321,9 +322,10 @@ class LSTM(BaseRecurrent, Initializable):
 
     """
     @lazy
-    def __init__(self, dim, **kwargs):
+    def __init__(self, dim, activation=None, **kwargs):
         super(LSTM, self).__init__(**kwargs)
         self.dim = dim
+        self.children = [activation]
 
     def get_dim(self, name):
         if name == 'inputs':
@@ -388,6 +390,7 @@ class LSTM(BaseRecurrent, Initializable):
         """
         def slice_last(x, no):
             return x.T[no*self.dim: (no+1)*self.dim].T
+        nonlinearity = self.children[0].apply
 
         activation = tensor.dot(states, self.W_state) + inputs + self.biases
         in_gate = tensor.nnet.sigmoid(slice_last(activation, 0) +
@@ -395,10 +398,10 @@ class LSTM(BaseRecurrent, Initializable):
         forget_gate = tensor.nnet.sigmoid(slice_last(activation, 1) +
                                           cells * self.W_cell_to_forget)
         next_cells = (forget_gate * cells +
-                      in_gate * tensor.tanh(slice_last(activation, 2)))
+                      in_gate * nonlinearity(slice_last(activation, 2)))
         out_gate = tensor.nnet.sigmoid(slice_last(activation, 3) +
                                        next_cells * self.W_cell_to_out)
-        next_states = out_gate * tensor.tanh(next_cells)
+        next_states = out_gate * nonlinearity(next_cells)
 
         if mask:
             next_states = (mask[:, None] * next_states +
@@ -418,9 +421,8 @@ class GatedRecurrent(BaseRecurrent, Initializable):
 
     Parameters
     ----------
-    activation : :class:`.Brick` or None
-        The brick to apply as activation. If ``None`` an
-        :class:`.bricks.Identity` brick is used.
+    activation : :class:`.Brick`
+        The brick to apply as activation.
     gated_activation : :class:`.Brick` or None
         The brick to apply as activation for gates. If ``None`` a
         :class:`.Sigmoid` brick is used.
@@ -449,8 +451,6 @@ class GatedRecurrent(BaseRecurrent, Initializable):
         self.use_update_gate = use_update_gate
         self.use_reset_gate = use_reset_gate
 
-        if not activation:
-            activation = Tanh()
         if not gate_activation:
             gate_activation = Sigmoid()
         self.activation = activation
