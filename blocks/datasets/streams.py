@@ -315,8 +315,19 @@ class CachedDataStream(DataStreamWrapper):
 
 
 class SortMapping(object):
-    """Callable class for creating sort mappings without nesting functions."""
-    def __init__(self, key, reverse):
+    """Callable class for creating sorting mappings.
+
+    This class can be used to create a callable that can be used by the
+    :class:`DataStreamMapping` constructor.
+
+    Parameters
+    ----------
+    key : callable
+        The mapping that returns the value to sort on
+    reverse : boolean value that indicates whether the sort order should
+        be reversed.
+    """
+    def __init__(self, key, reverse=False):
         self.key = key
         self.reverse = reverse
 
@@ -325,25 +336,6 @@ class SortMapping(object):
                    sorted(((v, i) for (i, v) in enumerate(x[0])),
                           key=self.key, reverse=self.reverse)]
         return tuple([[i[j] for j in indices] for i in x])
-
-
-class DataStreamSort(DataStreamMapping):
-    """Sorts the contents of the batches of the wrapped data stream.
-
-    Parameters
-    ----------
-    data_stream : instance of :class:`DataStream`
-        The wrapped data stream.
-    key : callable
-        The mapping that returns the value to sort on
-
-    """
-    def __init__(self, data_stream, key=None, reverse=False):
-
-        super(DataStreamSort, self).__init__(data_stream,
-                                             mapping=SortMapping(key, reverse))
-        self.key = key
-        self.reverse = reverse
 
 
 class BatchDataStream(DataStreamWrapper):

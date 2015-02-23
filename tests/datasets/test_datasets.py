@@ -9,7 +9,7 @@ from nose.tools import assert_raises
 from blocks.datasets import ContainerDataset
 from blocks.datasets.streams import (
     CachedDataStream, DataStream, DataStreamMapping, BatchDataStream,
-    PaddingDataStream, DataStreamFilter, ForceFloatX, DataStreamSort)
+    PaddingDataStream, DataStreamFilter, ForceFloatX, SortMapping)
 from blocks.datasets.schemes import BatchSizeScheme, ConstantScheme
 
 floatX = theano.config.floatX
@@ -43,18 +43,20 @@ def test_data_stream_mapping():
     assert list(wrapper2.get_epoch_iterator()) == list(zip(data, data_doubled))
 
 
-def test_data_stream_sort():
+def test_data_stream_mapping_sort():
     data = [[1, 2, 3],
             [2, 3, 1],
             [3, 2, 1]]
     data_sorted = [[1, 2, 3]] * 3
     data_sorted_rev = [[3, 2, 1]] * 3
     stream = ContainerDataset(data).get_default_stream()
-    wrapper1 = DataStreamSort(stream, operator.itemgetter(0))
+    wrapper1 = DataStreamMapping(stream,
+                                 mapping=SortMapping(operator.itemgetter(0)))
     assert list(wrapper1.get_epoch_iterator()) == list(zip(data_sorted))
-    wrapper2 = DataStreamSort(stream, lambda x: -x[0])
+    wrapper2 = DataStreamMapping(stream, SortMapping(lambda x: -x[0]))
     assert list(wrapper2.get_epoch_iterator()) == list(zip(data_sorted_rev))
-    wrapper3 = DataStreamSort(stream, operator.itemgetter(0), reverse=True)
+    wrapper3 = DataStreamMapping(stream, SortMapping(operator.itemgetter(0),
+                                                     reverse=True))
     assert list(wrapper3.get_epoch_iterator()) == list(zip(data_sorted_rev))
 
 
