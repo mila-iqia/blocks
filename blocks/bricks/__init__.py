@@ -455,15 +455,16 @@ class Softmax(Activation):
         :param x: Each slice along axis represents one distribution.
 
         :type y: floating point matrix or integer vector
-        :param y: In the case of a matrix argument, each slice along axis
-        represents one distribution. In the other case, each element represents
-        the position of the '1' in a one hot-vector.
+        :param y: In the case of a matrix argument, each slice along
+        axis represents one distribution. In the other case, each
+        element represents the position of the '1' in a one hot-vector.
 
         """
         x = x - x.max(axis=1).dimshuffle(0, 'x')
         log_prob = x - tensor.log(tensor.exp(x).sum(axis=1).dimshuffle(0, 'x'))
         cost = tensor.nnet.categorical_crossentropy(log_prob, y).mean()
         return cost
+
 
 class Sequence(Brick):
     """A sequence of bricks.
