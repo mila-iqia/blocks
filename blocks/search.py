@@ -97,6 +97,14 @@ class BeamSearch(Search):
         generator = self.sequence_generator
         attended = self.attended
         attended_mask = self.attended_mask
+
+        init_states = OrderedDict()
+        for name in (['outputs']):
+            init_states[name] = generator.initial_state(
+                name, self.real_batch_size)
+        self.initial_state_computer = function(self.inputs_dict.values(),
+                                               init_states.values(),
+                                               on_unused_input='warn')
         # Construct initial values
         init_generated = generator.generate(attended=attended,
                                             attended_mask=attended_mask,
@@ -290,12 +298,16 @@ class BeamSearch(Search):
               self.divide_by_chunks(numpy.tile(val, (1, self.beam_size))))
              for name, val in inputs_val_dict.iteritems()])
 
-        current_outputs = numpy.zeros((0, self.beam_size, self.batch_size),
-                                      dtype='int64')
-        curr_out_mask = numpy.ones((0, self.beam_size, self.batch_size),
+        current_outputs = self.initial_state_computer(
+            *inputs_val_dict.values())[0]
+        current_outputs = self.divide_by_chunks(current_outputs[None, :])
+        #current_outputs = numpy.zeros((0, self.beam_size, self.batch_size),
+        #                              dtype='int64')
+        curr_out_mask = numpy.ones((1, self.beam_size, self.batch_size),
                                    dtype=floatX)
 
         cur_values = None
+
         for i in range(max_length):
             cur_values = self.compute_next(aux_inputs, cur_values)
             next_probs = cur_values['probs']
@@ -329,7 +341,12 @@ class BeamSearch(Search):
             next_out_mask = numpy.ones((1, self.beam_size, self.batch_size),
                                        dtype=floatX)
 
-            next_out_mask[0, :, :] = (outputs[0, :, :] != eol_symbol)
+            if i > 0:
+                next_out_mask[0, :, :] = ((outputs[0, :, :] != eol_symbol)
+                                          * (curr_out_mask[-1, :, :] == 1))
+            else:
+                next_out_mask[0, :, :] = (outputs[0, :, :] != eol_symbol)
+
             curr_out_mask = numpy.append(curr_out_mask, next_out_mask.copy(),
                                          axis=0)
 

@@ -290,27 +290,22 @@ def main(mode, save_path, num_batches, data_path=None):
         chars = tensor.lmatrix("features")
         chars_mask = tensor.matrix("features_mask")
         attended = encoder.apply(
-                **dict_union(fork.apply(lookup.lookup(chars),
-                             return_dict=True)))
+            **dict_union(fork.apply(lookup.lookup(chars),
+                                    return_dict=True)))
         generated = generator.generate(
             n_steps=3 * chars.shape[0], batch_size=chars.shape[1],
             attended=attended,
-            attended_mask=tensor.ones(chars.shape))
+            attended_mask=chars_mask)
         model = Model(generated)
         model.set_param_values(load_parameter_values(save_path))
-        sample_function = model.get_theano_function()
-        logging.info("Sampling function is compiled")
-        beam_search = BeamSearch(3, 2, generator, attended, chars_mask,
+        batch_size = 20
+        beam_search = BeamSearch(3, batch_size, generator, attended,
+                                 chars_mask,
                                  OrderedDict([('chars', chars),
                                               ('chars_mask', chars_mask)]))
         beam_search.compile()
-        toy_data = numpy.array([[0] * 2, [1] * 2, [0] * 2, [1] * 2])
-        toy_mask = numpy.ones_like(toy_data)
-        out, mask = beam_search.search(OrderedDict([('chars', toy_data),
-            ('chars_mask', toy_mask)]), -1)
 
         line = "Enter a sentence"
-        batch_size = 2
         encoded_input = [char2code.get(char, char2code["<UNK>"])
                          for char in line.lower().strip()]
         encoded_input = ([char2code['<S>']] + encoded_input +
@@ -318,10 +313,13 @@ def main(mode, save_path, num_batches, data_path=None):
         print("Encoder input:", encoded_input)
         target = reverse_words((encoded_input,))[0]
         print("Target: ", target)
-        numpy_inputs = numpy.repeat(numpy.array(encoded_input)[:, None], batch_size, axis=1)
-        samples, probs = beam_search.search(
+        numpy_inputs = numpy.repeat(numpy.array(encoded_input)[:, None],
+                                    batch_size, axis=1)
+        print(numpy_inputs.shape)
+        samples, masks = beam_search.search(
             OrderedDict([('chars', numpy_inputs),
-                         ('chars_mask', numpy.ones_like(numpy_inputs))]), 43)
+                         ('chars_mask', numpy.ones_like(numpy_inputs))]),
+            char2code['</S>'])
 
         messages = []
         for i in range(samples.shape[1]):
@@ -331,8 +329,7 @@ def main(mode, save_path, num_batches, data_path=None):
             except ValueError:
                 true_length = len(sample)
             sample = sample[:true_length]
-            message = "({})".format(0)
-            message += "".join(code2char[code] for code in sample)
+            message = "".join(code2char[code] for code in sample)
             if sample == target:
                 message += " CORRECT!"
             messages.append((0, message))
