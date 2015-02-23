@@ -326,6 +326,7 @@ class SortMapping(object):
         The mapping that returns the value to sort on
     reverse : boolean value that indicates whether the sort order should
         be reversed.
+
     """
     def __init__(self, key, reverse=False):
         self.key = key
