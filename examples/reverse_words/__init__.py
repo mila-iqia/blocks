@@ -309,8 +309,8 @@ def main(mode, save_path, num_batches, data_path=None):
         out, mask = beam_search.search(OrderedDict([('chars', toy_data),
             ('chars_mask', toy_mask)]), -1)
 
-        line = input("Enter a sentence\n")
-        batch_size = int(input("Enter a number of samples\n"))
+        line = "Enter a sentence"
+        batch_size = 2
         encoded_input = [char2code.get(char, char2code["<UNK>"])
                          for char in line.lower().strip()]
         encoded_input = ([char2code['<S>']] + encoded_input +
@@ -331,6 +331,7 @@ def main(mode, save_path, num_batches, data_path=None):
             except ValueError:
                 true_length = len(sample)
             sample = sample[:true_length]
+            message = "({})".format(0)
             message += "".join(code2char[code] for code in sample)
             if sample == target:
                 message += " CORRECT!"

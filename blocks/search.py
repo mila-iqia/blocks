@@ -197,8 +197,8 @@ class BeamSearch(Search):
                 args = numpy.append(args,
                                  numpy.tile(args[0], beam_size - args.shape[0]))
         # convert args back
-        indexes = numpy.unravel_index(args, probs.shape)
-        return indexes, probs[indexes]
+        indexes = numpy.unravel_index(args, probs.shape[1:])
+        return indexes, probs[0][indexes]
 
     def _rearrange(self, outputs, indexes):
         new_outputs = self.merge_chunks(outputs)
@@ -337,7 +337,7 @@ class BeamSearch(Search):
                 break
 
         # Select only best
-        current_outputs = current_outputs[:, :, 0]
-        curr_out_mask = curr_out_mask[:, :, 0]
+        current_outputs = current_outputs[:, 0, :]
+        curr_out_mask = curr_out_mask[:, 0, :]
 
         return current_outputs, curr_out_mask
