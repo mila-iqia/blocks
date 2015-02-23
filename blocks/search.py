@@ -162,11 +162,9 @@ class BeamSearch(Search):
         init_states = self.initial_state_computer(*inputs)
         init_states = [self.divide_by_chunks(value.reshape((1,) + value.shape))
                        for value in init_states]
-        state_names = (['outputs'] + self.generator.state_names +
-                       self.generator.glimpse_names)
-        return OrderedDict(zip(state_names, init_states))
+        return OrderedDict(zip(self.state_names, init_states))
 
-    def compute_next(self, inputs_dict, cur_vals=None):
+    def compute_next(self, inputs_dict, cur_vals):
         """Computes next states, glimpses, outputs, and probabilities.
 
         Parameters
@@ -184,11 +182,8 @@ class BeamSearch(Search):
         """
         inputs = [self.merge_chunks(input) for input
                   in inputs_dict.itervalues()]
-        if cur_vals is None:
-            next_values = self.init_computer(*inputs)
-        else:
-            states = self.merge_chunks(cur_vals['states'])
-            next_values = self.next_computer(*(inputs + [states[0]]))
+        states = self.merge_chunks(cur_vals['states'])
+        next_values = self.next_computer(*(inputs + [states[0]]))
         next_values = [self.divide_by_chunks(value.reshape((1,) + value.shape))
                        for value in next_values]
         return OrderedDict(zip(self.generate_names + ['probs'], next_values))
@@ -227,7 +222,7 @@ class BeamSearch(Search):
 
     def _rearrange(self, outputs, indexes):
         new_outputs = self.merge_chunks(outputs)
-        new_outputs = new_outputs[:, indexes.flatten()]
+        new_outputs = new_outputs[:, indexes.T.flatten()]
         new_outputs = self.divide_by_chunks(new_outputs)
         return new_outputs.copy()
 
@@ -319,8 +314,8 @@ class BeamSearch(Search):
 
         current_outputs = init_states['outputs']
         curr_out_mask = numpy.ones_like(current_outputs)
+        cur_values = init_states
 
-        cur_values = None
         for i in range(max_length):
             cur_values = self.compute_next(aux_inputs, cur_values)
             next_probs = cur_values['probs']
@@ -347,7 +342,7 @@ class BeamSearch(Search):
                                                    rearrange_ind)
 
             # construct next output
-            outputs = outputs.reshape((1, self.beam_size, self.batch_size))
+            outputs = outputs.T[None, :, :]
             current_outputs = numpy.append(current_outputs,
                                            outputs.copy(), axis=0)
             # check if we meet eol
