@@ -173,6 +173,19 @@ def main(mode, save_path, num_batches, data_path=None):
         for brick in model.get_top_bricks():
             brick.initialize()
 
+        # Give an idea of what's going on
+        model = Model(cost)
+        params = model.get_params()
+        logger.info("Parameters:\n" +
+                    pprint.pformat(
+                        [(key, value.get_value().shape) for key, value
+                         in params.items()],
+                        width=120))
+
+        # Initialize parameters
+        for brick in model.get_top_bricks():
+            brick.initialize()
+
         # Fetch variables useful for debugging
         max_length = named_copy(chars.shape[0], "max_length")
         cost_per_character = named_copy(
