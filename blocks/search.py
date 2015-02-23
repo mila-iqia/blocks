@@ -50,12 +50,6 @@ class Search(object):
             self.compile()
 
 
-class GreedySearch(Search):
-
-    def __init__(self, sequence_generator):
-        super(GreedySearch, self).__init__(sequence_generator)
-
-
 class BeamSearch(Search):
     """Beam search.
 
@@ -300,7 +294,7 @@ class BeamSearch(Search):
 
         Returns
         -------
-        Most probable sequences, corresponding probabilities and costs
+        Most probable sequences, corresponding probabilities and costs.
 
         """
         super(BeamSearch, self).search(**kwargs)
