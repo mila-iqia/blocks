@@ -4,7 +4,8 @@ import time
 from subprocess import Popen, PIPE
 
 try:
-    from bokeh.plotting import figure, output_server, show, cursession, push
+    from bokeh.plotting import (curdoc, cursession, figure, output_server,
+                                push, show)
     BOKEH_AVAILABLE = True
 except ImportError:
     BOKEH_AVAILABLE = False
@@ -69,8 +70,8 @@ class Plot(SimpleExtension):
             raise ImportError
         self.plots = {}
         self.start_server = start_server
+        self.document = document
         self._startserver()
-        output_server(document)
 
         # Create figures for each group of channels
         self.p = []
@@ -104,6 +105,7 @@ class Plot(SimpleExtension):
                 else:
                     self.plots[key].data['x'].append(iteration)
                     self.plots[key].data['y'].append(value)
+
                     cursession().store_objects(self.plots[key])
         push()
 
@@ -121,12 +123,14 @@ class Plot(SimpleExtension):
             logger.info('Plotting server PID: {}'.format(self.sub.pid))
         else:
             self.sub = None
+        output_server(self.document)
 
     def __getstate__(self):
         state = self.__dict__.copy()
         state['sub'] = None
         return state
 
-    def __setstate(self, state):
+    def __setstate__(self, state):
         self.__dict__.update(state)
         self._startserver()
+        curdoc().add(*self.p)

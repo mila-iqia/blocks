@@ -83,10 +83,11 @@ class Parallel(Initializable):
             transform.output_dim = self.output_dims[name]
 
     @application
-    def apply(self, **kwargs):
-        return [transform.apply(kwargs[name])
-                for name, transform
-                in zip(self.input_names, self.transforms)]
+    def apply(self, *args, **kwargs):
+        args = args + tuple(kwargs[name] for name in
+                            self.input_names[len(args):])
+        return [transform.apply(arg) for arg, transform
+                in zip(args, self.transforms)]
 
     @apply.property('inputs')
     def apply_inputs(self):
@@ -235,9 +236,9 @@ class Distribute(Fork):
         r"""Distribute the source across the targets.
 
         Parameters
-        -----------
-            **kwargs : dict
-                The source and the target variables.
+        ----------
+        \*\*kwargs : dict
+            The source and the target variables.
 
         Returns
         -------

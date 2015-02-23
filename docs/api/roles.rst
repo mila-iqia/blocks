@@ -14,4 +14,4 @@ The actual roles are instances of the different subclasses of
 :class:`VariableRole`. They are:
 
 .. automodule:: blocks.roles
-   :members: INPUT, OUTPUT, AUXILIARY, COST, PARAMETER, WEIGHTS, BIASES
+   :members: INPUT, OUTPUT, AUXILIARY, COST, PARAMETER, WEIGHTS, BIASES, FILTERS

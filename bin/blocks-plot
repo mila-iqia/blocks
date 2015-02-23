@@ -1,0 +1,150 @@
+#!/usr/bin/env python
+from __future__ import print_function, division
+
+import argparse
+import logging
+
+from six import iteritems
+
+PROMPT_HEADER = """
+
+Type a comma separated list of channels to plot or [q]uit.
+
+Channels may be prefixed by <number>: to refer to a specific experiment \
+and may contain '*' or '?' characters to match multiple channels at once."""
+
+IPYTHON_HEADER = """
+
+Complete DataFrames for all experiments can be found in the \
+'experiments[fname]' dictionary. The DataFrame containing only \
+the selected channels can be access as 'matched'."""
+
+
+def plot_dataframe(dataframe):
+    import pylab
+
+    t = dataframe.index
+    print("Plotting {} channels:".format(len(dataframe.columns)))
+    for cname, series in iteritems(dataframe):
+        print("    {}".format(cname))
+        pylab.plot(t, series.interpolate(), label=cname)
+    pylab.legend()
+    pylab.show(block=True)
+
+
+def main(args):
+    import readline
+    import blocks.scripts.plot as plot
+
+    from six import iteritems
+    from six.moves import input
+    from collections import OrderedDict
+    from functools import reduce
+
+    # Load and convert experiments into DataFrames...
+    experiments = OrderedDict()
+    for fname in args.experiments:
+        log = plot.load_log(fname)
+
+        rows_to_keep = ([0] + log.status._epoch_ends
+                        if args.every == "epoch"
+                        else range(log.status.iterations_done))
+        data_frame = log.to_dataframe()
+        data_frame = data_frame.iloc[rows_to_keep]
+
+        experiments[fname] = data_frame
+
+    # Gain some overview...
+    n_experiments = len(experiments)
+    channels_per_experiment = OrderedDict(
+        [(fname, set(df.columns)) for fname, df in iteritems(experiments)]
+    )
+    all_channels = reduce(set.union, channels_per_experiment.values())
+
+    if args.list:
+        print()
+        plot.print_column_summary(experiments)
+        return
+
+    if args.channels:
+        column_specs = args.channels.split(',')
+        matched = plot.match_column_specs(experiments, column_specs)
+
+        if args.ipython:
+            from IPython import embed
+            print(IPYTHON_HEADER)
+            embed()
+            return
+
+        plot_dataframe(matched)
+        return
+    else:
+        # Interactive mode
+        def completer(text, state):
+            """Completion callback function for readline library."""
+            options = []
+            if text == "":
+                options += [str(i)+":" for i in range(n_experiments)]
+            if ":" in text:
+                exp_id, text = text.split(":")
+                channels = channels_per_experiment.values()[int(exp_id)]
+                options += [
+                    exp_id+":"+ch for ch in channels if ch.startswith(text)
+                ]
+            else:
+                options += [
+                    ch for ch in all_channels if ch.startswith(text)
+                ]
+
+            if state >= len(options):
+                return None
+            return sorted(options)[state]
+
+        readline.parse_and_bind("tab: complete")
+        readline.set_completer_delims(" \t,;")
+        readline.set_completer(completer)
+
+        print()
+        plot.print_column_summary(experiments)
+        print(PROMPT_HEADER)
+        while 1:
+            # Note: input() uses python3 semantics (provided by six)
+            column_spec = input("blocks-plot> ")
+            if column_spec in ["q", "quit", "exit", "e"]:
+                break
+
+            column_specs = column_spec.split(',')
+            matched = plot.match_column_specs(experiments, column_specs)
+
+            if len(matched.columns) == 0:
+                print("Your specification did not match any channels.")
+                continue
+
+            plot_dataframe(matched)
+            print()
+
+
+if __name__ == "__main__":
+    logging.basicConfig()
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--list", "-l", action="store_true",
+        help="List all channels contained in the experiments and exit")
+    parser.add_argument(
+        "--channels", "-c", type=str,
+        help="A comma separated list of channels to plot. "
+             "The wildcards '*' and '?' can be used to select multiple "
+             "channels at once. Prefix a channel name with <num>: to "
+             "refer to a channel of a particular experiment")
+    parser.add_argument(
+        "--every", "-e", choices=["epoch", "iter"],
+        default="iter",
+        help="Plot values at every epoch or at every iteration")
+    parser.add_argument(
+        "--ipython", action="store_true",
+        help="Drop into an IPython session after channels have been loaded")
+    parser.add_argument("experiments", type=str, nargs="+")
+    args = parser.parse_args()
+
+    main(args)

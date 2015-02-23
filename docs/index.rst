@@ -50,7 +50,7 @@ Quickstart
    :hide:
 
    >>> from theano import tensor
-   >>> from blocks.algorithms import GradientDescent, SteepestDescent
+   >>> from blocks.algorithms import GradientDescent, Scale
    >>> from blocks.bricks import MLP, Tanh, Softmax
    >>> from blocks.bricks.cost import CategoricalCrossEntropy, MisclassificationRate
    >>> from blocks.initialization import IsotropicGaussian, Constant
@@ -91,7 +91,7 @@ And train!
 >>> main_loop = MainLoop(
 ...     model=mlp, data_stream=train_stream,
 ...     algorithm=GradientDescent(
-...         cost=cost, step_rule=SteepestDescent(learning_rate=0.1)),
+...         cost=cost, step_rule=Scale(learning_rate=0.1)),
 ...     extensions=[FinishAfter(after_n_epochs=5),
 ...                 DataStreamMonitoring(
 ...                     variables=[cost, error_rate],

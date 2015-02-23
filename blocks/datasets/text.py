@@ -1,15 +1,13 @@
 import os
 
 import numpy
+from picklable_itertools import chain
+from picklable_itertools.iter_dispatch import _iter
 from toolz import sliding_window
 
 from blocks import config
 from blocks.datasets import Dataset
 from blocks.datasets.streams import CachedDataStream
-
-
-class TextFileState(object):
-    pass
 
 
 class TextFile(Dataset):
@@ -53,9 +51,11 @@ class TextFile(Dataset):
     ...     _ = f.write("This is a sentence\n")
     ...     _ = f.write("This another one")
     >>> dictionary = {'<UNK>': 0, '</S>': 1, 'this': 2, 'a': 3, 'one': 4}
+    >>> def lower(s):
+    ...     return s.lower()
     >>> text_data = TextFile(files=['sentences.txt'],
     ...                      dictionary=dictionary, bos_token=None,
-    ...                      preprocess=str.lower)
+    ...                      preprocess=lower)
     >>> for data in text_data.get_default_stream().get_epoch_iterator():
     ...     print(data)
     ([2, 0, 3, 0, 1],)
@@ -91,10 +91,7 @@ class TextFile(Dataset):
         super(TextFile, self).__init__()
 
     def open(self):
-        state = TextFileState()
-        state.current_index = 0
-        state.file = self._open_file(state.current_index)
-        return state
+        return chain(*[_iter(open(f)) for f in self.files])
 
     def _open_file(self, partition_index):
         return open(self.files[partition_index])
@@ -102,20 +99,7 @@ class TextFile(Dataset):
     def get_data(self, state=None, request=None):
         if request is not None:
             raise ValueError
-        while True:
-            if state.file is None:
-                raise StopIteration
-            sentence = state.file.readline()
-            if not sentence:
-                state.file.close()
-                state.file = None
-                if state.current_index == len(self.files) - 1:
-                    raise StopIteration
-                else:
-                    state.current_index += 1
-                    state.file = self._open_file(state.current_index)
-            else:
-                break
+        sentence = next(state)
         if self.preprocess is not None:
             sentence = self.preprocess(sentence)
         data = [self.dictionary[self.bos_token]] if self.bos_token else []

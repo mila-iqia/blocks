@@ -50,6 +50,7 @@ extensions = [
 intersphinx_mapping = {
     'theano': ('http://theano.readthedocs.org/en/latest/', None),
     'numpy': ('http://docs.scipy.org/doc/numpy/', None),
+    'scipy': ('http://docs.scipy.org/doc/scipy/reference/', None),
     'python': ('http://docs.python.org/3.4', None),
     'pandas': ('http://pandas.pydata.org/pandas-docs/stable/', None)
 }
@@ -295,7 +296,8 @@ def skip_abc(app, what, name, obj, skip, options):
 
 def fix_apply(app, what, name, obj, options, signature, return_annotation):
     if isinstance(obj, Application):
-        args, varargs, keywords, defaults = inspect.getargspec(obj.application)
+        args, varargs, keywords, defaults = \
+            inspect.getargspec(obj.application_function)
         positional_args = args[1:] if not defaults else args[:-len(defaults)]
         keyword_args = [] if not defaults else args[-len(defaults):]
         signature = '(' + ', '.join(positional_args)

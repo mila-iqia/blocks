@@ -13,10 +13,11 @@ from argparse import ArgumentParser
 import theano
 from theano import tensor
 
-from blocks.algorithms import GradientDescent, SteepestDescent
+from blocks.algorithms import GradientDescent, Scale
 from blocks.bricks import MLP, Tanh, Identity
 from blocks.bricks.cost import SquaredError
 from blocks.initialization import IsotropicGaussian, Constant
+from blocks.model import Model
 from blocks.datasets import ContainerDataset
 from blocks.datasets.streams import BatchDataStream, DataStreamMapping
 from blocks.datasets.schemes import ConstantScheme
@@ -29,14 +30,19 @@ from blocks.main_loop import MainLoop
 floatX = theano.config.floatX
 
 
+def _data_sqrt(data):
+    return (math.sqrt(data[0]),)
+
+
+def _array_tuple(data):
+    return tuple((numpy.asarray(d, dtype=floatX) for d in data))
+
+
 def get_data_stream(iterable):
     dataset = ContainerDataset({'numbers': iterable})
     data_stream = DataStreamMapping(dataset.get_default_stream(),
-                                    lambda data: (math.sqrt(data[0]),),
-                                    add_sources=('roots',))
-    data_stream = DataStreamMapping(
-        data_stream,
-        lambda data: tuple((numpy.asarray(d, dtype=floatX) for d in data)))
+                                    _data_sqrt, add_sources=('roots',))
+    data_stream = DataStreamMapping(data_stream, _array_tuple)
     return BatchDataStream(data_stream, ConstantScheme(20))
 
 
@@ -51,10 +57,10 @@ def main(save_to, num_batches, continue_=False):
     cost.name = "cost"
 
     main_loop = MainLoop(
-        mlp,
-        get_data_stream(range(100)),
         GradientDescent(
-            cost=cost, step_rule=SteepestDescent(learning_rate=0.001)),
+            cost=cost, step_rule=Scale(learning_rate=0.001)),
+        get_data_stream(range(100)),
+        model=Model(cost),
         extensions=([LoadFromDump(save_to)] if continue_ else []) +
         [Timing(),
             FinishAfter(after_n_batches=num_batches),

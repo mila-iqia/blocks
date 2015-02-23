@@ -1,13 +1,11 @@
+from __future__ import print_function
 import sys
-import os
-import shutil
-import tempfile
+import contextlib
 from collections import OrderedDict
 
 import numpy
 import six
 import theano
-import dill
 from theano import tensor
 from theano import printing
 from theano.gof.graph import Constant
@@ -374,8 +372,8 @@ def repr_attrs(instance, *attrs):
         return orig_repr_template.format(instance, id(instance))
 
 
-def put_hook(variable, hook_fn):
-    """Put a hook on a Theano variables.
+def put_hook(variable, hook_fn, *args):
+    r"""Put a hook on a Theano variables.
 
     Ensures that the hook function is executed every time when the value
     of the Theano variable is available.
@@ -387,9 +385,11 @@ def put_hook(variable, hook_fn):
     hook_fn : function
         The hook function. Should take a single argument: the variable's
         value.
+    *args : list
+        Positional arguments to pass to the hook function.
 
     """
-    return printing.Print(global_fn=lambda _, x: hook_fn(x))(variable)
+    return printing.Print(global_fn=lambda _, x: hook_fn(x, *args))(variable)
 
 
 def ipdb_breakpoint(x):
@@ -405,71 +405,16 @@ def ipdb_breakpoint(x):
     ipdb.set_trace()
 
 
-class LambdaIterator(six.Iterator):
-    """An iterator that calls a function to fetch the next element.
-
-    The reason for having this is that generators are not serializable
-    in Python (even when using third-party libraries).
-
-    Parameters
-    ----------
-    next_function : callable
-        A function to call every time the next element is requested.
-
-    """
-    def __init__(self, next_function):
-        self.next_function = next_function
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        return self.next_function()
+def print_sum(x, header=None):
+    if not header:
+        header = 'print_sum'
+    print(header + ':', x.sum())
 
 
-class SequenceIterator(six.Iterator):
-    """A serializable iterator for list and tuple.
-
-    The reason for having this is that list iterators are not serializable
-    in Python (even when using third-party libraries).
-
-    Parameters
-    ----------
-    sequence : :obj:`list` or :obj:`tuple`
-        The sequence to iterate over.
-
-    """
-    def __init__(self, sequence):
-        self.sequence = sequence
-        self._offset = 0
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        if self._offset == len(self.sequence):
-            raise StopIteration()
-        result = self.sequence[self._offset]
-        self._offset += 1
-        return result
-
-
-def secure_dill_dump(object_, path):
-    """Robust serialization - does not corrupt your files when failed.
-
-    Parameters
-    ----------
-    object_ : object
-        The object to be saved to the disk.
-    path : str
-        The destination path.
-
-    """
-    try:
-        with tempfile.NamedTemporaryFile(delete=False) as temp:
-            dill.dump(object_, temp, fmode=dill.CONTENTS_FMODE)
-        shutil.move(temp.name, path)
-    except:
-        if "temp" in locals():
-            os.remove(temp.name)
-        raise
+@contextlib.contextmanager
+def change_recursion_limit(limit):
+    """Temporarily changes the recursion limit."""
+    old_limit = sys.getrecursionlimit()
+    sys.setrecursionlimit(limit)
+    yield
+    sys.setrecursionlimit(old_limit)

@@ -2,9 +2,12 @@ from abc import ABCMeta, abstractmethod
 
 import numpy
 import theano
+from picklable_itertools import ifilter
 from six import add_metaclass
 
 from blocks.datasets.iterator import DataIterator
+
+floatX = theano.config.floatX
 
 
 @add_metaclass(ABCMeta)
@@ -39,7 +42,6 @@ class AbstractDataStream(object):
     def __init__(self, iteration_scheme=None):
         self.iteration_scheme = iteration_scheme
 
-    @abstractmethod
     def get_data(self, request=None):
         """Request data from the dataset or the wrapped stream.
 
@@ -225,6 +227,26 @@ class DataStreamMapping(DataStreamWrapper):
         return data + image
 
 
+class ForceFloatX(DataStreamWrapper):
+    """Force all floating point numpy arrays to be floatX."""
+    def __init__(self, data_stream):
+        super(ForceFloatX, self).__init__(data_stream)
+
+    def get_data(self, request=None):
+        if request is not None:
+            raise ValueError
+        data = next(self.child_epoch_iterator)
+        result = []
+        for piece in data:
+            if (isinstance(piece, numpy.ndarray) and
+                    piece.dtype.kind == "f" and
+                    piece.dtype != floatX):
+                result.append(piece.astype(floatX))
+            else:
+                result.append(piece)
+        return tuple(result)
+
+
 class DataStreamFilter(DataStreamWrapper):
     """Filters samples that meet a predicate.
 
@@ -240,13 +262,9 @@ class DataStreamFilter(DataStreamWrapper):
         super(DataStreamFilter, self).__init__(data_stream)
         self.predicate = predicate
 
-    def get_data(self, request=None):
-        if request is not None:
-            raise ValueError
-        while True:
-            data = next(self.child_epoch_iterator)
-            if self.predicate(data):
-                return data
+    def get_epoch_iterator(self, **kwargs):
+        super(DataStreamFilter, self).get_epoch_iterator(**kwargs)
+        return ifilter(self.predicate, self.child_epoch_iterator)
 
 
 class CachedDataStream(DataStreamWrapper):

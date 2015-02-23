@@ -2,9 +2,9 @@ import collections
 from abc import ABCMeta, abstractmethod
 
 from six import add_metaclass
+from picklable_itertools import _iter, izip
 
 from blocks.datasets.streams import DataStream
-from blocks.utils import LambdaIterator, SequenceIterator
 
 
 @add_metaclass(ABCMeta)
@@ -205,14 +205,14 @@ class InMemoryDataset(Dataset):
     files are loaded after de-serialization, before the :meth:`load` method
     is ever called.
 
-    >>> import dill
+    >>> from six.moves import cPickle
     >>> from blocks.datasets.mnist import MNIST
     >>> mnist = MNIST('train')
     >>> print("{:,d} KB".format(
     ...     mnist.features.nbytes / 1024)) # doctest: +SKIP
     183,750 KB
     >>> with open('mnist.pkl', 'wb') as f:
-    ...     dill.dump(mnist, f)
+    ...     cPickle.dump(mnist, f)
 
     You will notice that the dumping of the dataset was relatively quick,
     because it didn't attempt to write MNIST to disk. We can now reload it,
@@ -220,7 +220,7 @@ class InMemoryDataset(Dataset):
     happened.
 
     >>> with open('mnist.pkl', 'rb') as f:
-    ...     mnist = dill.load(f)
+    ...     mnist = cPickle.load(f)
     >>> print(mnist.features.shape)
     (60000, 784)
 
@@ -231,7 +231,7 @@ class InMemoryDataset(Dataset):
     >>> correct_path = config.data_path
     >>> config.data_path = '/non/existing/path'
     >>> with open('mnist.pkl', 'rb') as f:
-    ...     mnist = dill.load(f)
+    ...     mnist = cPickle.load(f)
     >>> print(mnist.features.shape) # doctest: +SKIP
     Traceback (most recent call last):
       ...
@@ -370,10 +370,8 @@ class ContainerDataset(Dataset):
             self.data_channels = [container]
 
     def open(self):
-        iterators = [SequenceIterator(channel)
-                     for channel in self.data_channels]
-        return LambdaIterator(
-            lambda: tuple([next(iterator) for iterator in iterators]))
+        iterators = [_iter(channel) for channel in self.data_channels]
+        return izip(*iterators)
 
     def get_data(self, state=None, request=None):
         if state is None or request is not None:

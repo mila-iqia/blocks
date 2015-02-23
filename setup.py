@@ -2,8 +2,6 @@ from codecs import open
 from os import path
 from setuptools import find_packages, setup
 
-import blocks.version
-
 here = path.abspath(path.dirname(__file__))
 
 with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
@@ -13,7 +11,7 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 
 setup(
     name='blocks',
-    version=blocks.version.__version__,
+    version='0.1a1',  # PEP 440 compliant
     description='A Theano framework for building and training neural networks',
     long_description=long_description,
     url='https://github.com/bartvm/blocks',
@@ -33,9 +31,10 @@ setup(
     ],
     keywords='theano machine learning neural networks deep learning',
     packages=find_packages(exclude=['examples', 'docs', 'tests']),
-    scripts=['bin/blocks-continue', 'bin/blocks-dump'],
-    install_requires=['dill', 'numpy', 'theano', 'six', 'pyyaml', 'pandas',
-                      'toolz'],
+    scripts=['bin/blocks-continue', 'bin/blocks-dump', 'bin/blocks-plot'],
+    setup_requires=['numpy'],
+    install_requires=['numpy', 'six', 'pyyaml', 'pandas', 'toolz',
+                      'theano', 'picklable-itertools'],
     extras_require={
         'test': ['nose', 'nose2'],
         'plot': ['bokeh'],
