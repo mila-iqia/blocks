@@ -50,12 +50,6 @@ class Search(object):
             self.compile()
 
 
-class GreedySearch(Search):
-
-    def __init__(self, sequence_generator):
-        super(GreedySearch, self).__init__(sequence_generator)
-
-
 class BeamSearch(Search):
     """Beam search.
 
@@ -300,7 +294,7 @@ class BeamSearch(Search):
 
         Returns
         -------
-        Most probable sequences, corresponding probabilities and costs
+        Most probable sequences, corresponding probabilities and costs.
 
         """
         super(BeamSearch, self).search(**kwargs)
@@ -315,16 +309,21 @@ class BeamSearch(Search):
         cur_states['cur_outputs'] = cur_states['outputs']
         cur_states['cur_outputs_mask'] = numpy.ones_like(
             cur_states['cur_outputs'])
+        cur_states['cur_probs'] = numpy.ones_like(
+            cur_states['cur_outputs'])
 
         for i in range(max_length):
             cur_states.update(self.compute_next(aux_inputs, cur_states))
-            next_probs = cur_states['probs']
+            next_probs = (cur_states['cur_probs'][:, :, :, None] *
+                          cur_states['probs'] *
+                          cur_states['cur_outputs_mask'][-1, :, :, None])
 
             # Top probs
             indexes, top_probs = zip(*[self._top_probs(next_probs[:, :, j],
                                                        self.beam_size,
                                                        unique=i == 0)
                                        for j in range(self.batch_size)])
+            cur_states['cur_probs'] = numpy.array(top_probs).T[None, :, :]
             indexes = numpy.array(indexes)  # chunk, 2, beam
             # current_outputs.
             # here we suppose, that we have 2d outputs
@@ -358,7 +357,8 @@ class BeamSearch(Search):
                 break
 
         # Select only best
-        best_outputs = cur_states['cur_outputs'][:, 0, :]
-        best_out_mask = cur_states['cur_outputs_mask'][:, 0, :]
+        best_outputs = cur_states['cur_outputs'][1:, 0, :]
+        best_out_mask = cur_states['cur_outputs_mask'][1:, 0, :]
+        best_probs = cur_states['cur_probs'][0, 0, :]
 
-        return best_outputs, best_out_mask
+        return best_outputs, best_out_mask, best_probs
