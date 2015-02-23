@@ -15,7 +15,7 @@ floatX = config.floatX
 
 
 class Search(object):
-    """Abstract search class
+    """Abstract search class.
 
     Parameters
     ----------
@@ -35,7 +35,7 @@ class Search(object):
 
     @abstractmethod
     def search(self, **kwargs):
-        r"""Performs search
+        r"""Performs search.
 
         Parameters
         ----------
@@ -88,7 +88,11 @@ class BeamSearch(Search):
         self.generate_names = sequence_generator.generate_outputs()
         self.init_computer = None
         self.next_computer = None
+        self.initial_state_computer = None
         self.real_batch_size = batch_size * beam_size
+        self.state_names = (sequence_generator.state_names +
+                            sequence_generator.glimpse_names +
+                            ['outputs'])
 
     def compile(self, *args, **kwargs):
         """Compiles functions for beam search.
@@ -98,13 +102,13 @@ class BeamSearch(Search):
         attended = self.attended
         attended_mask = self.attended_mask
 
-        init_states = OrderedDict()
-        for name in (['outputs']):
-            init_states[name] = generator.initial_state(
-                name, self.real_batch_size)
+        initial_states = OrderedDict()
+        for name in self.state_names:
+            initial_states[name] = generator.initial_state(name,
+                                                           attended=attended)
+
         self.initial_state_computer = function(self.inputs_dict.values(),
-                                               init_states.values(),
-                                               on_unused_input='warn')
+                                               initial_states.values())
         # Construct initial values
         init_generated = generator.generate(attended=attended,
                                             attended_mask=attended_mask,
@@ -127,11 +131,9 @@ class BeamSearch(Search):
             cur_value.name = name
             cur_variables[name] = cur_value
 
-        input_names = (generator.state_names + generator.glimpse_names +
-                       ['outputs'])
         generator_inputs = {name: val for name, val
                             in cur_variables.iteritems()
-                            if name in input_names}
+                            if name in self.state_names}
         next_generated = generator.generate(attended=attended,
                                             attended_mask=attended_mask,
                                             iterate=False,
@@ -148,6 +150,19 @@ class BeamSearch(Search):
                                       [cur_variables['states']],
                                       next_generated.values() + [next_probs])
         super(BeamSearch, self).compile(*args, **kwargs)
+
+    def compute_initial_states(self, inputs_dict):
+        """Computes initial outputs and states.
+
+        """
+        inputs = [self.merge_chunks(input) for input
+                  in inputs_dict.itervalues()]
+        init_states = self.initial_state_computer(*inputs)
+        init_states = [self.divide_by_chunks(value.reshape((1,) + value.shape))
+                       for value in init_states]
+        state_names = (['outputs'] + self.generator.state_names +
+                       self.generator.glimpse_names)
+        return OrderedDict(zip(state_names, init_states))
 
     def compute_next(self, inputs_dict, cur_vals=None):
         """Computes next states, glimpses, outputs, and probabilities.
@@ -298,16 +313,12 @@ class BeamSearch(Search):
               self.divide_by_chunks(numpy.tile(val, (1, self.beam_size))))
              for name, val in inputs_val_dict.iteritems()])
 
-        current_outputs = self.initial_state_computer(
-            *inputs_val_dict.values())[0]
-        current_outputs = self.divide_by_chunks(current_outputs[None, :])
-        #current_outputs = numpy.zeros((0, self.beam_size, self.batch_size),
-        #                              dtype='int64')
-        curr_out_mask = numpy.ones((1, self.beam_size, self.batch_size),
-                                   dtype=floatX)
+        init_states = self.compute_initial_states(aux_inputs)
+
+        current_outputs = init_states['outputs']
+        curr_out_mask = numpy.ones_like(current_outputs)
 
         cur_values = None
-
         for i in range(max_length):
             cur_values = self.compute_next(aux_inputs, cur_values)
             next_probs = cur_values['probs']
@@ -341,11 +352,8 @@ class BeamSearch(Search):
             next_out_mask = numpy.ones((1, self.beam_size, self.batch_size),
                                        dtype=floatX)
 
-            if i > 0:
-                next_out_mask[0, :, :] = ((outputs[0, :, :] != eol_symbol)
-                                          * (curr_out_mask[-1, :, :] == 1))
-            else:
-                next_out_mask[0, :, :] = (outputs[0, :, :] != eol_symbol)
+            next_out_mask[0, :, :] = ((outputs[0, :, :] != eol_symbol)
+                                      * (curr_out_mask[-1, :, :] == 1))
 
             curr_out_mask = numpy.append(curr_out_mask, next_out_mask.copy(),
                                          axis=0)
