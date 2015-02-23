@@ -1,4 +1,5 @@
 from __future__ import print_function
+from collections import OrderedDict
 import logging
 import pprint
 import math
@@ -37,6 +38,8 @@ from blocks.extensions.plot import Plot
 from blocks.main_loop import MainLoop
 from blocks.filter import VariableFilter
 from blocks.utils import named_copy, dict_union
+
+from blocks.search import BeamSearch
 
 config.recursion_limit = 100000
 floatX = theano.config.floatX
@@ -144,12 +147,13 @@ def main(mode, save_path, num_batches, data_path=None):
         chars_mask = tensor.matrix("features_mask")
         targets = tensor.lmatrix("targets")
         targets_mask = tensor.matrix("targets_mask")
-        batch_cost = generator.cost(
-            targets, targets_mask,
-            attended=encoder.apply(
+        attended = encoder.apply(
                 **dict_union(
                     fork.apply(lookup.lookup(chars), return_dict=True),
-                    mask=chars_mask)),
+                    mask=chars_mask))
+        batch_cost = generator.cost(
+            targets, targets_mask,
+            attended=attended,
             attended_mask=chars_mask).sum()
         batch_size = named_copy(chars.shape[1], "batch_size")
         cost = aggregation.mean(batch_cost,  batch_size)
@@ -268,3 +272,58 @@ def main(mode, save_path, num_batches, data_path=None):
             messages.sort(key=operator.itemgetter(0), reverse=True)
             for _, message in messages:
                 print(message)
+    elif mode == 'beam':
+        logger.info("Model is loaded")
+        chars = tensor.lmatrix("features")
+        chars_mask = tensor.matrix("features_mask")
+        attended = encoder.apply(
+                **dict_union(fork.apply(lookup.lookup(chars),
+                             return_dict=True)))
+        generated = generator.generate(
+            n_steps=3 * chars.shape[0], batch_size=chars.shape[1],
+            attended=attended,
+            attended_mask=tensor.ones(chars.shape))
+        model = Model(generated)
+        model.set_param_values(load_parameter_values(save_path))
+        sample_function = model.get_theano_function()
+        logging.info("Sampling function is compiled")
+        beam_search = BeamSearch(3, 2, generator, attended, chars_mask,
+                OrderedDict([('chars', chars),
+                    ('chars_mask', chars_mask)]))
+        beam_search.compile()
+        toy_data = numpy.array([[0] * 2, [1] * 2, [0] * 2, [1] * 2])
+        toy_mask = numpy.ones_like(toy_data)
+        out, mask = beam_search.search(OrderedDict([('chars', toy_data),
+            ('chars_mask', toy_mask)]), -1)
+
+        line = input("Enter a sentence\n")
+        batch_size = int(input("Enter a number of samples\n"))
+        encoded_input = [char2code.get(char, char2code["<UNK>"])
+                         for char in line.lower().strip()]
+        encoded_input = ([char2code['<S>']] + encoded_input +
+                         [char2code['</S>']])
+        print("Encoder input:", encoded_input)
+        target = reverse_words((encoded_input,))[0]
+        print("Target: ", target)
+        numpy_inputs = numpy.repeat(numpy.array(encoded_input)[:, None], batch_size, axis=1)
+        states, samples, glimpses, weights, costs = beam_search.search(
+                OrderedDict([('chars', numpy_inputs),
+                    ('chars_mask', numpy.ones_like(numpy_inputs))]), 43)
+
+        messages = []
+        for i in range(samples.shape[1]):
+            sample = list(samples[:, i])
+            try:
+                true_length = sample.index(char2code['</S>']) + 1
+            except ValueError:
+                true_length = len(sample)
+            sample = sample[:true_length]
+            cost = costs[:true_length, i].sum()
+            message = "({})".format(cost)
+            message += "".join(code2char[code] for code in sample)
+            if sample == target:
+                message += " CORRECT!"
+            messages.append((cost, message))
+        messages.sort(key=operator.itemgetter(0), reverse=True)
+        for _, message in messages:
+            print(message)
