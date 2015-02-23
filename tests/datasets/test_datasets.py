@@ -60,6 +60,21 @@ def test_data_stream_mapping_sort():
     assert list(wrapper3.get_epoch_iterator()) == list(zip(data_sorted_rev))
 
 
+def test_data_stream_mapping_multisource():
+    data_dict = {'x': [[1, 2, 3], [2, 3, 1], [3, 2, 1]],
+                 'y': [[6, 5, 4], [6, 5, 4], [6, 5, 4]]}
+    data = OrderedDict()
+    data['x'] = data_dict['x']
+    data['y'] = data_dict['y']
+    data_sorted = [([1, 2, 3], [6, 5, 4]),
+                   ([1, 2, 3], [4, 6, 5]),
+                   ([1, 2, 3], [4, 5, 6])]
+    stream = ContainerDataset(data).get_default_stream()
+    wrapper = DataStreamMapping(stream,
+                                 mapping=SortMapping(operator.itemgetter(0)))
+    assert list(wrapper.get_epoch_iterator()) == data_sorted
+
+
 def test_data_stream_filter():
     data = [1, 2, 3]
     data_filtered = [1, 3]

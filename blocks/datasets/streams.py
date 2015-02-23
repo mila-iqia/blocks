@@ -323,7 +323,8 @@ class SortMapping(object):
     Parameters
     ----------
     key : callable
-        The mapping that returns the value to sort on
+        The mapping that returns the value to sort on. Its input will be
+        a tuple that contains a single data point for each source.
     reverse : boolean value that indicates whether the sort order should
         be reversed.
 
@@ -333,9 +334,10 @@ class SortMapping(object):
         self.reverse = reverse
 
     def __call__(self, x):
+        values = [self.key(i) for i in zip(*x)]
         indices = [i for (v, i) in
-                   sorted(((v, i) for (i, v) in enumerate(x[0])),
-                          key=self.key, reverse=self.reverse)]
+                   sorted(((v, i) for (i, v) in enumerate(values)),
+                          reverse=self.reverse)]
         return tuple([[i[j] for j in indices] for i in x])
 
 
