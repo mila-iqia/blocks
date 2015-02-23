@@ -301,8 +301,8 @@ def main(mode, save_path, num_batches, data_path=None):
         sample_function = model.get_theano_function()
         logging.info("Sampling function is compiled")
         beam_search = BeamSearch(3, 2, generator, attended, chars_mask,
-                OrderedDict([('chars', chars),
-                    ('chars_mask', chars_mask)]))
+                                 OrderedDict([('chars', chars),
+                                              ('chars_mask', chars_mask)]))
         beam_search.compile()
         toy_data = numpy.array([[0] * 2, [1] * 2, [0] * 2, [1] * 2])
         toy_mask = numpy.ones_like(toy_data)
@@ -319,9 +319,9 @@ def main(mode, save_path, num_batches, data_path=None):
         target = reverse_words((encoded_input,))[0]
         print("Target: ", target)
         numpy_inputs = numpy.repeat(numpy.array(encoded_input)[:, None], batch_size, axis=1)
-        states, samples, glimpses, weights, costs = beam_search.search(
-                OrderedDict([('chars', numpy_inputs),
-                    ('chars_mask', numpy.ones_like(numpy_inputs))]), 43)
+        samples, probs = beam_search.search(
+            OrderedDict([('chars', numpy_inputs),
+                         ('chars_mask', numpy.ones_like(numpy_inputs))]), 43)
 
         messages = []
         for i in range(samples.shape[1]):
@@ -331,12 +331,10 @@ def main(mode, save_path, num_batches, data_path=None):
             except ValueError:
                 true_length = len(sample)
             sample = sample[:true_length]
-            cost = costs[:true_length, i].sum()
-            message = "({})".format(cost)
             message += "".join(code2char[code] for code in sample)
             if sample == target:
                 message += " CORRECT!"
-            messages.append((cost, message))
+            messages.append((0, message))
         messages.sort(key=operator.itemgetter(0), reverse=True)
         for _, message in messages:
             print(message)
