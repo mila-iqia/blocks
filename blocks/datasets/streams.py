@@ -323,9 +323,7 @@ class SortMapping(object):
     def __call__(self, x):
         indices = [i for (v, i) in
                    sorted(((v, i) for (i, v) in enumerate(x[0])),
-                          key=self.key)]
-        if self.reverse:
-            indices = indices[::-1]
+                          key=self.key, reverse=self.reverse)]
         return tuple([[i[j] for j in indices] for i in x])
 
 
