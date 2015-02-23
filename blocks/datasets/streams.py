@@ -314,6 +314,21 @@ class CachedDataStream(DataStreamWrapper):
             cache.extend(data)
 
 
+class SortMapping(object):
+    """Callable class for creating sort mappings without nesting functions"""
+    def __init__(self, key, reverse):
+        self.key = key
+        self.reverse = reverse
+
+    def __call__(self, x):
+        indices = [i for (v, i) in
+                   sorted(((v, i) for (i, v) in enumerate(x[0])),
+                          key=self.key)]
+        if self.reverse:
+            indices = indices[::-1]
+        return tuple([[i[j] for j in indices] for i in x])
+
+
 class DataStreamSort(DataStreamMapping):
     """Sorts the contents of the batches of the wrapped data stream.
 
@@ -325,15 +340,12 @@ class DataStreamSort(DataStreamMapping):
         The mapping that returns the value to sort on
 
     """
-    def __init__(self, data_stream, key=None):
+    def __init__(self, data_stream, key=None, reverse=False):
 
-        def mapping(x):
-            indices = [i for (v, i) in
-                       sorted(((v, i) for (i, v) in enumerate(x[0])), key=key)]
-            return tuple([[i[j] for j in indices] for i in x])
-
-        super(DataStreamSort, self).__init__(data_stream, mapping=mapping)
+        super(DataStreamSort, self).__init__(data_stream,
+                                             mapping=SortMapping(key, reverse))
         self.key = key
+        self.reverse = reverse
 
 
 class BatchDataStream(DataStreamWrapper):

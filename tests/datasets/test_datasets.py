@@ -1,6 +1,7 @@
 from collections import OrderedDict
 
 import numpy
+import operator
 import theano
 from six.moves import zip
 from nose.tools import assert_raises
@@ -49,10 +50,12 @@ def test_data_stream_sort():
     data_sorted = [[1, 2, 3]] * 3
     data_sorted_rev = [[3, 2, 1]] * 3
     stream = ContainerDataset(data).get_default_stream()
-    wrapper1 = DataStreamSort(stream, lambda x: x[0])
+    wrapper1 = DataStreamSort(stream, operator.itemgetter(0))
     assert list(wrapper1.get_epoch_iterator()) == list(zip(data_sorted))
     wrapper2 = DataStreamSort(stream, lambda x: -x[0])
     assert list(wrapper2.get_epoch_iterator()) == list(zip(data_sorted_rev))
+    wrapper3 = DataStreamSort(stream, operator.itemgetter(0), reverse=True)
+    assert list(wrapper3.get_epoch_iterator()) == list(zip(data_sorted_rev))
 
 
 def test_data_stream_filter():
