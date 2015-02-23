@@ -10,6 +10,7 @@ from theano import tensor
 
 from blocks.filter import VariableFilter
 from blocks.graph import ComputationGraph
+from blocks.utils import dict_union
 
 floatX = config.floatX
 
@@ -48,6 +49,20 @@ class Search(object):
         """
         if not self.compiled:
             self.compile()
+
+
+def unchunk_rename(func):
+    def wrapper(self, *inputs):
+        merged_input = []
+        for input in inputs:
+            merged_input += [OrderedDict([(name, self.merge_chunks(value))
+                                          for name, value
+                                          in input.iteritems()])]
+        names, outputs = func(self, *merged_input)
+        outputs = [self.divide_by_chunks(value.reshape((1,) + value.shape))
+                   for value in outputs]
+        return OrderedDict(zip(names, outputs))
+    return wrapper
 
 
 class BeamSearch(Search):
@@ -104,7 +119,8 @@ class BeamSearch(Search):
                 attended=attended)
 
         self.initial_state_computer = function(self.inputs_dict.values(),
-                                               initial_states.values())
+                                               initial_states.values(),
+                                               on_unused_input='ignore')
         # Construct initial values
         init_generated = generator.generate(attended=attended,
                                             attended_mask=attended_mask,
@@ -118,7 +134,8 @@ class BeamSearch(Search):
 
         # Create theano function for initial values
         self.init_computer = function(self.inputs_dict.values(),
-                                      init_generated.values() + [init_probs])
+                                      init_generated.values() + [init_probs],
+                                      on_unused_input='ignore')
 
         # Define inputs for next values computer
         cur_variables = OrderedDict()
@@ -147,18 +164,16 @@ class BeamSearch(Search):
                                       next_generated.values() + [next_probs])
         super(BeamSearch, self).compile(*args, **kwargs)
 
+    @unchunk_rename
     def compute_initial_states(self, inputs_dict):
         """Computes initial outputs and states.
 
         """
-        inputs = [self.merge_chunks(input) for input
-                  in inputs_dict.itervalues()]
-        init_states = self.initial_state_computer(*inputs)
-        init_states = [self.divide_by_chunks(value.reshape((1,) + value.shape))
-                       for value in init_states]
-        return OrderedDict(zip(self.state_names, init_states))
+        init_states = self.initial_state_computer(*inputs_dict.values())
+        return self.state_names, init_states
 
-    def compute_next(self, inputs_dict, cur_vals):
+    @unchunk_rename
+    def compute_next(self, inputs, cur_vals):
         """Computes next states, glimpses, outputs, and probabilities.
 
         Parameters
@@ -170,17 +185,13 @@ class BeamSearch(Search):
 
         Returns
         -------
-        Dictionary of next state, glimpe, output, probabilities values
+        Dictionary of next state, glimpses, output, probabilities values
         with names as returned by `generate_outputs`.
 
         """
-        inputs = [self.merge_chunks(input) for input
-                  in inputs_dict.itervalues()]
-        states = self.merge_chunks(cur_vals['states'])
-        next_values = self.next_computer(*(inputs + [states[0]]))
-        next_values = [self.divide_by_chunks(value.reshape((1,) + value.shape))
-                       for value in next_values]
-        return OrderedDict(zip(self.generate_names + ['probs'], next_values))
+        next_values = self.next_computer(*(inputs.values() +
+                                           [cur_vals['states'][0]]))
+        return self.generate_names + ['probs'], next_values
 
     @classmethod
     def _top_probs(cls, probs, beam_size, unique=False):
