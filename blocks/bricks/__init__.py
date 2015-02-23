@@ -462,7 +462,8 @@ class Softmax(Activation):
         """
         x = x - x.max(axis=1).dimshuffle(0, 'x')
         log_prob = x - tensor.log(tensor.exp(x).sum(axis=1).dimshuffle(0, 'x'))
-        cost = tensor.nnet.categorical_crossentropy(tensor.exp(log_prob), y).mean()
+        cost = \
+            tensor.nnet.categorical_crossentropy(tensor.exp(log_prob), y).mean()
         return cost
 
 
