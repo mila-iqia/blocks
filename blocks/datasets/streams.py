@@ -315,7 +315,7 @@ class CachedDataStream(DataStreamWrapper):
 
 
 class SortMapping(object):
-    """Callable class for creating sort mappings without nesting functions"""
+    """Callable class for creating sort mappings without nesting functions."""
     def __init__(self, key, reverse):
         self.key = key
         self.reverse = reverse
