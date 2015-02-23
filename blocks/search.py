@@ -101,12 +101,12 @@ class BeamSearch(Search):
         init_generated = generator.generate(attended=attended,
                                             attended_mask=attended_mask,
                                             iterate=False, n_steps=1,
-                                            batch_size=self.real_batch_size)
-        init_generated = OrderedDict(zip(self.generate_names, init_generated))
+                                            batch_size=self.real_batch_size,
+                                            return_dict=True)
         init_cg = ComputationGraph(init_generated.values())
-        init_readouts = VariableFilter(application=generator.readout.emit,
-                                       name='readouts')(init_cg.variables)[-1]
-        init_probs = generator.readout.emitter.probs(init_readouts)
+        init_probs = VariableFilter(
+            application=generator.readout.emitter.probs,
+            name='output')(init_cg.variables)[-1]
 
         # Create theano function for initial values
         self.init_computer = function(self.inputs_dict.values(),
@@ -129,12 +129,12 @@ class BeamSearch(Search):
                                             iterate=False,
                                             n_steps=1,
                                             batch_size=self.real_batch_size,
+                                            return_dict=True,
                                             **generator_inputs)
-        next_generated = OrderedDict(zip(self.generate_names, next_generated))
         cg_step = ComputationGraph(next_generated.values())
-        readouts_step = VariableFilter(application=generator.readout.emit,
-                                       name='readouts')(cg_step.variables)[-1]
-        next_probs = generator.readout.emitter.probs(readouts_step)
+        next_probs = VariableFilter(
+            application=generator.readout.emitter.probs,
+            name='output')(cg_step.variables)[-1]
         # Create theano function for next values
         self.next_computer = function(self.inputs_dict.values() +
                                       [cur_variables['states']],
