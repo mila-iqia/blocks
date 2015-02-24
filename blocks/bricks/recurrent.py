@@ -98,8 +98,11 @@ def recurrent(*args, **kwargs):
                     problem.
 
             """
-            # Extract arguments related to iteration.
+            # Extract arguments related to iteration and immediately relay the
+            # call to the wrapped function if `iterate=False`
             iterate = kwargs.pop('iterate', True)
+            if not iterate:
+                return application_function(brick, *args, **kwargs)
             reverse = kwargs.pop('reverse', False)
             return_initial_states = kwargs.pop('return_initial_states', False)
 
@@ -169,17 +172,20 @@ def recurrent(*args, **kwargs):
                 states_given[name] = tensor.unbroadcast(state,
                                                         *range(state.ndim))
 
-            # Apply methods
-            if not iterate:
-                return application_function(brick, **kwargs)
-
             def scan_function(*args):
                 args = list(args)
                 arg_names = (list(sequences_given) + list(states_given) +
                              list(contexts_given))
                 kwargs = dict(zip(arg_names, args))
                 kwargs.update(rest_kwargs)
-                return application_function(brick, **kwargs)
+                outputs = getattr(brick, application_function.__name__)(
+                    iterate=False, **kwargs)
+                # We want to save the computation graph returned by the
+                # `application_function` when it is called inside the
+                # `theano.scan`.
+                application_call.inner_inputs = args
+                application_call.inner_outputs = pack(outputs)
+                return outputs
             outputs_info = (list(states_given.values()) +
                             [None] * (len(application.outputs) -
                                       len(application.states)))
@@ -199,6 +205,7 @@ def recurrent(*args, **kwargs):
             if updates:
                 application_call.updates = dict_union(application_call.updates,
                                                       updates)
+
             return result
 
         return recurrent_apply

@@ -56,6 +56,7 @@ intersphinx_mapping = {
 }
 
 graphviz_dot_args = ['-Gbgcolor=#fcfcfc']  # To match the RTD theme
+graphviz_output_format = 'svg' # To produce SVG figures
 
 # Render todo lists
 todo_include_todos = True
