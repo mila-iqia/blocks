@@ -5,11 +5,14 @@ import numpy
 import theano
 from numpy.testing import assert_allclose
 from theano import tensor
+from theano.gof.graph import is_same_graph
 
 from blocks.bricks import Tanh
 from blocks.bricks.recurrent import (
     GatedRecurrent, SimpleRecurrent, Bidirectional, LSTM)
 from blocks.initialization import Constant, IsotropicGaussian, Orthogonal
+from blocks.filter import get_application_call, VariableFilter
+from blocks.graph import ComputationGraph
 
 
 floatX = theano.config.floatX
@@ -235,3 +238,24 @@ class TestBidirectional(unittest.TestCase):
 
         assert_allclose(h_simple, h_bidir[..., :3], rtol=1e-04)
         assert_allclose(h_simple_rev, h_bidir[::-1, ...,  3:], rtol=1e-04)
+
+
+def test_saved_inner_graph():
+    """Make sure that the original inner graph is saved."""
+    x = tensor.tensor3()
+    recurrent = SimpleRecurrent(dim=3, activation=Tanh())
+    y = recurrent.apply(x)
+
+    application_call = get_application_call(y)
+    assert application_call.inner_inputs
+    assert application_call.inner_outputs
+
+    cg = ComputationGraph(application_call.inner_outputs)
+    # Check that the inner scan graph is annotated
+    # with `recurrent.apply`
+    assert len(VariableFilter(application=recurrent.apply)(cg)) == 3
+    # Check that the inner graph is equivalent to the one
+    # produced by a stand-alone of `recurrent.apply`
+    assert is_same_graph(application_call.inner_outputs[0],
+                         recurrent.apply(*application_call.inner_inputs,
+                                         iterate=False))
