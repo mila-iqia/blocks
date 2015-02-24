@@ -2,7 +2,7 @@ from abc import ABCMeta, abstractmethod
 
 import numpy
 import theano
-from picklable_itertools import ifilter
+from picklable_itertools import ifilter, chain
 from six import add_metaclass
 
 from blocks.datasets.iterator import DataIterator
@@ -333,12 +333,9 @@ class SortMapping(object):
         self.key = key
         self.reverse = reverse
 
-    def __call__(self, x):
-        values = [self.key(i) for i in zip(*x)]
-        indices = [i for (v, i) in
-                   sorted(((v, i) for (i, v) in enumerate(values)),
-                          reverse=self.reverse)]
-        return tuple([[i[j] for j in indices] for i in x])
+    def __call__(self, batch):
+        output = sorted(zip(*batch), key=self.key, reverse=self.reverse)
+        return tuple(list(i) for i in zip(*output))
 
 
 class BatchDataStream(DataStreamWrapper):
