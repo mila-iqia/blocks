@@ -37,7 +37,7 @@ from blocks.extensions.monitoring import TrainingDataMonitoring
 from blocks.extensions.plot import Plot
 from blocks.main_loop import MainLoop
 from blocks.filter import VariableFilter
-from blocks.utils import named_copy, dict_union
+from blocks.utils import named_copy, dict_union, unpack
 
 from blocks.search import BeamSearch
 
@@ -285,7 +285,7 @@ def main(mode, save_path, num_batches, data_path=None):
             messages.sort(key=operator.itemgetter(0), reverse=True)
             for _, message in messages:
                 print(message)
-    elif mode == 'beam':
+    elif mode == 'beam_search':
         logger.info("Model is loaded")
         chars = tensor.lmatrix("features")
         chars_mask = tensor.matrix("features_mask")
@@ -298,41 +298,38 @@ def main(mode, save_path, num_batches, data_path=None):
             attended_mask=chars_mask)
         model = Model(generated)
         model.set_param_values(load_parameter_values(save_path))
-        batch_size = 2
-        beam_search = BeamSearch(3, batch_size, generator, attended,
+        batch_size = 1
+        beam_search = BeamSearch(10, batch_size, generator, attended,
                                  chars_mask,
                                  OrderedDict([('chars', chars),
                                               ('chars_mask', chars_mask)]))
         beam_search.compile()
 
-        line = "Enter a sentence ."
-        encoded_input = [char2code.get(char, char2code["<UNK>"])
-                         for char in line.lower().strip()]
-        encoded_input = ([char2code['<S>']] + encoded_input +
-                         [char2code['</S>']])
-        print("Encoder input:", encoded_input)
-        target = reverse_words((encoded_input,))[0]
-        print("Target: ", target)
-        numpy_inputs = numpy.repeat(numpy.array(encoded_input)[:, None],
-                                    batch_size, axis=1)
-        samples, masks, probs = beam_search.search(
-            OrderedDict([('chars', numpy_inputs),
-                         ('chars_mask', numpy.ones_like(numpy_inputs))]),
-            char2code['</S>'])
+        while True:
+            # Python 2-3 compatibility
+            line = input("Enter a sentence\n")
+            encoded_input = [char2code.get(char, char2code["<UNK>"])
+                             for char in line.lower().strip()]
+            encoded_input = ([char2code['<S>']] + encoded_input +
+                             [char2code['</S>']])
+            print("Encoder input:", encoded_input)
+            target = reverse_words((encoded_input,))[0]
+            print("Target: ", target)
+            numpy_inputs = numpy.repeat(numpy.array(encoded_input)[:, None],
+                                        batch_size, axis=1)
+            outputs, masks, probs = beam_search.search(
+                OrderedDict([('chars', numpy_inputs),
+                             ('chars_mask', numpy.ones_like(numpy_inputs))]),
+                char2code['</S>'])
 
-        messages = []
-        for i in range(samples.shape[1]):
-            sample = list(samples[:, i])
+            output = list(outputs[:, 0])
             try:
-                true_length = sample.index(char2code['</S>']) + 1
+                true_length = [x for x in outputs].index(char2code['</S>']) + 1
             except ValueError:
-                true_length = len(sample)
-            sample = sample[:true_length]
-            message = "(%.2e)" % probs[i]
-            message += "".join(code2char[code] for code in sample)
-            if sample == target:
+                true_length = len(outputs)
+            output = output[:true_length]
+            message = "(%.2e)" % unpack(probs)
+            message += "".join(code2char[code] for code in output)
+            if output == target:
                 message += " CORRECT!"
-            messages.append((0, message))
-        messages.sort(key=operator.itemgetter(0), reverse=True)
-        for _, message in messages:
             print(message)
