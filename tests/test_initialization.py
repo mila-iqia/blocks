@@ -101,22 +101,21 @@ def test_orthogonal():
         WTW = numpy.dot(W.T, W)
 
         atol = 0.2
-        rtol = 0.1
 
         # Sanity check, just to be save
         assert WWT.shape == (shape[0], shape[0])
         assert WTW.shape == (shape[1], shape[1])
 
         # Diagonals ~= 1. ?
-        assert_allclose(numpy.diag(WWT), 1., atol=atol, rtol=rtol)
-        assert_allclose(numpy.diag(WTW), 1., atol=atol, rtol=rtol)
+        assert_allclose(numpy.diag(WWT), 1., atol=atol)
+        assert_allclose(numpy.diag(WTW), 1., atol=atol)
 
         # Non-diagonal ~= 0. ?
         WWT_residum = WWT-numpy.eye(shape[0])
         WTW_residum = WTW-numpy.eye(shape[1])
 
-        assert_allclose(WWT_residum, 0., atol=atol, rtol=rtol)
-        assert_allclose(WTW_residum, 0., atol=atol, rtol=rtol)
+        assert_allclose(WWT_residum, 0., atol=atol)
+        assert_allclose(WTW_residum, 0., atol=atol)
 
     yield check_orthogonal, rng, (50, 50)
     yield check_orthogonal, rng, (50, 51)
