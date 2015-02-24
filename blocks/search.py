@@ -14,43 +14,6 @@ from blocks.graph import ComputationGraph
 floatX = config.floatX
 
 
-class Search(object):
-    """Abstract search class.
-
-    Parameters
-    ----------
-    sequence_generator : sequence generator
-        Sequence generator to be used
-
-    """
-    __metaclass__ = ABCMeta
-
-    def __init__(self, sequence_generator):
-        self.generator = sequence_generator
-        self.compiled = False
-
-    @abstractmethod
-    def compile(self):
-        self.compiled = True
-
-    @abstractmethod
-    def search(self, **kwargs):
-        r"""Performs search.
-
-        Parameters
-        ----------
-        \*\*kwargs :
-            Arguments needed by sequence generator
-
-        Returns
-        -------
-        Generated sequences
-
-        """
-        if not self.compiled:
-            self.compile()
-
-
 def unchunk_rename(*args, **kwargs):
     def _trace(func):
         def wrapper(self, *inputs):
@@ -80,7 +43,7 @@ def unchunk_rename(*args, **kwargs):
         return _trace
 
 
-class BeamSearch(Search):
+class BeamSearch(object):
     """Beam search.
 
     Parameters
@@ -102,7 +65,6 @@ class BeamSearch(Search):
     """
     def __init__(self, beam_size, batch_size, sequence_generator, attended,
                  attended_mask, inputs_dict):
-        super(BeamSearch, self).__init__(sequence_generator)
         self.beam_size = beam_size
         self.batch_size = batch_size
         self.sequence_generator = sequence_generator
@@ -180,7 +142,7 @@ class BeamSearch(Search):
         self.next_computer = function([attended, attended_mask,
                                        cur_variables['states']],
                                       next_generated.values() + [next_probs])
-        super(BeamSearch, self).compile(*args, **kwargs)
+        self.compiled = True
 
     @unchunk_rename(add_time_dim=False)
     def compute_contexts(self, inputs_dict):
@@ -289,7 +251,7 @@ class BeamSearch(Search):
         ----------
         array : numpy array
             2D or 3D (sequence length, beam size * batch size
-            [, readout dim]) aray
+            [, readout dim]) array
 
         Returns
         -------
@@ -331,7 +293,8 @@ class BeamSearch(Search):
         Most probable sequences, corresponding probabilities and costs.
 
         """
-        super(BeamSearch, self).search(**kwargs)
+        if not self.compiled:
+            self.compile()
         # Inputs repeated beam_size times
         aux_inputs = OrderedDict(
             [(name,
