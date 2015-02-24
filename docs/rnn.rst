@@ -47,7 +47,7 @@ receives (figure above). The equation describing that RNN is
 >>> rnn.initialize()
 >>> h = rnn.apply(x)
 >>> f = theano.function([x], h)
->>> print f(numpy.ones((3, 1, 3))) # doctest: +ELLIPSIS
+>>> print(f(numpy.ones((3, 1, 3)))) # doctest: +ELLIPSIS
 [[[ 1.  1.  1.]]
 <BLANKLINE>
  [[ 2.  2.  2.]]
@@ -88,7 +88,7 @@ The equation for the RNN is
 >>> doubler.initialize()
 >>> h_doubler = rnn.apply(doubler.apply(x))
 >>> f = theano.function([x], h_doubler)
->>> print f(numpy.ones((3, 1, 3))) # doctest: +ELLIPSIS
+>>> print(f(numpy.ones((3, 1, 3)))) # doctest: +ELLIPSIS
 [[[ 2.  2.  2.]]
 <BLANKLINE>
  [[ 4.  4.  4.]]
@@ -142,7 +142,7 @@ receives, but starting from one instead of zero (figure above):
 >>> h0 = tensor.matrix('h0')
 >>> h = rnn.apply(inputs=x, states=h0)
 >>> f = theano.function([x, h0], h)
->>> print f(numpy.ones((3, 1, 3)), numpy.ones((1, 3))) # doctest: +ELLIPSIS
+>>> print(f(numpy.ones((3, 1, 3)), numpy.ones((1, 3)))) # doctest: +ELLIPSIS
 [[[ 2.  2.  2.]]
 <BLANKLINE>
  [[ 3.  3.  3.]]
@@ -242,7 +242,7 @@ Here's how you can create a recurrent brick that encapsulate the two layers:
 >>> first_h, second_h = feedback.apply(inputs=x)
 >>> f = theano.function([x], [first_h, second_h])
 >>> for states in f(numpy.ones((3, 1, 3))):
-...     print states # doctest: +ELLIPSIS
+...     print(states) # doctest: +ELLIPSIS
 [[[ 1.  1.  1.]]
 <BLANKLINE>
  [[ 3.  3.  3.]]
