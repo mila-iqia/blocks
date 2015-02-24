@@ -299,8 +299,7 @@ def main(mode, save_path, num_batches, data_path=None):
         model = Model(generated)
         model.set_param_values(load_parameter_values(save_path))
         batch_size = 1
-        beam_search = BeamSearch(10, batch_size, generator, attended,
-                                 chars_mask,
+        beam_search = BeamSearch(10, generator, attended, chars_mask,
                                  OrderedDict([('chars', chars),
                                               ('chars_mask', chars_mask)]))
         beam_search.compile()
@@ -322,7 +321,7 @@ def main(mode, save_path, num_batches, data_path=None):
                              ('chars_mask', numpy.ones_like(numpy_inputs))]),
                 char2code['</S>'])
 
-            output = list(outputs[:, 0])
+            output = list(outputs[:])
             try:
                 true_length = [x for x in outputs].index(char2code['</S>']) + 1
             except ValueError:
