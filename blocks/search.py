@@ -9,7 +9,7 @@ from theano import tensor
 
 from blocks.filter import VariableFilter
 from blocks.graph import ComputationGraph
-from blocks.utils import unpack
+from blocks.utils import unpack, dict_union
 
 floatX = config.floatX
 
@@ -51,6 +51,7 @@ class BeamSearch(object):
         self.state_names = (sequence_generator.state_names +
                             sequence_generator.glimpse_names +
                             ['outputs'])
+        self.context_names = sequence_generator.context_names
         self.comp_graph = comp_graph
         self.compiled = False
 
@@ -58,15 +59,14 @@ class BeamSearch(object):
         """Compiles functions for beam search."""
         generator = self.sequence_generator
 
-        attended = unpack(
-            VariableFilter(application=generator.generate,
-                           name='attended$')(self.comp_graph.variables))
-        attended_mask = unpack(
-            VariableFilter(application=generator.generate,
-                           name='attended_mask$')(self.comp_graph.variables))
+        contexts = OrderedDict()
+        for name in self.context_names:
+            contexts[name] = unpack(
+                VariableFilter(application=generator.generate,
+                               name='^' + name + '$')(self.comp_graph.variables))
 
         self.attended_computer = function(self.inputs_dict.values(),
-                                          [attended, attended_mask],
+                                          contexts.values(),
                                           on_unused_input='ignore')
 
         initial_states = OrderedDict()
@@ -74,9 +74,9 @@ class BeamSearch(object):
             initial_states[name] = generator.initial_state(
                 name,
                 self.beam_size,
-                attended=attended)
+                **contexts)
 
-        self.initial_state_computer = function([attended, attended_mask],
+        self.initial_state_computer = function(contexts.values(),
                                                initial_states.values(),
                                                on_unused_input='ignore')
 
@@ -87,20 +87,19 @@ class BeamSearch(object):
             cur_value.name = name
             cur_variables[name] = cur_value
 
-        next_generated = generator.generate(attended=attended,
-                                            attended_mask=attended_mask,
-                                            iterate=False,
+        next_generated = generator.generate(iterate=False,
                                             n_steps=1,
                                             batch_size=self.beam_size,
                                             return_dict=True,
-                                            **cur_variables)
+                                            **dict_union(cur_variables,
+                                                         contexts))
         cg_step = ComputationGraph(next_generated.values())
         next_probs = VariableFilter(
             application=generator.readout.emitter.probs,
             name='output')(cg_step.variables)[-1]
         # Create theano function for next values
-        self.next_computer = function([attended, attended_mask,
-                                       cur_variables['states']],
+        self.next_computer = function(contexts.values() +
+                                      [cur_variables['states']],
                                       next_generated.values() + [next_probs])
         self.compiled = True
 
