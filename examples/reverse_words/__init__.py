@@ -298,8 +298,8 @@ def main(mode, save_path, num_batches, data_path=None):
             attended_mask=chars_mask)
         model = Model(generated)
         model.set_param_values(load_parameter_values(save_path))
-        batch_size = 20
-        beam_search = BeamSearch(20, batch_size, generator, attended,
+        batch_size = 2
+        beam_search = BeamSearch(3, batch_size, generator, attended,
                                  chars_mask,
                                  OrderedDict([('chars', chars),
                                               ('chars_mask', chars_mask)]))
