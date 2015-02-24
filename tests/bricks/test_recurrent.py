@@ -5,12 +5,14 @@ import numpy
 import theano
 from numpy.testing import assert_allclose
 from theano import tensor
+from theano.gof.graph import is_same_graph
 
 from blocks.bricks import Tanh
 from blocks.bricks.recurrent import (
     GatedRecurrent, SimpleRecurrent, Bidirectional, LSTM)
 from blocks.initialization import Constant, IsotropicGaussian, Orthogonal
-from blocks.filter import get_application_call
+from blocks.filter import get_application_call, VariableFilter
+from blocks.graph import ComputationGraph
 
 
 floatX = theano.config.floatX
@@ -247,6 +249,13 @@ def test_saved_inner_graph():
     application_call = get_application_call(y)
     assert application_call.inner_inputs
     assert application_call.inner_outputs
-    # TODO before merge: test equivalence of the saved CG
-    # and the one obtained by an explicit `iterate=False` call.
-    # Need to consult Theano gurus for that.
+
+    cg = ComputationGraph(application_call.inner_outputs)
+    # Check that the inner scan graph is annotated
+    # with `recurrent.apply`
+    assert len(VariableFilter(application=recurrent.apply)(cg)) == 3
+    # Check that the inner graph is equivalent to the one
+    # produced by a stand-alone of `recurrent.apply`
+    assert is_same_graph(application_call.inner_outputs[0],
+                         recurrent.apply(*application_call.inner_inputs,
+                                         iterate=False))

@@ -184,7 +184,7 @@ def recurrent(*args, **kwargs):
                 # `application_function` when it is called inside the
                 # `theano.scan`.
                 application_call.inner_inputs = args
-                application_call.inner_outputs = outputs
+                application_call.inner_outputs = pack(outputs)
                 return outputs
             outputs_info = (list(states_given.values()) +
                             [None] * (len(application.outputs) -
