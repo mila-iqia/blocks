@@ -71,7 +71,7 @@ class BeamSearch(object):
         self.attended = attended
         self.attended_mask = attended_mask
         self.inputs_dict = inputs_dict
-        self.generate_names = sequence_generator.generate_outputs()
+        self.generate_names = sequence_generator.generate.outputs
         self.init_computer = None
         self.next_computer = None
         self.attended_computer = None
