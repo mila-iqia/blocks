@@ -156,16 +156,26 @@ class Identity(NdarrayInitialization):
 class Orthogonal(NdarrayInitialization):
     """Initialize a random orthogonal matrix.
 
-    Only works for 2D, square arrays.
+    Only works for 2D arrays.
 
     """
     def generate(self, rng, shape):
-        M = rng.randn(*shape).astype(theano.config.floatX)
+        if len(shape) != 2:
+            raise ValueError
+        M1 = rng.randn(shape[0], shape[0]).astype(theano.config.floatX)
+        M2 = rng.randn(shape[1], shape[1]).astype(theano.config.floatX)
+
         # QR decomposition of matrix with entries in N(0, 1) is random
-        Q, R = numpy.linalg.qr(M)
+        Q1, R1 = numpy.linalg.qr(M1)
+        Q2, R2 = numpy.linalg.qr(M2)
         # Correct that NumPy doesn't force diagonal of R to be non-negative
-        Q = Q * numpy.sign(numpy.diag(R))
-        return Q
+        Q1 = Q1 * numpy.sign(numpy.diag(R1))
+        Q2 = Q2 * numpy.sign(numpy.diag(R2))
+
+        n_min = min(shape[0], shape[1])
+        
+        W = numpy.dot(Q1[:, :n_min], Q2[:n_min, :])
+        return W
 
 
 class Sparse(NdarrayInitialization):
