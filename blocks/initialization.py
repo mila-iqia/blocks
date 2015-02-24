@@ -173,9 +173,7 @@ class Orthogonal(NdarrayInitialization):
         Q2 = Q2 * numpy.sign(numpy.diag(R2))
 
         n_min = min(shape[0], shape[1])
-        
-        W = numpy.dot(Q1[:, :n_min], Q2[:n_min, :])
-        return W
+        return numpy.dot(Q1[:, :n_min], Q2[:n_min, :])
 
 
 class Sparse(NdarrayInitialization):

@@ -3,7 +3,8 @@ import six
 import theano
 from numpy.testing import assert_equal, assert_allclose, assert_raises
 
-from blocks.initialization import Constant, IsotropicGaussian, Sparse, Uniform, Orthogonal
+from blocks.initialization import Constant, IsotropicGaussian, Sparse
+from blocks.initialization import Uniform, Orthogonal
 
 
 def test_constant():
@@ -84,6 +85,7 @@ def test_sparse():
     yield check_sparse, rng, 0.3, Constant(1.), None, (10, 10), 30
     yield check_sparse, rng, 0.3, Constant(0.), Constant(1.), (10, 10), 70
 
+
 def test_orthogonal():
     rng = numpy.random.RandomState(1)
 
@@ -91,13 +93,13 @@ def test_orthogonal():
         W = Orthogonal().generate(rng, shape)
 
         assert W.shape == shape
-        
-        # For square matrices the following to should 
+
+        # For square matrices the following to should
         # be diagonal. For non-square matrices, we relax
         # a bit.
         WWT = numpy.dot(W, W.T)
         WTW = numpy.dot(W.T, W)
-        
+
         atol = 0.2
         rtol = 0.1
 
@@ -105,11 +107,11 @@ def test_orthogonal():
         assert WWT.shape == (shape[0], shape[0])
         assert WTW.shape == (shape[1], shape[1])
 
-        # Diagonals == 1. ?
+        # Diagonals ~= 1. ?
         assert_allclose(numpy.diag(WWT), 1., atol=atol, rtol=rtol)
         assert_allclose(numpy.diag(WTW), 1., atol=atol, rtol=rtol)
 
-        # Non-diagonal 
+        # Non-diagonal ~= 0. ?
         WWT_residum = WWT-numpy.eye(shape[0])
         WTW_residum = WTW-numpy.eye(shape[1])
 
@@ -119,4 +121,3 @@ def test_orthogonal():
     yield check_orthogonal, rng, (50, 50)
     yield check_orthogonal, rng, (50, 51)
     yield check_orthogonal, rng, (51, 50)
-
