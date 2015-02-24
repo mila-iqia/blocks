@@ -434,4 +434,3 @@ def test_application_call():
     assert auxiliary_variable.name == 'test_val'
     assert get_brick(auxiliary_variable) == brick
     assert get_application_call(Y).auxiliary_variables[0].name == 'test_val'
-
