@@ -162,6 +162,15 @@ class Orthogonal(NdarrayInitialization):
     def generate(self, rng, shape):
         if len(shape) != 2:
             raise ValueError
+
+        if shape[0] == shape[1]:
+            # For square weight matrices we can simplify the logic
+            # and be more exact:
+            M = rng.randn(*shape).astype(theano.config.floatX)
+            Q, R = numpy.linalg.qr(M)
+            Q = Q * numpy.sign(numpy.diag(R))
+            return Q
+
         M1 = rng.randn(shape[0], shape[0]).astype(theano.config.floatX)
         M2 = rng.randn(shape[1], shape[1]).astype(theano.config.floatX)
 
