@@ -2,7 +2,7 @@ from abc import ABCMeta, abstractmethod
 
 import numpy
 import theano
-from picklable_itertools import ifilter, chain
+from picklable_itertools import ifilter
 from six import add_metaclass
 
 from blocks.datasets.iterator import DataIterator
