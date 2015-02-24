@@ -590,3 +590,29 @@ class Adam(StepRule):
                    (time, t1)]
 
         return step, updates
+
+
+class RemoveNotFinite(StepRule):
+    """A step rule that replaces non-finite gradients.
+
+    Replaces steps with non-finite norm (`inf` or `NaN`) with
+    a scaled version of the parameter being updated.
+
+    source of the trick: https://github.com/lisa-groundhog/GroundHog
+
+    Parameters
+    ----------
+    scaler : float, optional
+        default value set to 0.1
+
+    """
+    def __init__(self, scaler=0.1):
+        self.scaler = scaler
+
+    def compute_step(self, param, previous_step):
+        grad_norm = l2_norm([previous_step])
+        not_finite = tensor.or_(tensor.isnan(grad_norm),
+                                tensor.isinf(grad_norm))
+        step = tensor.switch(not_finite, self.scaler * param, previous_step)
+
+        return step, []
