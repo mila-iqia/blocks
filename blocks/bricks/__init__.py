@@ -462,8 +462,12 @@ class Softmax(Activation):
         """
         x = x - x.max(axis=1).dimshuffle(0, 'x')
         log_prob = x - tensor.log(tensor.exp(x).sum(axis=1).dimshuffle(0, 'x'))
-        prob = tensor.exp(log_prob)
-        cost = tensor.nnet.categorical_crossentropy(prob, y).mean()
+        if y.ndim == x.ndim - 1:
+            cost = -tensor.mean(log_prob[tensor.arange(y.shape[0]), y])
+        elif y.ndim == x.ndim:
+            cost = -tensor.mean((log_prob * y).sum(axis=1))
+        else:
+            raise TypeError('rank mismatch between x and y')
         return cost
 
 
