@@ -186,10 +186,7 @@ class BeamSearch(Search):
 
     @unchunk_rename(add_time_dim=False)
     def compute_contexts(self, inputs_dict):
-        for name, val in inputs_dict.iteritems():
-            print name, val.shape
         contexts = self.attended_computer(*inputs_dict.values())
-        print contexts[0].shape, contexts[1].shape
         return ["attended", "attended_mask"], contexts
 
     @unchunk_rename
