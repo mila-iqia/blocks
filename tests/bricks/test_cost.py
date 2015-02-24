@@ -63,7 +63,7 @@ def test_softmax_matrix():
     y_val_us = numpy.array(numpy.random.uniform(size=(batch_size, x_size)),
                            dtype=theano.config.floatX)
     y_val = y_val_us / numpy.expand_dims(y_val_us.sum(axis=1),
-                                               axis=1)
+                                         axis=1)
     softmax_cost = softmax_cost_func(x_val, y_val)
     softmax_cost_stable = softmax_cost_stable_func(x_val, y_val)
 
