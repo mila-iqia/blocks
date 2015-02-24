@@ -44,7 +44,8 @@ script:
       export THEANO_FLAGS=floatX=$TESTS,optimizer=fast_compile
       # Running nose2 within coverage makes imports count towards coverage
       bokeh-server &> /dev/null &
-      coverage run --source=blocks -m nose2.__main__ -v doctests
-      coverage run --source=blocks -m nose2.__main__ -v tests
+      coverage run -p --source=blocks -m nose2.__main__ -v doctests
+      coverage run -p --source=blocks -m nose2.__main__ -v tests
+      coverage combine
 after_script:
   - coveralls
