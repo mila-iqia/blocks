@@ -109,16 +109,13 @@ class BeamSearch(object):
             cur_value.name = name
             cur_variables[name] = cur_value
 
-        generator_inputs = {name: val for name, val
-                            in cur_variables.iteritems()
-                            if name in self.state_names}
         next_generated = generator.generate(attended=attended,
                                             attended_mask=attended_mask,
                                             iterate=False,
                                             n_steps=1,
                                             batch_size=self.real_batch_size,
                                             return_dict=True,
-                                            **generator_inputs)
+                                            **cur_variables)
         cg_step = ComputationGraph(next_generated.values())
         next_probs = VariableFilter(
             application=generator.readout.emitter.probs,
