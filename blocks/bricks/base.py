@@ -863,6 +863,7 @@ class ApplicationCall(Annotation):
                 self.brick.name, self.application.name, name)
             variable.tag.name = name
             name = None
+        add_annotation(variable, self.brick)
         return super(ApplicationCall, self).add_auxiliary_variable(
             variable, roles, name)
 
