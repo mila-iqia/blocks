@@ -101,25 +101,10 @@ class BeamSearch(object):
         self.initial_state_computer = function([attended, attended_mask],
                                                initial_states.values(),
                                                on_unused_input='ignore')
-        # Construct initial values
-        init_generated = generator.generate(attended=attended,
-                                            attended_mask=attended_mask,
-                                            iterate=False, n_steps=1,
-                                            batch_size=self.real_batch_size,
-                                            return_dict=True)
-        init_cg = ComputationGraph(init_generated.values())
-        init_probs = VariableFilter(
-            application=generator.readout.emitter.probs,
-            name='output')(init_cg.variables)[-1]
-
-        # Create theano function for initial values
-        self.init_computer = function([attended, attended_mask],
-                                      init_generated.values() + [init_probs],
-                                      on_unused_input='ignore')
 
         # Define inputs for next values computer
         cur_variables = OrderedDict()
-        for name, value in init_generated.iteritems():
+        for name, value in initial_states.iteritems():
             cur_value = tensor.zeros_like(value)
             cur_value.name = name
             cur_variables[name] = cur_value
