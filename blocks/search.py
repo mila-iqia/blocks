@@ -10,7 +10,6 @@ from theano import tensor
 
 from blocks.filter import VariableFilter
 from blocks.graph import ComputationGraph
-from blocks.utils import dict_union
 
 floatX = config.floatX
 
@@ -46,6 +45,7 @@ class Search(object):
         Returns
         -------
         Generated sequences
+
         """
         if not self.compiled:
             self.compile()
@@ -120,9 +120,7 @@ class BeamSearch(Search):
                             ['outputs'])
 
     def compile(self, *args, **kwargs):
-        """Compiles functions for beam search.
-
-        """
+        """Compiles functions for beam search."""
         generator = self.sequence_generator
         attended = self.attended
         attended_mask = self.attended_mask
@@ -191,9 +189,7 @@ class BeamSearch(Search):
 
     @unchunk_rename
     def compute_initial_states(self, contexts):
-        """Computes initial outputs and states.
-
-        """
+        """Computes initial outputs and states."""
         init_states = self.initial_state_computer(*contexts.values())
         return self.state_names, init_states
 
@@ -237,15 +233,17 @@ class BeamSearch(Search):
         """
         flatten = probs.flatten()
         if unique:
-            args = numpy.unique(numpy.argpartition(-flatten, beam_size))[:beam_size]
+            args = numpy.unique(
+                numpy.argpartition(-flatten, beam_size))[:beam_size]
         else:
             args = numpy.argpartition(-flatten, beam_size)[:beam_size]
         args = args[numpy.argsort(-flatten[args])]
         if unique:
             # append best if needed
             if args.shape[0] < beam_size:
-                args = numpy.append(args,
-                                 numpy.tile(args[0], beam_size - args.shape[0]))
+                args = numpy.append(
+                    args,
+                    numpy.tile(args[0], beam_size - args.shape[0]))
         # convert args back
         indexes = numpy.unravel_index(args, probs.shape[1:])
         return indexes, probs[0][indexes]
@@ -257,13 +255,13 @@ class BeamSearch(Search):
         return new_outputs.copy()
 
     def merge_chunks(self, array):
-        """Merges chunks
+        """Merges chunks.
 
         Parameters
         ----------
         array : numpy array
-            3D or 4D (sequence length, beam size, batch size [, readout dim])
-            array
+            3D or 4D (sequence length, beam size, batch size
+            [, readout dim]) array
 
         Returns
         -------
@@ -285,7 +283,7 @@ class BeamSearch(Search):
         return array.transpose(trans_back)
 
     def divide_by_chunks(self, array):
-        """Divides input to chunks
+        """Divides input to chunks.
 
         Parameters
         ----------
