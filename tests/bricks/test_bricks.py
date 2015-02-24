@@ -8,7 +8,7 @@ from blocks.bricks import (Identity, Linear, Maxout, LinearMaxout, MLP, Tanh,
                            Sequence)
 from blocks.bricks.base import Application, application, Brick, lazy
 from blocks.bricks.parallel import Parallel, Fork
-from blocks.filter import get_application_call
+from blocks.filter import get_application_call, get_brick
 from blocks.initialization import Constant
 from blocks.utils import shared_floatx
 
@@ -430,4 +430,8 @@ def test_application_call():
     X = tensor.matrix('X')
     brick = TestBrick()
     Y = brick.access_application_call(X)
+    (auxiliary_variable,) = get_application_call(Y).auxiliary_variables
+    assert auxiliary_variable.name == 'test_val'
+    assert get_brick(auxiliary_variable) == brick
     assert get_application_call(Y).auxiliary_variables[0].name == 'test_val'
+
