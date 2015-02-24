@@ -9,6 +9,7 @@ from theano import tensor
 
 from blocks.filter import VariableFilter
 from blocks.graph import ComputationGraph
+from blocks.utils import unpack
 
 floatX = config.floatX
 
@@ -38,12 +39,9 @@ class BeamSearch(object):
         functions will be constructed with these inputs.
 
     """
-    def __init__(self, beam_size, sequence_generator, attended,
-                 attended_mask, inputs_dict):
+    def __init__(self, beam_size, sequence_generator, inputs_dict, comp_graph):
         self.beam_size = beam_size
         self.sequence_generator = sequence_generator
-        self.attended = attended
-        self.attended_mask = attended_mask
         self.inputs_dict = inputs_dict
         self.generate_names = sequence_generator.generate.outputs
         self.init_computer = None
@@ -53,13 +51,19 @@ class BeamSearch(object):
         self.state_names = (sequence_generator.state_names +
                             sequence_generator.glimpse_names +
                             ['outputs'])
+        self.comp_graph = comp_graph
         self.compiled = False
 
     def compile(self, *args, **kwargs):
         """Compiles functions for beam search."""
         generator = self.sequence_generator
-        attended = self.attended
-        attended_mask = self.attended_mask
+
+        attended = unpack(
+            VariableFilter(application=generator.generate,
+                           name='attended$')(self.comp_graph.variables))
+        attended_mask = unpack(
+            VariableFilter(application=generator.generate,
+                           name='attended_mask$')(self.comp_graph.variables))
 
         self.attended_computer = function(self.inputs_dict.values(),
                                           [attended, attended_mask],

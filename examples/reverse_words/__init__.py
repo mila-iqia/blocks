@@ -283,12 +283,14 @@ def main(mode, save_path, num_batches, data_path=None):
             n_steps=3 * chars.shape[0], batch_size=chars.shape[1],
             attended=attended,
             attended_mask=chars_mask)
+        cg = ComputationGraph(generated)
         model = Model(generated)
         model.set_param_values(load_parameter_values(save_path))
         batch_size = 1
-        beam_search = BeamSearch(10, generator, attended, chars_mask,
+        beam_search = BeamSearch(10, generator,
                                  OrderedDict([('chars', chars),
-                                              ('chars_mask', chars_mask)]))
+                                              ('chars_mask', chars_mask)]),
+                                 cg)
         beam_search.compile()
 
         while True:
