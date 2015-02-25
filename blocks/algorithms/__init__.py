@@ -589,17 +589,22 @@ class Adam(StepRule):
 
 
 class RemoveNotFinite(StepRule):
-    """A step rule that replaces non-finite gradients.
+    """A step rule that skips steps with non-finite elements.
 
-    Replaces steps with non-finite norm (`inf` or `NaN`) with
-    a scaled version of the parameter being updated.
-
-    source of the trick: https://github.com/lisa-groundhog/GroundHog
+    Replaces steps that contain non-finite elements (such as ``inf`` or
+    ``NaN``) with a scaled version of the parameter being updated instead.
 
     Parameters
     ----------
     scaler : float, optional
-        default value set to 0.1
+        The scaling applied to the parameter in case the step contains
+        non-finite elements. Defaults to 0.1.
+
+    Notes
+    -----
+    This trick was originally used in the GroundHog_ framework.
+
+    .. _GroundHog: https://github.com/lisa-groundhog/GroundHog
 
     """
     def __init__(self, scaler=0.1):
