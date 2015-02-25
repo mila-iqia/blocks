@@ -448,10 +448,6 @@ class BasicRMSProp(StepRule):
 
     For more information, see [Hint2014]_.
 
-    .. [Hint2014] Geoff Hinton, *Neural Networks for Machine Learning*,
-       lecture 6a,
-       http://cs.toronto.edu/~tijmen/csc321/slides/lecture_slides_lec6.pdf
-
     """
     def __init__(self, decay_rate=0.9, max_scaling=1e5):
         if not 0.0 <= decay_rate <= 1.0:
@@ -540,7 +536,7 @@ class Adam(StepRule):
     """Adam optimizer as described in [King2014]_.
 
     .. [King2014] Diederik Kingma, Jimmy Ba,
-       * Adam: A Method for Stochastic Optimization *,
+       *Adam: A Method for Stochastic Optimization*,
        http://arxiv.org/abs/1412.6980
 
     Parameters

@@ -385,7 +385,7 @@ def put_hook(variable, hook_fn, *args):
     hook_fn : function
         The hook function. Should take a single argument: the variable's
         value.
-    *args : list
+    \*args : list
         Positional arguments to pass to the hook function.
 
     """

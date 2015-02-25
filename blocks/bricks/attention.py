@@ -116,7 +116,7 @@ class AbstractAttention(Brick):
             padded structured output, e.g. when a number of sequences are
             force to be the same length. The mask identifies position of
             the `attended` that actually contain information.
-        **kwargs : dict
+        \*\*kwargs : dict
             Includes the states and the glimpses to be carried over from
             the previous step in the case when the attention mechanism is
             applied sequentially.
