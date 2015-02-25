@@ -7,10 +7,10 @@ from six.moves import zip
 from nose.tools import assert_raises
 
 from blocks.datasets import ContainerDataset
-from blocks.datasets.streams import (
+from fuel.streams import (
     CachedDataStream, DataStream, DataStreamMapping, BatchDataStream,
     PaddingDataStream, DataStreamFilter, ForceFloatX, SortMapping)
-from blocks.datasets.schemes import BatchSizeScheme, ConstantScheme
+from fuel.schemes import BatchSizeScheme, ConstantScheme
 
 floatX = theano.config.floatX
 

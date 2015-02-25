@@ -19,11 +19,11 @@ from blocks.bricks.sequence_generators import (
     SequenceGenerator, LinearReadout, SoftmaxEmitter, LookupFeedback)
 from blocks.config_parser import config
 from blocks.graph import ComputationGraph
-from blocks.datasets.streams import (
+from fuel.streams import (
     DataStreamMapping, BatchDataStream, PaddingDataStream,
     DataStreamFilter)
-from blocks.datasets.text import OneBillionWord, TextFile
-from blocks.datasets.schemes import ConstantScheme
+from fuel.datasets.text import OneBillionWord, TextFile
+from fuel.schemes import ConstantScheme
 from blocks.dump import load_parameter_values
 from blocks.algorithms import (GradientDescent, Scale,
                                StepClipping, CompositeRule)

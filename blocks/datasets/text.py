@@ -7,7 +7,7 @@ from toolz import sliding_window
 
 from blocks import config
 from blocks.datasets import Dataset
-from blocks.datasets.streams import CachedDataStream
+from fuel.streams import CachedDataStream
 
 
 class TextFile(Dataset):

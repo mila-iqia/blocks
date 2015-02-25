@@ -4,7 +4,7 @@ from abc import ABCMeta, abstractmethod
 from six import add_metaclass
 from picklable_itertools import _iter, izip
 
-from blocks.datasets.streams import DataStream
+from fuel.streams import DataStream
 
 
 @add_metaclass(ABCMeta)

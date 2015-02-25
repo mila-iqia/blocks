@@ -4,9 +4,9 @@ import tempfile
 import numpy
 from six.moves import cPickle
 
-from blocks.datasets.streams import DataStream
+from fuel.streams import DataStream
 from blocks.datasets.mnist import MNIST
-from blocks.datasets.schemes import SequentialScheme
+from fuel.schemes import SequentialScheme
 from blocks.serialization import pickle_dump
 from tests import skip_if_not_available
 
