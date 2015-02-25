@@ -170,6 +170,12 @@ class GradientDescent(DifferentiableCostMinimizer):
         A dictionary mapping a parameter to an expression for the cost's
         gradient with respect to the parameter. If ``None``, the gradient
         are taken automatically using :func:`theano.gradient.grad`.
+    known_grads : dict, optional
+        A passthrough to `theano.tensor.grad`'s `known_grads` argument.
+        Useful when you know the [approximate] gradients of some
+        sub-expressions and would like Theano to use that information
+        to compute parameter gradients. Only makes sense when `gradients`
+        is `None`.
 
     Attributes
     ----------
@@ -179,7 +185,8 @@ class GradientDescent(DifferentiableCostMinimizer):
         The step rule.
 
     """
-    def __init__(self, step_rule=None, gradients=None, **kwargs):
+    def __init__(self, step_rule=None, gradients=None, known_grads=None,
+                 **kwargs):
         if gradients:
             kwargs.setdefault("params", gradients.keys())
         super(GradientDescent, self).__init__(**kwargs)
@@ -188,8 +195,13 @@ class GradientDescent(DifferentiableCostMinimizer):
         if not self.gradients:
             logger.info("Taking the cost gradient")
             self.gradients = dict(
-                zip(self.params, tensor.grad(self.cost, self.params)))
+                zip(self.params, tensor.grad(self.cost, self.params,
+                                             known_grads=known_grads)))
             logger.info("The cost gradient computation graph is built")
+        else:
+            if known_grads:
+                raise ValueError("known_grads has no effect when gradients "
+                                 "are passed in")
         self.step_rule = step_rule if step_rule else Scale()
 
         self.total_gradient_norm = named_copy(l2_norm(self.gradients.values()),
