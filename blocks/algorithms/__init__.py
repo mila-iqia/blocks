@@ -371,8 +371,12 @@ class Momentum(CompositeRule):
 
     """
     def __init__(self, learning_rate=1.0, momentum=0.):
-        self.components = [Scale(learning_rate=learning_rate),
-                           BasicMomentum(momentum=momentum)]
+        scale = Scale(learning_rate=learning_rate)
+        momentum_alg = BasicMomentum(momentum=momentum)
+        self.learning_rate = scale.learning_rate
+        self.momentum = momentum_alg.momentum
+        self.components = [scale,
+                           momentum_alg]
 
 
 class AdaDelta(StepRule):
@@ -492,9 +496,12 @@ class RMSProp(CompositeRule):
 
     """
     def __init__(self, learning_rate=1.0, decay_rate=0.9, max_scaling=1e5):
-        self.components = [
-            BasicRMSProp(decay_rate=decay_rate, max_scaling=max_scaling),
-            Scale(learning_rate=learning_rate)]
+        basic_rms_prop = BasicRMSProp(decay_rate=decay_rate,
+                                      max_scaling=max_scaling)
+        scale = Scale(learning_rate=learning_rate)
+        self.learning_rate = scale.learning_rate
+        self.decay_rate = basic_rms_prop.decay_rate
+        self.components = [basic_rms_prop, scale]
 
 
 class StepClipping(StepRule):
