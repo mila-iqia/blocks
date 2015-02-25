@@ -60,12 +60,30 @@ def test_data_stream_mapping_sort():
     assert list(wrapper3.get_epoch_iterator()) == list(zip(data_sorted_rev))
 
 
-def test_data_stream_mapping_multisource():
-    data_dict = {'x': [[1, 2, 3], [2, 3, 1], [3, 2, 1]],
-                 'y': [[6, 5, 4], [6, 5, 4], [6, 5, 4]]}
+def test_data_stream_mapping_sort_multisource_ndarrays():
     data = OrderedDict()
-    data['x'] = data_dict['x']
-    data['y'] = data_dict['y']
+    data['x'] = [numpy.array([1, 2, 3]),
+                 numpy.array([2, 3, 1]),
+                 numpy.array([3, 2, 1])]
+    data['y'] = [numpy.array([6, 5, 4]),
+                 numpy.array([6, 5, 4]),
+                 numpy.array([6, 5, 4])]
+    data_sorted = [(numpy.array([1, 2, 3]), numpy.array([6, 5, 4])),
+                   (numpy.array([1, 2, 3]), numpy.array([4, 6, 5])),
+                   (numpy.array([1, 2, 3]), numpy.array([4, 5, 6]))]
+    stream = ContainerDataset(data).get_default_stream()
+    wrapper = DataStreamMapping(stream,
+                                mapping=SortMapping(operator.itemgetter(0)))
+    for output, ground_truth in zip(wrapper.get_epoch_iterator(), data_sorted):
+        assert len(output) == len(ground_truth)
+        assert (output[0] == ground_truth[0]).all()
+        assert (output[1] == ground_truth[1]).all()
+
+
+def test_data_stream_mapping_sort_multisource():
+    data = OrderedDict()
+    data['x'] = [[1, 2, 3], [2, 3, 1], [3, 2, 1]]
+    data['y'] = [[6, 5, 4], [6, 5, 4], [6, 5, 4]]
     data_sorted = [([1, 2, 3], [6, 5, 4]),
                    ([1, 2, 3], [4, 6, 5]),
                    ([1, 2, 3], [4, 5, 6])]

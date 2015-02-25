@@ -335,7 +335,10 @@ class SortMapping(object):
 
     def __call__(self, batch):
         output = sorted(zip(*batch), key=self.key, reverse=self.reverse)
-        return tuple(list(i) for i in zip(*output))
+        output = tuple(numpy.asarray(i) if isinstance(j, numpy.ndarray)
+                       else list(i)
+                       for i, j in zip(zip(*output), batch))
+        return output
 
 
 class BatchDataStream(DataStreamWrapper):
