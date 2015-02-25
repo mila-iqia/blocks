@@ -10,17 +10,13 @@ from blocks.bricks.cost import CategoricalCrossEntropy
 
 
 def test_softmax_vector():
-    """
-    return computationally stable softmax cost whose target is a label vector.
-    """
-
     x = tensor.matrix('x')
     y = tensor.lvector('y')
 
     softmax_out = Softmax().apply(x)
     cost = CategoricalCrossEntropy().apply(y, softmax_out)
 
-    cost_stable = Softmax().categorical_cross_entropy(x, y)
+    cost_stable = Softmax().categorical_cross_entropy(y, x)
 
     softmax_cost_func = function([x, y], cost)
     softmax_cost_stable_func = function([x, y], cost_stable)
@@ -39,18 +35,13 @@ def test_softmax_vector():
 
 
 def test_softmax_matrix():
-    """
-    return computationally stable softmax cost whose target
-    is a distribution matrix.
-    """
-
     x = tensor.matrix('x')
     y = tensor.matrix('y')
 
     softmax_out = Softmax().apply(x)
     cost = CategoricalCrossEntropy().apply(y, softmax_out)
 
-    cost_stable = Softmax().categorical_cross_entropy(x, y)
+    cost_stable = Softmax().categorical_cross_entropy(y, x)
 
     softmax_cost_func = function([x, y], cost)
     softmax_cost_stable_func = function([x, y], cost_stable)

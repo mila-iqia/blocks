@@ -445,19 +445,22 @@ class Softmax(Activation):
         return tensor.nnet.softmax(input_)
 
     @application
-    def categorical_cross_entropy(self, x, y):
-        """
-        Return computationally stable softmax cost.
+    def categorical_cross_entropy(self, y, x):
+        """Return computationally stable softmax cost.
 
         Parameters
         ----------
-        :type x: matrix
-        :param x: Each slice along axis represents one distribution.
+        y : :class:`~tensor.TensorVariable`
+            In the case of a matrix argument, each slice along
+            axis represents one distribution. In the vector case, each
+            element represents the position of the '1' in a one hot-vector.
+        x : :class:`~tensor.TensorVariable`
+            Each slice along axis represents one distribution.
 
-        :type y: floating point matrix or integer vector
-        :param y: In the case of a matrix argument, each slice along
-        axis represents one distribution. In the other case, each
-        element represents the position of the '1' in a one hot-vector.
+        Returns
+        -------
+        cost : :class:`~tensor.TensorVariable`
+            The cross entropy between y and x.
 
         """
         x = x - x.max(axis=1).dimshuffle(0, 'x')
