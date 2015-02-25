@@ -52,3 +52,11 @@ Sequence generators
     :members:
     :undoc-members:
     :show-inheritance:
+
+Cost bricks
+-----------
+
+.. automodule:: blocks.bricks.cost
+    :members:
+    :undoc-members:
+    :show-inheritance:
