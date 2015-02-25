@@ -498,7 +498,8 @@ class RMSProp(CompositeRule):
 
 
 class StepClipping(StepRule):
-    """Clips the total step to make it not exceed a threshold.
+    """Rescales a step on all parameters such that its total
+    L2 norm does not exceed a threshold.
 
     When the previous steps are the gradients, this step rule performs
     gradient clipping.
