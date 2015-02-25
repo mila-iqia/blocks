@@ -314,6 +314,33 @@ class CachedDataStream(DataStreamWrapper):
             cache.extend(data)
 
 
+class SortMapping(object):
+    """Callable class for creating sorting mappings.
+
+    This class can be used to create a callable that can be used by the
+    :class:`DataStreamMapping` constructor.
+
+    Parameters
+    ----------
+    key : callable
+        The mapping that returns the value to sort on. Its input will be
+        a tuple that contains a single data point for each source.
+    reverse : boolean value that indicates whether the sort order should
+        be reversed.
+
+    """
+    def __init__(self, key, reverse=False):
+        self.key = key
+        self.reverse = reverse
+
+    def __call__(self, batch):
+        output = sorted(zip(*batch), key=self.key, reverse=self.reverse)
+        output = tuple(numpy.asarray(i) if isinstance(j, numpy.ndarray)
+                       else list(i)
+                       for i, j in zip(zip(*output), batch))
+        return output
+
+
 class BatchDataStream(DataStreamWrapper):
     """Creates minibatches from data streams providing single examples.
 
