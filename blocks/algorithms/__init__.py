@@ -611,9 +611,8 @@ class RemoveNotFinite(StepRule):
         self.scaler = scaler
 
     def compute_step(self, param, previous_step):
-        grad_norm = l2_norm([previous_step])
-        not_finite = tensor.or_(tensor.isnan(grad_norm),
-                                tensor.isinf(grad_norm))
+        not_finite = tensor.any(tensor.or_(
+            tensor.isnan(previous_step), tensor.isinf(previous_step)))
         step = tensor.switch(not_finite, self.scaler * param, previous_step)
 
         return step, []
