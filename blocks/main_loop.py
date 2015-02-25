@@ -250,8 +250,7 @@ class MainLoop(object):
                 self.log.previous_row.batch_interrupt_received):
             raise TrainingFinish
         if (level == 'epoch' and
-                (self.log.current_row.epoch_interrupt_received or
-                 self.log.previous_row.epoch_interrupt_received)):
+                self.status.epoch_interrupt_received :
             raise TrainingFinish
 
     def _handle_epoch_interrupt(self, signal_number, frame):
@@ -260,6 +259,9 @@ class MainLoop(object):
                        epoch_interrupt_message)
         signal.signal(signal.SIGINT, self._handle_batch_interrupt)
         self.log.current_row.epoch_interrupt_received = True
+	# add epoch_interrupt_received to the status so to keep track on it after training
+	# on several samples
+	self.status.epoch_interrupt_received=True
 
     def _handle_batch_interrupt(self, signal_number, frame):
         # After 2nd CTRL + C or SIGTERM signal (from cluster) finish batch
