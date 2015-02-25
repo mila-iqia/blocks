@@ -369,14 +369,19 @@ class Momentum(CompositeRule):
     momentum : float, optional
         The momentum coefficient. Defaults to 0.
 
+    Notes
+    -----
+    The class has two shared variables: `learning_rate` and `momentum`.
+    See :class:`SharedVariableModifier` for a parameter decay during the
+    training.
+
     """
     def __init__(self, learning_rate=1.0, momentum=0.):
         scale = Scale(learning_rate=learning_rate)
         momentum_alg = BasicMomentum(momentum=momentum)
         self.learning_rate = scale.learning_rate
         self.momentum = momentum_alg.momentum
-        self.components = [scale,
-                           momentum_alg]
+        self.components = [scale, momentum_alg]
 
 
 class AdaDelta(StepRule):
@@ -493,6 +498,12 @@ class RMSProp(CompositeRule):
     max_scaling : float, optional
         Maximum scaling of the step size, in case the running average is
         really small. Defaults to 1e5.
+
+    Notes
+    -----
+    The class has two shared variables: `learning_rate` and `decay_rate`.
+    See :class:`SharedVariableModifier` for a parameter decay during the
+    training.
 
     """
     def __init__(self, learning_rate=1.0, decay_rate=0.9, max_scaling=1e5):
