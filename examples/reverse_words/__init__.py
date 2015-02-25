@@ -22,7 +22,7 @@ from blocks.graph import ComputationGraph
 from fuel.streams import (
     DataStreamMapping, BatchDataStream, PaddingDataStream,
     DataStreamFilter)
-from fuel.datasets.text import OneBillionWord, TextFile
+from fuel.datasets import OneBillionWord, TextFile
 from fuel.schemes import ConstantScheme
 from blocks.dump import load_parameter_values
 from blocks.algorithms import (GradientDescent, Scale,

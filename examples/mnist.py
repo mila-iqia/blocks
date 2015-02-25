@@ -10,7 +10,7 @@ from blocks.bricks import MLP, Tanh, Softmax, WEIGHTS
 from blocks.bricks.cost import CategoricalCrossEntropy, MisclassificationRate
 from blocks.initialization import IsotropicGaussian, Constant
 from fuel.streams import DataStream
-from fuel.datasets.mnist import MNIST
+from fuel.datasets import MNIST
 from fuel.schemes import SequentialScheme
 from blocks.filter import VariableFilter
 from blocks.graph import ComputationGraph
