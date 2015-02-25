@@ -591,8 +591,9 @@ class Adam(StepRule):
 class RemoveNotFinite(StepRule):
     """A step rule that skips steps with non-finite elements.
 
-    Replaces steps that contain non-finite elements (such as ``inf`` or
-    ``NaN``) with a scaled version of the parameter being updated instead.
+    Replaces a step (the parameter update of a single shared variable)
+    which contains non-finite elements (such as ``inf`` or ``NaN``) with a
+    scaled version of the parameters being updated instead.
 
     Parameters
     ----------
