@@ -135,6 +135,7 @@ class TrainingDataMonitoring(SimpleExtension, MonitoringExtension):
             if self.main_loop.status.iterations_done == self._last_time_called:
                 raise Exception("TrainingDataMonitoring.do should be invoked"
                                 " no more than once per iteration")
+            self._last_time_called = self.main_loop.status.iterations_done
             self.add_records(self.main_loop.log,
                              self._buffer.get_aggregated_values().items())
             self._buffer.initialize_aggregators()
