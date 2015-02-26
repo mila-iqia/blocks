@@ -83,7 +83,7 @@ with your own GitHub user name:
 .. code-block:: bash
 
    $ pip install -e git+git@github.com:USER/blocks.git#egg=blocks[test,plot,docs] --src=$HOME \
-     -r https://raw.githubusercontent.com/bartvm/blocks/install_again/requirements.txt
+     -r https://raw.githubusercontent.com/bartvm/blocks/master/requirements.txt
 
 As with the usual installation, you can use ``--user`` or ``--no-deps`` if you
 need to. You can now make changes in the ``blocks`` directory created by pip,
