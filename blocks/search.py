@@ -95,21 +95,17 @@ class BeamSearch(object):
         for name in generator.generate.states:
             var = VariableFilter(bricks=[generator], name='^' + name + '$',
                                  roles=[INPUT])(inner_cg)[-1:]
-            print 'input', name, var
             states.extend(var)
 
         next_states = []
         for name in generator.generate.states:
             var = VariableFilter(bricks=[generator], name='^' + name + '$',
                                  roles=[OUTPUT])(inner_cg)[-1:]
-            print 'output', name, var
             next_states.extend(var)
-        print states[0] == next_states[0]
 
         next_probs = VariableFilter(
             bricks=[generator.readout.emitter],
-            name='^probs$')(inner_cg)[-1]
-        print next_probs
+            name='^probs')(inner_cg)[-1]
         # Create theano function for next values
         self.next_computer = function(contexts.values() + states,
                                       next_states + [next_probs])

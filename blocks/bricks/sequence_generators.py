@@ -420,7 +420,7 @@ class SoftmaxEmitter(AbstractEmitter, Initializable, Random):
     Interprets readout elements as energies corresponding to their indices.
 
     """
-    @application(outputs='probs')
+    @application(outputs=['probs'])
     def probs(self, readouts):
         shape = readouts.shape
         return tensor.nnet.softmax(readouts.reshape(
