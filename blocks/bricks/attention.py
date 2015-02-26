@@ -62,7 +62,7 @@ class AbstractAttention(Brick):
     First, see the module-level docstring for terminology.
 
     A generic attention mechanism functions as follows. Its inputs are the
-    states of the network and the attended .Given these two it produces
+    states of the network and the attended. Given these two it produces
     so-called *glimpses*, that is it extracts information from the attended
     which is necessary for the network in its current states
 
