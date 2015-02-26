@@ -277,7 +277,7 @@ def main(mode, save_path, num_batches, data_path=None):
         chars_mask = tensor.matrix("features_mask")
         attended = encoder.apply(
             **dict_union(fork.apply(lookup.lookup(chars),
-                                    return_dict=True)))
+                                    as_dict=True)))
         generated = generator.generate(
             n_steps=3 * chars.shape[0], batch_size=chars.shape[1],
             attended=attended,
