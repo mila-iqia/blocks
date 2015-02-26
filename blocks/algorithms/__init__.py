@@ -381,10 +381,25 @@ class Momentum(CompositeRule):
     momentum : float, optional
         The momentum coefficient. Defaults to 0.
 
+    Attributes
+    ----------
+    learning_rate : :class:`~tensor.SharedVariable`
+        A variable for learning rate.
+    momentum : :class:`~tensor.SharedVariable`
+        A variable for momentum.
+
+    See Also
+    --------
+    :class:`SharedVariableModifier` for a parameter decay during the
+    training.
+
     """
     def __init__(self, learning_rate=1.0, momentum=0.):
-        self.components = [Scale(learning_rate=learning_rate),
-                           BasicMomentum(momentum=momentum)]
+        scale = Scale(learning_rate=learning_rate)
+        basic_momentum = BasicMomentum(momentum=momentum)
+        self.learning_rate = scale.learning_rate
+        self.momentum = basic_momentum.momentum
+        self.components = [scale, basic_momentum]
 
 
 class AdaDelta(StepRule):
@@ -502,11 +517,26 @@ class RMSProp(CompositeRule):
         Maximum scaling of the step size, in case the running average is
         really small. Defaults to 1e5.
 
+    Attributes
+    ----------
+    learning_rate : :class:`~tensor.SharedVariable`
+        A variable for learning rate.
+    decay_rate : :class:`~tensor.SharedVariable`
+        A variable for decay rate.
+
+    See Also
+    --------
+    :class:`SharedVariableModifier` for a parameter decay during the
+    training.
+
     """
     def __init__(self, learning_rate=1.0, decay_rate=0.9, max_scaling=1e5):
-        self.components = [
-            BasicRMSProp(decay_rate=decay_rate, max_scaling=max_scaling),
-            Scale(learning_rate=learning_rate)]
+        basic_rms_prop = BasicRMSProp(decay_rate=decay_rate,
+                                      max_scaling=max_scaling)
+        scale = Scale(learning_rate=learning_rate)
+        self.learning_rate = scale.learning_rate
+        self.decay_rate = basic_rms_prop.decay_rate
+        self.components = [basic_rms_prop, scale]
 
 
 class StepClipping(StepRule):
