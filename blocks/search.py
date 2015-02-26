@@ -7,8 +7,9 @@ from theano import config
 from theano import function
 from theano import tensor
 
-from blocks.filter import VariableFilter
+from blocks.filter import VariableFilter, get_application_call
 from blocks.graph import ComputationGraph
+from blocks.roles import INPUT, OUTPUT
 from blocks.utils import unpack, dict_union
 
 floatX = config.floatX
@@ -43,7 +44,7 @@ class BeamSearch(object):
         self.beam_size = beam_size
         self.sequence_generator = sequence_generator
         self.inputs_dict = inputs_dict
-        self.generate_names = sequence_generator.generate.outputs
+        self.generate_names = sequence_generator.generate.states
         self.init_computer = None
         self.next_computer = None
         self.attended_computer = None
@@ -55,52 +56,63 @@ class BeamSearch(object):
         self.comp_graph = comp_graph
         self.compiled = False
 
+    def compile_attended_computer(self, generator, inner_cg):
+        contexts_original = OrderedDict()
+        for name in generator.generate.contexts:
+            contexts_original[name] = VariableFilter(
+                bricks=[generator],
+                name='^' + name + '$',
+                roles=[INPUT])(inner_cg)[0]
+
+        self.attended_computer = function(self.inputs_dict.values(),
+                                          contexts_original.values(),
+                                          on_unused_input='ignore')
+
     def compile(self, *args, **kwargs):
         """Compiles functions for beam search."""
         generator = self.sequence_generator
 
+        application_call = get_application_call(self.comp_graph.outputs[0])
+        inner_cg = ComputationGraph(application_call.inner_outputs)
         contexts = OrderedDict()
-        for name in self.context_names:
-            contexts[name] = unpack(
-                VariableFilter(application=generator.generate,
-                               name='^' + name + '$')(self.comp_graph.variables))
+        for name in generator.generate.contexts:
+            contexts[name] = VariableFilter(bricks=[generator],
+                                            name='^' + name + '$',
+                                            roles=[INPUT])(inner_cg)[0]
+        self.compile_attended_computer(generator, inner_cg)
 
-        self.attended_computer = function(self.inputs_dict.values(),
-                                          contexts.values(),
-                                          on_unused_input='ignore')
-
-        initial_states = OrderedDict()
+        initial_states = []
         for name in self.state_names:
-            initial_states[name] = generator.initial_state(
+            initial_states.append(generator.initial_state(
                 name,
                 self.beam_size,
-                **contexts)
-
+                **contexts))
         self.initial_state_computer = function(contexts.values(),
-                                               initial_states.values(),
+                                               initial_states,
                                                on_unused_input='ignore')
 
-        # Define inputs for next values computer
-        cur_variables = OrderedDict()
-        for name, value in initial_states.iteritems():
-            cur_value = tensor.zeros_like(value)
-            cur_value.name = name
-            cur_variables[name] = cur_value
+        states = []
+        for name in generator.generate.states:
+            var = VariableFilter(bricks=[generator], name='^' + name + '$',
+                                 roles=[INPUT])(inner_cg)[-1:]
+            print 'input', name, var
+            states.extend(var)
 
-        next_generated = generator.generate(iterate=False,
-                                            n_steps=1,
-                                            batch_size=self.beam_size,
-                                            return_dict=True,
-                                            **dict_union(cur_variables,
-                                                         contexts))
-        cg_step = ComputationGraph(next_generated.values())
+        next_states = []
+        for name in generator.generate.states:
+            var = VariableFilter(bricks=[generator], name='^' + name + '$',
+                                 roles=[OUTPUT])(inner_cg)[-1:]
+            print 'output', name, var
+            next_states.extend(var)
+        print states[0] == next_states[0]
+
         next_probs = VariableFilter(
-            application=generator.readout.emitter.probs,
-            name='output')(cg_step.variables)[-1]
+            bricks=[generator.readout.emitter],
+            roles=[OUTPUT], name='output')(inner_cg)[-1]
+        print next_probs
         # Create theano function for next values
-        self.next_computer = function(contexts.values() +
-                                      [cur_variables['states']],
-                                      next_generated.values() + [next_probs])
+        self.next_computer = function(contexts.values() + states,
+                                      next_states + [next_probs])
         self.compiled = True
 
     @construct_dict
