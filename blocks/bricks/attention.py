@@ -4,13 +4,42 @@ This module defines the interface of attention mechanisms and a few
 concrete implementations. For a gentle introduction and usage examples see
 the tutorial TODO.
 
-The general setting in which we define the attention mechanism is: we
-consider a hypothetical agent that wants to concentrate on particular parts
-of a structured input. To do that the agent needs an *attention mechanism*
-that given the *state* of the agent and the input signal outputs
-*glimpses*.  For technical reasons we permit an agent to have a composite
-state consisting of several components, to which we will refer as *states
-of the agent* or simply *states*.
+An attention mechanism decides to what part of the input to pay attention.
+It is typically used as a component of a recurrent network, though one can
+imagine it used in other conditions as well. When the input is big and has
+certain structure, for instance when it is sequence or an image, an
+attention mechanism can be applied to extract only information which is
+relevant for the network in its current state.
+
+For the purpose of documentation clarity, we fix the following terminology
+in this file:
+
+* *network* is the network, typically a recurrent one, which
+  uses the attention mechanism.
+
+* The network has *states*. Using this word in plural might seem weird, but
+  some recurrent networks like :class:`~blocks.bricks.recurrent.LSTM` do
+  have several states.
+
+* The big structured input, to which the attention mechanism is applied,
+  is called the *attended*. When it has variable structure, e.g. a sequence
+  of variable length, there might be a *mask* associated with it.
+
+* The information extracted by the attention from the attended is called
+  *glimpse*, more specifically *glimpses* because there might be a few
+  pieces of this information.
+
+Using this terminology, the attention mechanism computes glimpses
+given the states of the network and the attended.
+
+An example: in the machine translation network from [BCB] the attended is a
+sequence of so-called annotations, that is states of a bidirectional
+network that was driven by word embeddings of the source sentence. The
+attention mechanism assigns weights to the annotations. The weighted sum of
+the annotations is further used by the translation network to predict the
+next word of the generated translation. The weights and the weighted sum
+are the glimpses. A generalized attention mechanism for this paper is
+represented here as :class:`SequenceContentAttention`.
 
 """
 from abc import ABCMeta, abstractmethod
@@ -33,18 +62,16 @@ class AbstractAttention(Brick):
     First, see the module-level docstring for terminology.
 
     A generic attention mechanism functions as follows. Its inputs are the
-    state of the agent and the object of attention, which we call here
-    *attended*. Given these two it produces so-called *glimpses*, that is
-    it extracts information from the attended which is necessary for the
-    agent in its current state.
+    states of the network and the attended .Given these two it produces
+    so-called *glimpses*, that is it extracts information from the attended
+    which is necessary for the network in its current states
 
     For computational reasons we separate the process described above into
     two stages:
 
     1. The preprocessing stage, :meth:`preprocess`, includes computation
-       that do not involve the state. Those can be often performed in
-       advance. The outcome of this stage is called
-       *preprocessed_attended*.
+    that do not involve the state. Those can be often performed in advance.
+    The outcome of this stage is called *preprocessed_attended*.
 
     2. The main stage, :meth:`take_glimpses`, includes all the rest.
 
@@ -56,9 +83,6 @@ class AbstractAttention(Brick):
     addition :meth:`initial_glimpses` should specify some sensible
     initialization for the glimpses to be carried over.
 
-    For technical convenience a composite state of the agent, consisting
-    of *states* is allowed.
-
     .. todo::
 
         Only single attended is currently allowed.
@@ -69,7 +93,7 @@ class AbstractAttention(Brick):
     Attributes
     ----------
     state_names : list of str
-        The names of the agent's states.
+        The names of the network states.
 
     """
     def preprocess(self, attended):
@@ -175,7 +199,7 @@ class SequenceContentAttention(AbstractAttention, Initializable):
     Parameters
     ----------
     state_names : list of str
-        The names of the agent states.
+        The names of the network states.
     sequence_dim : int
         The dimension of the sequence elements.
     match_dim : int
@@ -248,7 +272,7 @@ class SequenceContentAttention(AbstractAttention, Initializable):
             A 0/1 mask specifying available data. 0 means that the
             corresponding sequence element is fake.
         \*\*states
-            The states of the agent.
+            The states of the network.
 
         Returns
         -------
@@ -412,6 +436,12 @@ class AttentionRecurrent(AbstractAttentionRecurrent, Initializable):
     Notes
     -----
     See :class:`.Initializable` for initialization parameters.
+
+    Wrapping your recurrent brick with this class makes all the
+    states mandatory. If you feel this is a limitation for you, try
+    to make it better! This restriction does not apply to sequence
+    and contexts: those keep being as optional as they were for
+    your brick.
 
     Those coming to Blocks from Groundhog might recognize that this is
     a `RecurrentLayerWithSearch`, but on steroids :)
