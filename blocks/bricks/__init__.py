@@ -466,7 +466,10 @@ class Softmax(Activation):
         x = x - x.max(axis=1).dimshuffle(0, 'x')
         log_prob = x - tensor.log(tensor.exp(x).sum(axis=1).dimshuffle(0, 'x'))
         if y.ndim == x.ndim - 1:
-            cost = -tensor.mean(log_prob[tensor.arange(y.shape[0]), y])
+            flat_log_prob = log_prob.flatten()
+            range_ = tensor.arange(y.shape[0])
+            flat_indices = y + range_ * x.shape[1]
+            cost = -tensor.mean(flat_log_prob[flat_indices])
         elif y.ndim == x.ndim:
             cost = -tensor.mean((log_prob * y).sum(axis=1))
         else:
