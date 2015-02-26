@@ -108,7 +108,7 @@ class BeamSearch(object):
 
         next_probs = VariableFilter(
             bricks=[generator.readout.emitter],
-            roles=[OUTPUT], name='output')(inner_cg)[-1]
+            name='^probs$')(inner_cg)[-1]
         print next_probs
         # Create theano function for next values
         self.next_computer = function(contexts.values() + states,
