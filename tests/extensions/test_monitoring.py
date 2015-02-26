@@ -1,9 +1,9 @@
 import numpy
 import theano
-from theano import tensor
+from fuel.datasets import ContainerDataset
 from numpy.testing import assert_allclose
+from theano import tensor
 
-from blocks.datasets import ContainerDataset
 from blocks.extensions import TrainingExtension, FinishAfter
 from blocks.extensions.monitoring import TrainingDataMonitoring
 from blocks.monitoring import aggregation
