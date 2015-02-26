@@ -68,19 +68,7 @@ class BeamSearch(object):
                                           contexts_original.values(),
                                           on_unused_input='ignore')
 
-    def compile(self, *args, **kwargs):
-        """Compiles functions for beam search."""
-        generator = self.sequence_generator
-
-        application_call = get_application_call(self.comp_graph.outputs[0])
-        inner_cg = ComputationGraph(application_call.inner_outputs)
-        contexts = OrderedDict()
-        for name in generator.generate.contexts:
-            contexts[name] = VariableFilter(bricks=[generator],
-                                            name='^' + name + '$',
-                                            roles=[INPUT])(inner_cg)[0]
-        self.compile_attended_computer(generator, inner_cg)
-
+    def compile_initial_state_computer(self, generator, contexts):
         initial_states = []
         for name in self.state_names:
             initial_states.append(generator.initial_state(
@@ -91,6 +79,7 @@ class BeamSearch(object):
                                                initial_states,
                                                on_unused_input='ignore')
 
+    def compile_next_state_computer(self, generator, contexts, inner_cg):
         states = []
         for name in generator.generate.states:
             var = VariableFilter(bricks=[generator], name='^' + name + '$',
@@ -109,6 +98,22 @@ class BeamSearch(object):
         # Create theano function for next values
         self.next_computer = function(contexts.values() + states,
                                       next_states + [next_probs])
+
+    def compile(self, *args, **kwargs):
+        """Compiles functions for beam search."""
+        generator = self.sequence_generator
+
+        application_call = get_application_call(self.comp_graph.outputs[0])
+        inner_cg = ComputationGraph(application_call.inner_outputs)
+        contexts = OrderedDict()
+        for name in generator.generate.contexts:
+            contexts[name] = VariableFilter(bricks=[generator],
+                                            name='^' + name + '$',
+                                            roles=[INPUT])(inner_cg)[0]
+        self.compile_attended_computer(generator, inner_cg)
+        self.compile_initial_state_computer(generator, contexts)
+        self.compile_next_state_computer(generator, contexts, inner_cg)
+
         self.compiled = True
 
     @construct_dict
