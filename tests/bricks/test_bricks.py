@@ -356,6 +356,27 @@ def test_mlp():
     assert mlp.rng == mlp.linear_transformations[0].rng
 
 
+def test_mlp_apply():
+    x = tensor.matrix()
+    x_val = numpy.random.rand(2, 16).astype(theano.config.floatX)
+    mlp = MLP(activations=[Tanh().apply, None], dims=[16, 8, 4],
+              weights_init=Constant(1), biases_init=Constant(1))
+    y = mlp.apply(x)
+    mlp.initialize()
+    assert_allclose(
+        numpy.tanh(x_val.dot(numpy.ones((16, 8))) + numpy.ones((2, 8))).dot(
+            numpy.ones((8, 4))) + numpy.ones((2, 4)),
+        y.eval({x: x_val}), rtol=1e-06)
+
+    mlp = MLP(activations=[None], weights_init=Constant(1), use_bias=False)
+    mlp.dims = [16, 8]
+    y = mlp.apply(x)
+    mlp.initialize()
+    assert_allclose(x_val.dot(numpy.ones((16, 8))),
+                    y.eval({x: x_val}), rtol=1e-06)
+    assert mlp.rng == mlp.linear_transformations[0].rng
+
+
 def test_sequence():
     x = tensor.matrix()
 
