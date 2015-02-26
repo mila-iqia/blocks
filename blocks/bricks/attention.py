@@ -534,7 +534,7 @@ class AttentionRecurrent(AbstractAttentionRecurrent, Initializable):
 
         sequences.update(self.distribute.apply(
             as_dict=True, **dict_subset(dict_union(sequences, glimpses),
-                                            self.distribute.apply.inputs)))
+                                        self.distribute.apply.inputs)))
         current_states = self.transition.apply(
             iterate=False, as_list=True,
             **dict_union(sequences, kwargs))
