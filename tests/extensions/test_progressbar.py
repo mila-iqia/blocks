@@ -14,8 +14,11 @@ floatX = theano.config.floatX
 
 
 def setup_mainloop(extension):
-    """Create a MainLoop, register the given extension, supply it with a
-        DataStream and a minimal model/cost to optimize.
+    """Set up a simple main loop for progress bar tests.
+
+    Create a MainLoop, register the given extension, supply it with a
+    DataStream and a minimal model/cost to optimize.
+
     """
     features = [numpy.array(f, dtype=floatX)
                 for f in [[1, 2], [3, 4], [5, 6]]]
