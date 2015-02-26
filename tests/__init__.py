@@ -54,6 +54,15 @@ def skip_if_not_available(modules=None, datasets=None, configurations=None):
             import_module(module)
         except Exception:
             raise SkipTest
+        if module == 'bokeh':
+            ConnectionError = import_module(
+                'requests.exceptions').ConnectionError
+            session = import_module('bokeh.session').Session()
+            try:
+                session.execute('get', session.base_url)
+            except ConnectionError:
+                raise SkipTest
+
     if datasets and not hasattr(config, 'data_path'):
         raise SkipTest
     for dataset in datasets:
