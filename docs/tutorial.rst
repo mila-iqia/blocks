@@ -154,7 +154,23 @@ needed to train a model. It has a set of training algorithms (like SGD), an
 interface to datasets, and a training loop that allows you to monitoring and
 control the training process.
 
-We want to train our model on the training set of MNIST.
+We want to train our model on the training set of MNIST. We load the data using
+the Fuel_ framework. You'll need to configure Fuel's data path so that it knows
+where to find the MNIST files. You can do this by creating a configuration file.
+
+.. code-block:: bash
+
+   echo "data_path: /home/user/datasets" >> ~/.fuelrc
+
+You can also do it by setting an environment variable in your bash shell:
+
+.. code-block:: bash
+
+   export FUEL_DATA_PATH=/home/user/datasets
+
+After having configured Fuel, `download the MNIST files`_ to a folder called
+``mnist`` in your data path (e.g. to ``/home/user/datasets/mnist``) and load
+the dataset.
 
 >>> from fuel.datasets import MNIST
 >>> mnist = MNIST("train")
@@ -239,3 +255,5 @@ Log records from the iteration 235:
 .. _softmax: https://en.wikipedia.org/wiki/Softmax
 .. _stochastic gradient descent: https://en.wikipedia.org/wiki/Stochastic_gradient_descent
 .. _doctest mode: http://ipython.org/ipython-doc/dev/interactive/tips.html#run-doctests
+.. _download the MNIST files: http://yann.lecun.com/exdb/mnist/
+.. _Fuel: http://fuel.readthedocs.org/en/latest/
