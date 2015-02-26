@@ -510,7 +510,7 @@ class RMSProp(CompositeRule):
 
 
 class StepClipping(StepRule):
-    """Clips the total step to make it not exceed a threshold.
+    """Rescales an entire step if its L2 norm exceeds a threshold.
 
     When the previous steps are the gradients, this step rule performs
     gradient clipping.
@@ -553,18 +553,18 @@ class Adam(StepRule):
 
     Parameters
     ----------
-    learning_rate: float, optional
+    learning_rate : float, optional
         Step size.
         Default value is set to 0.0002.
-    beta_1: float, optional
+    beta_1 : float, optional
         Exponential decay rate for the first moment estimates.
         Default value is set to 0.1.
-    beta_2: float, optional
+    beta_2 : float, optional
         Exponential decay rate for the second moment estimates.
         Default value is set to 0.001.
-    epsilon: float, optional
+    epsilon : float, optional
         Default value is set to 1e-8.
-    decay_factor: float, optional
+    decay_factor : float, optional
         Default value is set to 1e-8.
 
     """
