@@ -376,7 +376,7 @@ class Momentum(CompositeRule):
     momentum : :class:`~tensor.SharedVariable`
         A variable for momentum.
 
-    See also
+    See Also
     --------
     :class:`SharedVariableModifier` for a parameter decay during the
     training.
@@ -512,7 +512,7 @@ class RMSProp(CompositeRule):
     decay_rate : :class:`~tensor.SharedVariable`
         A variable for decay rate.
 
-    See also
+    See Also
     --------
     :class:`SharedVariableModifier` for a parameter decay during the
     training.
