@@ -384,10 +384,10 @@ class Momentum(CompositeRule):
     """
     def __init__(self, learning_rate=1.0, momentum=0.):
         scale = Scale(learning_rate=learning_rate)
-        momentum_alg = BasicMomentum(momentum=momentum)
+        basic_momentum = BasicMomentum(momentum=momentum)
         self.learning_rate = scale.learning_rate
-        self.momentum = momentum_alg.momentum
-        self.components = [scale, momentum_alg]
+        self.momentum = basic_momentum.momentum
+        self.components = [scale, basic_momentum]
 
 
 class AdaDelta(StepRule):
