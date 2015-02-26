@@ -2,7 +2,7 @@
 import os.path
 from pkg_resources import get_distribution, DistributionNotFound
 
-from blocks.config_parser import config  # flake8: noqa
+from blocks.config_parser import config  # noqa
 
 
 try:

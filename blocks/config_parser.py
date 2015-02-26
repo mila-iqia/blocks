@@ -12,12 +12,6 @@ variable. A configuration file is of the form:
 
    data_path: /home/user/datasets
 
-Which could be overwritten by using environment variables:
-
-.. code-block:: bash
-
-   $ BLOCKS_DATA_PATH=/home/users/other_datasets python
-
 If a setting is not configured and does not provide a default, a
 :class:`~.ConfigurationError` is raised when it is
 accessed.
@@ -26,15 +20,10 @@ Configuration values can be accessed as attributes of
 :const:`blocks.config`.
 
     >>> from blocks import config
-    >>> print(config.data_path) # doctest: +SKIP
-    '~/datasets'
+    >>> print(config.default_seed) # doctest: +SKIP
+    1
 
 The following configurations are supported:
-
-.. option:: data_path
-
-   The path where dataset files are stored. Can also be set using the
-   environment variable ``BLOCKS_DATA_PATH``.
 
 .. option:: default_seed
 
@@ -145,7 +134,6 @@ class Configuration(object):
 config = Configuration()
 
 # Define configuration options
-config.add_config('data_path', type_=str, env_var='BLOCKS_DATA_PATH')
 config.add_config('default_seed', type_=int, default=1)
 config.add_config('recursion_limit', type_=int, default=10000)
 

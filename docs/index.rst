@@ -7,6 +7,10 @@ Want to get try it out? Start by :doc:`installing <setup>` Blocks and having a
 look at the :ref:`quickstart <quickstart>` further down this page. Once you're
 hooked, try your hand at the :ref:`tutorials <tutorials>`.
 
+Blocks is developed in parallel with Fuel_, a dataset processing framework.
+
+.. _Fuel: https://github.com/bartvm/fuel
+
 .. _tutorials:
 
 Tutorials
@@ -27,7 +31,6 @@ In-depth
 
    rnn
    configuration
-   datasets
    serialization
    api/index.rst
    development/index.rst
@@ -55,9 +58,9 @@ Quickstart
    >>> from blocks.bricks import MLP, Tanh, Softmax
    >>> from blocks.bricks.cost import CategoricalCrossEntropy, MisclassificationRate
    >>> from blocks.initialization import IsotropicGaussian, Constant
-   >>> from blocks.datasets.streams import DataStream
-   >>> from blocks.datasets.mnist import MNIST
-   >>> from blocks.datasets.schemes import SequentialScheme
+   >>> from fuel.streams import DataStream
+   >>> from fuel.datasets import MNIST
+   >>> from fuel.schemes import SequentialScheme
    >>> from blocks.extensions import FinishAfter, Printing
    >>> from blocks.extensions.monitoring import DataStreamMonitoring
    >>> from blocks.main_loop import MainLoop
@@ -76,7 +79,7 @@ Calculate your loss function.
 >>> cost = CategoricalCrossEntropy().apply(y.flatten(), y_hat)
 >>> error_rate = MisclassificationRate().apply(y.flatten(), y_hat)
 
-Load your training data.
+Load your training data using Fuel.
 
 >>> mnist_train = MNIST("train")
 >>> train_stream = DataStream(
@@ -108,7 +111,6 @@ Currently Blocks supports and provides:
 
 * Constructing parametrized Theano operations, called "bricks"
 * Pattern matching to select variables and bricks in large models
-* A pipeline for loading and iterating over training data
 * Algorithms to optimize your model
 * Saving and resuming of training
 * Monitoring and analyzing values during training progress (on the training set

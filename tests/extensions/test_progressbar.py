@@ -1,21 +1,22 @@
 import numpy
 import theano
-
+from fuel.datasets import ContainerDataset
 from theano import tensor
 
-from blocks.datasets import ContainerDataset
-from blocks.main_loop import MainLoop
 from blocks.algorithms import GradientDescent, Scale
-from blocks.utils import shared_floatx
-
 from blocks.extensions import FinishAfter, ProgressBar, Printing
+from blocks.main_loop import MainLoop
+from blocks.utils import shared_floatx
 
 floatX = theano.config.floatX
 
 
 def setup_mainloop(extension):
-    """Create a MainLoop, register the given extension, supply it with a
-        DataStream and a minimal model/cost to optimize.
+    """Set up a simple main loop for progress bar tests.
+
+    Create a MainLoop, register the given extension, supply it with a
+    DataStream and a minimal model/cost to optimize.
+
     """
     features = [numpy.array(f, dtype=floatX)
                 for f in [[1, 2], [3, 4], [5, 6]]]

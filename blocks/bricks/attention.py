@@ -116,7 +116,7 @@ class AbstractAttention(Brick):
             padded structured output, e.g. when a number of sequences are
             force to be the same length. The mask identifies position of
             the `attended` that actually contain information.
-        **kwargs : dict
+        \*\*kwargs : dict
             Includes the states and the glimpses to be carried over from
             the previous step in the case when the attention mechanism is
             applied sequentially.
@@ -262,7 +262,7 @@ class SequenceContentAttention(AbstractAttention, Initializable):
         """
         if not preprocessed_sequence:
             preprocessed_sequence = self.preprocess(sequence)
-        transformed_states = self.state_transformers.apply(return_dict=True,
+        transformed_states = self.state_transformers.apply(as_dict=True,
                                                            **states)
         # Broadcasting of transformed states should be done automatically
         match_vectors = sum(transformed_states.values(),
@@ -533,10 +533,10 @@ class AttentionRecurrent(AbstractAttentionRecurrent, Initializable):
             kwargs.pop(self.attended_mask_name)
 
         sequences.update(self.distribute.apply(
-            return_dict=True, **dict_subset(dict_union(sequences, glimpses),
-                                            self.distribute.apply.inputs)))
+            as_dict=True, **dict_subset(dict_union(sequences, glimpses),
+                                        self.distribute.apply.inputs)))
         current_states = self.transition.apply(
-            iterate=False, return_list=True,
+            iterate=False, as_list=True,
             **dict_union(sequences, kwargs))
         return current_states
 
@@ -574,14 +574,14 @@ class AttentionRecurrent(AbstractAttentionRecurrent, Initializable):
         glimpses = dict_subset(kwargs, self.glimpse_names, pop=True)
 
         current_glimpses = self.take_glimpses(
-            return_dict=True,
+            as_dict=True,
             **dict_union(
                 states, glimpses,
                 {self.attended_name: attended,
                  self.attended_mask_name: attended_mask,
                  self.preprocessed_attended_name: preprocessed_attended}))
         current_states = self.compute_states(
-            return_list=True,
+            as_list=True,
             **dict_union(sequences, states, current_glimpses, kwargs))
         return current_states + list(current_glimpses.values())
 

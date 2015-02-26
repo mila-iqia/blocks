@@ -13,8 +13,6 @@ from tests import skip_if_not_available
 
 def setup(testobj):
     skip_if_not_available(modules=['nose2'])
-    if testobj.name == 'blocks.datasets.InMemoryDataset':
-        skip_if_not_available(datasets=['mnist'])
     # Not importing unicode_literal because it gives problems
     # If needed, see https://dirkjan.ochtman.nl/writing/2014/07/06/
     # single-source-python-23-doctests.html for a solution

@@ -170,6 +170,12 @@ class GradientDescent(DifferentiableCostMinimizer):
         A dictionary mapping a parameter to an expression for the cost's
         gradient with respect to the parameter. If ``None``, the gradient
         are taken automatically using :func:`theano.gradient.grad`.
+    known_grads : dict, optional
+        A passthrough to `theano.tensor.grad`'s `known_grads` argument.
+        Useful when you know the [approximate] gradients of some
+        sub-expressions and would like Theano to use that information
+        to compute parameter gradients. Only makes sense when `gradients`
+        is `None`.
 
     Attributes
     ----------
@@ -179,7 +185,8 @@ class GradientDescent(DifferentiableCostMinimizer):
         The step rule.
 
     """
-    def __init__(self, step_rule=None, gradients=None, **kwargs):
+    def __init__(self, step_rule=None, gradients=None, known_grads=None,
+                 **kwargs):
         if gradients:
             kwargs.setdefault("params", gradients.keys())
         super(GradientDescent, self).__init__(**kwargs)
@@ -188,8 +195,13 @@ class GradientDescent(DifferentiableCostMinimizer):
         if not self.gradients:
             logger.info("Taking the cost gradient")
             self.gradients = dict(
-                zip(self.params, tensor.grad(self.cost, self.params)))
+                zip(self.params, tensor.grad(self.cost, self.params,
+                                             known_grads=known_grads)))
             logger.info("The cost gradient computation graph is built")
+        else:
+            if known_grads:
+                raise ValueError("known_grads has no effect when gradients "
+                                 "are passed in")
         self.step_rule = step_rule if step_rule else Scale()
 
         self.total_gradient_norm = named_copy(l2_norm(self.gradients.values()),
@@ -369,10 +381,25 @@ class Momentum(CompositeRule):
     momentum : float, optional
         The momentum coefficient. Defaults to 0.
 
+    Attributes
+    ----------
+    learning_rate : :class:`~tensor.SharedVariable`
+        A variable for learning rate.
+    momentum : :class:`~tensor.SharedVariable`
+        A variable for momentum.
+
+    See Also
+    --------
+    :class:`SharedVariableModifier` for a parameter decay during the
+    training.
+
     """
     def __init__(self, learning_rate=1.0, momentum=0.):
-        self.components = [Scale(learning_rate=learning_rate),
-                           BasicMomentum(momentum=momentum)]
+        scale = Scale(learning_rate=learning_rate)
+        basic_momentum = BasicMomentum(momentum=momentum)
+        self.learning_rate = scale.learning_rate
+        self.momentum = basic_momentum.momentum
+        self.components = [scale, basic_momentum]
 
 
 class AdaDelta(StepRule):
@@ -448,10 +475,6 @@ class BasicRMSProp(StepRule):
 
     For more information, see [Hint2014]_.
 
-    .. [Hint2014] Geoff Hinton, *Neural Networks for Machine Learning*,
-       lecture 6a,
-       http://cs.toronto.edu/~tijmen/csc321/slides/lecture_slides_lec6.pdf
-
     """
     def __init__(self, decay_rate=0.9, max_scaling=1e5):
         if not 0.0 <= decay_rate <= 1.0:
@@ -494,15 +517,30 @@ class RMSProp(CompositeRule):
         Maximum scaling of the step size, in case the running average is
         really small. Defaults to 1e5.
 
+    Attributes
+    ----------
+    learning_rate : :class:`~tensor.SharedVariable`
+        A variable for learning rate.
+    decay_rate : :class:`~tensor.SharedVariable`
+        A variable for decay rate.
+
+    See Also
+    --------
+    :class:`SharedVariableModifier` for a parameter decay during the
+    training.
+
     """
     def __init__(self, learning_rate=1.0, decay_rate=0.9, max_scaling=1e5):
-        self.components = [
-            BasicRMSProp(decay_rate=decay_rate, max_scaling=max_scaling),
-            Scale(learning_rate=learning_rate)]
+        basic_rms_prop = BasicRMSProp(decay_rate=decay_rate,
+                                      max_scaling=max_scaling)
+        scale = Scale(learning_rate=learning_rate)
+        self.learning_rate = scale.learning_rate
+        self.decay_rate = basic_rms_prop.decay_rate
+        self.components = [basic_rms_prop, scale]
 
 
 class StepClipping(StepRule):
-    """Clips the total step to make it not exceed a threshold.
+    """Rescales an entire step if its L2 norm exceeds a threshold.
 
     When the previous steps are the gradients, this step rule performs
     gradient clipping.
@@ -540,23 +578,23 @@ class Adam(StepRule):
     """Adam optimizer as described in [King2014]_.
 
     .. [King2014] Diederik Kingma, Jimmy Ba,
-       * Adam: A Method for Stochastic Optimization *,
+       *Adam: A Method for Stochastic Optimization*,
        http://arxiv.org/abs/1412.6980
 
     Parameters
     ----------
-    learning_rate: float, optional
+    learning_rate : float, optional
         Step size.
         Default value is set to 0.0002.
-    beta_1: float, optional
+    beta_1 : float, optional
         Exponential decay rate for the first moment estimates.
         Default value is set to 0.1.
-    beta_2: float, optional
+    beta_2 : float, optional
         Exponential decay rate for the second moment estimates.
         Default value is set to 0.001.
-    epsilon: float, optional
+    epsilon : float, optional
         Default value is set to 1e-8.
-    decay_factor: float, optional
+    decay_factor : float, optional
         Default value is set to 1e-8.
 
     """
@@ -590,3 +628,34 @@ class Adam(StepRule):
                    (time, t1)]
 
         return step, updates
+
+
+class RemoveNotFinite(StepRule):
+    """A step rule that skips steps with non-finite elements.
+
+    Replaces a step (the parameter update of a single shared variable)
+    which contains non-finite elements (such as ``inf`` or ``NaN``) with a
+    scaled version of the parameters being updated instead.
+
+    Parameters
+    ----------
+    scaler : float, optional
+        The scaling applied to the parameter in case the step contains
+        non-finite elements. Defaults to 0.1.
+
+    Notes
+    -----
+    This trick was originally used in the GroundHog_ framework.
+
+    .. _GroundHog: https://github.com/lisa-groundhog/GroundHog
+
+    """
+    def __init__(self, scaler=0.1):
+        self.scaler = scaler
+
+    def compute_step(self, param, previous_step):
+        not_finite = tensor.any(tensor.or_(
+            tensor.isnan(previous_step), tensor.isinf(previous_step)))
+        step = tensor.switch(not_finite, self.scaler * param, previous_step)
+
+        return step, []

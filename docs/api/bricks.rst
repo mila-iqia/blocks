@@ -1,6 +1,13 @@
 Bricks
 ======
 
+* `Convolutional bricks`_
+* `Routing bricks`_
+* `Recurrent bricks`_
+* `Attention bricks`_
+* `Sequence generators`_
+* `Cost bricks`_
+
 .. automodule:: blocks.bricks
     :members:
     :exclude-members: Activation, ActivationDocumentation
@@ -36,8 +43,8 @@ Recurrent bricks
     :undoc-members:
     :show-inheritance:
 
-Attention brick
----------------
+Attention bricks
+----------------
 
 .. automodule:: blocks.bricks.attention
     :members:
@@ -49,6 +56,14 @@ Sequence generators
 -------------------
 
 .. automodule:: blocks.bricks.sequence_generators
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+Cost bricks
+-----------
+
+.. automodule:: blocks.bricks.cost
     :members:
     :undoc-members:
     :show-inheritance:

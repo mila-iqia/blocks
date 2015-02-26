@@ -5,10 +5,11 @@ build:
       - pip install -q git+git://github.com/bartvm/pep257.git@numpy
   tests:
     override:
-      - flake8 blocks tests examples
       - flake8 --filename=* bin
-      - pep257 blocks tests examples --numpy --ignore=D100,D101,D102,D103
-      - pep257 --match='.*' bin --numpy --ignore=D100,D101,D102,D103
+      - flake8 blocks tests examples
+      - pep257 bin --numpy --ignore=D100,D101,D102,D103 --match='.*'
+      - pep257 blocks examples --numpy --ignore=D100,D101,D102,D103
+      - pep257 tests --numpy --ignore=D100,D101,D102,D103 --match='.*\.py'
 checks:
     python:
         code_rating: true

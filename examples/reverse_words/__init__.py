@@ -20,11 +20,11 @@ from blocks.bricks.sequence_generators import (
     SequenceGenerator, LinearReadout, SoftmaxEmitter, LookupFeedback)
 from blocks.config_parser import config
 from blocks.graph import ComputationGraph
-from blocks.datasets.streams import (
+from fuel.streams import (
     DataStreamMapping, BatchDataStream, PaddingDataStream,
     DataStreamFilter)
-from blocks.datasets.text import OneBillionWord, TextFile
-from blocks.datasets.schemes import ConstantScheme
+from fuel.datasets import OneBillionWord, TextFile
+from fuel.schemes import ConstantScheme
 from blocks.dump import load_parameter_values
 from blocks.algorithms import (GradientDescent, Scale,
                                StepClipping, CompositeRule)
@@ -147,13 +147,12 @@ def main(mode, save_path, num_batches, data_path=None):
         chars_mask = tensor.matrix("features_mask")
         targets = tensor.lmatrix("targets")
         targets_mask = tensor.matrix("targets_mask")
-        attended = encoder.apply(
-                **dict_union(
-                    fork.apply(lookup.lookup(chars), return_dict=True),
-                    mask=chars_mask))
         batch_cost = generator.cost(
             targets, targets_mask,
-            attended=attended,
+            attended=encoder.apply(
+                **dict_union(
+                    fork.apply(lookup.lookup(chars), as_dict=True),
+                    mask=chars_mask)),
             attended_mask=chars_mask).sum()
         batch_size = named_copy(chars.shape[1], "batch_size")
         cost = aggregation.mean(batch_cost,  batch_size)
@@ -233,7 +232,7 @@ def main(mode, save_path, num_batches, data_path=None):
             n_steps=3 * chars.shape[0], batch_size=chars.shape[1],
             attended=encoder.apply(
                 **dict_union(fork.apply(lookup.lookup(chars),
-                             return_dict=True))),
+                             as_dict=True))),
             attended_mask=tensor.ones(chars.shape))
         model = Model(generated)
         model.set_param_values(load_parameter_values(save_path))

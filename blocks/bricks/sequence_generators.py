@@ -152,12 +152,12 @@ class BaseSequenceGenerator(Initializable):
                   if name in kwargs}
         contexts = {name: kwargs[name] for name in self.context_names}
         feedback = self.readout.feedback(outputs)
-        inputs = (self.fork.apply(feedback, return_dict=True)
+        inputs = (self.fork.apply(feedback, as_dict=True)
                   if self.fork else {'feedback': feedback})
 
         # Run the recurrent network
         results = self.transition.apply(
-            mask=mask, return_initial_states=True, return_dict=True,
+            mask=mask, return_initial_states=True, as_dict=True,
             **dict_union(inputs, states, contexts))
 
         # Separate the deliverables
@@ -201,17 +201,17 @@ class BaseSequenceGenerator(Initializable):
         glimpses = {name: kwargs[name] for name in self.glimpse_names}
 
         next_glimpses = self.transition.take_glimpses(
-            return_dict=True, **dict_union(states, glimpses, contexts))
+            as_dict=True, **dict_union(states, glimpses, contexts))
         next_readouts = self.readout.readout(
             feedback=self.readout.feedback(outputs),
             **dict_union(states, next_glimpses, contexts))
         next_outputs = self.readout.emit(next_readouts)
         next_costs = self.readout.cost(next_readouts, next_outputs)
         next_feedback = self.readout.feedback(next_outputs)
-        next_inputs = (self.fork.apply(next_feedback, return_dict=True)
+        next_inputs = (self.fork.apply(next_feedback, as_dict=True)
                        if self.fork else {'feedback': next_feedback})
         next_states = self.transition.compute_states(
-            return_list=True,
+            as_list=True,
             **dict_union(next_inputs, states, next_glimpses, contexts))
         return (next_states + [next_outputs] +
                 list(next_glimpses.values()) + [next_costs])

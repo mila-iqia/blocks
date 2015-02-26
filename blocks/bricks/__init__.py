@@ -444,6 +444,38 @@ class Softmax(Activation):
     def apply(self, input_):
         return tensor.nnet.softmax(input_)
 
+    @application
+    def categorical_cross_entropy(self, y, x):
+        """Return computationally stable softmax cost.
+
+        Parameters
+        ----------
+        y : :class:`~tensor.TensorVariable`
+            In the case of a matrix argument, each slice along
+            axis represents one distribution. In the vector case, each
+            element represents the position of the '1' in a one hot-vector.
+        x : :class:`~tensor.TensorVariable`
+            Each slice along axis represents one distribution.
+
+        Returns
+        -------
+        cost : :class:`~tensor.TensorVariable`
+            The cross entropy between y and x.
+
+        """
+        x = x - x.max(axis=1).dimshuffle(0, 'x')
+        log_prob = x - tensor.log(tensor.exp(x).sum(axis=1).dimshuffle(0, 'x'))
+        if y.ndim == x.ndim - 1:
+            flat_log_prob = log_prob.flatten()
+            range_ = tensor.arange(y.shape[0])
+            flat_indices = y + range_ * x.shape[1]
+            cost = -tensor.mean(flat_log_prob[flat_indices])
+        elif y.ndim == x.ndim:
+            cost = -tensor.mean((log_prob * y).sum(axis=1))
+        else:
+            raise TypeError('rank mismatch between x and y')
+        return cost
+
 
 class Sequence(Brick):
     """A sequence of bricks.

@@ -56,7 +56,7 @@ class DataStreamMonitoring(SimpleExtension, MonitoringExtension):
         as this is not intended to alter your model in any meaningfull
         way. A typical use case of this option arises when the theano
         function used for evaluation contains a call to
-        :function:`~theano.scan` which might have returned shared
+        :func:`~theano.scan` which might have returned shared
         variable updates.
     data_stream : instance of :class:`.DataStream`
         The data stream to monitor on. A data epoch is requested
@@ -124,7 +124,7 @@ class TrainingDataMonitoring(SimpleExtension, MonitoringExtension):
         aggregated values of the monitored variables to the log.
 
         """
-        if callback_name == self.before_training.__name__:
+        if callback_name == 'before_training':
             if not isinstance(self.main_loop.algorithm,
                               DifferentiableCostMinimizer):
                 raise ValueError
@@ -135,6 +135,7 @@ class TrainingDataMonitoring(SimpleExtension, MonitoringExtension):
             if self.main_loop.status.iterations_done == self._last_time_called:
                 raise Exception("TrainingDataMonitoring.do should be invoked"
                                 " no more than once per iteration")
+            self._last_time_called = self.main_loop.status.iterations_done
             self.add_records(self.main_loop.log,
                              self._buffer.get_aggregated_values().items())
             self._buffer.initialize_aggregators()

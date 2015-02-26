@@ -7,7 +7,7 @@ unpicklable by a third party.
 import numpy
 import copy
 
-from blocks.datasets import Dataset
+from fuel.datasets import Dataset
 
 
 class MarkovChainDataset(Dataset):

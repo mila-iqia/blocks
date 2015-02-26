@@ -1,10 +1,10 @@
 import numpy
 import theano
+from fuel.datasets import ContainerDataset
 from numpy.testing import assert_raises
 
 from blocks.graph import ComputationGraph
 from blocks.monitoring.evaluators import DatasetEvaluator
-from blocks.datasets import ContainerDataset
 from tests.monitoring.test_aggregation import TestBrick
 
 floatX = theano.config.floatX
