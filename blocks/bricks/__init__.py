@@ -559,9 +559,9 @@ class MLP(Sequence, Initializable, Feedforward):
             if entity is None:
                 continue
             if isinstance(entity, Brick):
-                application_methods += [entity.apply]
+                application_methods.append(entity.apply)
             else:
-                application_methods += [entity]
+                application_methods.append(entity)
         if not dims:
             dims = [None] * (len(activations) + 1)
         self.dims = dims
