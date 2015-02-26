@@ -602,9 +602,9 @@ class Bidirectional(Initializable):
     @application
     def apply(self, *args, **kwargs):
         """Applies forward and backward networks and concatenates outputs."""
-        forward = self.children[0].apply(return_list=True, *args, **kwargs)
+        forward = self.children[0].apply(as_list=True, *args, **kwargs)
         backward = [x[::-1] for x in
-                    self.children[1].apply(reverse=True, return_list=True,
+                    self.children[1].apply(reverse=True, as_list=True,
                                            *args, **kwargs)]
         return [tensor.concatenate([f, b], axis=2)
                 for f, b in zip(forward, backward)]
