@@ -1,14 +1,12 @@
 import numpy
 import theano
-
+from fuel.datasets import ContainerDataset
 from theano import tensor
 
-from blocks.datasets import ContainerDataset
-from blocks.main_loop import MainLoop
 from blocks.algorithms import GradientDescent, Scale
-from blocks.utils import shared_floatx
-
 from blocks.extensions import FinishAfter, ProgressBar, Printing
+from blocks.main_loop import MainLoop
+from blocks.utils import shared_floatx
 
 floatX = theano.config.floatX
 

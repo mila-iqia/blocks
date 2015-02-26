@@ -31,7 +31,7 @@ before_install:
         gunzip *-ubyte.gz
         cd -
       fi
-  - export BLOCKS_DATA_PATH=$PWD
+  - export FUEL_DATA_PATH=$PWD
 install:
   # Install all Python dependencies
   - conda install -q --yes python=$TRAVIS_PYTHON_VERSION mkl bokeh nose numpy pip coverage six scipy toolz
@@ -40,6 +40,7 @@ script:
   - pip install . -r requirements.txt # Tests setup.py
   - # Must export environment variable so that the subprocess is aware of it
   - export THEANO_FLAGS=floatX=$TESTS,optimizer=fast_compile
+  - export FUEL_FLOATX=$TESTS
   - # Running nose2 within coverage makes imports count towards coverage
   - bokeh-server &> /dev/null &
   - coverage run -p --source=blocks -m nose2.__main__ -v doctests

@@ -156,7 +156,7 @@ control the training process.
 
 We want to train our model on the training set of MNIST.
 
->>> from blocks.datasets.mnist import MNIST
+>>> from fuel.datasets import MNIST
 >>> mnist = MNIST("train")
 
 Datasets only provide an interface to the data. For actual training, we will
@@ -165,8 +165,8 @@ stream which makes use of a particular iteration scheme. We will use an
 iteration scheme that iterates over our MNIST examples sequentially in batches
 of size 256.
 
->>> from blocks.datasets.streams import DataStream
->>> from blocks.datasets.schemes import SequentialScheme
+>>> from fuel.streams import DataStream
+>>> from fuel.schemes import SequentialScheme
 >>> data_stream = DataStream(mnist, iteration_scheme=SequentialScheme(
 ...     num_examples=mnist.num_examples, batch_size=256))
 

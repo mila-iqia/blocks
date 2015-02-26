@@ -1,7 +1,7 @@
+from fuel.datasets import ContainerDataset
 from six.moves import cPickle
 
 from blocks.main_loop import MainLoop
-from blocks.datasets import ContainerDataset
 from blocks.extensions import TrainingExtension, FinishAfter
 from blocks.utils import unpack
 
