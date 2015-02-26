@@ -5,21 +5,12 @@ import numpy
 
 from theano import config
 from theano import function
-from theano import tensor
 
 from blocks.filter import VariableFilter, get_application_call
 from blocks.graph import ComputationGraph
 from blocks.roles import INPUT, OUTPUT
-from blocks.utils import unpack, dict_union
 
 floatX = config.floatX
-
-
-def construct_dict(func):
-    def wrapper(self, *inputs):
-        names, outputs = func(self, *inputs)
-        return OrderedDict(zip(names, outputs))
-    return wrapper
 
 
 class BeamSearch(object):
@@ -116,20 +107,17 @@ class BeamSearch(object):
 
         self.compiled = True
 
-    @construct_dict
     def compute_contexts(self, inputs_dict):
         contexts = self.attended_computer(*inputs_dict.values())
-        return ["attended", "attended_mask"], contexts
+        return OrderedDict(zip(["attended", "attended_mask"], contexts))
 
-    @construct_dict
     def compute_initial_states(self, contexts):
         """Computes initial outputs and states."""
         init_states = self.initial_state_computer(*contexts.values())
         init_states = [state.reshape((1,) + state.shape)
                        for state in init_states]
-        return self.state_names, init_states
+        return OrderedDict(zip(self.state_names, init_states))
 
-    @construct_dict
     def compute_next(self, contexts, cur_vals):
         """Computes next states, glimpses, outputs, and probabilities.
 
@@ -150,7 +138,7 @@ class BeamSearch(object):
                                            [cur_vals['states'][0]]))
         next_values = [state.reshape((1,) + state.shape)
                        for state in next_values]
-        return self.generate_names + ['probs'], next_values
+        return OrderedDict(zip(self.generate_names + ['probs'], next_values))
 
     @classmethod
     def _top_probs(cls, probs, beam_size, unique=False):
@@ -237,7 +225,7 @@ class BeamSearch(object):
                           cur_states['cur_outputs_mask'][-1, :, None])
 
             # Top probs
-            indexes, top_probs = self._top_probs(next_probs[:, :],
+            indexes, top_probs = self._top_probs(next_probs,
                                                  self.beam_size,
                                                  unique=i == 0)
             cur_states['cur_probs'] = numpy.array(top_probs).T[None, :]
