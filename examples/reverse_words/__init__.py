@@ -148,7 +148,7 @@ def main(mode, save_path, num_batches, data_path=None):
             targets, targets_mask,
             attended=encoder.apply(
                 **dict_union(
-                    fork.apply(lookup.lookup(chars), return_dict=True),
+                    fork.apply(lookup.lookup(chars), as_dict=True),
                     mask=chars_mask)),
             attended_mask=chars_mask).sum()
         batch_size = named_copy(chars.shape[1], "batch_size")
@@ -229,7 +229,7 @@ def main(mode, save_path, num_batches, data_path=None):
             n_steps=3 * chars.shape[0], batch_size=chars.shape[1],
             attended=encoder.apply(
                 **dict_union(fork.apply(lookup.lookup(chars),
-                             return_dict=True))),
+                             as_dict=True))),
             attended_mask=tensor.ones(chars.shape))
         model = Model(generated)
         model.set_param_values(load_parameter_values(save_path))

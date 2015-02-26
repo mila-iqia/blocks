@@ -247,7 +247,7 @@ class Distribute(Fork):
 
         """
         result = super(Distribute, self).apply(kwargs.pop(self.source_name),
-                                               return_list=True)
+                                               as_list=True)
         for i, name in enumerate(self.target_names):
             result[i] += kwargs.pop(name)
         if len(kwargs):

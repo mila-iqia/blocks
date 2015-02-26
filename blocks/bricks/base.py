@@ -242,9 +242,9 @@ class Application(object):
         return self.apply(bound_application, *args, **kwargs)
 
     def apply(self, bound_application, *args, **kwargs):
-        return_dict = kwargs.pop('return_dict', False)
-        return_list = kwargs.pop('return_list', False)
-        if return_list and return_dict:
+        as_dict = kwargs.pop('as_dict', False)
+        as_list = kwargs.pop('as_list', False)
+        if as_list and as_dict:
             raise ValueError
 
         brick = bound_application.brick
@@ -317,9 +317,9 @@ class Application(object):
                                           OUTPUT, name)
 
         # Return values
-        if return_list:
+        if as_list:
             return outputs
-        if return_dict:
+        if as_dict:
             return OrderedDict(zip(bound_application.outputs, outputs))
         return unpack(outputs)
 
