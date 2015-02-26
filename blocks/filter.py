@@ -2,6 +2,7 @@ from inspect import isclass
 import re
 
 from blocks.bricks.base import ApplicationCall, Brick
+from blocks.roles import has_roles
 
 
 def get_annotation(var, cls):
@@ -104,17 +105,8 @@ class VariableFilter(object):
         """
         if self.roles:
             filtered_variables = []
-            for var in variables:
-                var_roles = getattr(var.tag, 'roles', [])
-                if self.each_role:
-                    if all(any(isinstance(var_role, role.__class__) for
-                               var_role in var_roles) for role in self.roles):
-                        filtered_variables.append(var)
-                else:
-                    if any(any(isinstance(var_role, role.__class__) for
-                               var_role in var_roles) for role in self.roles):
-                        filtered_variables.append(var)
-            variables = filtered_variables
+            variables = [var for var in variables
+                         if has_roles(var, self.roles, self.each_role)]
         if self.bricks is not None:
             filtered_variables = []
             for var in variables:
