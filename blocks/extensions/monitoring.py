@@ -124,7 +124,7 @@ class TrainingDataMonitoring(SimpleExtension, MonitoringExtension):
         aggregated values of the monitored variables to the log.
 
         """
-        if callback_name == self.before_training.__name__:
+        if callback_name == 'before_training':
             if not isinstance(self.main_loop.algorithm,
                               DifferentiableCostMinimizer):
                 raise ValueError
