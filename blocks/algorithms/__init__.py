@@ -369,10 +369,16 @@ class Momentum(CompositeRule):
     momentum : float, optional
         The momentum coefficient. Defaults to 0.
 
-    Notes
-    -----
-    The class has two shared variables: `learning_rate` and `momentum`.
-    See :class:`SharedVariableModifier` for a parameter decay during the
+    Attributes
+    ----------
+    learning_rate : :class:`~tensor.SharedVariable`
+        A variable for learning rate.
+    momentum : :class:`~tensor.SharedVariable`
+        A variable for momentum.
+
+    See also
+    --------
+    :class:`SharedVariableModifier` for a parameter decay during the
     training.
 
     """
@@ -499,10 +505,16 @@ class RMSProp(CompositeRule):
         Maximum scaling of the step size, in case the running average is
         really small. Defaults to 1e5.
 
-    Notes
-    -----
-    The class has two shared variables: `learning_rate` and `decay_rate`.
-    See :class:`SharedVariableModifier` for a parameter decay during the
+    Attributes
+    ----------
+    learning_rate : :class:`~tensor.SharedVariable`
+        A variable for learning rate.
+    decay_rate : :class:`~tensor.SharedVariable`
+        A variable for decay rate.
+
+    See also
+    --------
+    :class:`SharedVariableModifier` for a parameter decay during the
     training.
 
     """
