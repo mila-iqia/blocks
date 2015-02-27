@@ -172,7 +172,7 @@ class BeamSearch(object):
                                next_values))
 
     @staticmethod
-    def _top_probs(scores, beam_size):
+    def _top_probs(scores, beam_size, unique=False):
         """Returns indexes of elements with lowest scores.
 
         Parameters
@@ -181,13 +181,19 @@ class BeamSearch(object):
             A 3d array of scores (length of sequence, batch, readout_dim).
         beam_size : int
             Beam size, number of top scores to return.
+        unique : bool
+            Return only unique indexes. Should be used for the first
+            iteration of the beam search.
 
         Returns
         -------
         Tuple of (indexes, top scores).
 
         """
-        flatten = scores.flatten()
+        if unique:
+            flatten = scores[:, :1, :].flatten()
+        else:
+            flatten = scores.flatten()
         args = numpy.argpartition(flatten, beam_size)[:beam_size]
         args = args[numpy.argsort(flatten[args])]
         # convert args back
@@ -243,7 +249,8 @@ class BeamSearch(object):
                           states['cur_outputs_mask'][-1, :, None])
 
             # Top probs
-            indexes, top_probs = self._top_probs(next_probs, self.beam_size)
+            indexes, top_probs = self._top_probs(next_probs, self.beam_size,
+                                                 unique=i == 0)
             states['cur_logprobs'] = numpy.array(top_probs).T[None, :]
             indexes = numpy.array(indexes)  # chunk, 2, beam
             # current_outputs.
