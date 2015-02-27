@@ -250,11 +250,11 @@ class MainLoop(object):
         if (self.log.current_row.training_finish_requested or
             self.status._batch_interrupt_received):
 
-		    raise TrainingFinish
-	if (level == 'epoch' and
-	    self.status._epoch_interrupt_received):
+                raise TrainingFinish
+        if (level == 'epoch' and
+            self.status._epoch_interrupt_received):
 
-            raise TrainingFinish
+                raise TrainingFinish
 
     def _handle_epoch_interrupt(self, signal_number, frame):
         # Try to complete the current epoch if user presses CTRL + C
@@ -264,7 +264,7 @@ class MainLoop(object):
         self.log.current_row.epoch_interrupt_received = True
         # Add a record to the status. Unlike the log record it will be
         # easy to access at later iterations.
-        self.status._epoch_interrupt_received=True
+        self.status._epoch_interrupt_received = True
 
     def _handle_batch_interrupt(self, signal_number, frame):
         # After 2nd CTRL + C or SIGTERM signal (from cluster) finish batch
