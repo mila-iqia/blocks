@@ -149,35 +149,25 @@ class BeamSearch(object):
         return OrderedDict(zip(self.generate_names + ['probs'], next_values))
 
     @classmethod
-    def _top_probs(cls, probs, beam_size, unique=False):
+    def _top_probs(cls, probs, beam_size):
         """Returns indexes of elements with highest probabilities.
 
         Parameters
         ----------
         probs : numpy array
             A 3d array of probabilities (length of sequence, batch,
-            readout_dim)
+            readout_dim).
         beam_size : int
-            Beam size, number of top probs to return
+            Beam size, number of top probs to return.
 
         Returns
         -------
-        Tuple of (indexes, top probabilities)
+        Tuple of (indexes, top probabilities).
 
         """
         flatten = probs.flatten()
-        if unique:
-            args = numpy.unique(
-                numpy.argpartition(-flatten, beam_size))[:beam_size]
-        else:
-            args = numpy.argpartition(-flatten, beam_size)[:beam_size]
+        args = numpy.argpartition(-flatten, beam_size)[:beam_size]
         args = args[numpy.argsort(-flatten[args])]
-        if unique:
-            # append best if needed
-            if args.shape[0] < beam_size:
-                args = numpy.append(
-                    args,
-                    numpy.tile(args[0], beam_size - args.shape[0]))
         # convert args back
         indexes = numpy.unravel_index(args, probs.shape[1:])
         return indexes, probs[0][indexes]
@@ -232,9 +222,7 @@ class BeamSearch(object):
                           cur_states['cur_outputs_mask'][-1, :, None])
 
             # Top probs
-            indexes, top_probs = self._top_probs(next_probs,
-                                                 self.beam_size,
-                                                 unique=i == 0)
+            indexes, top_probs = self._top_probs(next_probs, self.beam_size)
             cur_states['cur_probs'] = numpy.array(top_probs).T[None, :]
             indexes = numpy.array(indexes)  # chunk, 2, beam
             # current_outputs.
