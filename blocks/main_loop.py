@@ -251,9 +251,8 @@ class MainLoop(object):
              self.status._batch_interrupt_received):
 		  raise TrainingFinish
 	if (level == 'epoch' and
-	    self.status._epoch_interrupt_received):
+	     self.status._epoch_interrupt_received):
 		  raise TrainingFinish
-		
 
     def _handle_epoch_interrupt(self, signal_number, frame):
         # Try to complete the current epoch if user presses CTRL + C
@@ -261,7 +260,8 @@ class MainLoop(object):
                        epoch_interrupt_message)
         signal.signal(signal.SIGINT, self._handle_batch_interrupt)
         self.log.current_row.epoch_interrupt_received = True
-	# Add a record to the status. Unlike the log record it will be easy to access at later iterations.
+	# Add a record to the status. Unlike the log record it will be
+        # easy to access at later iterations.
 	self.status._epoch_interrupt_received=True
 
     def _handle_batch_interrupt(self, signal_number, frame):
@@ -270,7 +270,8 @@ class MainLoop(object):
         logger.warning('Received batch interrupt signal.' +
                        batch_interrupt_message)
         self.log.current_row.batch_interrupt_received = True
-        # Add a record to the status. Unlike the log record it will be easy to access at later iterations.
+        # Add a record to the status. Unlike the log record it will be 
+        # easy to access at later iterations.
 	self.status._batch_interrupt_received = True
 
     def _restore_signal_handlers(self):
