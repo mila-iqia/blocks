@@ -227,23 +227,20 @@ class BeamSearch(object):
         # Precompute contexts
         contexts = self.compute_contexts(inputs)
 
-        cur_states = self.compute_initial_states(contexts)
+        states = self.compute_initial_states(contexts)
 
-        cur_states['cur_outputs'] = cur_states['outputs']
-        cur_states['cur_outputs_mask'] = numpy.ones_like(
-            cur_states['cur_outputs'])
-        cur_states['cur_probs'] = numpy.ones_like(
-            cur_states['cur_outputs'])
+        states['cur_outputs'] = states['outputs']
+        states['cur_outputs_mask'] = numpy.ones_like(states['cur_outputs'])
+        states['cur_probs'] = numpy.ones_like(states['cur_outputs'])
 
         for i in range(max_length):
-            cur_states.update(self.compute_next(contexts, cur_states))
-            next_probs = (cur_states['cur_probs'][:, :, None] *
-                          cur_states['probs'] **
-                          cur_states['cur_outputs_mask'][-1, :, None])
+            states.update(self.compute_next(contexts, states))
+            next_probs = (states['cur_probs'][:, :, None] * states['probs'] **
+                          states['cur_outputs_mask'][-1, :, None])
 
             # Top probs
             indexes, top_probs = self._top_probs(next_probs, self.beam_size)
-            cur_states['cur_probs'] = numpy.array(top_probs).T[None, :]
+            states['cur_probs'] = numpy.array(top_probs).T[None, :]
             indexes = numpy.array(indexes)  # chunk, 2, beam
             # current_outputs.
             # here we suppose, that we have 2d outputs
@@ -251,35 +248,31 @@ class BeamSearch(object):
 
             # rearrange outputs
             rearrange_ind = indexes[0, :]
-            for name in cur_states:
-                cur_states[name] = self._rearrange(cur_states[name],
-                                                   rearrange_ind)
+            for name in states:
+                states[name] = self._rearrange(states[name], rearrange_ind)
             for name in contexts:
-                contexts[name] = self._rearrange(contexts[name],
-                                                 rearrange_ind)
+                contexts[name] = self._rearrange(contexts[name], rearrange_ind)
 
             # construct next output
             outputs = outputs[None, :]
-            cur_states['cur_outputs'] = numpy.append(cur_states['cur_outputs'],
-                                                     outputs.copy(), axis=0)
+            states['cur_outputs'] = numpy.append(states['cur_outputs'],
+                                                 outputs.copy(), axis=0)
             # check if we meet eol
             next_out_mask = numpy.ones((1, self.beam_size),
                                        dtype=floatX)
 
             next_out_mask[0, :] = ((outputs[0, :] != eol_symbol) *
-                                   cur_states['cur_outputs_mask'][-1, :])
-            cur_states['cur_outputs_mask'] = numpy.append(
-                cur_states['cur_outputs_mask'],
-                next_out_mask.copy(),
-                axis=0)
+                                   states['cur_outputs_mask'][-1, :])
+            states['cur_outputs_mask'] = numpy.append(
+                states['cur_outputs_mask'], next_out_mask.copy(), axis=0)
 
             # All sequences ended
-            if numpy.all(cur_states['cur_outputs'][-1, :] == eol_symbol):
+            if numpy.all(states['cur_outputs'][-1, :] == eol_symbol):
                 break
 
         # Drop a meaningless first element
-        outputs = cur_states['cur_outputs'][1:, :]
-        outputs_mask = cur_states['cur_outputs_mask'][1:, :]
-        probs = cur_states['cur_probs'][-1, :]
+        outputs = states['cur_outputs'][1:, :]
+        outputs_mask = states['cur_outputs_mask'][1:, :]
+        probs = states['cur_probs'][-1, :]
 
         return outputs, outputs_mask, probs
