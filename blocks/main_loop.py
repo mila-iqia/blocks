@@ -249,12 +249,10 @@ class MainLoop(object):
         # the previous row.
         if (self.log.current_row.training_finish_requested or
             self.status._batch_interrupt_received):
-
-                raise TrainingFinish
+            raise TrainingFinish
         if (level == 'epoch' and
             self.status._epoch_interrupt_received):
-
-                raise TrainingFinish
+            raise TrainingFinish
 
     def _handle_epoch_interrupt(self, signal_number, frame):
         # Try to complete the current epoch if user presses CTRL + C
