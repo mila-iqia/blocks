@@ -16,11 +16,13 @@ floatX = config.floatX
 class BeamSearch(object):
     """Beam search.
 
+    N-greedy algorithm to find the most probable sequence.
+
     Parameters
     ----------
     beam_size : int
         Size of beam.
-    sequence_generator : sequence generator
+    sequence_generator : :class:`BasicSequenceGenerator`
         Sequence generator brick.
     comp_graph : :class:`ComputationalGraph`
         Computational graph which contains `sequence_generator`.
@@ -29,6 +31,10 @@ class BeamSearch(object):
     -----
     Sequence generator should use an emitter which has `probs` method and
     one of its outputs is called `probs` e.g. :class:`SoftmaxEmitter`.
+
+    See Also
+    --------
+    :class:`SequenceGenerator`, :class:`SequenceContentAttention`.
 
     """
     def __init__(self, beam_size, sequence_generator, comp_graph):
@@ -200,6 +206,8 @@ class BeamSearch(object):
 
     def search(self, inputs_val_dict, eol_symbol=-1, max_length=512):
         """Performs beam search.
+
+        If the beam search was not compiled, it also compiles it.
 
         Parameters
         ----------

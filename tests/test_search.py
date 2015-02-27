@@ -5,8 +5,6 @@ import numpy
 import theano
 from theano import tensor
 
-from blocks.graph import ComputationGraph
-from blocks.search import BeamSearch
 from blocks.bricks import Tanh
 from blocks.bricks.attention import SequenceContentAttention
 from blocks.bricks.lookup import LookupTable
@@ -15,7 +13,9 @@ from blocks.bricks.recurrent import Bidirectional, SimpleRecurrent
 from blocks.bricks.sequence_generators import (SequenceGenerator,
                                                LinearReadout, SoftmaxEmitter,
                                                LookupFeedback)
+from blocks.graph import ComputationGraph
 from blocks.initialization import Orthogonal, IsotropicGaussian, Constant
+from blocks.search import BeamSearch
 from blocks.utils import dict_union
 
 floatX = theano.config.floatX
