@@ -18,9 +18,9 @@ from blocks.bricks import MLP, Tanh, Identity
 from blocks.bricks.cost import SquaredError
 from blocks.initialization import IsotropicGaussian, Constant
 from blocks.model import Model
-from blocks.datasets import ContainerDataset
-from blocks.datasets.streams import BatchDataStream, DataStreamMapping
-from blocks.datasets.schemes import ConstantScheme
+from fuel.datasets import IterableDataset
+from fuel.streams import BatchDataStream, DataStreamMapping
+from fuel.schemes import ConstantScheme
 from blocks.extensions import FinishAfter, Timing, Printing
 from blocks.extensions.saveload import LoadFromDump, Dump
 from blocks.extensions.monitoring import (TrainingDataMonitoring,
@@ -39,8 +39,8 @@ def _array_tuple(data):
 
 
 def get_data_stream(iterable):
-    dataset = ContainerDataset({'numbers': iterable})
-    data_stream = DataStreamMapping(dataset.get_default_stream(),
+    dataset = IterableDataset({'numbers': iterable})
+    data_stream = DataStreamMapping(dataset.get_example_stream(),
                                     _data_sqrt, add_sources=('roots',))
     data_stream = DataStreamMapping(data_stream, _array_tuple)
     return BatchDataStream(data_stream, ConstantScheme(20))

@@ -1,14 +1,12 @@
 import numpy
 import theano
-
+from fuel.datasets import IterableDataset
 from theano import tensor
 
-from blocks.datasets import ContainerDataset
-from blocks.main_loop import MainLoop
 from blocks.algorithms import GradientDescent, Scale
-from blocks.utils import shared_floatx
-
 from blocks.extensions import FinishAfter, ProgressBar, Printing
+from blocks.main_loop import MainLoop
+from blocks.utils import shared_floatx
 
 floatX = theano.config.floatX
 
@@ -22,7 +20,7 @@ def setup_mainloop(extension):
     """
     features = [numpy.array(f, dtype=floatX)
                 for f in [[1, 2], [3, 4], [5, 6]]]
-    dataset = ContainerDataset(dict(features=features))
+    dataset = IterableDataset(dict(features=features))
 
     W = shared_floatx([0, 0], name='W')
     x = tensor.vector('features')
@@ -33,7 +31,7 @@ def setup_mainloop(extension):
                                 step_rule=Scale(1e-3))
 
     main_loop = MainLoop(
-        model=None, data_stream=dataset.get_default_stream(),
+        model=None, data_stream=dataset.get_example_stream(),
         algorithm=algorithm,
         extensions=[
             FinishAfter(after_n_epochs=1),

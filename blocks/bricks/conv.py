@@ -260,17 +260,18 @@ class ConvolutionalLayer(Sequence, Initializable):
         self.image_size = image_size
 
     def _push_allocation_config(self):
-        for attr in ['filter_size', 'num_filters', 'num_channels', 'conv_step',
+        for attr in ['filter_size', 'num_filters', 'num_channels',
                      'border_mode', 'image_size']:
             setattr(self.convolution, attr, getattr(self, attr))
+        self.convolution.step = self.conv_step
         self.convolution._push_allocation_config()
         if self.image_size is not None:
             pooling_input_dim = self.convolution.get_dim('output')
         else:
             pooling_input_dim = None
         self.pooling.input_dim = pooling_input_dim
-        for attr in ['pooling_size', 'pooling_step']:
-            setattr(self.pooling, attr, getattr(self, attr))
+        self.pooling.pooling_size = self.pooling_size
+        self.pooling.step = self.pooling_step
 
     def get_dim(self, name):
         if name == 'input_':

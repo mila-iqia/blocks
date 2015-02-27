@@ -5,3 +5,7 @@ git+https://github.com/dwf/picklable_itertools.git#egg=picklable-itertools
 --allow-external theano
 --allow-unverified theano
 git+https://github.com/Theano/Theano.git#egg=theano
+
+--allow-external fuel
+--allow-unverified fuel
+git+https://github.com/bartvm/fuel#egg=fuel

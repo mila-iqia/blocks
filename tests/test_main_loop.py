@@ -1,7 +1,7 @@
+from fuel.datasets import IterableDataset
 from six.moves import cPickle
 
 from blocks.main_loop import MainLoop
-from blocks.datasets import ContainerDataset
 from blocks.extensions import TrainingExtension, FinishAfter
 from blocks.utils import unpack
 
@@ -65,7 +65,7 @@ def test_main_loop():
 
 def test_training_resumption():
     def do_test(with_serialization):
-        data_stream = ContainerDataset(range(10)).get_default_stream()
+        data_stream = IterableDataset(range(10)).get_example_stream()
         main_loop = MainLoop(
             MockAlgorithm(), data_stream,
             extensions=[WriteBatchExtension(),

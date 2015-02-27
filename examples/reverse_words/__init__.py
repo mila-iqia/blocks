@@ -19,11 +19,11 @@ from blocks.bricks.sequence_generators import (
     SequenceGenerator, LinearReadout, SoftmaxEmitter, LookupFeedback)
 from blocks.config_parser import config
 from blocks.graph import ComputationGraph
-from blocks.datasets.streams import (
+from fuel.streams import (
     DataStreamMapping, BatchDataStream, PaddingDataStream,
     DataStreamFilter)
-from blocks.datasets.text import OneBillionWord, TextFile
-from blocks.datasets.schemes import ConstantScheme
+from fuel.datasets import OneBillionWord, TextFile
+from fuel.schemes import ConstantScheme
 from blocks.dump import load_parameter_values
 from blocks.algorithms import (GradientDescent, Scale,
                                StepClipping, CompositeRule)
@@ -137,7 +137,7 @@ def main(mode, save_path, num_batches, data_path=None):
                         data_stream=DataStreamFilter(
                             predicate=_filter_long,
                             data_stream=dataset
-                            .get_default_stream())))))
+                            .get_example_stream())))))
 
         # Build the cost computation graph
         chars = tensor.lmatrix("features")

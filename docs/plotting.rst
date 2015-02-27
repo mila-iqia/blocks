@@ -40,10 +40,10 @@ function :math:`f(x) = x^a` to :math:`f(x) = x^2`.
 We train on a 150 random points in :math:`[0, 1]`.
 
 >>> import numpy
->>> from blocks.datasets.streams import DataStream
->>> from blocks.datasets import ContainerDataset
+>>> from fuel.streams import DataStream
+>>> from fuel.datasets import IterableDataset
 >>> sample = theano.tensor.scalar('data')
->>> data_stream = DataStream(ContainerDataset(
+>>> data_stream = DataStream(IterableDataset(
 ...     numpy.random.rand(150).astype(theano.config.floatX)))
 
 Now let's train with gradient descent and plot the results.
