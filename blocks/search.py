@@ -179,9 +179,8 @@ class BeamSearch(object):
         Parameters
         ----------
         inputs_val_dict : dict
-            Dictionary of input values {name: value}. Input values may
-            be in a batch of size greater than 1, in this case, several
-            beam searches will be performed in parallel.
+            Dictionary of input values {name: value}. Batch size `1` is
+            supported only.
         eol_symbol : int
             End of sequence symbol, the search stops when the
             symbol is generated.
@@ -254,8 +253,8 @@ class BeamSearch(object):
                 break
 
         # Select only best
-        best_outputs = cur_states['cur_outputs'][1:, 0]
-        best_out_mask = cur_states['cur_outputs_mask'][1:, 0]
-        best_probs = cur_states['cur_probs'][0, 0]
+        outputs = cur_states['cur_outputs'][1:, :]
+        outputs_mask = cur_states['cur_outputs_mask'][1:, :]
+        probs = cur_states['cur_probs'][0, :]
 
-        return best_outputs, best_out_mask, best_probs
+        return outputs, outputs_mask, probs

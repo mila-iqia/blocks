@@ -306,14 +306,21 @@ def main(mode, save_path, num_batches, data_path=None):
                              ('features_mask', numpy.ones_like(numpy_inputs))]),
                 char2code['</S>'])
 
-            output = list(outputs[:])
-            try:
-                true_length = [x for x in outputs].index(char2code['</S>']) + 1
-            except ValueError:
-                true_length = len(outputs)
-            output = output[:true_length]
-            message = "(%.2e)" % unpack(probs)
-            message += "".join(code2char[code] for code in output)
-            if output == target:
-                message += " CORRECT!"
-            print(message)
+            messages = []
+            for i in range(outputs.shape[1]):
+                sample = list(outputs[:, i])
+                try:
+                    true_length = sample.index(char2code['</S>']) + 1
+                except ValueError:
+                    true_length = len(sample)
+                sample = sample[:true_length]
+                prob = probs[i]
+                message = "({})".format(prob)
+                message += "".join(code2char[code] for code in sample)
+                if sample == target:
+                    message += " CORRECT!"
+                messages.append((prob, message))
+            messages.sort(key=operator.itemgetter(0), reverse=True)
+            for _, message in messages:
+                print(message)
+
