@@ -90,6 +90,8 @@ class Application(object):
     call_stack : :obj:`list` of :class:`Brick`
         The call stack of brick application methods. Used to check whether
         the current call was made by a parent brick.
+    brick : type
+        The brick class to which this instance belongs.
 
     Raises
     ------
@@ -119,7 +121,6 @@ class Application(object):
         self.application_name = application_function.__name__
         self.delegate_function = None
         self.properties = {}
-        self.bound_applications = {}
 
     @property
     def application_function(self):
@@ -201,10 +202,11 @@ class Application(object):
         """Instantiate :class:`BoundApplication` for each :class:`Brick`."""
         if instance is None:
             return self
-        elif instance not in self.bound_applications:
-            bound_application = BoundApplication(self, instance)
-            self.bound_applications[instance] = bound_application
-        return self.bound_applications[instance]
+        if not hasattr(instance, "_bound_applications"):
+            instance._bound_applications = {}
+        key = "{}.{}".format(self.brick.__name__, self.application_name)
+        return instance._bound_applications.setdefault(
+            key, BoundApplication(self, instance))
 
     def __getattr__(self, name):
         # Mimic behavior of properties
