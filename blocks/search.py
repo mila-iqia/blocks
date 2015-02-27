@@ -41,10 +41,6 @@ class BeamSearch(object):
         self.sequence_generator = sequence_generator
         self.generate_names = sequence_generator.generate.states
         self.context_names = sequence_generator.generate.contexts
-        self.init_computer = None
-        self.next_state_computer = None
-        self.context_computer = None
-        self.initial_state_computer = None
         self.state_names = (sequence_generator.state_names +
                             sequence_generator.glimpse_names +
                             sequence_generator.glimpse_names +
@@ -73,15 +69,9 @@ class BeamSearch(object):
                                                initial_states,
                                                on_unused_input='ignore')
 
-    def compile_next_state_computer(self, generator, contexts, inner_cg):
+    def compile_next_state_computer(self, generator, contexts, states,
+                                    inner_cg):
         """Compiles `next_state_computer`."""
-        states = []
-        for name in generator.generate.states:
-            var = VariableFilter(bricks=[generator], name='^' + name + '$',
-                                 roles=[INPUT])(inner_cg)[-1:]
-            if var:
-                self.need_input_states.append(name)
-            states.extend(var)
 
         next_states = []
         for name in generator.generate.states:
@@ -89,13 +79,23 @@ class BeamSearch(object):
                                  roles=[OUTPUT])(inner_cg)[-1:]
             next_states.extend(var)
 
+        next_outputs = VariableFilter(
+            application=generator.readout.emit,
+            roles=[OUTPUT])(inner_cg.variables)
+
+        # Create theano function for next states
+        self.next_state_computer = function(list(contexts.values()) + states +
+                                            next_outputs, next_states)
+
+    def compile_costs_computer(self, generator, contexts, states, inner_cg):
         next_probs = VariableFilter(
             bricks=[generator.readout.emitter],
             name='^probs$')(inner_cg)[-1]
         logprobs = -tensor.log(next_probs)
-        # Create theano function for next states
-        self.next_state_computer = function(list(contexts.values()) + states,
-                                            next_states + [logprobs])
+
+        self.costs_computer = function(list(contexts.values()) + states,
+                                       logprobs,
+                                       on_unused_input='ignore')
 
     def compile(self):
         """Compiles functions for beam search."""
@@ -108,9 +108,17 @@ class BeamSearch(object):
             contexts[name] = VariableFilter(bricks=[generator],
                                             name='^' + name + '$',
                                             roles=[INPUT])(inner_cg)[0]
+        states = []
+        for name in generator.generate.states:
+            var = VariableFilter(bricks=[generator], name='^' + name + '$',
+                                 roles=[INPUT])(inner_cg)[-1:]
+            if var:
+                self.need_input_states.append(name)
+            states.extend(var)
         self.compile_context_computer(contexts)
         self.compile_initial_state_computer(generator, contexts)
-        self.compile_next_state_computer(generator, contexts, inner_cg)
+        self.compile_next_state_computer(generator, contexts, states, inner_cg)
+        self.compile_costs_computer(generator, contexts, states, inner_cg)
 
         self.compiled = True
 
@@ -143,8 +151,15 @@ class BeamSearch(object):
                        for state in init_states]
         return OrderedDict(zip(self.state_names, init_states))
 
-    def compute_next(self, contexts, cur_states):
-        """Computes next states and probabilities.
+    def compute_costs(self, contexts, cur_states):
+        """Computes next costs."""
+        states = [cur_states[name][0] for name in self.need_input_states]
+
+        logprobs = self.costs_computer(*(list(contexts.values()) + states))
+        return logprobs[None, :, :]
+
+    def compute_next_state(self, contexts, cur_states, outputs):
+        """Computes next states.
 
         Parameters
         ----------
@@ -163,13 +178,12 @@ class BeamSearch(object):
         states = [cur_states[name][0] for name in self.need_input_states]
 
         next_values = self.next_state_computer(*(list(contexts.values()) +
-                                                 states))
+                                                 states + [outputs]))
 
         # Add time dimension back
         next_values = [state.reshape((1,) + state.shape)
                        for state in next_values]
-        return OrderedDict(zip(self.generate_names + ['logprobs'],
-                               next_values))
+        return OrderedDict(zip(self.generate_names, next_values))
 
     @staticmethod
     def _top_probs(scores, beam_size, unique=False):
@@ -243,17 +257,16 @@ class BeamSearch(object):
         states['cur_logprobs'] = numpy.zeros_like(states['cur_outputs'])
 
         for i in range(max_length):
-            states.update(self.compute_next(contexts, states))
+            logprobs = self.compute_costs(contexts, states)
             next_probs = (states['cur_logprobs'][:, :, None] +
-                          states['logprobs'] *
+                          logprobs *
                           states['cur_outputs_mask'][-1, :, None])
 
             # Top probs
             indexes, top_probs = self._top_probs(next_probs, self.beam_size,
                                                  unique=i == 0)
             states['cur_logprobs'] = numpy.array(top_probs).T[None, :]
-            indexes = numpy.array(indexes)  # chunk, 2, beam
-            # current_outputs.
+            indexes = numpy.array(indexes)  # 2, beam
             # here we suppose, that we have 2d outputs
             outputs = indexes[1, :].copy()
 
@@ -264,6 +277,7 @@ class BeamSearch(object):
             for name in contexts:
                 contexts[name] = self._rearrange(contexts[name], rearrange_ind)
 
+            states.update(self.compute_next_state(contexts, states, outputs))
             # construct next output
             outputs = outputs[None, :]
             states['cur_outputs'] = numpy.append(states['cur_outputs'],
@@ -278,7 +292,7 @@ class BeamSearch(object):
                 states['cur_outputs_mask'], next_out_mask.copy(), axis=0)
 
             # All sequences ended
-            if numpy.all(states['cur_outputs'][-1, :] == eol_symbol):
+            if numpy.all(states['cur_outputs_mask'][-1, :] == 0):
                 break
 
         # Drop a meaningless first element
