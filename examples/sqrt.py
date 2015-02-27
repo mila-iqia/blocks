@@ -16,6 +16,7 @@ from theano import tensor
 from blocks.algorithms import GradientDescent, Scale
 from blocks.bricks import MLP, Tanh, Identity
 from blocks.bricks.cost import SquaredError
+from blocks.graph import ComputationGraph
 from blocks.initialization import IsotropicGaussian, Constant
 from blocks.model import Model
 from fuel.datasets import IterableDataset
@@ -58,7 +59,8 @@ def main(save_to, num_batches, continue_=False):
 
     main_loop = MainLoop(
         GradientDescent(
-            cost=cost, step_rule=Scale(learning_rate=0.001)),
+            cost=cost, params=ComputationGraph(cost).parameters,
+            step_rule=Scale(learning_rate=0.001)),
         get_data_stream(range(100)),
         model=Model(cost),
         extensions=([LoadFromDump(save_to)] if continue_ else []) +

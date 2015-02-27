@@ -44,7 +44,8 @@ def main(save_to, num_epochs):
     mnist_test = MNIST("test")
 
     algorithm = GradientDescent(
-        cost=cost, step_rule=Scale(learning_rate=0.1))
+        cost=cost, params=cg.parameters,
+        step_rule=Scale(learning_rate=0.1))
     main_loop = MainLoop(
         algorithm,
         DataStream(mnist_train,

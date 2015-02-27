@@ -187,8 +187,8 @@ def main(mode, save_path, num_batches, data_path=None):
 
         # Define the training algorithm.
         algorithm = GradientDescent(
-            cost=cost, step_rule=CompositeRule([StepClipping(10.0),
-                                                Scale(0.01)]))
+            cost=cost, params=cg.parameters,
+            step_rule=CompositeRule([StepClipping(10.0), Scale(0.01)]))
 
         # More variables for debugging
         observables = [

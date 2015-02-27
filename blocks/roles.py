@@ -39,6 +39,26 @@ def add_role(var, role):
     var.tag.roles = roles
 
 
+def has_roles(var, roles, match_all=False):
+    r"""Test if a variable has given roles taking subroles into account.
+
+    Parameters
+    ----------
+    var : :class:`~tensor.TensorVariable`
+        Variable being queried.
+    roles : an iterable of :class:`.VariableRole` instances.
+    match_all : bool, optional
+        If ``True``, checks if the variable has all given roles.
+        If ``False``, any of the roles is sufficient.
+        ``False`` by default.
+
+    """
+    var_roles = getattr(var.tag, 'roles', [])
+    matches = (any(isinstance(var_role, role.__class__) for
+                   var_role in var_roles) for role in roles)
+    return all(matches) if match_all else any(matches)
+
+
 class VariableRole(object):
     """Base class for all variable roles."""
     def __eq__(self, other):

@@ -57,9 +57,8 @@ class DifferentiableCostMinimizer(TrainingAlgorithm):
     ----------
     cost : :class:`~tensor.TensorVariable`
         The objective to be minimized.
-    params : list of :class:`~tensor.TensorSharedVariable`, optional
-        The parameters to be tuned. If ``None``, all shared variables of
-        `cost` computation graph will be considered parameters.
+    params : list of :class:`~tensor.TensorSharedVariable`
+        The parameters to be tuned.
 
     Attributes
     ----------
@@ -88,10 +87,9 @@ class DifferentiableCostMinimizer(TrainingAlgorithm):
        currently.
 
     """
-    def __init__(self, cost, params=None):
+    def __init__(self, cost, params):
         self.cost = cost
-        self.params = (params if params
-                       else ComputationGraph(cost).shared_variables)
+        self.params = params
         self._cost_computation_graph = ComputationGraph(self.cost)
         self._updates = []
 
