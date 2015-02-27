@@ -27,14 +27,14 @@ class BeamSearch(object):
     comp_graph : :class:`ComputationalGraph`
         Computational graph which contains `sequence_generator`.
 
+    See Also
+    --------
+    :class:`SequenceGenerator`, :class:`SequenceContentAttention`.
+
     Notes
     -----
     Sequence generator should use an emitter which has `probs` method and
     one of its outputs is called `probs` e.g. :class:`SoftmaxEmitter`.
-
-    See Also
-    --------
-    :class:`SequenceGenerator`, :class:`SequenceContentAttention`.
 
     """
     def __init__(self, beam_size, sequence_generator, comp_graph):
@@ -64,8 +64,8 @@ class BeamSearch(object):
                 name='^' + name + '$',
                 roles=[INPUT])(inner_cg)[0]
 
-        self.context_computer = function(self.inputs.values(),
-                                         contexts_original.values(),
+        self.context_computer = function(list(self.inputs.values()),
+                                         list(contexts_original.values()),
                                          on_unused_input='ignore')
 
     def compile_initial_state_computer(self, generator, contexts):
@@ -76,7 +76,7 @@ class BeamSearch(object):
                 name,
                 self.beam_size,
                 **contexts))
-        self.initial_state_computer = function(contexts.values(),
+        self.initial_state_computer = function(list(contexts.values()),
                                                initial_states,
                                                on_unused_input='ignore')
 
@@ -100,7 +100,7 @@ class BeamSearch(object):
             bricks=[generator.readout.emitter],
             name='^probs')(inner_cg)[-1]
         # Create theano function for next states
-        self.next_state_computer = function(contexts.values() + states,
+        self.next_state_computer = function(list(contexts.values()) + states,
                                             next_states + [next_probs])
 
     def compile(self):
@@ -144,7 +144,7 @@ class BeamSearch(object):
             Dictionary of contexts {name: context}.
 
         """
-        init_states = self.initial_state_computer(*contexts.values())
+        init_states = self.initial_state_computer(*list(contexts.values()))
         init_states = [state.reshape((1,) + state.shape)
                        for state in init_states]
         return OrderedDict(zip(self.state_names, init_states))
@@ -168,7 +168,8 @@ class BeamSearch(object):
         # First timesteps only if state is needed
         states = [cur_states[name][0] for name in self.need_input_states]
 
-        next_values = self.next_state_computer(*(contexts.values() + states))
+        next_values = self.next_state_computer(*(list(contexts.values()) +
+                                                 states))
 
         # Add time dimension back
         next_values = [state.reshape((1,) + state.shape)
