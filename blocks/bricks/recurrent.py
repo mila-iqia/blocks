@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 import copy
 import inspect
-import warnings
-from collections import OrderedDict
+import logging
 from functools import wraps
 
 import theano
@@ -12,8 +11,16 @@ from blocks.bricks import Initializable, Sigmoid, Tanh
 from blocks.bricks.base import Application, application, Brick, lazy
 from blocks.initialization import NdarrayInitialization
 from blocks.roles import add_role, WEIGHTS, BIASES
-from blocks.utils import (pack, shared_floatx_zeros, dict_union,
+from blocks.utils import (pack, shared_floatx_zeros, dict_union, dict_subset,
                           is_shared_variable)
+
+logger = logging.getLogger()
+
+unknown_scan_input = """
+
+Your function uses a non-shared variable other than those given \
+by scan explicitly. That can significantly slow down `tensor.grad` \
+call. Did you forget to declare it in `contexts`?"""
 
 
 class BaseRecurrent(Brick):
@@ -109,20 +116,26 @@ def recurrent(*args, **kwargs):
             # Push everything to kwargs
             for arg, arg_name in zip(args, arg_names):
                 kwargs[arg_name] = arg
-            # Separate sequences, states and contexts
+
+            # Make sure that all arguments for scan are tensor variables
             scan_arguments = (application.sequences + application.states +
                               application.contexts)
+            for arg in scan_arguments:
+                if arg in kwargs:
+                    if kwargs[arg] is None:
+                        del kwargs[arg]
+                    else:
+                        kwargs[arg] = tensor.as_tensor_variable(kwargs[arg])
 
-            # Check what is given and what is not
-            def only_given(arg_names):
-                return OrderedDict((arg_name, kwargs[arg_name])
-                                   for arg_name in arg_names
-                                   if kwargs.get(arg_name))
-            sequences_given = only_given(application.sequences)
-            contexts_given = only_given(application.contexts)
+            # Check which sequence and contexts were provided
+            sequences_given = dict_subset(kwargs, application.sequences,
+                                          must_have=False)
+            contexts_given = dict_subset(kwargs, application.contexts,
+                                         must_have=False)
 
-            # TODO Assumes 1 time dim!
+            # Determine number of steps and batch size.
             if len(sequences_given):
+                # TODO Assumes 1 time dim!
                 shape = list(sequences_given.values())[0].shape
                 if not iterate:
                     batch_size = shape[0]
@@ -140,11 +153,8 @@ def recurrent(*args, **kwargs):
             for value in rest_kwargs.values():
                 if (isinstance(value, Variable) and not
                         is_shared_variable(value)):
-                    warnings.warn(
-                        'Your function uses a non-shared variable other than'
-                        ' those given by scan explicitly. That can'
-                        ' significantly slow down `tensor.grad` call.'
-                        ' Did you forget to declare it in `contexts`?')
+                    logger.warning("unknown input {}".format(value)
+                                   + unknown_scan_input)
 
             # Ensure that all initial states are available.
             for state_name in application.states:
@@ -155,17 +165,16 @@ def recurrent(*args, **kwargs):
                             kwargs[state_name].generate(brick.rng, (1, dim)),
                             batch_size, dim)
                     elif isinstance(kwargs[state_name], Application):
-                        kwargs[state_name] = \
+                        kwargs[state_name] = (
                             kwargs[state_name](state_name, batch_size,
-                                               *args, **kwargs)
+                                               *args, **kwargs))
                 else:
                     # TODO init_func returns 2D-tensor, fails for iterate=False
-                    kwargs[state_name] = \
+                    kwargs[state_name] = (
                         brick.initial_state(state_name, batch_size,
-                                            *args, **kwargs)
+                                            *args, **kwargs))
                     assert kwargs[state_name]
-            states_given = only_given(application.states)
-            assert len(states_given) == len(application.states)
+            states_given = dict_subset(kwargs, application.states)
 
             # Theano issue 1772
             for name, state in states_given.items():

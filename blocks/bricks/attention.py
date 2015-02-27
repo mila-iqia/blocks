@@ -422,20 +422,20 @@ class AttentionRecurrent(AbstractAttentionRecurrent, Initializable):
                  attended_name=None, attended_mask_name=None,
                  **kwargs):
         super(AttentionRecurrent, self).__init__(**kwargs)
-        self.sequence_names = transition.apply.sequences
-        self.state_names = transition.apply.states
-        self.context_names = transition.apply.contexts
+        self._sequence_names = list(transition.apply.sequences)
+        self._state_names = list(transition.apply.states)
+        self._context_names = list(transition.apply.contexts)
         if add_contexts:
             if not attended_name:
                 attended_name = 'attended'
             if not attended_mask_name:
                 attended_mask_name = 'attended_mask'
-            self.context_names += [attended_name, attended_mask_name]
+            self._context_names += [attended_name, attended_mask_name]
         else:
-            attended_name = self.context_names[0]
-            attended_mask_name = self.context_names[1]
+            attended_name = self._context_names[0]
+            attended_mask_name = self._context_names[1]
         if not distribute:
-            normal_inputs = [name for name in self.sequence_names
+            normal_inputs = [name for name in self._sequence_names
                              if 'mask' not in name]
             distribute = Distribute(normal_inputs,
                                     attention.take_glimpses.outputs[0])
@@ -449,22 +449,22 @@ class AttentionRecurrent(AbstractAttentionRecurrent, Initializable):
 
         self.preprocessed_attended_name = "preprocessed_" + self.attended_name
 
-        self.glimpse_names = self.attention.take_glimpses.outputs
+        self._glimpse_names = self.attention.take_glimpses.outputs
         # We need to determine which glimpses are fed back.
         # Currently we extract it from `take_glimpses` signature.
         self.previous_glimpses_needed = [
-            name for name in self.glimpse_names
+            name for name in self._glimpse_names
             if name in self.attention.take_glimpses.inputs]
 
         self.children = [self.transition, self.attention, self.distribute]
 
     def _push_allocation_config(self):
-        self.attention.state_dims = self.transition.get_dims(self.state_names)
+        self.attention.state_dims = self.transition.get_dims(self._state_names)
         self.attention.sequence_dim = self.get_dim(self.attended_name)
         self.distribute.source_dim = self.attention.get_dim(
             self.distribute.source_name)
         self.distribute.target_dims = dict_subset(
-            self.transition.get_dims(self.sequence_names),
+            self.transition.get_dims(self._sequence_names),
             self.distribute.target_names)
 
     @application
@@ -487,8 +487,8 @@ class AttentionRecurrent(AbstractAttentionRecurrent, Initializable):
             Current step glimpses.
 
         """
-        states = dict_subset(kwargs, self.state_names, pop=True)
-        glimpses = dict_subset(kwargs, self.glimpse_names, pop=True)
+        states = dict_subset(kwargs, self._state_names, pop=True)
+        glimpses = dict_subset(kwargs, self._glimpse_names, pop=True)
         glimpses_needed = dict_subset(glimpses, self.previous_glimpses_needed)
         result = self.attention.take_glimpses(
             kwargs.pop(self.attended_name),
@@ -501,7 +501,7 @@ class AttentionRecurrent(AbstractAttentionRecurrent, Initializable):
 
     @take_glimpses.property('outputs')
     def take_glimpses_outputs(self):
-        return self.glimpse_names
+        return self._glimpse_names
 
     @application
     def compute_states(self, **kwargs):
@@ -525,9 +525,9 @@ class AttentionRecurrent(AbstractAttentionRecurrent, Initializable):
 
         """
         # Masks are not mandatory, that's why 'must_have=False'
-        sequences = dict_subset(kwargs, self.sequence_names,
+        sequences = dict_subset(kwargs, self._sequence_names,
                                 pop=True, must_have=False)
-        glimpses = dict_subset(kwargs, self.glimpse_names, pop=True)
+        glimpses = dict_subset(kwargs, self._glimpse_names, pop=True)
         if self.add_contexts:
             kwargs.pop(self.attended_name)
             kwargs.pop(self.attended_mask_name)
@@ -542,7 +542,7 @@ class AttentionRecurrent(AbstractAttentionRecurrent, Initializable):
 
     @compute_states.property('outputs')
     def compute_states_outputs(self):
-        return self.state_names
+        return self._state_names
 
     @recurrent
     def do_apply(self, **kwargs):
@@ -568,10 +568,10 @@ class AttentionRecurrent(AbstractAttentionRecurrent, Initializable):
         attended = kwargs[self.attended_name]
         preprocessed_attended = kwargs.pop(self.preprocessed_attended_name)
         attended_mask = kwargs.get(self.attended_mask_name)
-        sequences = dict_subset(kwargs, self.sequence_names, pop=True,
+        sequences = dict_subset(kwargs, self._sequence_names, pop=True,
                                 must_have=False)
-        states = dict_subset(kwargs, self.state_names, pop=True)
-        glimpses = dict_subset(kwargs, self.glimpse_names, pop=True)
+        states = dict_subset(kwargs, self._state_names, pop=True)
+        glimpses = dict_subset(kwargs, self._glimpse_names, pop=True)
 
         current_glimpses = self.take_glimpses(
             as_dict=True,
@@ -587,20 +587,19 @@ class AttentionRecurrent(AbstractAttentionRecurrent, Initializable):
 
     @do_apply.property('sequences')
     def do_apply_sequences(self):
-        return self.transition.apply.sequences
+        return self._sequence_names
 
     @do_apply.property('contexts')
     def do_apply_contexts(self):
-        return self.transition.apply.contexts + [
-            self.preprocessed_attended_name]
+        return self._context_names + [self.preprocessed_attended_name]
 
     @do_apply.property('states')
     def do_apply_states(self):
-        return self.transition.apply.states + self.glimpse_names
+        return self._state_names + self._glimpse_names
 
     @do_apply.property('outputs')
     def do_apply_outputs(self):
-        return self.transition.apply.states + self.glimpse_names
+        return self._state_names + self._glimpse_names
 
     @application
     def apply(self, **kwargs):
@@ -624,17 +623,17 @@ class AttentionRecurrent(AbstractAttentionRecurrent, Initializable):
 
     @apply.property('contexts')
     def apply_contexts(self):
-        return self.transition.apply.contexts
+        return self._context_names
 
     @application
     def initial_state(self, state_name, batch_size, **kwargs):
-        if state_name in self.glimpse_names:
+        if state_name in self._glimpse_names:
             return self.attention.initial_glimpses(
                 state_name, batch_size, kwargs[self.attended_name])
         return self.transition.initial_state(state_name, batch_size, **kwargs)
 
     def get_dim(self, name):
-        if name in self.glimpse_names:
+        if name in self._glimpse_names:
             return self.attention.get_dim(name)
         if name == self.preprocessed_attended_name:
             (original_name,) = self.attention.preprocess.outputs
