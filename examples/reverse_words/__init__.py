@@ -37,7 +37,7 @@ from blocks.extensions.monitoring import TrainingDataMonitoring
 from blocks.extensions.plot import Plot
 from blocks.main_loop import MainLoop
 from blocks.filter import VariableFilter
-from blocks.utils import named_copy, dict_union, unpack
+from blocks.utils import named_copy, dict_union
 
 from blocks.search import BeamSearch
 
@@ -303,7 +303,8 @@ def main(mode, save_path, num_batches, data_path=None):
                                         batch_size, axis=1)
             outputs, masks, probs = beam_search.search(
                 OrderedDict([('features', numpy_inputs),
-                             ('features_mask', numpy.ones_like(numpy_inputs))]),
+                             ('features_mask',
+                              numpy.ones_like(numpy_inputs))]),
                 char2code['</S>'])
 
             messages = []
@@ -323,4 +324,3 @@ def main(mode, save_path, num_batches, data_path=None):
             messages.sort(key=operator.itemgetter(0), reverse=True)
             for _, message in messages:
                 print(message)
-

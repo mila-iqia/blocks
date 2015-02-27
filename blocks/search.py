@@ -190,7 +190,7 @@ class BeamSearch(object):
 
         Returns
         -------
-        Most probable sequences, corresponding probabilities and costs.
+        Sequences in the beam, masks, and corresponding probabilities.
 
         """
         if not self.compiled:
