@@ -111,6 +111,7 @@ class BeamSearch(object):
         self.compiled = True
 
     def compute_contexts(self, inputs_dict):
+        """Computes contexts from inputs."""
         contexts = self.attended_computer(*inputs_dict.values())
         return OrderedDict(zip(["attended", "attended_mask"], contexts))
 
@@ -210,12 +211,11 @@ class BeamSearch(object):
         if not self.compiled:
             self.compile()
         # Inputs repeated beam_size times
-        aux_inputs = OrderedDict(
-            [(name, numpy.tile(val, (1, self.beam_size)))
-             for name, val in inputs_val_dict.iteritems()])
+        inputs = OrderedDict([(name, numpy.tile(val, (1, self.beam_size)))
+                              for name, val in inputs_val_dict.iteritems()])
 
         # Precompute contexts
-        contexts = self.compute_contexts(aux_inputs)
+        contexts = self.compute_contexts(inputs)
 
         cur_states = self.compute_initial_states(contexts)
 
