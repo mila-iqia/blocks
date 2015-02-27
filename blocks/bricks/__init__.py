@@ -518,7 +518,7 @@ class MLP(Sequence, Initializable, Feedforward):
 
     Parameters
     ----------
-    activations : list of :class:`.Brick`, :class:`ApplicationCall`,
+    activations : list of :class:`.Brick`, :class:`.BoundApplication`,
                   or ``None``
         A list of activations to apply after each linear transformation.
         Give ``None`` to not apply any activation. It is assumed that the
