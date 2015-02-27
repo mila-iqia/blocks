@@ -27,8 +27,9 @@ def test_sequence_content_attention():
 
     attention = SequenceContentAttention(
         state_names=["states"], state_dims={"states": state_dim},
-        sequence_dim=sequence_dim, match_dim=match_dim)
-    attention.allocate()
+        sequence_dim=sequence_dim, match_dim=match_dim,
+        weights_init=IsotropicGaussian(0.5))
+    attention.initialize()
 
     sequences = tensor.tensor3('sequences')
     states = tensor.matrix('states')
