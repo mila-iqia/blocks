@@ -3,8 +3,7 @@ from six.moves import range
 
 import numpy
 
-from theano import config
-from theano import function
+from theano import config, function, tensor
 
 from blocks.filter import VariableFilter, get_application_call
 from blocks.graph import ComputationGraph
@@ -47,6 +46,7 @@ class BeamSearch(object):
         self.context_computer = None
         self.initial_state_computer = None
         self.state_names = (sequence_generator.state_names +
+                            sequence_generator.glimpse_names +
                             sequence_generator.glimpse_names +
                             ['outputs'])
         self.context_names = sequence_generator.context_names
@@ -91,10 +91,11 @@ class BeamSearch(object):
 
         next_probs = VariableFilter(
             bricks=[generator.readout.emitter],
-            name='^probs')(inner_cg)[-1]
+            name='^probs$')(inner_cg)[-1]
+        logprobs = -tensor.log(next_probs)
         # Create theano function for next states
         self.next_state_computer = function(list(contexts.values()) + states,
-                                            next_states + [next_probs])
+                                            next_states + [logprobs])
 
     def compile(self):
         """Compiles functions for beam search."""
@@ -167,31 +168,31 @@ class BeamSearch(object):
         # Add time dimension back
         next_values = [state.reshape((1,) + state.shape)
                        for state in next_values]
-        return OrderedDict(zip(self.generate_names + ['probs'], next_values))
+        return OrderedDict(zip(self.generate_names + ['logprobs'],
+                               next_values))
 
     @staticmethod
-    def _top_probs(probs, beam_size):
-        """Returns indexes of elements with highest probabilities.
+    def _top_probs(scores, beam_size):
+        """Returns indexes of elements with lowest scores.
 
         Parameters
         ----------
-        probs : numpy array
-            A 3d array of probabilities (length of sequence, batch,
-            readout_dim).
+        scores : numpy array
+            A 3d array of scores (length of sequence, batch, readout_dim).
         beam_size : int
-            Beam size, number of top probabilities to return.
+            Beam size, number of top scores to return.
 
         Returns
         -------
-        Tuple of (indexes, top probabilities).
+        Tuple of (indexes, top scores).
 
         """
-        flatten = probs.flatten()
-        args = numpy.argpartition(-flatten, beam_size)[:beam_size]
-        args = args[numpy.argsort(-flatten[args])]
+        flatten = scores.flatten()
+        args = numpy.argpartition(flatten, beam_size)[:beam_size]
+        args = args[numpy.argsort(flatten[args])]
         # convert args back
-        indexes = numpy.unravel_index(args, probs.shape[1:])
-        return indexes, probs[0][indexes]
+        indexes = numpy.unravel_index(args, scores.shape[1:])
+        return indexes, scores[0][indexes]
 
     @staticmethod
     def _rearrange(outputs, indexes):
@@ -233,16 +234,17 @@ class BeamSearch(object):
 
         states['cur_outputs'] = states['outputs']
         states['cur_outputs_mask'] = numpy.ones_like(states['cur_outputs'])
-        states['cur_probs'] = numpy.ones_like(states['cur_outputs'])
+        states['cur_logprobs'] = numpy.zeros_like(states['cur_outputs'])
 
         for i in range(max_length):
             states.update(self.compute_next(contexts, states))
-            next_probs = (states['cur_probs'][:, :, None] * states['probs'] **
+            next_probs = (states['cur_logprobs'][:, :, None] +
+                          states['logprobs'] *
                           states['cur_outputs_mask'][-1, :, None])
 
             # Top probs
             indexes, top_probs = self._top_probs(next_probs, self.beam_size)
-            states['cur_probs'] = numpy.array(top_probs).T[None, :]
+            states['cur_logprobs'] = numpy.array(top_probs).T[None, :]
             indexes = numpy.array(indexes)  # chunk, 2, beam
             # current_outputs.
             # here we suppose, that we have 2d outputs
@@ -275,6 +277,6 @@ class BeamSearch(object):
         # Drop a meaningless first element
         outputs = states['cur_outputs'][1:, :]
         outputs_mask = states['cur_outputs_mask'][1:, :]
-        probs = states['cur_probs'][-1, :]
+        logprobs = states['cur_logprobs'][-1, :]
 
-        return outputs, outputs_mask, probs
+        return outputs, outputs_mask, logprobs
