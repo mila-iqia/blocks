@@ -37,15 +37,14 @@ def test_sequence_generator():
     batch_size = 30
     n_steps = 10
 
-    transition = SimpleRecurrent(name="transition",
-                                 activation=Tanh(), dim=dim,
+    transition = SimpleRecurrent(activation=Tanh(), dim=dim,
                                  weights_init=Orthogonal())
     generator = SequenceGenerator(
         LinearReadout(readout_dim=output_dim, source_names=["states"],
-                      emitter=TestEmitter(name="emitter"), name="readout"),
+                      emitter=TestEmitter()),
         transition,
         weights_init=IsotropicGaussian(0.1), biases_init=Constant(0.0),
-        name="generator", seed=1234)
+        seed=1234)
     generator.initialize()
 
     # Test 'cost' method
@@ -95,8 +94,7 @@ def test_integer_sequence_generator():
     generator = SequenceGenerator(
         LinearReadout(readout_dim=readout_dim, source_names=["states"],
                       emitter=SoftmaxEmitter(theano_seed=1234),
-                      feedbacker=LookupFeedback(readout_dim, feedback_dim),
-                      name="readout"),
+                      feedbacker=LookupFeedback(readout_dim, feedback_dim)),
         transition,
         weights_init=IsotropicGaussian(0.1), biases_init=Constant(0),
         seed=1234)
@@ -181,15 +179,14 @@ def test_with_attention():
     transition = TestTransition(
         dim=inp_dim, attended_dim=attended_dim, activation=Identity())
     attention = SequenceContentAttention(
-        transition.apply.states, match_dim=inp_dim, name="attention")
+        transition.apply.states, match_dim=inp_dim)
     generator = SequenceGenerator(
         LinearReadout(readout_dim=inp_dim, source_names=["states"],
-                      emitter=TestEmitter(name="emitter"),
-                      name="readout"),
+                      emitter=TestEmitter()),
         transition=transition,
         attention=attention,
         weights_init=IsotropicGaussian(0.1), biases_init=Constant(0),
-        add_contexts=False, name="generator", seed=1234)
+        add_contexts=False, seed=1234)
     generator.initialize()
 
     # Test 'cost' method
