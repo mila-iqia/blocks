@@ -31,6 +31,7 @@ def test_top_probs():
 
 def test_beam_search():
     # Checks only dimension
+
     dimension = 15
     readout_dimension = 6
 

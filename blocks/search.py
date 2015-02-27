@@ -25,14 +25,20 @@ class BeamSearch(object):
     comp_graph : :class:`ComputationalGraph`
         Computational graph which contains `sequence_generator`.
 
+    Notes
+    -----
+    Sequence generator should use an emitter which has `probs` method and
+    one of its outputs is called `probs` e.g. :class:`SoftmaxEmitter`.
+
     """
     def __init__(self, beam_size, sequence_generator, comp_graph):
         self.beam_size = beam_size
         self.sequence_generator = sequence_generator
         self.generate_names = sequence_generator.generate.states
+        self.context_names = sequence_generator.generate.contexts
         self.init_computer = None
-        self.next_computer = None
-        self.attended_computer = None
+        self.next_state_computer = None
+        self.context_computer = None
         self.initial_state_computer = None
         self.state_names = (sequence_generator.state_names +
                             sequence_generator.glimpse_names +
@@ -43,19 +49,21 @@ class BeamSearch(object):
         self.need_input_states = []
         self.compiled = False
 
-    def compile_attended_computer(self, generator, inner_cg):
+    def compile_context_computer(self, generator, inner_cg):
+        """Compiles `context_computer`."""
         contexts_original = OrderedDict()
-        for name in generator.generate.contexts:
+        for name in self.context_names:
             contexts_original[name] = VariableFilter(
                 bricks=[generator],
                 name='^' + name + '$',
                 roles=[INPUT])(inner_cg)[0]
 
-        self.attended_computer = function(self.inputs.values(),
-                                          contexts_original.values(),
-                                          on_unused_input='ignore')
+        self.context_computer = function(self.inputs.values(),
+                                         contexts_original.values(),
+                                         on_unused_input='ignore')
 
     def compile_initial_state_computer(self, generator, contexts):
+        """Compiles `initial_state_computer`."""
         initial_states = []
         for name in self.state_names:
             initial_states.append(generator.initial_state(
@@ -67,6 +75,7 @@ class BeamSearch(object):
                                                on_unused_input='ignore')
 
     def compile_next_state_computer(self, generator, contexts, inner_cg):
+        """Compiles `next_state_computer`."""
         states = []
         for name in generator.generate.states:
             var = VariableFilter(bricks=[generator], name='^' + name + '$',
@@ -84,11 +93,11 @@ class BeamSearch(object):
         next_probs = VariableFilter(
             bricks=[generator.readout.emitter],
             name='^probs')(inner_cg)[-1]
-        # Create theano function for next values
-        self.next_computer = function(contexts.values() + states,
-                                      next_states + [next_probs])
+        # Create theano function for next states
+        self.next_state_computer = function(contexts.values() + states,
+                                            next_states + [next_probs])
 
-    def compile(self, *args, **kwargs):
+    def compile(self):
         """Compiles functions for beam search."""
         generator = self.sequence_generator
 
@@ -99,53 +108,69 @@ class BeamSearch(object):
             contexts[name] = VariableFilter(bricks=[generator],
                                             name='^' + name + '$',
                                             roles=[INPUT])(inner_cg)[0]
-        self.compile_attended_computer(generator, inner_cg)
+        self.compile_context_computer(generator, inner_cg)
         self.compile_initial_state_computer(generator, contexts)
         self.compile_next_state_computer(generator, contexts, inner_cg)
 
         self.compiled = True
 
     def compute_contexts(self, inputs_dict):
-        """Computes contexts from inputs."""
-        contexts = self.attended_computer(*[inputs_dict[name]
-                                            for name in self.inputs])
-        return OrderedDict(zip(["attended", "attended_mask"], contexts))
+        """Computes contexts from inputs.
+
+        Wrapper around a theano function which precomputes contexts.
+
+        Parameters
+        ----------
+        inputs_dict : dict
+            Dictionary of input arrays.
+
+        """
+        contexts = self.context_computer(*[inputs_dict[name]
+                                           for name in self.inputs])
+        return OrderedDict(zip(self.context_names, contexts))
 
     def compute_initial_states(self, contexts):
-        """Computes initial outputs and states."""
+        """Computes initial outputs and states.
+
+        Parameters
+        ----------
+        contexts : dict
+            Dictionary of contexts {name: context}.
+
+        """
         init_states = self.initial_state_computer(*contexts.values())
         init_states = [state.reshape((1,) + state.shape)
                        for state in init_states]
         return OrderedDict(zip(self.state_names, init_states))
 
-    def compute_next(self, contexts, cur_vals):
-        """Computes next states, glimpses, outputs, and probabilities.
+    def compute_next(self, contexts, cur_states):
+        """Computes next states and probabilities.
 
         Parameters
         ----------
         contexts : dict
-            Dictionary of contexts divided by chunks.
-        cur_vals : dict
-            Dictionary of current states, glimpses, and outputs.
+            Dictionary of contexts.
+        cur_states : dict
+            Dictionary of current states.
 
         Returns
         -------
-        Dictionary of next state, glimpses, output, probabilities values
+        Dictionary of next state and probabilities values
         with names as returned by `generate_outputs`.
 
         """
         # First timesteps only if state is needed
-        states = [cur_vals[name][0] for name in self.need_input_states]
+        states = [cur_states[name][0] for name in self.need_input_states]
 
-        next_values = self.next_computer(*(contexts.values() + states))
+        next_values = self.next_state_computer(*(contexts.values() + states))
 
         # Add time dimension back
         next_values = [state.reshape((1,) + state.shape)
                        for state in next_values]
         return OrderedDict(zip(self.generate_names + ['probs'], next_values))
 
-    @classmethod
-    def _top_probs(cls, probs, beam_size):
+    @staticmethod
+    def _top_probs(probs, beam_size):
         """Returns indexes of elements with highest probabilities.
 
         Parameters
@@ -154,7 +179,7 @@ class BeamSearch(object):
             A 3d array of probabilities (length of sequence, batch,
             readout_dim).
         beam_size : int
-            Beam size, number of top probs to return.
+            Beam size, number of top probabilities to return.
 
         Returns
         -------
@@ -213,7 +238,7 @@ class BeamSearch(object):
         for i in range(max_length):
             cur_states.update(self.compute_next(contexts, cur_states))
             next_probs = (cur_states['cur_probs'][:, :, None] *
-                          cur_states['probs'] *
+                          cur_states['probs'] **
                           cur_states['cur_outputs_mask'][-1, :, None])
 
             # Top probs
@@ -248,13 +273,13 @@ class BeamSearch(object):
                 next_out_mask.copy(),
                 axis=0)
 
-            # All first element in sequences ended
-            if numpy.all(cur_states['cur_outputs'][-1, 0] == eol_symbol):
+            # All sequences ended
+            if numpy.all(cur_states['cur_outputs'][-1, :] == eol_symbol):
                 break
 
-        # Select only best
+        # Drop a meaningless first element
         outputs = cur_states['cur_outputs'][1:, :]
         outputs_mask = cur_states['cur_outputs_mask'][1:, :]
-        probs = cur_states['cur_probs'][0, :]
+        probs = cur_states['cur_probs'][-1, :]
 
         return outputs, outputs_mask, probs
