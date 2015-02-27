@@ -224,7 +224,7 @@ class BeamSearch(object):
             self.compile()
         # Inputs repeated beam_size times
         inputs = OrderedDict([(name, numpy.tile(val, (1, self.beam_size)))
-                              for name, val in inputs_val_dict.iteritems()])
+                              for name, val in inputs_val_dict.items()])
 
         # Precompute contexts
         contexts = self.compute_contexts(inputs)
