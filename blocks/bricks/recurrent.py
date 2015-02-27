@@ -153,8 +153,8 @@ def recurrent(*args, **kwargs):
             for value in rest_kwargs.values():
                 if (isinstance(value, Variable) and not
                         is_shared_variable(value)):
-                    logger.warning("unknown input {}".format(value)
-                                   + unknown_scan_input)
+                    logger.warning("unknown input {}".format(value) +
+                                   unknown_scan_input)
 
             # Ensure that all initial states are available.
             for state_name in application.states:
