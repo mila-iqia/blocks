@@ -286,10 +286,7 @@ def main(mode, save_path, num_batches, data_path=None):
         model = Model(generated)
         model.set_param_values(load_parameter_values(save_path))
         batch_size = 1
-        beam_search = BeamSearch(10, generator,
-                                 OrderedDict([('chars', chars),
-                                              ('chars_mask', chars_mask)]),
-                                 cg)
+        beam_search = BeamSearch(10, generator, cg)
         beam_search.compile()
 
         while True:
@@ -305,8 +302,8 @@ def main(mode, save_path, num_batches, data_path=None):
             numpy_inputs = numpy.repeat(numpy.array(encoded_input)[:, None],
                                         batch_size, axis=1)
             outputs, masks, probs = beam_search.search(
-                OrderedDict([('chars', numpy_inputs),
-                             ('chars_mask', numpy.ones_like(numpy_inputs))]),
+                OrderedDict([('features', numpy_inputs),
+                             ('features_mask', numpy.ones_like(numpy_inputs))]),
                 char2code['</S>'])
 
             output = list(outputs[:])

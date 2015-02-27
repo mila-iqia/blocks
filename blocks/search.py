@@ -22,19 +22,13 @@ class BeamSearch(object):
         Size of beam.
     sequence_generator : sequence generator
         Sequence generator brick.
-    attended : theano variable
-        Theano variable for attended in sequence generator.
-    attended_mask : theano variable
-        Theano variable for attended mask in sequence generator.
-    inputs_dict : dict
-        Dictionary of inputs {name: theano variable for input}. The
-        functions will be constructed with these inputs.
+    comp_graph : :class:`ComputationalGraph`
+        Computational graph which contains `sequence_generator`.
 
     """
-    def __init__(self, beam_size, sequence_generator, inputs_dict, comp_graph):
+    def __init__(self, beam_size, sequence_generator, comp_graph):
         self.beam_size = beam_size
         self.sequence_generator = sequence_generator
-        self.inputs_dict = inputs_dict
         self.generate_names = sequence_generator.generate.states
         self.init_computer = None
         self.next_computer = None
@@ -45,6 +39,7 @@ class BeamSearch(object):
                             ['outputs'])
         self.context_names = sequence_generator.context_names
         self.comp_graph = comp_graph
+        self.inputs = OrderedDict(comp_graph.dict_of_inputs())
         self.need_input_states = []
         self.compiled = False
 
@@ -56,7 +51,7 @@ class BeamSearch(object):
                 name='^' + name + '$',
                 roles=[INPUT])(inner_cg)[0]
 
-        self.attended_computer = function(self.inputs_dict.values(),
+        self.attended_computer = function(self.inputs.values(),
                                           contexts_original.values(),
                                           on_unused_input='ignore')
 
@@ -112,7 +107,8 @@ class BeamSearch(object):
 
     def compute_contexts(self, inputs_dict):
         """Computes contexts from inputs."""
-        contexts = self.attended_computer(*inputs_dict.values())
+        contexts = self.attended_computer(*[inputs_dict[name]
+                                            for name in self.inputs])
         return OrderedDict(zip(["attended", "attended_mask"], contexts))
 
     def compute_initial_states(self, contexts):
