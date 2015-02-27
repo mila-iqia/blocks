@@ -518,7 +518,8 @@ class MLP(Sequence, Initializable, Feedforward):
 
     Parameters
     ----------
-    activations : list of :class:`.Brick` or ``None``
+    activations : list of :class:`.Brick`, :class:`ApplicationCall`,
+                  or ``None``
         A list of activations to apply after each linear transformation.
         Give ``None`` to not apply any activation. It is assumed that the
         application method to use is ``apply``. Required for
@@ -553,8 +554,14 @@ class MLP(Sequence, Initializable, Feedforward):
         self.linear_transformations = [Linear(name='linear_{}'.format(i))
                                        for i in range(len(activations))]
         # Interleave the transformations and activations
-        application_methods = [brick.apply for brick in interleave(
-            [self.linear_transformations, activations]) if brick is not None]
+        application_methods = []
+        for entity in interleave([self.linear_transformations, activations]):
+            if entity is None:
+                continue
+            if isinstance(entity, Brick):
+                application_methods.append(entity.apply)
+            else:
+                application_methods.append(entity)
         if not dims:
             dims = [None] * (len(activations) + 1)
         self.dims = dims
