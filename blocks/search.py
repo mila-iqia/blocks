@@ -45,6 +45,7 @@ class BeamSearch(object):
                             ['outputs'])
         self.context_names = sequence_generator.context_names
         self.comp_graph = comp_graph
+        self.need_input_states = []
         self.compiled = False
 
     def compile_attended_computer(self, generator, inner_cg):
@@ -75,6 +76,8 @@ class BeamSearch(object):
         for name in generator.generate.states:
             var = VariableFilter(bricks=[generator], name='^' + name + '$',
                                  roles=[INPUT])(inner_cg)[-1:]
+            if var:
+                self.need_input_states.append(name)
             states.extend(var)
 
         next_states = []
@@ -134,8 +137,12 @@ class BeamSearch(object):
         with names as returned by `generate_outputs`.
 
         """
-        next_values = self.next_computer(*(contexts.values() +
-                                           [cur_vals['states'][0]]))
+        # First timesteps only if state is needed
+        states = [cur_vals[name][0] for name in self.need_input_states]
+
+        next_values = self.next_computer(*(contexts.values() + states))
+
+        # Add time dimension back
         next_values = [state.reshape((1,) + state.shape)
                        for state in next_values]
         return OrderedDict(zip(self.generate_names + ['probs'], next_values))
