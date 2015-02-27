@@ -97,7 +97,8 @@ class MainLoop(object):
 
         self.status._training_started = False
         self.status._epoch_started = False
-        self.status._epoch_interrupt_received=False
+        self.status._epoch_interrupt_received = False
+	self.status._batch_interrupt_received = False
 
     @property
     def model(self):
@@ -247,8 +248,7 @@ class MainLoop(object):
         # the iteration the corresponding log record can be found only in
         # the previous row.
         if (self.log.current_row.training_finish_requested or
-	     self.log.current_row.batch_interrupt_received or
-	     self.log.previous_row.batch_interrupt_received):
+             self.status._batch_interrupt_received):
 		  raise TrainingFinish
 	if (level == 'epoch' and
 	    self.status._epoch_interrupt_received):
@@ -261,8 +261,7 @@ class MainLoop(object):
                        epoch_interrupt_message)
         signal.signal(signal.SIGINT, self._handle_batch_interrupt)
         self.log.current_row.epoch_interrupt_received = True
-	# add epoch_interrupt_received to the status so to keep track on it after training
-	# on several samples
+	# Add a record to the status. Unlike the log record it will be easy to access at later iterations.
 	self.status._epoch_interrupt_received=True
 
     def _handle_batch_interrupt(self, signal_number, frame):
@@ -271,6 +270,8 @@ class MainLoop(object):
         logger.warning('Received batch interrupt signal.' +
                        batch_interrupt_message)
         self.log.current_row.batch_interrupt_received = True
+        # Add a record to the status. Unlike the log record it will be easy to access at later iterations.
+	self.status._batch_interrupt_received = True
 
     def _restore_signal_handlers(self):
         signal.signal(signal.SIGINT, self.original_sigint_handler)
