@@ -439,7 +439,7 @@ class AttentionRecurrent(AbstractAttentionRecurrent, Initializable):
 
     Wrapping your recurrent brick with this class makes all the
     states mandatory. If you feel this is a limitation for you, try
-    to make it better! This restriction does not apply to sequence
+    to make it better! This restriction does not apply to sequences
     and contexts: those keep being as optional as they were for
     your brick.
 
