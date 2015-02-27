@@ -11,7 +11,7 @@ from blocks.bricks import Initializable, Sigmoid, Tanh
 from blocks.bricks.base import Application, application, Brick, lazy
 from blocks.initialization import NdarrayInitialization
 from blocks.roles import add_role, WEIGHTS, BIASES
-from blocks.utils import (pack, shared_floatx_zeros, dict_union, dict_subset,
+from blocks.utils import (pack, shared_floatx_nans, dict_union, dict_subset,
                           is_shared_variable)
 
 logger = logging.getLogger()
@@ -268,7 +268,7 @@ class SimpleRecurrent(BaseRecurrent, Initializable):
         return super(SimpleRecurrent, self).get_dim(name)
 
     def _allocate(self):
-        self.params.append(shared_floatx_zeros((self.dim, self.dim), name="W"))
+        self.params.append(shared_floatx_nans((self.dim, self.dim), name="W"))
 
     def _initialize(self):
         self.weights_init.initialize(self.W, self.rng)
@@ -354,15 +354,15 @@ class LSTM(BaseRecurrent, Initializable):
         return super(LSTM, self).get_dim(name)
 
     def _allocate(self):
-        self.W_state = shared_floatx_zeros((self.dim, 4*self.dim),
+        self.W_state = shared_floatx_nans((self.dim, 4*self.dim),
                                            name='W_state')
-        self.W_cell_to_in = shared_floatx_zeros((self.dim,),
+        self.W_cell_to_in = shared_floatx_nans((self.dim,),
                                                 name='W_cell_to_in')
-        self.W_cell_to_forget = shared_floatx_zeros((self.dim,),
+        self.W_cell_to_forget = shared_floatx_nans((self.dim,),
                                                     name='W_cell_to_forget')
-        self.W_cell_to_out = shared_floatx_zeros((self.dim,),
+        self.W_cell_to_out = shared_floatx_nans((self.dim,),
                                                  name='W_cell_to_out')
-        self.biases = shared_floatx_zeros((4*self.dim,), name='biases')
+        self.biases = shared_floatx_nans((4*self.dim,), name='biases')
         add_role(self.W_state, WEIGHTS)
         add_role(self.W_cell_to_in, WEIGHTS)
         add_role(self.W_cell_to_forget, WEIGHTS)
@@ -496,7 +496,7 @@ class GatedRecurrent(BaseRecurrent, Initializable):
 
     def _allocate(self):
         def new_param(name):
-            return shared_floatx_zeros((self.dim, self.dim), name=name)
+            return shared_floatx_nans((self.dim, self.dim), name=name)
 
         self.params.append(new_param('state_to_state'))
         self.params.append(new_param('state_to_update')
