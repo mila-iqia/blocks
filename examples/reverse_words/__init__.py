@@ -19,9 +19,7 @@ from blocks.bricks.sequence_generators import (
     SequenceGenerator, LinearReadout, SoftmaxEmitter, LookupFeedback)
 from blocks.config_parser import config
 from blocks.graph import ComputationGraph
-from fuel.streams import (
-    DataStreamMapping, BatchDataStream, PaddingDataStream,
-    DataStreamFilter)
+from fuel.transformers import Mapping, Batch, Padding, Filter
 from fuel.datasets import OneBillionWord, TextFile
 from fuel.schemes import ConstantScheme
 from blocks.dump import load_parameter_values
@@ -126,15 +124,15 @@ def main(mode, save_path, num_batches, data_path=None):
             dataset = TextFile(data_path, **dataset_options)
         else:
             dataset = OneBillionWord("training", [99], **dataset_options)
-        data_stream = DataStreamMapping(
+        data_stream = Mapping(
             mapping=_transpose,
-            data_stream=PaddingDataStream(
-                BatchDataStream(
+            data_stream=Padding(
+                Batch(
                     iteration_scheme=ConstantScheme(10),
-                    data_stream=DataStreamMapping(
+                    data_stream=Mapping(
                         mapping=reverse_words,
                         add_sources=("targets",),
-                        data_stream=DataStreamFilter(
+                        data_stream=Filter(
                             predicate=_filter_long,
                             data_stream=dataset
                             .get_example_stream())))))
