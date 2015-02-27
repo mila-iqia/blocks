@@ -55,17 +55,10 @@ class BeamSearch(object):
         self.need_input_states = []
         self.compiled = False
 
-    def compile_context_computer(self, generator, inner_cg):
+    def compile_context_computer(self, contexts):
         """Compiles `context_computer`."""
-        contexts_original = OrderedDict()
-        for name in self.context_names:
-            contexts_original[name] = VariableFilter(
-                bricks=[generator],
-                name='^' + name + '$',
-                roles=[INPUT])(inner_cg)[0]
-
         self.context_computer = function(list(self.inputs.values()),
-                                         list(contexts_original.values()),
+                                         list(contexts.values()),
                                          on_unused_input='ignore')
 
     def compile_initial_state_computer(self, generator, contexts):
@@ -114,7 +107,7 @@ class BeamSearch(object):
             contexts[name] = VariableFilter(bricks=[generator],
                                             name='^' + name + '$',
                                             roles=[INPUT])(inner_cg)[0]
-        self.compile_context_computer(generator, inner_cg)
+        self.compile_context_computer(contexts)
         self.compile_initial_state_computer(generator, contexts)
         self.compile_next_state_computer(generator, contexts, inner_cg)
 
