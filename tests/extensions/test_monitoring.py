@@ -1,6 +1,6 @@
 import numpy
 import theano
-from fuel.datasets import ContainerDataset
+from fuel.datasets import IterableDataset
 from numpy.testing import assert_allclose
 from theano import tensor
 
@@ -20,7 +20,7 @@ def test_training_data_monitoring():
                 for f in [[1, 2], [3, 4], [5, 6]]]
     targets = [(weights * f).sum() for f in features]
     n_batches = 3
-    dataset = ContainerDataset(dict(features=features, targets=targets))
+    dataset = IterableDataset(dict(features=features, targets=targets))
 
     x = tensor.vector('features')
     y = tensor.scalar('targets')
@@ -38,7 +38,7 @@ def test_training_data_monitoring():
                  data["targets"]) ** 2)
 
     main_loop = MainLoop(
-        model=None, data_stream=dataset.get_default_stream(),
+        model=None, data_stream=dataset.get_example_stream(),
         algorithm=GradientDescent(cost=cost, params=[W],
                                   step_rule=Scale(0.001)),
         extensions=[

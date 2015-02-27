@@ -21,7 +21,6 @@ def setup(testobj):
 
 
 def load_tests(loader, tests, ignore):
-
     # This function loads doctests from all submodules and runs them
     # with the __future__ imports necessary for Python 2
     for _, module, _ in pkgutil.walk_packages(path=blocks.__path__,

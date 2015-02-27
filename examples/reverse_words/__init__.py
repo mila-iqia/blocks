@@ -137,7 +137,7 @@ def main(mode, save_path, num_batches, data_path=None):
                         data_stream=DataStreamFilter(
                             predicate=_filter_long,
                             data_stream=dataset
-                            .get_default_stream())))))
+                            .get_example_stream())))))
 
         # Build the cost computation graph
         chars = tensor.lmatrix("features")
