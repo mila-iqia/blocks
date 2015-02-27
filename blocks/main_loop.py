@@ -98,7 +98,7 @@ class MainLoop(object):
         self.status._training_started = False
         self.status._epoch_started = False
         self.status._epoch_interrupt_received = False
-	self.status._batch_interrupt_received = False
+        self.status._batch_interrupt_received = False
 
     @property
     def model(self):
@@ -248,11 +248,13 @@ class MainLoop(object):
         # the iteration the corresponding log record can be found only in
         # the previous row.
         if (self.log.current_row.training_finish_requested or
-             self.status._batch_interrupt_received):
-		  raise TrainingFinish
+            self.status._batch_interrupt_received):
+
+		    raise TrainingFinish
 	if (level == 'epoch' and
-	     self.status._epoch_interrupt_received):
-                  raise TrainingFinish
+	    self.status._epoch_interrupt_received):
+
+            raise TrainingFinish
 
     def _handle_epoch_interrupt(self, signal_number, frame):
         # Try to complete the current epoch if user presses CTRL + C
