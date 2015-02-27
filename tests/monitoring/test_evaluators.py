@@ -1,6 +1,6 @@
 import numpy
 import theano
-from fuel.datasets import ContainerDataset
+from fuel.datasets import IterableDataset
 from numpy.testing import assert_raises
 
 from blocks.graph import ComputationGraph
@@ -20,7 +20,7 @@ def test_dataset_evaluators():
 
     data = [numpy.arange(1, 5, dtype=floatX).reshape(2, 2),
             numpy.arange(10, 16, dtype=floatX).reshape(3, 2)]
-    data_stream = ContainerDataset(dict(X=data)).get_default_stream()
+    data_stream = IterableDataset(dict(X=data)).get_example_stream()
 
     values = validator.evaluate(data_stream)
     assert values['test_brick_apply_V_squared'] == 4
@@ -31,6 +31,6 @@ def test_dataset_evaluators():
         values['test_brick_apply_mean_batch_element'], per_batch_mean)
 
     with assert_raises(Exception) as ar:
-        data_stream = ContainerDataset(dict(X2=data)).get_default_stream()
+        data_stream = IterableDataset(dict(X2=data)).get_example_stream()
         validator.evaluate(data_stream)
     assert "Not all data sources" in ar.exception.args[0]
