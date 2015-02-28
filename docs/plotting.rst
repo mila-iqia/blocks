@@ -60,7 +60,7 @@ Now let's train with gradient descent and plot the results.
 ...                               params=[a]
 ...                               step_rule=Scale(learning_rate=0.1)),
 ...     extensions=[FinishAfter(after_n_epochs=1),
-...                 TrainingDataMonitoring([cost, a_copy], after_every_batch=True),
+...                 TrainingDataMonitoring([cost, a], after_every_batch=True),
 ...                 Plot('Plotting example', channels=[['cost'], ['a']],
 ...                      after_every_batch=True)])  # doctest: +SKIP
 >>> main_loop.run() # doctest: +SKIP
