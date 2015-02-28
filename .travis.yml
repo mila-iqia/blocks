@@ -45,6 +45,6 @@ script:
   - bokeh-server &> /dev/null &
   - coverage run -p --source=blocks -m nose2.__main__ -v doctests
   - coverage run -p --source=blocks -m nose2.__main__ -v tests
-  - coverage combine
 after_script:
+  - coverage combine
   - coveralls
