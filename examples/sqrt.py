@@ -42,7 +42,7 @@ def _array_tuple(data):
 def get_data_stream(iterable):
     dataset = IterableDataset({'numbers': iterable})
     data_stream = Mapping(dataset.get_example_stream(),
-                                    _data_sqrt, add_sources=('roots',))
+                          _data_sqrt, add_sources=('roots',))
     data_stream = Mapping(data_stream, _array_tuple)
     return Batch(data_stream, ConstantScheme(20))
 
