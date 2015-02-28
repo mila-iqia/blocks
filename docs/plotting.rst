@@ -33,6 +33,7 @@ function :math:`f(x) = x^a` to :math:`f(x) = x^2`.
 
 >>> import theano
 >>> a = theano.shared(3.)
+>>> a.name = 'a'
 >>> x = theano.tensor.scalar('data')
 >>> cost = abs(x ** 2 - x ** a)
 >>> cost.name = 'cost'
@@ -53,11 +54,10 @@ Now let's train with gradient descent and plot the results.
 >>> from blocks.extensions import FinishAfter
 >>> from blocks.extensions.monitoring import TrainingDataMonitoring
 >>> from blocks.extensions.plot import Plot
->>> a_copy = a.copy()
->>> a_copy.name = 'a'
 >>> main_loop = MainLoop(
 ...     model=None, data_stream=data_stream,
 ...     algorithm=GradientDescent(cost=cost,
+...                               params=[a]
 ...                               step_rule=Scale(learning_rate=0.1)),
 ...     extensions=[FinishAfter(after_n_epochs=1),
 ...                 TrainingDataMonitoring([cost, a_copy], after_every_batch=True),
