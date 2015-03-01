@@ -184,7 +184,7 @@ of size 256.
 >>> data_stream = DataStream(mnist, iteration_scheme=SequentialScheme(
 ...     num_examples=mnist.num_examples, batch_size=256))
 
-Regarding the training algorithm, we will use straightforward SGD with a fixed
+The training algorithm we will use is straightforward SGD with a fixed
 learning rate.
 
 >>> from blocks.algorithms import GradientDescent, Scale
