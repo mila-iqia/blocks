@@ -92,22 +92,19 @@ class BeamSearch(object):
                                        on_unused_input='ignore')
 
     def compile(self):
-        """Compiles functions for beam search."""
         generator = self.sequence_generator
 
-        inner_cg = ComputationGraph(self.generate_call.inner_outputs)
-        contexts = OrderedDict()
-        for name in generator.generate.contexts:
-            contexts[name] = VariableFilter(bricks=[generator],
-                                            name='^' + name + '$',
-                                            roles=[INPUT])(inner_cg)[0]
+        contexts = OrderedDict(
+            [(name, VariableFilter(bricks=[generator], name='^' + name + '$',
+                                   roles=[INPUT])(self.inner_cg)[0])
+             for name in self.context_names])
         states = []
         for name in generator.generate.states:
             var = VariableFilter(bricks=[generator], name='^' + name + '$',
-                                 roles=[INPUT])(inner_cg)[-1:]
+                                 roles=[INPUT])(self.inner_cg)
             if var:
                 self.need_input_states.append(name)
-            states.extend(var)
+                states.append(var[0])
         self.compile_context_computer(contexts)
         self.compile_initial_state_computer(generator, contexts)
         self.compile_next_state_computer(generator, contexts, states)
