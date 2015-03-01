@@ -40,9 +40,9 @@ of a brick we refer to this as *allocation*.
     >>> linear.params
     [W, b]
     >>> linear.params[1].get_value() # doctest: +SKIP
-    array([ 0.,  0.,  0.,  0.,  0.])
+    array([ nan,  nan,  nan,  nan,  nan])
 
-By default, all our parameters are set to 0. To initialize them, simply
+By default, all our parameters are set to nan. To initialize them, simply
 call the :meth:`.Brick.initialize` method. This is the last step in the
 brick lifecycle: *initialization*.
 

@@ -2,7 +2,7 @@ Managing the computation graph
 ==============================
 
 Theano constructs computation graphs of mathematical expressions. Bricks help
-you :doc:`build these graphs <bricks_overview>`, but it does more than that.
+you :doc:`build these graphs <bricks_overview>`, but they do more than that.
 When you apply a brick to a Theano variable, it automatically *annotates* this
 Theano variable, in two ways:
 
