@@ -5,7 +5,7 @@ import numpy
 
 from theano import config, function, tensor
 
-from blocks.filter import VariableFilter, get_application_call
+from blocks.filter import VariableFilter, get_application_call, get_brick
 from blocks.graph import ComputationGraph
 from blocks.roles import INPUT, OUTPUT
 
@@ -20,11 +20,11 @@ class BeamSearch(object):
     Parameters
     ----------
     beam_size : int
-        Size of beam.
-    sequence_generator : :class:`BasicSequenceGenerator`
-        Sequence generator brick.
-    comp_graph : :class:`ComputationalGraph`
-        Computational graph which contains `sequence_generator`.
+        The beam size.
+    samples : :class:`~theano.Variable`
+        An output of a sampling computation graph built by
+        :meth:`~blocks.brick.SequenceGenerator.generate`, the one
+        corresponding to sampled sequences.
 
     See Also
     --------
@@ -36,18 +36,18 @@ class BeamSearch(object):
     one of its outputs is called `probs` e.g. :class:`SoftmaxEmitter`.
 
     """
-    def __init__(self, beam_size, sequence_generator, comp_graph):
+    def __init__(self, beam_size, samples):
         self.beam_size = beam_size
-        self.sequence_generator = sequence_generator
-        self.generate_names = sequence_generator.generate.states
-        self.context_names = sequence_generator.generate.contexts
-        self.state_names = (sequence_generator.state_names +
-                            sequence_generator.glimpse_names +
-                            sequence_generator.glimpse_names +
+        self.sequence_generator = get_brick(samples)
+        self.generate_names = self.sequence_generator.generate.states
+        self.context_names = self.sequence_generator.generate.contexts
+        self.state_names = (self.sequence_generator.state_names +
+                            self.sequence_generator.glimpse_names +
+                            self.sequence_generator.glimpse_names +
                             ['outputs'])
-        self.context_names = sequence_generator.context_names
-        self.comp_graph = comp_graph
-        self.inputs = OrderedDict(comp_graph.dict_of_inputs())
+        self.context_names = self.sequence_generator.context_names
+        self.cg = ComputationGraph(samples)
+        self.inputs = OrderedDict(self.cg.dict_of_inputs())
         self.need_input_states = []
         self.compiled = False
 
@@ -101,7 +101,7 @@ class BeamSearch(object):
         """Compiles functions for beam search."""
         generator = self.sequence_generator
 
-        application_call = get_application_call(self.comp_graph.outputs[0])
+        application_call = get_application_call(self.cg.outputs[0])
         inner_cg = ComputationGraph(application_call.inner_outputs)
         contexts = OrderedDict()
         for name in generator.generate.contexts:

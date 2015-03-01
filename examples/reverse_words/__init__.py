@@ -282,11 +282,9 @@ def main(mode, save_path, num_batches, data_path=None):
             n_steps=3 * chars.shape[0], batch_size=chars.shape[1],
             attended=attended,
             attended_mask=chars_mask)
-        cg = ComputationGraph(generated)
-        model = Model(generated)
+        model = Model(generated[1])
         model.set_param_values(load_parameter_values(save_path))
-        batch_size = 1
-        beam_search = BeamSearch(10, generator, cg)
+        beam_search = BeamSearch(10, generated[1])
         beam_search.compile()
 
         while True:
@@ -299,8 +297,7 @@ def main(mode, save_path, num_batches, data_path=None):
             print("Encoder input:", encoded_input)
             target = reverse_words((encoded_input,))[0]
             print("Target: ", target)
-            numpy_inputs = numpy.repeat(numpy.array(encoded_input)[:, None],
-                                        batch_size, axis=1)
+            numpy_inputs = numpy.array(encoded_input)[:, None]
             outputs, masks, probs = beam_search.search(
                 OrderedDict([('features', numpy_inputs),
                              ('features_mask',
