@@ -66,7 +66,7 @@ Lazy initialization
 In the example above we configured the :class:`.Linear` brick during
 initialization. We specified input and output dimensions, and specified the
 way in which weight matrices should be initialized. But consider the
-following case, which is quite common: we want to take the output of one
+following case, which is quite common: We want to take the output of one
 model, and feed it as an input to another model, but the output and input
 dimensions don't match, so we will need to add a linear transformation in
 the middle.
@@ -154,7 +154,7 @@ brick:
 
 When dealing with children, the life cycle actually becomes a bit more
 complicated. (The full life cycle is documented as part of the
-:class:`.Brick` class). Before allocating or initializing parameters, the
+:class:`.Brick` class.) Before allocating or initializing parameters, the
 parent brick calls its :meth:`.Brick.push_allocation_config` and
 :meth:`.Brick.push_initialization_config` methods, which configure the
 children. If you want to override the child configuration, you will need to
