@@ -244,9 +244,12 @@ class BeamSearch(object):
                 break
 
             logprobs = self.compute_costs(contexts, states)
-            next_probs = (states['cur_logprobs'][-1, :, None] +
-                          logprobs *
-                          states['cur_outputs_mask'][-1, :, None])
+            next_probs = (states['cur_logprobs'][-1, :, None]
+                    + logprobs * states['cur_outputs_mask'][-1, :, None])
+            (finished,) = numpy.where(states['cur_outputs_mask'][-1, :] == 0)
+            next_probs[finished, :eol_symbol] = numpy.inf
+            next_probs[finished, eol_symbol + 1:] = numpy.inf
+
             (indexes, outputs), top_probs = self._top_probs(next_probs, self.beam_size,
                                                  unique=i == 0)
             self._rearrange(states, indexes)
