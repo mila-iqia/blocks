@@ -184,7 +184,7 @@ of size 256.
 >>> from fuel.streams import DataStream
 >>> from fuel.schemes import SequentialScheme
 >>> data_stream = DataStream(mnist, iteration_scheme=SequentialScheme(
-...     num_examples=mnist.num_examples, batch_size=256))
+...     mnist.num_examples, batch_size=256))
 
 As our algorithm we will use straightforward SGD with a fixed learning rate.
 
@@ -197,7 +197,7 @@ a separate set of examples. Let's create a new data stream for that.
 
 >>> mnist_test = MNIST("test")
 >>> data_stream_test = DataStream(mnist_test, iteration_scheme=SequentialScheme(
-...     num_examples=mnist_test.num_examples, batch_size=1024))
+...     mnist_test.num_examples, batch_size=1024))
 
 In order to monitor our performance on this data stream during training, we need
 to use one of Blocks' extensions, namely the :class:`.DataStreamMonitoring`
