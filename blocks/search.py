@@ -225,6 +225,7 @@ class BeamSearch(object):
         """
         if not self.compiled:
             self.compile()
+
         # Inputs repeated beam_size times
         inputs = OrderedDict([(name, numpy.tile(val, (1, self.beam_size)))
                               for name, val in inputs_val_dict.items()])
@@ -252,10 +253,8 @@ class BeamSearch(object):
             self._rearrange(states, indexes[0])
 
             states.update(self.compute_next_state(contexts, states, outputs))
-            # Top probs
             states['cur_outputs'] = numpy.append(
                 states['cur_outputs'], outputs[None, :], axis=0)
-
             next_out_mask = ((outputs != eol_symbol) *
                               states['cur_outputs_mask'][-1, :])
             states['cur_outputs_mask'] = numpy.append(
