@@ -43,17 +43,17 @@ class BeamSearch(object):
         # Extracting information from the sampling computation graph
         cg = ComputationGraph(samples)
         self.inputs = OrderedDict(cg.dict_of_inputs())
-        self.sequence_generator = get_brick(samples)
-        if not isinstance(self.sequence_generator, SequenceGenerator):
+        self.generator = get_brick(samples)
+        if not isinstance(self.generator, SequenceGenerator):
             raise ValueError
         self.generate_call = get_application_call(samples)
         if (not self.generate_call.application ==
-                self.sequence_generator.generate):
+                self.generator.generate):
             raise ValueError
         self.inner_cg = ComputationGraph(self.generate_call.inner_outputs)
 
-        self.context_names = self.sequence_generator.generate.contexts
-        self.state_names = self.sequence_generator.generate.states
+        self.context_names = self.generator.generate.contexts
+        self.state_names = self.generator.generate.states
 
         self.need_input_states = []
         self.compiled = False
@@ -63,28 +63,28 @@ class BeamSearch(object):
                                          list(contexts.values()),
                                          on_unused_input='ignore')
 
-    def compile_initial_state_computer(self, generator, contexts):
-        initial_states = [generator.initial_state(name, self.beam_size,
+    def compile_initial_state_computer(self, contexts):
+        initial_states = [self.generator.initial_state(name, self.beam_size,
                                                   **contexts)
                           for name in self.state_names]
         self.initial_state_computer = function(list(contexts.values()),
                                                initial_states,
                                                on_unused_input='ignore')
 
-    def compile_next_state_computer(self, generator, contexts, states):
-        next_states = [VariableFilter(bricks=[generator],
+    def compile_next_state_computer(self, contexts, states):
+        next_states = [VariableFilter(bricks=[self.generator],
                                       name='^' + name + '$',
                                       roles=[OUTPUT])(self.inner_cg)[-1]
                        for name in self.state_names]
         next_outputs = VariableFilter(
-            application=generator.readout.emit, roles=[OUTPUT])(
+            application=self.generator.readout.emit, roles=[OUTPUT])(
                 self.inner_cg.variables)
         self.next_state_computer = function(
             list(contexts.values()) + states + next_outputs, next_states)
 
-    def compile_costs_computer(self, generator, contexts, states):
+    def compile_costs_computer(self, contexts, states):
         next_probs = VariableFilter(
-            bricks=[generator.readout.emitter],
+            bricks=[self.generator.readout.emitter],
             name='^probs$')(self.inner_cg)[-1]
         logprobs = -tensor.log(next_probs)
         self.costs_computer = function(list(contexts.values()) + states,
@@ -92,7 +92,7 @@ class BeamSearch(object):
                                        on_unused_input='ignore')
 
     def compile(self):
-        generator = self.sequence_generator
+        generator = self.generator
 
         contexts = OrderedDict(
             [(name, VariableFilter(bricks=[generator], name='^' + name + '$',
@@ -106,9 +106,9 @@ class BeamSearch(object):
                 self.need_input_states.append(name)
                 states.append(var[0])
         self.compile_context_computer(contexts)
-        self.compile_initial_state_computer(generator, contexts)
-        self.compile_next_state_computer(generator, contexts, states)
-        self.compile_costs_computer(generator, contexts, states)
+        self.compile_initial_state_computer(contexts)
+        self.compile_next_state_computer(contexts, states)
+        self.compile_costs_computer(contexts, states)
 
         self.compiled = True
 
