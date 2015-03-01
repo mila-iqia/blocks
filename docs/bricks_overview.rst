@@ -33,7 +33,7 @@ bias vector with values drawn from a particular distribution.
 
 So what happened here? We constructed a brick called :class:`.Linear` with a
 particular configuration: the input dimension (20) and output dimension (5).
-The moment we called :attr:`.Linear.apply`, the brick automatically constructed
+When we called :attr:`.Linear.apply`, the brick automatically constructed
 the `shared Theano variables`_ needed to store its parameters. In the lifecycle
 of a brick we refer to this as *allocation*.
 
@@ -66,9 +66,9 @@ Lazy initialization
 In the example above we configured the :class:`.Linear` brick during
 initialization. We specified input and output dimensions, and specified the
 way in which weight matrices should be initialized. But consider the
-following case, which is quite common: We want to take the output of one
+following case, which is quite common: we want to take the output of one
 model, and feed it as an input to another model, but the output and input
-dimension don't match, so we will need to add a linear transformation in
+dimensions don't match, so we will need to add a linear transformation in
 the middle.
 
 To support this use case, bricks allow for *lazy initialization*, which is
@@ -93,7 +93,7 @@ We can now easily configure our brick based on other bricks.
     >>> linear2.apply(x)
     linear_apply_output
 
-In the examples so far, allocation of the parameters has always happened
+In the examples so far, the allocation of the parameters has always happened
 implicitly when calling the ``apply`` methods, but it can also be called
 explicitly. Consider the following example:
 
@@ -154,8 +154,8 @@ brick:
 
 When dealing with children, the life cycle actually becomes a bit more
 complicated. (The full life cycle is documented as part of the
-:class:`.Brick` class.) Before allocating or initializing parameters, the
-parent brick will call its :meth:`.Brick.push_allocation_config` and
+:class:`.Brick` class). Before allocating or initializing parameters, the
+parent brick calls its :meth:`.Brick.push_allocation_config` and
 :meth:`.Brick.push_initialization_config` methods, which configure the
 children. If you want to override the child configuration, you will need to
 call these methods manually, after which you can override the child bricks'

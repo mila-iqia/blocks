@@ -2,15 +2,15 @@ Managing the computation graph
 ==============================
 
 Theano constructs computation graphs of mathematical expressions. Bricks help
-you :doc:`build these graphs <bricks_overview>`, but they do more than that.
+you :doc:`build these graphs <bricks_overview>`, but it does more than that.
 When you apply a brick to a Theano variable, it automatically *annotates* this
 Theano variable, in two ways:
 
 * It defines the *role* this variable plays in the computation graph e.g. it will
-  label weights matrices and biases as parameters, keep track of which variables
-  where the in- and outputs of your bricks, and more.
-* It constructs *auxiliary variables*. These are variables which are not an
-  output of your brick, but might still be of interest. For example, if you are
+  label weight matrices and biases as parameters, keep track of which variables
+  were the in- and outputs of your bricks, and more.
+* It constructs *auxiliary variables*. These are variables which are not
+  outputs of your brick, but might still be of interest. For example, if you are
   training a neural network, you might be interested to now the norm of your
   weight matrices, so Blocks attaches these as auxiliary variables to the graph.
 

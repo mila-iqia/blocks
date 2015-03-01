@@ -1,9 +1,8 @@
 Introduction tutorial
 =====================
 
-In this tutorial we will examine the example from the :ref:`quickstart
-<quickstart>` use the Blocks framework to train a `multilayer perceptron`_ (MLP) to
-perform handwriting recognition on the `MNIST handwritten digit database`_.
+In this tutorial we will perform handwriting recognition by training a
+`multilayer perceptron`_ (MLP) on the `MNIST handwritten digit database`_.
 
 The Task
 --------
@@ -21,14 +20,14 @@ The Model
 We will train a simple MLP with a single hidden layer that uses the rectifier_
 activation function. Our output layer will consist of a softmax_ function with
 10 units; one for each class. Mathematically speaking, our model is parametrized
-by the parameters :math:`\mathbf{\theta}`, defined as the weight matrices
+by :math:`\mathbf{\theta}`, defined as the weight matrices
 :math:`\mathbf{W}^{(1)}` and :math:`\mathbf{W}^{(2)}`, and bias vectors
 :math:`\mathbf{b}^{(1)}` and :math:`\mathbf{b}^{(2)}`. The rectifier activation
 function is defined as
 
 .. math:: \mathrm{ReLU}(\mathbf{x})_i = \max(0, \mathbf{x}_i)
 
-and our softmax output function is defined
+and our softmax output function is defined as
 
 .. math:: \mathrm{softmax}(\mathbf{x})_i = \frac{e^{\mathbf{x}_i}}{\sum_{j=1}^n e^{\mathbf{x}_j}}
 
@@ -94,10 +93,9 @@ we will need the Theano variable representing the target labels.
 >>> from blocks.bricks.cost import CategoricalCrossEntropy
 >>> cost = CategoricalCrossEntropy().apply(y.flatten(), y_hat)
 
-To make sure that our network doesn't overfit we can use regularization, that
-is, we will penalize the complexity of the model. We will use
-:math:`L2`-regularization, also known as *weight decay*. So our final objective
-function is:
+To reduce the risk of overfitting, we can penalize excessive values of
+the parameters by adding a :math:`L2`-regularization term (also known as
+*weight decay*) to the objective function:
 
 .. math:: l(\mathbf{f}(\mathbf{x}), y) = -\log f(\mathbf{x})_y + \lambda_1\|\mathbf{W}^{(1)}\|^2 + \lambda_2\|\mathbf{W}^{(2)}\|^2
 
@@ -186,7 +184,8 @@ of size 256.
 >>> data_stream = DataStream(mnist, iteration_scheme=SequentialScheme(
 ...     num_examples=mnist.num_examples, batch_size=256))
 
-As our algorithm we will use straightforward SGD with a fixed learning rate.
+Regarding the training algorithm, we will use straightforward SGD with a fixed
+learning rate.
 
 >>> from blocks.algorithms import GradientDescent, Scale
 >>> algorithm = GradientDescent(cost=cost, params=cg.parameters,
@@ -207,8 +206,8 @@ extension.
 >>> monitor = DataStreamMonitoring(
 ...     variables=[cost], data_stream=data_stream_test, prefix="test")
 
-We can use the :class:`.MainLoop` to combine all the different
-bits and pieces now. We use two more extensions to make our training stop after
+We can now use the :class:`.MainLoop` to combine all the different
+bits and pieces. We use two more extensions to make our training stop after
 a single epoch and to make sure that our progress is printed.
 
 >>> from blocks.main_loop import MainLoop
