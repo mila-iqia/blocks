@@ -194,13 +194,6 @@ class BeamSearch(object):
         indexes = numpy.unravel_index(args, scores.shape)
         return indexes, scores[indexes]
 
-    def _rearrange(self, states, indexes):
-        for name in states:
-            if name.startswith('cur'):
-                states[name] = states[name][:, indexes.T.flatten()]
-            else:
-                states[name] = states[name][indexes.T.flatten()]
-
     def search(self, inputs_val_dict, eol_symbol=-1, max_length=512):
         """Performs beam search.
 
@@ -235,37 +228,37 @@ class BeamSearch(object):
 
         states = self.compute_initial_states(contexts)
 
-        states['cur_outputs'] = states['outputs'][None, :]
-        states['cur_outputs_mask'] = numpy.ones_like(states['cur_outputs'])
-        states['cur_logprobs'] = numpy.zeros_like(states['cur_outputs'])
+        all_outputs = states['outputs'][None, :]
+        mask = numpy.ones_like(all_outputs[0])
+        costs = numpy.zeros_like(all_outputs[0])
 
         for i in range(max_length):
-            if numpy.all(states['cur_outputs_mask'][-1, :] == 0):
+            if mask.sum() == 0:
                 break
 
             logprobs = self.compute_costs(contexts, states)
-            next_probs = (states['cur_logprobs'][-1, :, None]
-                    + logprobs * states['cur_outputs_mask'][-1, :, None])
-            (finished,) = numpy.where(states['cur_outputs_mask'][-1, :] == 0)
-            next_probs[finished, :eol_symbol] = numpy.inf
-            next_probs[finished, eol_symbol + 1:] = numpy.inf
+            next_costs = costs[:, None] + logprobs * mask[:, None]
+            (finished,) = numpy.where(mask == 0)
+            next_costs[finished, :eol_symbol] = numpy.inf
+            next_costs[finished, eol_symbol + 1:] = numpy.inf
 
-            (indexes, outputs), top_probs = self._top_probs(next_probs, self.beam_size,
-                                                 unique=i == 0)
-            self._rearrange(states, indexes)
+            (indexes, outputs), top_probs = self._top_probs(
+                next_costs, self.beam_size, unique=i == 0)
+
+            for name in states:
+                states[name] = states[name][indexes]
+            all_outputs = all_outputs[:, indexes]
+            mask = mask[indexes]
+            costs = costs[indexes]
 
             states.update(self.compute_next_state(contexts, states, outputs))
-            states['cur_logprobs'] = numpy.array(top_probs).T[None, :]
-            states['cur_outputs'] = numpy.append(
-                states['cur_outputs'], outputs[None, :], axis=0)
-            next_out_mask = ((outputs != eol_symbol) *
-                              states['cur_outputs_mask'][-1, :])
-            states['cur_outputs_mask'] = numpy.append(
-                states['cur_outputs_mask'], next_out_mask[None, :], axis=0)
+            all_outputs = numpy.append(all_outputs, outputs[None, :], axis=0)
+            costs = top_probs
+            mask = (outputs != eol_symbol) * mask
 
-        # Drop a meaningless first element
-        outputs = states['cur_outputs'][1:, :]
-        outputs_mask = states['cur_outputs_mask'][1:, :]
-        logprobs = states['cur_logprobs'][-1, :]
+        all_outputs = all_outputs[1:]
+        mask = all_outputs != eol_symbol
+        for row in mask.T:
+            row[row.sum()] = 1
 
-        return outputs, outputs_mask, logprobs
+        return all_outputs, mask, costs
