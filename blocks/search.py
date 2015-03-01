@@ -194,34 +194,38 @@ class BeamSearch(object):
         indexes = numpy.unravel_index(args, scores.shape)
         return indexes, scores[indexes]
 
-    def search(self, inputs_val_dict, eol_symbol=-1, max_length=512):
+    def search(self, input_values, eol_symbol, max_length):
         """Performs beam search.
 
         If the beam search was not compiled, it also compiles it.
 
         Parameters
         ----------
-        inputs_val_dict : dict
-            Dictionary of input values {name: value}. Batch size `1` is
-            supported only.
+        input_values : dict
+            Dictionary of input values {name: value}. The shapes should be
+            the same as if you ran sampling with batch size equal to
+            `beam_size`. Put it differently, the user is responsible
+            for duplicaling inputs necessary number of times, because
+            this class has insufficient information to do it properly.
         eol_symbol : int
-            End of sequence symbol, the search stops when the
-            symbol is generated.
+            End of sequence symbol, the search stops when the symbol is
+            generated.
         max_length : int
-            Maximum sequence length, the search stops when it
-            is reached.
+            Maximum sequence length, the search stops when it is reached.
 
         Returns
         -------
-        Sequences in the beam, masks, and corresponding probabilities.
+        Sequences in the beam, masks, and corresponding log-probabilities.
 
         """
         if not self.compiled:
             self.compile()
 
-        contexts = self.compute_contexts(inputs_val_dict)
+        contexts = self.compute_contexts(input_values)
         states = self.compute_initial_states(contexts)
 
+        # This array will store all generated outputs, including those from
+        # previous step and those from already finished sequences.
         all_outputs = states['outputs'][None, :]
         mask = numpy.ones_like(all_outputs[0])
         costs = numpy.zeros_like(all_outputs[0])
@@ -230,21 +234,27 @@ class BeamSearch(object):
             if mask.sum() == 0:
                 break
 
+            # We carefully hack values of the `logprobs` array to ensure
+            # that all finished sequences are continued with `eos_symbol`.
             logprobs = self.compute_costs(contexts, states)
             next_costs = costs[:, None] + logprobs * mask[:, None]
             (finished,) = numpy.where(mask == 0)
             next_costs[finished, :eol_symbol] = numpy.inf
             next_costs[finished, eol_symbol + 1:] = numpy.inf
 
+            # The `i == 0` is required because at the first step the beam
+            # size is effectively only 1.
             (indexes, outputs), top_probs = self._top_probs(
                 next_costs, self.beam_size, unique=i == 0)
 
+            # Rearrange everything
             for name in states:
                 states[name] = states[name][indexes]
             all_outputs = all_outputs[:, indexes]
             mask = mask[indexes]
             costs = costs[indexes]
 
+            # Record chosen output and compute new states
             states.update(self.compute_next_state(contexts, states, outputs))
             all_outputs = numpy.append(all_outputs, outputs[None, :], axis=0)
             costs = top_probs
@@ -252,6 +262,8 @@ class BeamSearch(object):
 
         all_outputs = all_outputs[1:]
         mask = all_outputs != eol_symbol
+        # The first `eol_symbol` should be preserved: we add an additional
+        # 1 to each mask row to ensure that.
         for row in mask.T:
             row[row.sum()] = 1
 

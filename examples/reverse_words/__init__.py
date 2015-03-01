@@ -303,7 +303,8 @@ def main(mode, save_path, num_batches, data_path=None):
                 OrderedDict([('features', numpy_inputs),
                              ('features_mask',
                               numpy.ones_like(numpy_inputs))]),
-                char2code['</S>'])
+                char2code['</S>'],
+                3 * len(encoded_input))
 
             messages = []
             for i in range(outputs.shape[1]):
