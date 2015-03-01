@@ -166,30 +166,30 @@ class BeamSearch(object):
         return OrderedDict(zip(self.state_names, next_values))
 
     @staticmethod
-    def _cheapest(scores, beam_size, only_first=False):
-        """Find continuation candidates with lowest costs.
+    def _smallest(matrix, k, only_first_row=False):
+        """Find k smallest elements of a matrix.
 
         Parameters
         ----------
-        costs : numpy array
-            A 2d array of costs (batch, readout_dim).
-        beam_size : int
-            The beam size, number of top scores to return.
-        only_first : bool, optional
-            Consider continuations only of the first sequence.
+        matrix : numpy array
+            The matrix.
+        k : int
+            The number of smallest elements required.
+        only_first_row : bool, optional
+            Consider only elements of the first row.
 
         Returns
         -------
-        Tuple of ((candidate indices, outputs), costs).
+        Tuple of ((row numbers, column numbers), values).
 
         """
-        if only_first:
-            flatten = scores[:1, :].flatten()
+        if only_first_row:
+            flatten = matrix[:1, :].flatten()
         else:
-            flatten = scores.flatten()
-        args = numpy.argpartition(flatten, beam_size)[:beam_size]
+            flatten = matrix.flatten()
+        args = numpy.argpartition(flatten, k)[:k]
         args = args[numpy.argsort(flatten[args])]
-        return numpy.unravel_index(args, scores.shape), flatten[args]
+        return numpy.unravel_index(args, matrix.shape), flatten[args]
 
     def search(self, input_values, eol_symbol, max_length):
         """Performs beam search.
@@ -241,8 +241,8 @@ class BeamSearch(object):
 
             # The `i == 0` is required because at the first step the beam
             # size is effectively only 1.
-            (indexes, outputs), chosen_costs = self._cheapest(
-                next_costs, self.beam_size, only_first=i == 0)
+            (indexes, outputs), chosen_costs = self._smallest(
+                next_costs, self.beam_size, only_first_row=i == 0)
 
             # Rearrange everything
             for name in states:
