@@ -240,29 +240,25 @@ class BeamSearch(object):
         states['cur_logprobs'] = numpy.zeros_like(states['cur_outputs'])
 
         for i in range(max_length):
+            if numpy.all(states['cur_outputs_mask'][-1, :] == 0):
+                break
+
             logprobs = self.compute_costs(contexts, states)
             next_probs = (states['cur_logprobs'][-1, :, None] +
                           logprobs *
                           states['cur_outputs_mask'][-1, :, None])
-
-            indexes, top_probs = self._top_probs(next_probs, self.beam_size,
+            (indexes, outputs), top_probs = self._top_probs(next_probs, self.beam_size,
                                                  unique=i == 0)
-            states['cur_logprobs'] = numpy.array(top_probs).T[None, :]
-            outputs = indexes[1].copy()
-
-            self._rearrange(states, indexes[0])
+            self._rearrange(states, indexes)
 
             states.update(self.compute_next_state(contexts, states, outputs))
+            states['cur_logprobs'] = numpy.array(top_probs).T[None, :]
             states['cur_outputs'] = numpy.append(
                 states['cur_outputs'], outputs[None, :], axis=0)
             next_out_mask = ((outputs != eol_symbol) *
                               states['cur_outputs_mask'][-1, :])
             states['cur_outputs_mask'] = numpy.append(
                 states['cur_outputs_mask'], next_out_mask[None, :], axis=0)
-
-            # All sequences ended
-            if numpy.all(states['cur_outputs_mask'][-1, :] == 0):
-                break
 
         # Drop a meaningless first element
         outputs = states['cur_outputs'][1:, :]
