@@ -52,12 +52,9 @@ class BeamSearch(object):
             raise ValueError
         self.inner_cg = ComputationGraph(self.generate_call.inner_outputs)
 
-        self.generate_names = self.sequence_generator.generate.states
         self.context_names = self.sequence_generator.generate.contexts
-        self.state_names = (self.sequence_generator.state_names +
-                            self.sequence_generator.glimpse_names +
-                            self.sequence_generator.glimpse_names +
-                            ['outputs'])
+        self.state_names = self.sequence_generator.generate.states
+
         self.need_input_states = []
         self.compiled = False
 
@@ -181,7 +178,7 @@ class BeamSearch(object):
         # Add time dimension back
         next_values = [state.reshape((1,) + state.shape)
                        for state in next_values]
-        return OrderedDict(zip(self.generate_names, next_values))
+        return OrderedDict(zip(self.state_names, next_values))
 
     @staticmethod
     def _top_probs(scores, beam_size, unique=False):
