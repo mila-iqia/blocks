@@ -137,16 +137,11 @@ class BeamSearch(object):
 
         """
         init_states = self.initial_state_computer(*list(contexts.values()))
-        init_states = [state.reshape((1,) + state.shape)
-                       for state in init_states]
         return OrderedDict(zip(self.state_names, init_states))
 
     def compute_costs(self, contexts, cur_states):
-        """Computes next costs."""
-        states = [cur_states[name][0] for name in self.input_state_names]
-
-        logprobs = self.costs_computer(*(list(contexts.values()) + states))
-        return logprobs[None, :, :]
+        states = [cur_states[name] for name in self.input_state_names]
+        return self.costs_computer(*(list(contexts.values()) + states))
 
     def compute_next_state(self, contexts, cur_states, outputs):
         """Computes next states.
@@ -165,14 +160,9 @@ class BeamSearch(object):
 
         """
         # First timesteps only if state is needed
-        states = [cur_states[name][0] for name in self.input_state_names]
-
+        states = [cur_states[name] for name in self.input_state_names]
         next_values = self.next_state_computer(*(list(contexts.values()) +
                                                  states + [outputs]))
-
-        # Add time dimension back
-        next_values = [state.reshape((1,) + state.shape)
-                       for state in next_values]
         return OrderedDict(zip(self.state_names, next_values))
 
     @staticmethod
@@ -182,7 +172,7 @@ class BeamSearch(object):
         Parameters
         ----------
         scores : numpy array
-            A 3d array of scores (length of sequence, batch, readout_dim).
+            A 2d array of scores (batch, readout_dim).
         beam_size : int
             Beam size, number of top scores to return.
         unique : bool
@@ -195,19 +185,21 @@ class BeamSearch(object):
 
         """
         if unique:
-            flatten = scores[:, :1, :].flatten()
+            flatten = scores[:1, :].flatten()
         else:
             flatten = scores.flatten()
         args = numpy.argpartition(flatten, beam_size)[:beam_size]
         args = args[numpy.argsort(flatten[args])]
         # convert args back
-        indexes = numpy.unravel_index(args, scores.shape[1:])
-        return indexes, scores[0][indexes]
+        indexes = numpy.unravel_index(args, scores.shape)
+        return indexes, scores[indexes]
 
-    @staticmethod
-    def _rearrange(outputs, indexes):
-        new_outputs = outputs[:, indexes.T.flatten()]
-        return new_outputs.copy()
+    def _rearrange(self, states, indexes):
+        for name in states:
+            if name.startswith('cur'):
+                states[name] = states[name][:, indexes.T.flatten()]
+            else:
+                states[name] = states[name][indexes.T.flatten()]
 
     def search(self, inputs_val_dict, eol_symbol=-1, max_length=512):
         """Performs beam search.
@@ -242,44 +234,32 @@ class BeamSearch(object):
 
         states = self.compute_initial_states(contexts)
 
-        states['cur_outputs'] = states['outputs']
+        states['cur_outputs'] = states['outputs'][None, :]
         states['cur_outputs_mask'] = numpy.ones_like(states['cur_outputs'])
         states['cur_logprobs'] = numpy.zeros_like(states['cur_outputs'])
 
         for i in range(max_length):
             logprobs = self.compute_costs(contexts, states)
-            next_probs = (states['cur_logprobs'][:, :, None] +
+            next_probs = (states['cur_logprobs'][-1, :, None] +
                           logprobs *
                           states['cur_outputs_mask'][-1, :, None])
 
-            # Top probs
             indexes, top_probs = self._top_probs(next_probs, self.beam_size,
                                                  unique=i == 0)
             states['cur_logprobs'] = numpy.array(top_probs).T[None, :]
-            indexes = numpy.array(indexes)  # 2, beam
-            # here we suppose, that we have 2d outputs
-            outputs = indexes[1, :].copy()
+            outputs = indexes[1].copy()
 
-            # rearrange outputs
-            rearrange_ind = indexes[0, :]
-            for name in states:
-                states[name] = self._rearrange(states[name], rearrange_ind)
-            for name in contexts:
-                contexts[name] = self._rearrange(contexts[name], rearrange_ind)
+            self._rearrange(states, indexes[0])
 
             states.update(self.compute_next_state(contexts, states, outputs))
-            # construct next output
-            outputs = outputs[None, :]
-            states['cur_outputs'] = numpy.append(states['cur_outputs'],
-                                                 outputs.copy(), axis=0)
-            # check if we meet eol
-            next_out_mask = numpy.ones((1, self.beam_size),
-                                       dtype=floatX)
+            # Top probs
+            states['cur_outputs'] = numpy.append(
+                states['cur_outputs'], outputs[None, :], axis=0)
 
-            next_out_mask[0, :] = ((outputs[0, :] != eol_symbol) *
-                                   states['cur_outputs_mask'][-1, :])
+            next_out_mask = ((outputs != eol_symbol) *
+                              states['cur_outputs_mask'][-1, :])
             states['cur_outputs_mask'] = numpy.append(
-                states['cur_outputs_mask'], next_out_mask.copy(), axis=0)
+                states['cur_outputs_mask'], next_out_mask[None, :], axis=0)
 
             # All sequences ended
             if numpy.all(states['cur_outputs_mask'][-1, :] == 0):
