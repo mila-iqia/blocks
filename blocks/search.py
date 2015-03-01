@@ -74,12 +74,12 @@ class BeamSearch(object):
 
         self.compiled = False
 
-    def compile_context_computer(self):
+    def _compile_context_computer(self):
         self.context_computer = function(
             list(self.inputs.values()), self.contexts,
             on_unused_input='ignore')
 
-    def compile_initial_state_computer(self):
+    def _compile_initial_state_computer(self):
         initial_states = [
             self.generator.initial_state(
                 name, self.beam_size,
@@ -88,7 +88,7 @@ class BeamSearch(object):
         self.initial_state_computer = function(
             self.contexts, initial_states, on_unused_input='ignore')
 
-    def compile_next_state_computer(self):
+    def _compile_next_state_computer(self):
         next_states = [VariableFilter(bricks=[self.generator],
                                       name='^' + name + '$',
                                       roles=[OUTPUT])(self.inner_cg)[-1]
@@ -99,7 +99,7 @@ class BeamSearch(object):
         self.next_state_computer = function(
             self.contexts + self.input_states + next_outputs, next_states)
 
-    def compile_costs_computer(self):
+    def _compile_costs_computer(self):
         next_probs = VariableFilter(
             bricks=[self.generator.readout.emitter],
             name='^probs$')(self.inner_cg)[-1]
@@ -108,10 +108,10 @@ class BeamSearch(object):
             self.contexts + self.input_states, logprobs, on_unused_input='ignore')
 
     def compile(self):
-        self.compile_context_computer()
-        self.compile_initial_state_computer()
-        self.compile_next_state_computer()
-        self.compile_costs_computer()
+        self._compile_context_computer()
+        self._compile_initial_state_computer()
+        self._compile_next_state_computer()
+        self._compile_costs_computer()
         self.compiled = True
 
     def compute_contexts(self, inputs_dict):
