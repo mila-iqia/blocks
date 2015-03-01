@@ -5,6 +5,7 @@ import numpy
 
 from theano import config, function, tensor
 
+from blocks.bricks.sequence_generators import SequenceGenerator
 from blocks.filter import VariableFilter, get_application_call, get_brick
 from blocks.graph import ComputationGraph
 from blocks.roles import INPUT, OUTPUT
@@ -38,27 +39,34 @@ class BeamSearch(object):
     """
     def __init__(self, beam_size, samples):
         self.beam_size = beam_size
+
+        # Extracting information from the sampling computation graph
+        cg = ComputationGraph(samples)
+        self.inputs = OrderedDict(cg.dict_of_inputs())
         self.sequence_generator = get_brick(samples)
+        if not isinstance(self.sequence_generator, SequenceGenerator):
+            raise ValueError
+        self.generate_call = get_application_call(samples)
+        if (not self.generate_call.application ==
+                self.sequence_generator.generate):
+            raise ValueError
+        self.inner_cg = ComputationGraph(self.generate_call.inner_outputs)
+
         self.generate_names = self.sequence_generator.generate.states
         self.context_names = self.sequence_generator.generate.contexts
         self.state_names = (self.sequence_generator.state_names +
                             self.sequence_generator.glimpse_names +
                             self.sequence_generator.glimpse_names +
                             ['outputs'])
-        self.context_names = self.sequence_generator.context_names
-        self.cg = ComputationGraph(samples)
-        self.inputs = OrderedDict(self.cg.dict_of_inputs())
         self.need_input_states = []
         self.compiled = False
 
     def compile_context_computer(self, contexts):
-        """Compiles `context_computer`."""
         self.context_computer = function(list(self.inputs.values()),
                                          list(contexts.values()),
                                          on_unused_input='ignore')
 
     def compile_initial_state_computer(self, generator, contexts):
-        """Compiles `initial_state_computer`."""
         initial_states = []
         for name in self.state_names:
             initial_states.append(generator.initial_state(
@@ -69,30 +77,23 @@ class BeamSearch(object):
                                                initial_states,
                                                on_unused_input='ignore')
 
-    def compile_next_state_computer(self, generator, contexts, states,
-                                    inner_cg):
-        """Compiles `next_state_computer`."""
-
+    def compile_next_state_computer(self, generator, contexts, states):
         next_states = []
         for name in generator.generate.states:
             var = VariableFilter(bricks=[generator], name='^' + name + '$',
-                                 roles=[OUTPUT])(inner_cg)[-1:]
+                                 roles=[OUTPUT])(self.inner_cg)[-1:]
             next_states.extend(var)
-
         next_outputs = VariableFilter(
             application=generator.readout.emit,
-            roles=[OUTPUT])(inner_cg.variables)
-
-        # Create theano function for next states
+            roles=[OUTPUT])(self.inner_cg.variables)
         self.next_state_computer = function(list(contexts.values()) + states +
                                             next_outputs, next_states)
 
-    def compile_costs_computer(self, generator, contexts, states, inner_cg):
+    def compile_costs_computer(self, generator, contexts, states):
         next_probs = VariableFilter(
             bricks=[generator.readout.emitter],
-            name='^probs$')(inner_cg)[-1]
+            name='^probs$')(self.inner_cg)[-1]
         logprobs = -tensor.log(next_probs)
-
         self.costs_computer = function(list(contexts.values()) + states,
                                        logprobs,
                                        on_unused_input='ignore')
@@ -101,8 +102,7 @@ class BeamSearch(object):
         """Compiles functions for beam search."""
         generator = self.sequence_generator
 
-        application_call = get_application_call(self.cg.outputs[0])
-        inner_cg = ComputationGraph(application_call.inner_outputs)
+        inner_cg = ComputationGraph(self.generate_call.inner_outputs)
         contexts = OrderedDict()
         for name in generator.generate.contexts:
             contexts[name] = VariableFilter(bricks=[generator],
@@ -117,15 +117,13 @@ class BeamSearch(object):
             states.extend(var)
         self.compile_context_computer(contexts)
         self.compile_initial_state_computer(generator, contexts)
-        self.compile_next_state_computer(generator, contexts, states, inner_cg)
-        self.compile_costs_computer(generator, contexts, states, inner_cg)
+        self.compile_next_state_computer(generator, contexts, states)
+        self.compile_costs_computer(generator, contexts, states)
 
         self.compiled = True
 
     def compute_contexts(self, inputs_dict):
         """Computes contexts from inputs.
-
-        Wrapper around a theano function which precomputes contexts.
 
         Parameters
         ----------
