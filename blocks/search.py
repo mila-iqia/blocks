@@ -219,13 +219,7 @@ class BeamSearch(object):
         if not self.compiled:
             self.compile()
 
-        # Inputs repeated beam_size times
-        inputs = OrderedDict([(name, numpy.tile(val, (1, self.beam_size)))
-                              for name, val in inputs_val_dict.items()])
-
-        # Precompute contexts
-        contexts = self.compute_contexts(inputs)
-
+        contexts = self.compute_contexts(inputs_val_dict)
         states = self.compute_initial_states(contexts)
 
         all_outputs = states['outputs'][None, :]

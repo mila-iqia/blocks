@@ -297,7 +297,8 @@ def main(mode, save_path, num_batches, data_path=None):
             print("Encoder input:", encoded_input)
             target = reverse_words((encoded_input,))[0]
             print("Target: ", target)
-            numpy_inputs = numpy.array(encoded_input)[:, None]
+            numpy_inputs = numpy.repeat(
+                numpy.array(encoded_input)[:, None], 10, axis=1)
             outputs, masks, probs = beam_search.search(
                 OrderedDict([('features', numpy_inputs),
                              ('features_mask',
