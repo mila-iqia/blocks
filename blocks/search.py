@@ -64,27 +64,23 @@ class BeamSearch(object):
                                          on_unused_input='ignore')
 
     def compile_initial_state_computer(self, generator, contexts):
-        initial_states = []
-        for name in self.state_names:
-            initial_states.append(generator.initial_state(
-                name,
-                self.beam_size,
-                **contexts))
+        initial_states = [generator.initial_state(name, self.beam_size,
+                                                  **contexts)
+                          for name in self.state_names]
         self.initial_state_computer = function(list(contexts.values()),
                                                initial_states,
                                                on_unused_input='ignore')
 
     def compile_next_state_computer(self, generator, contexts, states):
-        next_states = []
-        for name in generator.generate.states:
-            var = VariableFilter(bricks=[generator], name='^' + name + '$',
-                                 roles=[OUTPUT])(self.inner_cg)[-1:]
-            next_states.extend(var)
+        next_states = [VariableFilter(bricks=[generator],
+                                      name='^' + name + '$',
+                                      roles=[OUTPUT])(self.inner_cg)[-1]
+                       for name in self.state_names]
         next_outputs = VariableFilter(
-            application=generator.readout.emit,
-            roles=[OUTPUT])(self.inner_cg.variables)
-        self.next_state_computer = function(list(contexts.values()) + states +
-                                            next_outputs, next_states)
+            application=generator.readout.emit, roles=[OUTPUT])(
+                self.inner_cg.variables)
+        self.next_state_computer = function(
+            list(contexts.values()) + states + next_outputs, next_states)
 
     def compile_costs_computer(self, generator, contexts, states):
         next_probs = VariableFilter(
