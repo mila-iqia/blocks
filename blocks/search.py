@@ -166,33 +166,30 @@ class BeamSearch(object):
         return OrderedDict(zip(self.state_names, next_values))
 
     @staticmethod
-    def _top_probs(scores, beam_size, unique=False):
-        """Returns indexes of elements with lowest scores.
+    def _cheapest(scores, beam_size, only_first=False):
+        """Find continuation candidates with lowest costs.
 
         Parameters
         ----------
-        scores : numpy array
-            A 2d array of scores (batch, readout_dim).
+        costs : numpy array
+            A 2d array of costs (batch, readout_dim).
         beam_size : int
-            Beam size, number of top scores to return.
-        unique : bool
-            Return only unique indexes. Should be used for the first
-            iteration of the beam search.
+            The beam size, number of top scores to return.
+        only_first : bool, optional
+            Consider continuations only of the first sequence.
 
         Returns
         -------
-        Tuple of (indexes, top scores).
+        Tuple of ((candidate indices, outputs), costs).
 
         """
-        if unique:
+        if only_first:
             flatten = scores[:1, :].flatten()
         else:
             flatten = scores.flatten()
         args = numpy.argpartition(flatten, beam_size)[:beam_size]
         args = args[numpy.argsort(flatten[args])]
-        # convert args back
-        indexes = numpy.unravel_index(args, scores.shape)
-        return indexes, scores[indexes]
+        return numpy.unravel_index(args, scores.shape), flatten[args]
 
     def search(self, input_values, eol_symbol, max_length):
         """Performs beam search.
@@ -244,8 +241,8 @@ class BeamSearch(object):
 
             # The `i == 0` is required because at the first step the beam
             # size is effectively only 1.
-            (indexes, outputs), top_probs = self._top_probs(
-                next_costs, self.beam_size, unique=i == 0)
+            (indexes, outputs), chosen_costs = self._cheapest(
+                next_costs, self.beam_size, only_first=i == 0)
 
             # Rearrange everything
             for name in states:
@@ -257,7 +254,7 @@ class BeamSearch(object):
             # Record chosen output and compute new states
             states.update(self.compute_next_state(contexts, states, outputs))
             all_outputs = numpy.append(all_outputs, outputs[None, :], axis=0)
-            costs = top_probs
+            costs = chosen_costs
             mask = (outputs != eol_symbol) * mask
 
         all_outputs = all_outputs[1:]
