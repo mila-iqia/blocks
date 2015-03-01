@@ -11,7 +11,7 @@ from theano.scan_module.scan_op import Scan
 from toolz import unique
 
 from blocks import config
-from blocks.roles import add_role, AUXILIARY
+from blocks.roles import add_role, has_roles, AUXILIARY, PARAMETER
 from blocks.utils import (is_graph_input, is_shared_variable, dict_union,
                           shared_like)
 
@@ -41,6 +41,8 @@ class ComputationGraph(object):
         variables and constants.
     shared_variables : list of :class:`~tensor.TensorSharedVariable`
         All the shared variables in the graph.
+    parameters : list of :class:`~tensor.TensorSharedVariable`
+        All the shared variables which have the :const:`.PARAMETER` role.
     outputs : list of :class:`~tensor.TensorVariable`
         The outputs of the computations graph (as passed to the
         constructor).
@@ -84,9 +86,13 @@ class ComputationGraph(object):
         return [var for var in self.variables if is_shared_variable(var)]
 
     @property
+    def parameters(self):
+        return [var for var in self.shared_variables
+                if has_roles(var, [PARAMETER])]
+
+    @property
     def auxiliary_variables(self):
-        return [var for var in self.variables if hasattr(var.tag, 'roles') and
-                AUXILIARY in var.tag.roles]
+        return [var for var in self.variables if has_roles(var, [AUXILIARY])]
 
     @property
     def scan_variables(self):
@@ -287,10 +293,10 @@ class Annotation(object):
         --------
         >>> from blocks.bricks.base import application, Brick
         >>> from blocks.roles import COST
-        >>> from blocks.utils import shared_floatx_zeros
+        >>> from blocks.utils import shared_floatx_nans
         >>> class Foo(Brick):
         ...     def _allocate(self):
-        ...         W = shared_floatx_zeros((10, 10))
+        ...         W = shared_floatx_nans((10, 10))
         ...         self.add_auxiliary_variable(W.mean(), name='mean_W')
         ...     @application
         ...     def apply(self, x, application_call):

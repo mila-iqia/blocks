@@ -33,6 +33,7 @@ function :math:`f(x) = x^a` to :math:`f(x) = x^2`.
 
 >>> import theano
 >>> a = theano.shared(3.)
+>>> a.name = 'a'
 >>> x = theano.tensor.scalar('data')
 >>> cost = abs(x ** 2 - x ** a)
 >>> cost.name = 'cost'
@@ -41,9 +42,9 @@ We train on a 150 random points in :math:`[0, 1]`.
 
 >>> import numpy
 >>> from fuel.streams import DataStream
->>> from fuel.datasets import ContainerDataset
+>>> from fuel.datasets import IterableDataset
 >>> sample = theano.tensor.scalar('data')
->>> data_stream = DataStream(ContainerDataset(
+>>> data_stream = DataStream(IterableDataset(
 ...     numpy.random.rand(150).astype(theano.config.floatX)))
 
 Now let's train with gradient descent and plot the results.
@@ -53,14 +54,13 @@ Now let's train with gradient descent and plot the results.
 >>> from blocks.extensions import FinishAfter
 >>> from blocks.extensions.monitoring import TrainingDataMonitoring
 >>> from blocks.extensions.plot import Plot
->>> a_copy = a.copy()
->>> a_copy.name = 'a'
 >>> main_loop = MainLoop(
 ...     model=None, data_stream=data_stream,
 ...     algorithm=GradientDescent(cost=cost,
+...                               params=[a]
 ...                               step_rule=Scale(learning_rate=0.1)),
 ...     extensions=[FinishAfter(after_n_epochs=1),
-...                 TrainingDataMonitoring([cost, a_copy], after_every_batch=True),
+...                 TrainingDataMonitoring([cost, a], after_every_batch=True),
 ...                 Plot('Plotting example', channels=[['cost'], ['a']],
 ...                      after_every_batch=True)])  # doctest: +SKIP
 >>> main_loop.run() # doctest: +SKIP

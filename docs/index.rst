@@ -57,6 +57,7 @@ Quickstart
    >>> from blocks.algorithms import GradientDescent, Scale
    >>> from blocks.bricks import MLP, Tanh, Softmax
    >>> from blocks.bricks.cost import CategoricalCrossEntropy, MisclassificationRate
+   >>> from blocks.graph import ComputationGraph
    >>> from blocks.initialization import IsotropicGaussian, Constant
    >>> from fuel.streams import DataStream
    >>> from fuel.datasets import MNIST
@@ -95,7 +96,8 @@ And train!
 >>> main_loop = MainLoop(
 ...     model=mlp, data_stream=train_stream,
 ...     algorithm=GradientDescent(
-...         cost=cost, step_rule=Scale(learning_rate=0.1)),
+...         cost=cost, params=ComputationGraph(cost).parameters,
+...         step_rule=Scale(learning_rate=0.1)),
 ...     extensions=[FinishAfter(after_n_epochs=5),
 ...                 DataStreamMonitoring(
 ...                     variables=[cost, error_rate],
