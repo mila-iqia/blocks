@@ -14,9 +14,16 @@ floatX = config.floatX
 
 
 class BeamSearch(object):
-    """Beam search.
+    """Approximate search for the most likely sequence.
 
-    N-greedy algorithm to find the most probable sequence.
+    Beam search is an approximate algorithm for finding :math:`y^* =
+    argmax_y P(y|c)`, where :math:`y` is an output sequence, :math:`c` are
+    the contexts, :math:`P` is the output distribution of a
+    :class:`.SequenceGenerator`. At each step it considers :math:`k`
+    candidate sequence prefixes. :math:`k` is called the beam size, and the
+    sequence are called the beam. The sequences are replaced with their
+    :math:`k` most probable continuations, and this is repeated until
+    end-of-line symbol is met.
 
     Parameters
     ----------
@@ -29,12 +36,12 @@ class BeamSearch(object):
 
     See Also
     --------
-    :class:`SequenceGenerator`, :class:`SequenceContentAttention`.
+    :class:`.SequenceGenerator`
 
     Notes
     -----
-    Sequence generator should use an emitter which has `probs` method and
-    one of its outputs is called `probs` e.g. :class:`SoftmaxEmitter`.
+    Sequence generator should use an emitter which has `probs` method
+    e.g. :class:`SoftmaxEmitter`.
 
     """
     def __init__(self, beam_size, samples):
@@ -101,8 +108,8 @@ class BeamSearch(object):
 
     def _compile_costs_computer(self):
         next_probs = VariableFilter(
-            bricks=[self.generator.readout.emitter],
-            name='^probs$')(self.inner_cg)[-1]
+            application=self.generator.readout.emitter.probs,
+            roles=[OUTPUT])(self.inner_cg)[-1]
         logprobs = -tensor.log(next_probs)
         self.costs_computer = function(
             self.contexts + self.input_states, logprobs, on_unused_input='ignore')
