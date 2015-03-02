@@ -106,19 +106,19 @@ class BeamSearch(object):
         self.next_state_computer = function(
             self.contexts + self.input_states + next_outputs, next_states)
 
-    def _compile_costs_computer(self):
-        next_probs = VariableFilter(
+    def _compile_logprobs_computer(self):
+        probs = VariableFilter(
             application=self.generator.readout.emitter.probs,
             roles=[OUTPUT])(self.inner_cg)[-1]
-        logprobs = -tensor.log(next_probs)
-        self.costs_computer = function(
+        logprobs = -tensor.log(probs)
+        self.logprobs_computer = function(
             self.contexts + self.input_states, logprobs, on_unused_input='ignore')
 
     def compile(self):
         self._compile_context_computer()
         self._compile_initial_state_computer()
         self._compile_next_state_computer()
-        self._compile_costs_computer()
+        self._compile_logprobs_computer()
         self.compiled = True
 
     def compute_contexts(self, inputs_dict):
@@ -146,9 +146,9 @@ class BeamSearch(object):
         init_states = self.initial_state_computer(*list(contexts.values()))
         return OrderedDict(zip(self.state_names, init_states))
 
-    def compute_costs(self, contexts, cur_states):
+    def compute_logprobs(self, contexts, cur_states):
         states = [cur_states[name] for name in self.input_state_names]
-        return self.costs_computer(*(list(contexts.values()) + states))
+        return self.logprobs_computer(*(list(contexts.values()) + states))
 
     def compute_next_state(self, contexts, cur_states, outputs):
         """Computes next states.
@@ -240,7 +240,7 @@ class BeamSearch(object):
 
             # We carefully hack values of the `logprobs` array to ensure
             # that all finished sequences are continued with `eos_symbol`.
-            logprobs = self.compute_costs(contexts, states)
+            logprobs = self.compute_logprobs(contexts, states)
             next_costs = costs[:, None] + logprobs * mask[:, None]
             (finished,) = numpy.where(mask == 0)
             next_costs[finished, :eol_symbol] = numpy.inf
