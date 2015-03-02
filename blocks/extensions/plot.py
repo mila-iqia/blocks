@@ -59,9 +59,9 @@ class Plot(SimpleExtension):
         start the server manually using the ``bokeh-server`` command. Also
         see the warning above.
     server_url : str, optional
-        Url that the bokeh-server is listening to. Ex: when starting the
-        bokeh-server with ``bokeh-server --ip your.i.p.here``, server_url
-        should be ``http://your.i.p.here:5006``.
+        Url of the bokeh-server is listening to. Ex: when starting the
+        bokeh-server with ``bokeh-server --ip 0.0.0.0`` at ``alice``, server_url
+        should be ``http://alice:5006``.
 
     """
     # Tableau 10 colors
