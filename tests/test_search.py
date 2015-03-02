@@ -45,7 +45,7 @@ def test_beam_search():
                             (beam_size, 1)).T
 
     search = BeamSearch(10, samples)
-    results, mask, costs = search.search({'inputs': input_vals},
+    results, mask, costs = search.search({inputs: input_vals},
                                          0, 3 * length)
 
     true_costs = reverser.cost(

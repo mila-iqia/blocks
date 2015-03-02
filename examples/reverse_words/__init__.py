@@ -280,7 +280,7 @@ def main(mode, save_path, num_batches, data_path=None):
                         ComputationGraph(generated[1]))
                 beam_search = BeamSearch(input_.shape[1], samples)
                 outputs, _, costs = beam_search.search(
-                    {"input": input_}, char2code['</S>'],
+                    {chars: input_}, char2code['</S>'],
                     3 * input_.shape[0])
             else:
                 _1, outputs, _2, _3, costs = (

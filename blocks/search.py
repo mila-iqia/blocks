@@ -50,7 +50,7 @@ class BeamSearch(object):
 
         # Extracting information from the sampling computation graph
         cg = ComputationGraph(samples)
-        self.inputs = OrderedDict(cg.dict_of_inputs())
+        self.inputs = cg.inputs
         self.generator = get_brick(samples)
         if not isinstance(self.generator, SequenceGenerator):
             raise ValueError
@@ -85,8 +85,7 @@ class BeamSearch(object):
 
     def _compile_context_computer(self):
         self.context_computer = function(
-            list(self.inputs.values()), self.contexts,
-            on_unused_input='ignore')
+            self.inputs, self.contexts, on_unused_input='ignore')
 
     def _compile_initial_state_computer(self):
         initial_states = [
@@ -138,8 +137,8 @@ class BeamSearch(object):
         like `self.context_names`.
 
         """
-        contexts = self.context_computer(*[inputs[name]
-                                           for name in self.inputs])
+        contexts = self.context_computer(*[inputs[var]
+                                           for var in self.inputs])
         return OrderedDict(zip(self.context_names, contexts))
 
     def compute_initial_states(self, contexts):
@@ -235,7 +234,8 @@ class BeamSearch(object):
         Parameters
         ----------
         input_values : dict
-            Dictionary of input values {name: value}. The shapes should be
+            A {:class:`~theano.Variable`: :class:`~numpy.ndarray`}
+            dictionary of input values. The shapes should be
             the same as if you ran sampling with batch size equal to
             `beam_size`. Put it differently, the user is responsible
             for duplicaling inputs necessary number of times, because
