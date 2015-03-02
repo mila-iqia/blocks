@@ -59,7 +59,7 @@ class Plot(SimpleExtension):
         start the server manually using the ``bokeh-server`` command. Also
         see the warning above.
     server_url : str, optional
-        Url of the bokeh-server is listening to. Ex: when starting the
+        Url of the bokeh-server. Ex: when starting the
         bokeh-server with ``bokeh-server --ip 0.0.0.0`` at ``alice``, server_url
         should be ``http://alice:5006``.
 
