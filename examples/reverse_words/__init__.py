@@ -10,7 +10,8 @@ import theano
 from six.moves import input
 from theano import tensor
 
-from blocks.bricks import Tanh
+from blocks.bricks import Tanh, Initializable
+from blocks.bricks.base import application
 from blocks.bricks.lookup import LookupTable
 from blocks.bricks.recurrent import SimpleRecurrent, Bidirectional
 from blocks.bricks.attention import SequenceContentAttention
@@ -83,40 +84,65 @@ def _is_nan(log):
     return math.isnan(log.current_row.total_gradient_norm)
 
 
-def main(mode, save_path, num_batches, data_path=None):
-    # Experiment configuration
-    dimension = 100
-    readout_dimension = len(char2code)
+class WordReverser(Initializable):
+    """The top brick.
 
-    # Build bricks
-    encoder = Bidirectional(
-        SimpleRecurrent(dim=dimension, activation=Tanh()),
-        weights_init=Orthogonal())
-    fork = Fork([name for name in encoder.prototype.apply.sequences
-                 if name != 'mask'],
-                weights_init=IsotropicGaussian(0.1),
-                biases_init=Constant(0))
-    fork.input_dim = dimension
-    fork.output_dims = {name: dimension for name in fork.input_names}
-    lookup = LookupTable(readout_dimension, dimension,
-                         weights_init=IsotropicGaussian(0.1))
-    transition = SimpleRecurrent(
-        activation=Tanh(),
-        dim=dimension, name="transition")
-    attention = SequenceContentAttention(
-        state_names=transition.apply.states,
-        sequence_dim=2 * dimension, match_dim=dimension, name="attention")
-    readout = LinearReadout(
-        readout_dim=readout_dimension, source_names=["states"],
-        emitter=SoftmaxEmitter(name="emitter"),
-        feedbacker=LookupFeedback(readout_dimension, dimension),
-        name="readout")
-    generator = SequenceGenerator(
-        readout=readout, transition=transition, attention=attention,
-        weights_init=IsotropicGaussian(0.1), biases_init=Constant(0),
-        name="generator")
-    generator.push_initialization_config()
-    transition.weights_init = Orthogonal()
+    It is often convenient to gather all bricks of the model under the
+    roof of a single top brick.
+
+    """
+    def __init__(self, dimension, alphabet_size, **kwargs):
+        super(WordReverser, self).__init__(**kwargs)
+        encoder = Bidirectional(
+            SimpleRecurrent(dim=dimension, activation=Tanh()))
+        fork = Fork([name for name in encoder.prototype.apply.sequences
+                    if name != 'mask'])
+        fork.input_dim = dimension
+        fork.output_dims = {name: dimension for name in fork.input_names}
+        lookup = LookupTable(alphabet_size, dimension)
+        transition = SimpleRecurrent(
+            activation=Tanh(),
+            dim=dimension, name="transition")
+        attention = SequenceContentAttention(
+            state_names=transition.apply.states,
+            sequence_dim=2 * dimension, match_dim=dimension, name="attention")
+        readout = LinearReadout(
+            readout_dim=alphabet_size, source_names=["states"],
+            emitter=SoftmaxEmitter(name="emitter"),
+            feedbacker=LookupFeedback(alphabet_size, dimension),
+            name="readout")
+        generator = SequenceGenerator(
+            readout=readout, transition=transition, attention=attention,
+            name="generator")
+
+        self.lookup = lookup
+        self.fork = fork
+        self.encoder = encoder
+        self.generator = generator
+        self.children = [lookup, fork, encoder, generator]
+
+    @application
+    def cost(self, chars, chars_mask, targets, targets_mask):
+        return self.generator.cost(
+            targets, targets_mask,
+            attended=self.encoder.apply(
+                **dict_union(
+                    self.fork.apply(self.lookup.lookup(chars), as_dict=True),
+                    mask=chars_mask)),
+            attended_mask=chars_mask)
+
+    @application
+    def generate(self, chars):
+        return self.generator.generate(
+            n_steps=3 * chars.shape[0], batch_size=chars.shape[1],
+            attended=self.encoder.apply(
+                **dict_union(self.fork.apply(self.lookup.lookup(chars),
+                             as_dict=True))),
+            attended_mask=tensor.ones(chars.shape))
+
+
+def main(mode, save_path, num_batches, data_path=None):
+    reverser = WordReverser(100, len(char2code), name="reverser")
 
     if mode == "train":
         # Data processing pipeline
@@ -139,18 +165,20 @@ def main(mode, save_path, num_batches, data_path=None):
                             data_stream=dataset
                             .get_example_stream())))))
 
+        # Initialization settings
+        reverser.weights_init = IsotropicGaussian(0.1)
+        reverser.biases_init = Constant(0.0)
+        reverser.push_initialization_config()
+        reverser.encoder.weghts_init = Orthogonal()
+        reverser.generator.transition.weights_init = Orthogonal()
+
         # Build the cost computation graph
         chars = tensor.lmatrix("features")
         chars_mask = tensor.matrix("features_mask")
         targets = tensor.lmatrix("targets")
         targets_mask = tensor.matrix("targets_mask")
-        batch_cost = generator.cost(
-            targets, targets_mask,
-            attended=encoder.apply(
-                **dict_union(
-                    fork.apply(lookup.lookup(chars), as_dict=True),
-                    mask=chars_mask)),
-            attended_mask=chars_mask).sum()
+        batch_cost = reverser.cost(
+            chars, chars_mask, targets, targets_mask).sum()
         batch_size = named_copy(chars.shape[1], "batch_size")
         cost = aggregation.mean(batch_cost,  batch_size)
         cost.name = "sequence_log_likelihood"
@@ -175,12 +203,14 @@ def main(mode, save_path, num_batches, data_path=None):
             aggregation.mean(batch_cost, batch_size * max_length),
             "character_log_likelihood")
         cg = ComputationGraph(cost)
+        r = reverser
         (energies,) = VariableFilter(
-            application=readout.readout, name="output")(cg.variables)
+            application=r.generator.readout.readout,
+            name="output")(cg.variables)
         min_energy = named_copy(energies.min(), "min_energy")
         max_energy = named_copy(energies.max(), "max_energy")
         (activations,) = VariableFilter(
-            application=generator.transition.apply,
+            application=r.generator.transition.apply,
             name="states")(cg.variables)
         mean_activation = named_copy(abs(activations).mean(),
                                      "mean_activation")
@@ -223,15 +253,10 @@ def main(mode, save_path, num_batches, data_path=None):
                 Printing(every_n_batches=1)])
         main_loop.run()
     elif mode == "sample" or mode == "beam_search":
-        logger.info("Loading the model..")
         chars = tensor.lmatrix("input")
-        generated = generator.generate(
-            n_steps=3 * chars.shape[0], batch_size=chars.shape[1],
-            attended=encoder.apply(
-                **dict_union(fork.apply(lookup.lookup(chars),
-                             as_dict=True))),
-            attended_mask=tensor.ones(chars.shape))
+        generated = reverser.generate(chars)
         model = Model(generated)
+        logger.info("Loading the model..")
         model.set_param_values(load_parameter_values(save_path))
 
         def generate(input_):
@@ -250,7 +275,10 @@ def main(mode, save_path, num_batches, data_path=None):
 
             """
             if mode == "beam_search":
-                beam_search = BeamSearch(input_.shape[1], generated[1])
+                samples, = VariableFilter(
+                    bricks=[reverser.generator], name="outputs")(
+                        ComputationGraph(generated[1]))
+                beam_search = BeamSearch(input_.shape[1], samples)
                 outputs, _, costs = beam_search.search(
                     {"input": input_}, char2code['</S>'],
                     3 * input_.shape[0])
