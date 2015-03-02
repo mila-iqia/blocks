@@ -222,7 +222,7 @@ def main(mode, save_path, num_batches, data_path=None):
                                   save_separately=["model", "log"]),
                 Printing(every_n_batches=1)])
         main_loop.run()
-    elif mode == "test" or mode == "beam_search":
+    elif mode == "sample" or mode == "beam_search":
         logger.info("Loading the model..")
         chars = tensor.lmatrix("input")
         generated = generator.generate(
@@ -268,13 +268,13 @@ def main(mode, save_path, num_batches, data_path=None):
                 except ValueError:
                     true_length = len(outputs[i])
                 outputs[i] = outputs[i][:true_length]
-                if mode == "test":
+                if mode == "sample":
                     costs[i] = costs[i][:true_length].sum()
             return outputs, costs
 
         while True:
             line = input("Enter a sentence\n")
-            message = ("Enter the number of samples\n" if mode == "test"
+            message = ("Enter the number of samples\n" if mode == "sample"
                        else "Enter the beam size\n")
             batch_size = int(input(message))
 
