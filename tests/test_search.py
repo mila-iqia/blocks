@@ -52,4 +52,4 @@ def test_beam_search():
         input_vals, numpy.ones((length, beam_size), dtype=floatX),
         results, mask).eval()
     true_costs = (true_costs * mask).sum(axis=0)
-    assert_allclose(costs, true_costs)
+    assert_allclose(costs, true_costs, rtol=1e-5)
