@@ -298,6 +298,7 @@ class BeamSearch(object):
         # The first `eol_symbol` should be preserved: we add an additional
         # 1 to each mask row to ensure that.
         for row in mask.T:
-            row[row.sum()] = 1
+            if row.sum() < len(row):
+                row[row.sum()] = 1
 
         return all_outputs, mask, costs
