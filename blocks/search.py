@@ -1,3 +1,4 @@
+"""The beam search module."""
 from collections import OrderedDict
 from six.moves import range
 
@@ -66,15 +67,16 @@ class BeamSearch(object):
         # Parsing the inner computation graph of sampling scan
         self.contexts = [
             VariableFilter(bricks=[self.generator], name='^' + name + '$',
-                                   roles=[INPUT])(self.inner_cg)[0]
-             for name in self.context_names]
+                           roles=[INPUT])(self.inner_cg)[0]
+            for name in self.context_names]
         self.input_states = []
         # Includes only those state names that were actually used
         # in 'generate'
         self.input_state_names = []
         for name in self.generator.generate.states:
-            var = VariableFilter(bricks=[self.generator], name='^' + name + '$',
-                                 roles=[INPUT])(self.inner_cg)
+            var = VariableFilter(
+                bricks=[self.generator], name='^' + name + '$',
+                roles=[INPUT])(self.inner_cg)
             if var:
                 self.input_state_names.append(name)
                 self.input_states.append(var[0])
@@ -112,7 +114,8 @@ class BeamSearch(object):
             roles=[OUTPUT])(self.inner_cg)[-1]
         logprobs = -tensor.log(probs)
         self.logprobs_computer = function(
-            self.contexts + self.input_states, logprobs, on_unused_input='ignore')
+            self.contexts + self.input_states, logprobs,
+            on_unused_input='ignore')
 
     def compile(self):
         self._compile_context_computer()
@@ -121,55 +124,81 @@ class BeamSearch(object):
         self._compile_logprobs_computer()
         self.compiled = True
 
-    def compute_contexts(self, inputs_dict):
+    def compute_contexts(self, inputs):
         """Computes contexts from inputs.
 
         Parameters
         ----------
-        inputs_dict : dict
+        inputs : dict
             Dictionary of input arrays.
 
+        Returns
+        -------
+        A {name: :class:`numpy.ndarray`} dictionary of contexts ordered
+        like `self.context_names`.
+
         """
-        contexts = self.context_computer(*[inputs_dict[name]
+        contexts = self.context_computer(*[inputs[name]
                                            for name in self.inputs])
         return OrderedDict(zip(self.context_names, contexts))
 
     def compute_initial_states(self, contexts):
-        """Computes initial outputs and states.
+        """Computes initial states.
 
         Parameters
         ----------
         contexts : dict
-            Dictionary of contexts {name: context}.
+            A {name: :class:`numpy.ndarray`} dictionary of contexts.
+
+        Returns
+        -------
+        A {name: :class:`numpy.ndarray`} dictionary of states ordered like
+        `self.state_names`.
 
         """
         init_states = self.initial_state_computer(*list(contexts.values()))
         return OrderedDict(zip(self.state_names, init_states))
 
-    def compute_logprobs(self, contexts, cur_states):
-        states = [cur_states[name] for name in self.input_state_names]
-        return self.logprobs_computer(*(list(contexts.values()) + states))
+    def compute_logprobs(self, contexts, states):
+        """Compute log probabilities of all possible outputs.
 
-    def compute_next_state(self, contexts, cur_states, outputs):
+        Parameters
+        ----------
+        contexts : dict
+            A {name: :class:`numpy.ndarray`} dictionary of contexts.
+        states : dict
+            A {name: :class:`numpy.ndarray`} dictionary of states.
+
+        Returns
+        -------
+        A :class:`numpy.ndarray` of the (beam size, number of possible
+        outputs) shape.
+
+        """
+        input_states = [states[name] for name in self.input_state_names]
+        return self.logprobs_computer(*(list(contexts.values())
+                                      + input_states))
+
+    def compute_next_states(self, contexts, states, outputs):
         """Computes next states.
 
         Parameters
         ----------
         contexts : dict
-            Dictionary of contexts.
-        cur_states : dict
-            Dictionary of current states.
+            A {name: :class:`numpy.ndarray`} dictionary of contexts.
+        states : dict
+            A {name: :class:`numpy.ndarray`} dictionary of states.
+        outputs : :class:`numpy.ndarray`
+            A :class:`numpy.ndarray` of this step outputs.
 
         Returns
         -------
-        Dictionary of next state and probabilities values
-        with names as returned by `generate_outputs`.
+        A {name: numpy.array} dictionary of next states.
 
         """
-        # First timesteps only if state is needed
-        states = [cur_states[name] for name in self.input_state_names]
+        input_states = [states[name] for name in self.input_state_names]
         next_values = self.next_state_computer(*(list(contexts.values()) +
-                                                 states + [outputs]))
+                                                 input_states + [outputs]))
         return OrderedDict(zip(self.state_names, next_values))
 
     @staticmethod
@@ -178,7 +207,7 @@ class BeamSearch(object):
 
         Parameters
         ----------
-        matrix : numpy array
+        matrix : :class:`numpy.ndarray`
             The matrix.
         k : int
             The number of smallest elements required.
@@ -259,7 +288,7 @@ class BeamSearch(object):
             costs = costs[indexes]
 
             # Record chosen output and compute new states
-            states.update(self.compute_next_state(contexts, states, outputs))
+            states.update(self.compute_next_states(contexts, states, outputs))
             all_outputs = numpy.append(all_outputs, outputs[None, :], axis=0)
             costs = chosen_costs
             mask = (outputs != eol_symbol) * mask
