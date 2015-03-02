@@ -176,8 +176,8 @@ class BeamSearch(object):
 
         """
         input_states = [states[name] for name in self.input_state_names]
-        return self.logprobs_computer(*(list(contexts.values())
-                                      + input_states))
+        return self.logprobs_computer(*(list(contexts.values()) +
+                                      input_states))
 
     def compute_next_states(self, contexts, states, outputs):
         """Computes next states.
