@@ -429,8 +429,6 @@ class SoftmaxEmitter(AbstractEmitter, Initializable, Random):
     @application
     def emit(self, readouts):
         probs = self.probs(readouts)
-        # Implemented in Theano only for pvals.ndim == 2
-        # TODO: Refactor reshapes when implemented in Theano
         batch_size = probs.shape[0]
         pvals_flat = probs.reshape((batch_size, -1))
         generated = self.theano_rng.multinomial(pvals=pvals_flat)
