@@ -18,6 +18,7 @@ def test_beam_search_smallest():
     assert numpy.all(numpy.array(ind) == numpy.array([[1, 1], [0, 1]]))
     assert numpy.all(mins == [1, 2])
 
+
 def test_beam_search():
     """Test beam search using the model from the reverse_words demo.
 
