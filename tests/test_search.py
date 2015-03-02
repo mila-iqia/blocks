@@ -33,7 +33,7 @@ def test_beam_search():
     beam_size = 10
     length = 15
 
-    reverser = WordReverser(100, alphabet_size)
+    reverser = WordReverser(10, alphabet_size)
     reverser.weights_init = reverser.biases_init = IsotropicGaussian(0.5)
     reverser.initialize()
 

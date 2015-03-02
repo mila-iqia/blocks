@@ -260,8 +260,8 @@ class BeamSearch(object):
         # This array will store all generated outputs, including those from
         # previous step and those from already finished sequences.
         all_outputs = states['outputs'][None, :]
-        mask = numpy.ones_like(all_outputs[0])
-        costs = numpy.zeros_like(all_outputs[0])
+        mask = numpy.ones_like(all_outputs[0], dtype=floatX)
+        costs = numpy.zeros_like(all_outputs[0], dtype=floatX)
 
         for i in range(max_length):
             if mask.sum() == 0:
