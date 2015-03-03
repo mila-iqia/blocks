@@ -420,19 +420,23 @@ class SoftmaxEmitter(AbstractEmitter, Initializable, Random):
     Interprets readout elements as energies corresponding to their indices.
 
     """
-    def _probs(self, readouts):
+    @application
+    def probs(self, readouts):
         shape = readouts.shape
         return tensor.nnet.softmax(readouts.reshape(
             (tensor.prod(shape[:-1]), shape[-1]))).reshape(shape)
 
     @application
     def emit(self, readouts):
-        probs = self._probs(readouts)
-        return self.theano_rng.multinomial(pvals=probs).argmax(axis=-1)
+        probs = self.probs(readouts)
+        batch_size = probs.shape[0]
+        pvals_flat = probs.reshape((batch_size, -1))
+        generated = self.theano_rng.multinomial(pvals=pvals_flat)
+        return generated.reshape(probs.shape).argmax(axis=-1)
 
     @application
     def cost(self, readouts, outputs):
-        probs = self._probs(readouts)
+        probs = self.probs(readouts)
         max_output = probs.shape[-1]
         flat_outputs = outputs.flatten()
         num_outputs = flat_outputs.shape[0]
