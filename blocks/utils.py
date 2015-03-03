@@ -445,6 +445,12 @@ def print_sum(x, header=None):
     print(header + ':', x.sum())
 
 
+def print_shape(x, header=None):
+    if not header:
+        header = 'print_shape'
+    print(header + ':', x.shape)
+
+
 @contextlib.contextmanager
 def change_recursion_limit(limit):
     """Temporarily changes the recursion limit."""

@@ -162,7 +162,7 @@ class BaseSequenceGenerator(Initializable):
 
         # Separate the deliverables
         states = {name: results[name][:-1] for name in self.state_names}
-        glimpses = {name: results[name] for name in self.glimpse_names}
+        glimpses = {name: results[name][1:] for name in self.glimpse_names}
 
         # Compute the cost
         feedback = tensor.roll(feedback, 1, 0)
@@ -436,6 +436,9 @@ class SoftmaxEmitter(AbstractEmitter, Initializable, Random):
 
     @application
     def cost(self, readouts, outputs):
+        # WARNING: unfortunately this application method works
+        # just fine when `readouts` and `outputs` have
+        # different dimensions. Be careful!
         probs = self.probs(readouts)
         max_output = probs.shape[-1]
         flat_outputs = outputs.flatten()
