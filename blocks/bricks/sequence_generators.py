@@ -405,6 +405,10 @@ class TrivialEmitter(AbstractEmitter):
         return readouts
 
     @application
+    def cost(self, readouts, outputs):
+        return tensor.zeros_like(outputs)
+
+    @application
     def initial_outputs(self, batch_size, *args, **kwargs):
         return tensor.zeros((batch_size, self.readout_dim))
 
