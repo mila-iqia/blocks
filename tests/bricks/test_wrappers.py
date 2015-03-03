@@ -4,7 +4,7 @@ from numpy.testing import assert_allclose
 from theano import tensor
 
 from blocks.bricks import Linear
-from blocks.bricks.wrapper import As2D
+from blocks.bricks.wrappers import As2D
 from blocks.initialization import Constant
 
 
