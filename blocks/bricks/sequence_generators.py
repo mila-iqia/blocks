@@ -374,8 +374,8 @@ class LinearReadout(Readout, Initializable):
     def _push_allocation_config(self):
         super(LinearReadout, self)._push_allocation_config()
         for name, projector in zip(self.source_names, self.projectors):
-            projector.dims[0] = self.source_dims[name]
-            projector.dims[-1] = self.readout_dim
+            projector.input_dim = self.source_dims[name]
+            projector.output_dim = self.readout_dim
 
     @application
     def readout(self, **kwargs):
