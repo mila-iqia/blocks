@@ -48,6 +48,10 @@ class BeamSearch(object):
     Sequence generator should use an emitter which has `probs` method
     e.g. :class:`SoftmaxEmitter`.
 
+    Does not support dummy contexts so far (all the contexts must be used
+    in the `generate` method of the sequence generator for the current code
+    to work).
+
     """
     def __init__(self, beam_size, samples):
         self.beam_size = beam_size
