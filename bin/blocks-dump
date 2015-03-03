@@ -15,7 +15,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "pickle_path", help="A path to a file with a pickled main loop")
     parser.add_argument(
-        "dump_path", help="A path where you want to dump")
+        "dump_path", nargs="?",
+        help="A path where you want to dump."
+             " When not given, the root of 'pickle_path' is used.")
     args = parser.parse_args()
 
     dump(args.pickle_path, args.dump_path)
