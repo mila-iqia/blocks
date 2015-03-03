@@ -52,7 +52,7 @@ def main(mode, save_path, steps, num_batches):
         generator = SequenceGenerator(
             LinearReadout(readout_dim=num_states, source_names=["states"],
                           emitter=SoftmaxEmitter(name="emitter"),
-                          feedbacker=LookupFeedback(
+                          feedback_brick=LookupFeedback(
                               num_states, feedback_dim, name='feedback'),
                           name="readout"),
             transition,
