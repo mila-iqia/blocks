@@ -296,28 +296,28 @@ class Readout(AbstractReadout):
         The dimension of the readout.
     emitter : an instance of :class:`AbstractEmitter`
         The emitter component.
-    feedbacker : an instance of :class:`AbstractFeedback`
+    feedback_brick : an instance of :class:`AbstractFeedback`
         The feedback component.
 
     """
     @lazy
-    def __init__(self, readout_dim=None, emitter=None, feedbacker=None,
+    def __init__(self, readout_dim=None, emitter=None, feedback_brick=None,
                  **kwargs):
         super(Readout, self).__init__(**kwargs)
         self.readout_dim = readout_dim
 
         if not emitter:
             emitter = TrivialEmitter(readout_dim)
-        if not feedbacker:
-            feedbacker = TrivialFeedback(readout_dim)
+        if not feedback_brick:
+            feedback_brick = TrivialFeedback(readout_dim)
         self.emitter = emitter
-        self.feedbacker = feedbacker
+        self.feedback_brick = feedback_brick
 
-        self.children = [self.emitter, self.feedbacker]
+        self.children = [self.emitter, self.feedback_brick]
 
     def _push_allocation_config(self):
         self.emitter.readout_dim = self.get_dim('readouts')
-        self.feedbacker.output_dim = self.get_dim('outputs')
+        self.feedback_brick.output_dim = self.get_dim('outputs')
 
     @application
     def emit(self, readouts):
@@ -333,13 +333,13 @@ class Readout(AbstractReadout):
 
     @application(outputs=['feedback'])
     def feedback(self, outputs):
-        return self.feedbacker.feedback(outputs)
+        return self.feedback_brick.feedback(outputs)
 
     def get_dim(self, name):
         if name == 'outputs':
             return self.emitter.get_dim(name)
         elif name == 'feedback':
-            return self.feedbacker.get_dim(name)
+            return self.feedback_brick.get_dim(name)
         elif name == 'readouts':
             return self.readout_dim
         return super(Readout, self).get_dim(name)
