@@ -58,6 +58,10 @@ class Plot(SimpleExtension):
         it down you will lose your plots. If you want to store your plots,
         start the server manually using the ``bokeh-server`` command. Also
         see the warning above.
+    server_url : str, optional
+        Url of the bokeh-server. Ex: when starting the bokeh-server with
+        ``bokeh-server --ip 0.0.0.0`` at ``alice``, server_url should be
+        ``http://alice:5006``.
 
     """
     # Tableau 10 colors
@@ -65,12 +69,13 @@ class Plot(SimpleExtension):
               '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
 
     def __init__(self, document, channels, open_browser=False,
-                 start_server=False, **kwargs):
+                 start_server=False, server_url='default', **kwargs):
         if not BOKEH_AVAILABLE:
             raise ImportError
         self.plots = {}
         self.start_server = start_server
         self.document = document
+        self.server_url = server_url
         self._startserver()
 
         # Create figures for each group of channels
@@ -123,7 +128,7 @@ class Plot(SimpleExtension):
             logger.info('Plotting server PID: {}'.format(self.sub.pid))
         else:
             self.sub = None
-        output_server(self.document)
+        output_server(self.document, url=self.server_url)
 
     def __getstate__(self):
         state = self.__dict__.copy()
