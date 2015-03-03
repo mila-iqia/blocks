@@ -119,7 +119,8 @@ class BaseSequenceGenerator(Initializable):
         if not len(feedback_names) == 1:
             raise ValueError
         self.fork.input_dim = self.readout.get_dim(feedback_names[0])
-        self.fork.output_dims = self.transition.get_dims(self.fork.apply.outputs)
+        self.fork.output_dims = self.transition.get_dims(
+            self.fork.apply.outputs)
 
     @application
     def cost(self, application_call, outputs, mask=None, **kwargs):
