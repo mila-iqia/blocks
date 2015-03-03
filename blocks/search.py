@@ -26,6 +26,10 @@ class BeamSearch(object):
     :math:`k` most probable continuations, and this is repeated until
     end-of-line symbol is met.
 
+    The beam search compiles quite a few Theano functions under the hood.
+    Normally those are compiled at the first :meth:`search` call, but
+    you can also explicitly call :meth:`compile`.
+
     Parameters
     ----------
     beam_size : int
@@ -120,6 +124,7 @@ class BeamSearch(object):
             on_unused_input='ignore')
 
     def compile(self):
+        """Compile all Theano functions used."""
         self._compile_context_computer()
         self._compile_initial_state_computer()
         self._compile_next_state_computer()

@@ -278,6 +278,10 @@ def main(mode, save_path, num_batches, data_path=None):
                 samples, = VariableFilter(
                     bricks=[reverser.generator], name="outputs")(
                         ComputationGraph(generated[1]))
+                # NOTE: this will recompile beam search functions
+                # every time user presses Enter. Do not create
+                # a new `BeamSearch` object every time if
+                # speed is important for you.
                 beam_search = BeamSearch(input_.shape[1], samples)
                 outputs, _, costs = beam_search.search(
                     {chars: input_}, char2code['</S>'],
