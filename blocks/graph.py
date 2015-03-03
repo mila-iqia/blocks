@@ -161,8 +161,37 @@ class ComputationGraph(object):
             substitutes.
 
         """
-        return ComputationGraph(theano.clone(self.outputs,
-                                             replace=replacements))
+        # Due to bug in theano we have to make one replacement in time
+        replacements = OrderedDict(replacements)
+        # Replacements with previous replacements
+        replacements_cur = replacements
+        # Links to current keys
+        replacement_keys = OrderedDict(zip(replacements.keys(),
+                                           replacements_cur.keys()))
+        vars_sorted = theano.gof.graph.io_toposort(self.inputs, self.outputs)
+        outputs_cur = self.outputs
+        # Replace step-by-step in topological order
+        for var in vars_sorted:
+            for input in var.inputs:
+                if input not in replacements:
+                    continue
+                # We also want to make changes in future replacements
+                new_vals = theano.clone(
+                    outputs_cur +
+                    list(replacements_cur.keys()) +
+                    list(replacements_cur.values()),
+                    replace={replacement_keys[input]:
+                             replacements_cur[replacement_keys[input]]})
+                # Reconstruct outputs, keys, and values
+                outputs_cur = new_vals[:len(outputs_cur)]
+                keys = new_vals[len(outputs_cur):
+                                len(outputs_cur) + len(replacements)]
+                vals = new_vals[len(outputs_cur) + len(replacements):]
+                # Update maps
+                replacements_cur = OrderedDict(zip(keys, vals))
+                replacement_keys = OrderedDict(zip(replacements.keys(),
+                                                   replacements_cur.keys()))
+        return ComputationGraph(outputs_cur)
 
     def get_theano_function(self, additional_updates=None):
         """Create Theano function from the graph contained."""
