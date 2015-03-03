@@ -394,6 +394,10 @@ class TrivialEmitter(AbstractEmitter):
     readout_dim : int
         The dimension of the readout.
 
+    Notes
+    -----
+    By default :meth:`cost` always returns zero tensor.
+
     """
     @lazy
     def __init__(self, readout_dim, **kwargs):
