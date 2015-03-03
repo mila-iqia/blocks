@@ -236,7 +236,8 @@ class MainLoop(object):
         class Callback(str):
             def __eq__(self, other):
                 if other not in ['before_batch', 'after_batch']:
-                    raise ValueError("I'm being compared to something I don't know!")
+                    raise ValueError("I'm being compared to something \
+                                      I don't know!")
 
         for extension in self.extensions:
             extension.dispatch(method_name, *args)
