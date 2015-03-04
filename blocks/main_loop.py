@@ -242,6 +242,7 @@ class MainLoop(object):
                                  'on_interrupt']:
                     raise ValueError("I'm being compared to \
                                      something I don't know!")
+                return str(self) == other
 
         for extension in self.extensions:
             extension.dispatch(Callback(method_name), *args)
