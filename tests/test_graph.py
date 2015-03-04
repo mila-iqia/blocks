@@ -9,7 +9,7 @@ from blocks.bricks.base import Brick
 from blocks.filter import VariableFilter
 from blocks.graph import apply_dropout, apply_noise, ComputationGraph
 from blocks.initialization import Constant
-from blocks.roles import INPUT
+from blocks.roles import INPUT, DROPOUT
 from tests.bricks.test_bricks import TestBrick
 
 floatX = theano.config.floatX
@@ -115,4 +115,8 @@ def test_apply_dropout():
     y = linear.apply(x)
 
     cg = ComputationGraph(y)
-    apply_dropout(cg, VariableFilter(roles=[INPUT])(cg))
+    inputs = VariableFilter(roles=[INPUT])(cg.variables)
+    cg_dropout = apply_dropout(cg, inputs)
+    dropped_out = VariableFilter(roles=[DROPOUT])(cg_dropout.variables)
+    inputs_referenced = [var.tag.replacement_of for var in dropped_out]
+    assert set(inputs) == set(inputs_referenced)

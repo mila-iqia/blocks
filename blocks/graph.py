@@ -11,8 +11,7 @@ from theano.scan_module.scan_op import Scan
 from toolz import unique
 
 from blocks import config
-from blocks.roles import (add_role, has_roles, AUXILIARY, OUTPUT, PARAMETER,
-                          WEIGHTS)
+from blocks.roles import (add_role, has_roles, AUXILIARY, PARAMETER, DROPOUT)
 from blocks.utils import (is_graph_input, is_shared_variable, dict_union,
                           shared_like)
 
@@ -418,8 +417,12 @@ def apply_dropout(computation_graph, variables, drop_prob=0.5, rng=None,
         seed = config.default_seed
     if not rng:
         rng = MRG_RandomStreams(seed)
-    replacements = {var: var * rng.binomial(var.shape, p=1 - drop_prob,
-                                            dtype=floatX) / (1 - drop_prob)
-                    for var in variables}
+
+    replacements = [(var, var * rng.binomial(var.shape, p=1 - drop_prob,
+                                             dtype=floatX) / (1 - drop_prob))
+                    for var in variables]
+    for variable, replacement in replacements:
+        replacement.tag.roles = variable.tag.roles + [DROPOUT]
+        replacement.tag.replacement_of = variable
 
     return computation_graph.replace(replacements)

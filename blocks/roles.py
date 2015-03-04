@@ -122,3 +122,10 @@ class FiltersRole(WeightsRole):
 
 #: The filters (kernels) of a convolution operation
 FILTERS = FiltersRole()
+
+
+class DropoutRole(VariableRole):
+    pass
+
+#: Inputs with applied dropout
+DROPOUT = DropoutRole()
