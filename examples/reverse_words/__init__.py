@@ -109,7 +109,7 @@ class WordReverser(Initializable):
         readout = LinearReadout(
             readout_dim=alphabet_size, source_names=["states"],
             emitter=SoftmaxEmitter(name="emitter"),
-            feedbacker=LookupFeedback(alphabet_size, dimension),
+            feedback_brick=LookupFeedback(alphabet_size, dimension),
             name="readout")
         generator = SequenceGenerator(
             readout=readout, transition=transition, attention=attention,

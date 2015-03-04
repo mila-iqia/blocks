@@ -94,7 +94,8 @@ def test_integer_sequence_generator():
     generator = SequenceGenerator(
         LinearReadout(readout_dim=readout_dim, source_names=["states"],
                       emitter=SoftmaxEmitter(theano_seed=1234),
-                      feedbacker=LookupFeedback(readout_dim, feedback_dim)),
+                      feedback_brick=LookupFeedback(readout_dim,
+                                                    feedback_dim)),
         transition,
         weights_init=IsotropicGaussian(0.1), biases_init=Constant(0),
         seed=1234)
