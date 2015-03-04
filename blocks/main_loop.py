@@ -160,6 +160,8 @@ class MainLoop(object):
                 # of the main loop.
                 if self.log.status.iterations_done > 0:
                     self._run_extensions('on_resumption')
+                    self.status._epoch_interrupt_received = False
+                    self.status._batch_interrupt_received = False
                 while self._run_epoch():
                     pass
             except TrainingFinish:
