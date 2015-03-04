@@ -235,12 +235,16 @@ class MainLoop(object):
     def _run_extensions(self, method_name, *args):
         class Callback(str):
             def __eq__(self, other):
-                if other not in ['before_batch', 'after_batch']:
-                    raise ValueError("I'm being compared to something \
-                                      I don't know!")
+                if other not in ['before_batch', 'after_batch',
+                                 'on_resumption', 'on_error',
+                                 'before_training', 'before_epoch',
+                                 'after_epoch', 'after_training',
+                                 'on_interrupt']:
+                    raise ValueError("I'm being compared to \
+                                     something I don't know!")
 
         for extension in self.extensions:
-            extension.dispatch(method_name, *args)
+            extension.dispatch(Callback(method_name), *args)
 
     def _check_finish_training(self, level):
         """Checks whether the current training should be terminated.
