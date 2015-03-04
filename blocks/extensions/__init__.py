@@ -11,6 +11,7 @@ from toolz import first
 
 logger = logging.getLogger()
 
+
 def callback(func):
     func._is_callback = True
     return func
