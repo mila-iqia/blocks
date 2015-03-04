@@ -281,7 +281,30 @@ class Merge(Parallel):
     child_prefix : str, optional
         A prefix for children names. By default "transform" is used.
 
+    Attributes
+    ----------
+    input_names : list of str
+        The input names.
+    input_dims : dict
+        Dictionary of input dimensions.
+    output_dim : int
+        Dictionary of output dimensions.
+
+    Examples
+    --------
+    >>> from theano import tensor
+    >>> from blocks.initialization import Constant
+    >>> a = tensor.matrix('a')
+    >>> b = tensor.matrix('b')
+    >>> merge = Merge(input_names=['a', 'b'], input_dims={'a': 3, 'b': 4},
+    ...               output_dim=2, weights_init=Constant(1.))
+    >>> merge.initialize()
+    >>> c = merge.apply(a=a, b=b)
+    >>> c.eval({a: [[1, 1, 1]], b: [[2, 2, 2, 2]]})  # doctest: +ELLIPSIS
+    array([[ 11.,  11.]]...
+
     """
+    @lazy
     def __init__(self, input_names, input_dims, output_dim, **kwargs):
         super(Merge, self).__init__(
             input_names, input_dims,
@@ -291,3 +314,13 @@ class Merge(Parallel):
     def apply(self, *args, **kwargs):
         outputs = super(Merge, self).apply(*args, **kwargs)
         return tensor.sum(outputs, axis=0)
+
+    @property
+    def output_dim(self):
+        return self._output_dim
+
+    @output_dim.setter
+    def output_dim(self, value):
+        self._output_dim = value
+        self.output_dims = {input_name: value
+                            for input_name in self.input_names}

@@ -7,7 +7,7 @@ from theano import tensor
 from blocks.bricks import (Identity, Linear, Maxout, LinearMaxout, MLP, Tanh,
                            Sequence)
 from blocks.bricks.base import Application, application, Brick, lazy
-from blocks.bricks.parallel import Parallel, Fork, Merge
+from blocks.bricks.parallel import Parallel, Fork
 from blocks.filter import get_application_call, get_brick
 from blocks.initialization import Constant
 from blocks.utils import shared_floatx
@@ -469,22 +469,3 @@ def test_linear_nan_allocation():
     b2 = linear.params[1].get_value()
     numpy.testing.assert_equal(w1, w2)
     numpy.testing.assert_equal(b1, b2)
-
-
-def test_merge():
-    a = tensor.matrix('a')
-    b = tensor.matrix('b')
-    rng = numpy.random.RandomState(1)
-    a_val = rng.rand(3, 10).astype(theano.config.floatX)
-    b_val = rng.rand(3, 20).astype(theano.config.floatX)
-
-    merge = Merge(input_names=['a', 'b'], input_dims={'a': 10, 'b': 20},
-                  output_dim=5, weights_init=Constant(1.))
-    merge.initialize()
-    c = merge.apply(a=a, b=b)
-
-    c_val = c.eval({a: a_val, b: b_val})
-    assert c_val.shape == (3, 5)
-
-    assert_allclose(c_val[:, 0],
-                    numpy.sum(a_val, axis=1) + numpy.sum(b_val, axis=1))
