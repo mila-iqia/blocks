@@ -240,6 +240,11 @@ The :doc:`development API reference <internal_api>` contains documentation on
 the internal classes that Blocks uses. If you are not planning on contributing
 to Blocks, have a look at the :doc:`user API reference </api/index>` instead.
 
+Installation
+------------
+See the instructions at the bottom of the :doc:`installation instructions
+<setup>`.
+
 .. toctree::
    :hidden:
 
