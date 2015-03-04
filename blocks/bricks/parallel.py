@@ -1,6 +1,8 @@
 """Generic transformations with multiple inputs and/or outputs."""
 import copy
 
+from theano import tensor
+
 from blocks.bricks import Initializable, Linear
 from blocks.bricks.base import lazy, application
 
@@ -261,3 +263,31 @@ class Distribute(Fork):
     @apply.property('outputs')
     def apply_outputs(self):
         return self.target_names
+
+
+class Merge(Parallel):
+    """Merges several variables by applying a transformation and summing.
+
+    input_names : list of str
+        The input names.
+    input_dims : dict
+        The dictionary of input dimensions, keys are input names, values
+        are dimensions.
+    output_dim : int
+        The output dimension of the merged variables.
+    prototype : :class:`~blocks.bricks.Feedforward`
+        A transformation prototype. A copy will be created for every
+        input.  If ``None``, a linear transformation without bias is used.
+    child_prefix : str, optional
+        A prefix for children names. By default "transform" is used.
+
+    """
+    def __init__(self, input_names, input_dims, output_dim, **kwargs):
+        super(Merge, self).__init__(
+            input_names, input_dims,
+            {input_name: output_dim for input_name in input_names}, **kwargs
+        )
+
+    def apply(self, *args, **kwargs):
+        outputs = super(Merge, self).apply(*args, **kwargs)
+        return tensor.sum(outputs, axis=0)
