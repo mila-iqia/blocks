@@ -238,7 +238,8 @@ class BeamSearch(object):
         args = args[numpy.argsort(flatten[args])]
         return numpy.unravel_index(args, matrix.shape), flatten[args]
 
-    def search(self, input_values, eol_symbol, max_length):
+    def search(self, input_values, eol_symbol, max_length,
+               ignore_first_eol=False):
         """Performs beam search.
 
         If the beam search was not compiled, it also compiles it.
@@ -257,6 +258,11 @@ class BeamSearch(object):
             generated.
         max_length : int
             Maximum sequence length, the search stops when it is reached.
+        ignore_first_eol : bool, optional
+            When ``True``, the end if sequence symbol generated at the
+            first iteration are ignored. This useful when the sequence
+            generator was trained on data with identical symbols for
+            sequence start and sequence end.
 
         Returns
         -------
@@ -303,7 +309,8 @@ class BeamSearch(object):
             states.update(self.compute_next_states(contexts, states, outputs))
             all_outputs = numpy.append(all_outputs, outputs[None, :], axis=0)
             costs = chosen_costs
-            mask = (outputs != eol_symbol) * mask
+            if not ignore_first_eol or i > 0:
+                mask = (outputs != eol_symbol) * mask
 
         all_outputs = all_outputs[1:]
         mask = all_outputs != eol_symbol
