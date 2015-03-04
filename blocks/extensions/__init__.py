@@ -221,15 +221,16 @@ class SimpleExtension(TrainingExtension):
         }
         # Freeze the keys as a list so that we can safely modify kwargs.
         for key, value in kwargs.items():
-            if key in self.BOOLEAN_TRIGGERS and value:
-                self.add_condition(conditions.get(key, key),
-                                   predicate=predicates.get(key, None))
-            elif key in self.INTEGER_TRIGGERS and value:
-                predicate = Predicate(key, value)
-                self.add_condition(conditions.get(key, key),
-                                   predicate=predicate)
-            else:
-                raise KeyError("Invalid condition: {}".format(key))
+            if value:
+                if key in self.BOOLEAN_TRIGGERS:
+                    self.add_condition(conditions.get(key, key),
+                                       predicate=predicates.get(key, None))
+                elif key in self.INTEGER_TRIGGERS:
+                    predicate = Predicate(key, value)
+                    self.add_condition(conditions.get(key, key),
+                                       predicate=predicate)
+                else:
+                    raise KeyError("Invalid condition: {}".format(key))
         return self  # For chaining calls.
 
     def add_condition(self, callback_name, predicate=None, arguments=None):
