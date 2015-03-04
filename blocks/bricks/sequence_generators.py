@@ -106,7 +106,10 @@ class BaseSequenceGenerator(Initializable):
         self.children = [self.readout, self.fork, self.transition]
 
     def _push_allocation_config(self):
-        # Configure readout
+        # Configure readout. That involves `get_dim` requests
+        # to the transition. To make sure that it answers
+        # correctly we should finish its configuration first.
+        self.transition.push_allocation_config()
         state_dims = self.transition.get_dims(self.state_names)
         context_dims = self.transition.get_dims(self.context_names)
         self.glimpse_dims = self.transition.get_dims(self.glimpse_names)
@@ -114,7 +117,9 @@ class BaseSequenceGenerator(Initializable):
             state_dims, context_dims, self.glimpse_dims,
             feedback=self.readout.get_dim('feedback'))
 
-        # Configure fork
+        # Configure fork. For similar reasons as outlined above,
+        # first push `readout` configuration.
+        self.readout.push_allocation_config()
         feedback_names = self.readout.feedback.outputs
         if not len(feedback_names) == 1:
             raise ValueError
@@ -140,7 +145,9 @@ class BaseSequenceGenerator(Initializable):
         The contexts are expected as keyword arguments.
 
         """
-        batch_size = outputs.shape[-2]  # TODO Assumes only 1 features dim
+        # Assume the the last dimension stands for the feature number and
+        # the second last for the number in the batch.
+        batch_size = outputs.shape[-2]
 
         # Prepare input for the iterative part
         states = dict_subset(kwargs, self.state_names, must_have=False)
@@ -154,7 +161,11 @@ class BaseSequenceGenerator(Initializable):
             mask=mask, return_initial_states=True, as_dict=True,
             **dict_union(inputs, states, contexts))
 
-        # Separate the deliverables
+        # Separate the deliverables. The last states are discarded: they
+        # are not used to predict any output symbol. The initial glimpses
+        # are discarded because they are not used for prediction.
+        # Remember, glimpses are computed _before_ output stage, states are
+        # computed after.
         states = {name: results[name][:-1] for name in self.state_names}
         glimpses = {name: results[name][1:] for name in self.glimpse_names}
 

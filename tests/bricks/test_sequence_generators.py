@@ -182,8 +182,9 @@ def test_with_attention():
     attention = SequenceContentAttention(
         transition.apply.states, match_dim=inp_dim)
     generator = SequenceGenerator(
-        LinearReadout(readout_dim=inp_dim, source_names=["states"],
-                      emitter=TestEmitter()),
+        LinearReadout(
+            readout_dim=inp_dim, source_names=["states", "glimpses"],
+            emitter=TestEmitter()),
         transition=transition,
         attention=attention,
         weights_init=IsotropicGaussian(0.1), biases_init=Constant(0),
@@ -202,7 +203,7 @@ def test_with_attention():
                              attended: attended_vals,
                              attended_mask: attended_mask_vals})
     assert costs_vals.shape == (inp_len, batch_size)
-    assert_allclose(costs_vals.sum(), 27.6455, rtol=1e-5)
+    assert_allclose(costs_vals.sum(), 33.6583, rtol=1e-5)
 
     # Test `generate` method
     results = (
@@ -217,10 +218,10 @@ def test_with_attention():
     assert glimpses_vals.shape == (n_steps, batch_size, attended_dim)
     assert weights_vals.shape == (n_steps, batch_size, attended_len)
     assert costs_vals.shape == (n_steps, batch_size)
-    assert_allclose(states_vals.sum(), -2.49988, rtol=1e-5)
+    assert_allclose(states_vals.sum(), 23.4172, rtol=1e-5)
     # There is no generation cost in this case, since generation is
     # deterministic
     assert_allclose(costs_vals.sum(), 0.0, rtol=1e-5)
     assert_allclose(weights_vals.sum(), 120.0, rtol=1e-5)
-    assert_allclose(glimpses_vals.sum(), 199.2499, rtol=1e-5)
-    assert_allclose(outputs_vals.sum(), -2.06212, rtol=1e-5)
+    assert_allclose(glimpses_vals.sum(), 199.2402, rtol=1e-5)
+    assert_allclose(outputs_vals.sum(), -11.6008, rtol=1e-5)
