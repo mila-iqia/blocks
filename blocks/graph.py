@@ -11,11 +11,13 @@ from theano.scan_module.scan_op import Scan
 from toolz import unique
 
 from blocks import config
-from blocks.roles import add_role, has_roles, AUXILIARY, PARAMETER
+from blocks.roles import (add_role, has_roles, AUXILIARY, OUTPUT, PARAMETER,
+                          WEIGHTS)
 from blocks.utils import (is_graph_input, is_shared_variable, dict_union,
                           shared_like)
 
 logger = logging.getLogger(__name__)
+floatX = theano.config.floatX
 
 
 class ComputationGraph(object):
@@ -161,7 +163,7 @@ class ComputationGraph(object):
             substitutes.
 
         """
-        # Due to bug in theano we have to make one replacement in time
+        # Due to theano specifics we have to make one replacement in time
         replacements = OrderedDict(replacements)
         # Replacements with previous replacements
         replacements_cur = replacements
@@ -383,3 +385,41 @@ def apply_noise(computation_graph, variables, level, seed=None):
         replace[variable] = (variable +
                              rng.normal(variable.shape, std=level))
     return computation_graph.replace(replace)
+
+
+def apply_dropout(computation_graph, variables, drop_prob=0.5, rng=None,
+                  seed=None):
+    """Returns a graph to variables in a computational graph.
+
+    Parameters
+    ----------
+    computation_graph : instance of :class:`ComputationGraph`
+        The computation graph.
+    variables : list of :class:`~tensor.TensorVariable`
+        Variables to be dropped out.
+    drop_prob : float
+        Probability of dropping out. If you want to apply the dropout
+        with different probabilities for different layers, call it
+        several times.
+    rng : :class:`~theano.sandbox.rng_mrg.MRG_RandomStreams`
+        Random number generator.
+    seed : int
+        Random seed to be used if `rng` was not specified.
+
+    Notes
+    -----
+    For more information, see [DROPOUT]_.
+
+    .. [DROPOUT] Hinton et al. *Rate MethodImproving neural networks
+    by preventing co-adaptation of feature detectors*, arXiv:1207.0580.
+
+    """
+    if not rng and not seed:
+        seed = config.default_seed
+    if not rng:
+        rng = MRG_RandomStreams(seed)
+    replacements = {var: var * rng.binomial(var.shape, p=1 - drop_prob,
+                                            dtype=floatX) / (1 - drop_prob)
+                    for var in variables}
+
+    return computation_graph.replace(replacements)
