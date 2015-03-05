@@ -7,6 +7,7 @@ from blocks import config
 from blocks.log import TrainingLog
 from blocks.utils import reraise_as, unpack, change_recursion_limit
 from blocks.algorithms import DifferentiableCostMinimizer
+from blocks.extensions import TrainingExtension
 
 logger = logging.getLogger(__name__)
 
@@ -235,13 +236,13 @@ class MainLoop(object):
     def _run_extensions(self, method_name, *args):
         class Callback(str):
             def __eq__(self, other):
-                if other not in ['before_batch', 'after_batch',
-                                 'on_resumption', 'on_error',
-                                 'before_training', 'before_epoch',
-                                 'after_epoch', 'after_training',
-                                 'on_interrupt']:
-                    raise ValueError("I'm being compared to \
-                                     something I don't know!")
+                callbackname = [key for key, value
+                                in TrainingExtension.__dict__.items()
+                                if getattr(value, '_is_callback', False)]
+                if other not in callbakname:
+                    if isinstance(other, str):
+                        raise ValueError(str(other) + " is not a valid callback!")
+                    raise TypeError(str(type(other)) ＋ " is not unsupported!")
                 return str(self) == other
 
         for extension in self.extensions:
