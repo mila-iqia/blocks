@@ -358,6 +358,8 @@ class LinearMaxout(Initializable, Feedforward):
 
     @property
     def output_dim(self):
+        if self.linear_transformation.output_dim and self.num_pieces:
+            return self.linear_transformation.output_dim // self.num_pieces
         return self._output_dim
 
     @output_dim.setter
