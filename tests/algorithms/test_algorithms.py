@@ -162,9 +162,10 @@ def test_adam():
         OrderedDict([(a, tensor.grad(cost, a))]))
     f = theano.function([], [steps[a]], updates=updates)
 
-    assert_allclose(f()[0], [0.0002, 0.0002], rtol=1e-5)
-    assert_allclose(f()[0], [0.00105263, 0.00105263], rtol=1e-5)
-    assert_allclose(f()[0], [0.00073801, 0.00073801], rtol=1e-5)
+    rtol = 1e-4
+    assert_allclose(f()[0], [0.002, 0.002], rtol=rtol)
+    assert_allclose(f()[0], [0.01052621, 0.01052621], rtol=rtol)
+    assert_allclose(f()[0], [0.00738005, 0.00738005], rtol=rtol)
 
 
 def test_remove_not_finite():
