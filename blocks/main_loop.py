@@ -239,10 +239,10 @@ class MainLoop(object):
                 callbackname = [key for key, value
                                 in TrainingExtension.__dict__.items()
                                 if getattr(value, '_is_callback', False)]
-                if other not in callbakname:
+                if other not in callbackname:
                     if isinstance(other, str):
                         raise ValueError(str(other) + \
-                                " is not a valid callback!")
+                                         " is not a valid callback!")
                     raise TypeError("must be a string!")
                 return str(self) == other
 
