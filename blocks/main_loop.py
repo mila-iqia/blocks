@@ -241,7 +241,7 @@ class MainLoop(object):
                                 if getattr(value, '_is_callback', False)]
                 if other not in callbackname:
                     if isinstance(other, str):
-                        raise ValueError(str(other) + \
+                        raise ValueError(str(other) +
                                          " is not a valid callback!")
                     raise TypeError("must be a string!")
                 return str(self) == other
