@@ -358,11 +358,13 @@ class LinearMaxout(Initializable, Feedforward):
 
     @property
     def output_dim(self):
-        return self.linear_transformation.output_dim // self.num_pieces
+        return self._output_dim
 
     @output_dim.setter
     def output_dim(self, value):
-        self.linear_transformation.output_dim = value * self.num_pieces
+        self._output_dim = value
+        if value and self.num_pieces:
+            self.linear_transformation.output_dim = value * self.num_pieces
 
     @property
     def num_pieces(self):
@@ -371,6 +373,8 @@ class LinearMaxout(Initializable, Feedforward):
     @num_pieces.setter
     def num_pieces(self, value):
         self.maxout_transformation.num_pieces = value
+        if self.output_dim:
+            self.linear_transformation.output_dim = self.output_dim * value
 
     @application(inputs=['input_'], outputs=['output'])
     def apply(self, input_):
