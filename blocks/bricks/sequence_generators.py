@@ -366,9 +366,8 @@ class Readout(AbstractReadout, Initializable):
 
     @application
     def readout(self, **kwargs):
-        if set(kwargs.keys()) != set(self.merger.input_names):
-            raise ValueError
-        merged = self.merger.apply(**kwargs)
+        merged = self.merger.apply(**{name: kwargs[name]
+                                      for name in self.merger.input_names})
         if self.post_merge:
             merged = self.post_merge.apply(merged)
         return merged
