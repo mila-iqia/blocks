@@ -33,7 +33,7 @@ def test_beam_search():
     beam_size = 10
     length = 15
 
-    reverser = WordReverser(10, alphabet_size)
+    reverser = WordReverser(10, alphabet_size, seed=1234)
     reverser.weights_init = reverser.biases_init = IsotropicGaussian(0.5)
     reverser.initialize()
 
@@ -47,9 +47,10 @@ def test_beam_search():
     search = BeamSearch(10, samples)
     results, mask, costs = search.search({inputs: input_vals},
                                          0, 3 * length)
+    assert results.sum() == 1240
 
     true_costs = reverser.cost(
         input_vals, numpy.ones((length, beam_size), dtype=floatX),
         results, mask).eval()
     true_costs = (true_costs * mask).sum(axis=0)
-    assert_allclose(costs, true_costs, rtol=1e-5)
+    assert_allclose(costs.sum(axis=0), true_costs, rtol=1e-5)

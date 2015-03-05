@@ -278,18 +278,19 @@ class BeamSearch(object):
         # This array will store all generated outputs, including those from
         # previous step and those from already finished sequences.
         all_outputs = states['outputs'][None, :]
-        mask = numpy.ones_like(all_outputs[0], dtype=floatX)
-        costs = numpy.zeros_like(all_outputs[0], dtype=floatX)
+        all_masks = numpy.ones_like(all_outputs, dtype=floatX)
+        all_costs = numpy.zeros_like(all_outputs, dtype=floatX)
 
         for i in range(max_length):
-            if mask.sum() == 0:
+            if all_masks[-1].sum() == 0:
                 break
 
             # We carefully hack values of the `logprobs` array to ensure
             # that all finished sequences are continued with `eos_symbol`.
             logprobs = self.compute_logprobs(contexts, states)
-            next_costs = costs[:, None] + logprobs * mask[:, None]
-            (finished,) = numpy.where(mask == 0)
+            next_costs = (all_costs[-1, :, None] +
+                          logprobs * all_masks[-1, :, None])
+            (finished,) = numpy.where(all_masks[-1] == 0)
             next_costs[finished, :eol_symbol] = numpy.inf
             next_costs[finished, eol_symbol + 1:] = numpy.inf
 
@@ -302,22 +303,19 @@ class BeamSearch(object):
             for name in states:
                 states[name] = states[name][indexes]
             all_outputs = all_outputs[:, indexes]
-            mask = mask[indexes]
-            costs = costs[indexes]
+            all_masks = all_masks[:, indexes]
+            all_costs = all_costs[:, indexes]
 
             # Record chosen output and compute new states
             states.update(self.compute_next_states(contexts, states, outputs))
-            all_outputs = numpy.append(all_outputs, outputs[None, :], axis=0)
-            costs = chosen_costs
-            if not ignore_first_eol or i > 0:
-                mask = (outputs != eol_symbol) * mask
+            all_outputs = numpy.vstack([all_outputs, outputs[None, :]])
+            all_costs = numpy.vstack([all_costs, chosen_costs[None, :]])
+            mask = outputs != eol_symbol
+            if ignore_first_eol and i == 0:
+                mask[:] = 1
+            all_masks = numpy.vstack([all_masks, mask[None, :]])
 
         all_outputs = all_outputs[1:]
-        mask = all_outputs != eol_symbol
-        # The first `eol_symbol` should be preserved: we add an additional
-        # 1 to each mask row to ensure that.
-        for row in mask.T:
-            if row.sum() < len(row):
-                row[row.sum()] = 1
-
-        return all_outputs, mask, costs
+        all_masks = all_masks[:-1]
+        all_costs = all_costs[1:] - all_costs[:-1]
+        return all_outputs, all_masks, all_costs
