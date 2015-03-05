@@ -241,8 +241,9 @@ class MainLoop(object):
                                 if getattr(value, '_is_callback', False)]
                 if other not in callbakname:
                     if isinstance(other, str):
-                        raise ValueError(str(other) + " is not a valid callback!")
-                    raise TypeError(str(type(other)) ＋ " is not unsupported!")
+                        raise ValueError(str(other) + \
+                                " is not a valid callback!")
+                    raise TypeError("must be a string!")
                 return str(self) == other
 
         for extension in self.extensions:
