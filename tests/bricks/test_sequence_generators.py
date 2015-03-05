@@ -180,7 +180,7 @@ def test_with_attention():
     transition = TestTransition(
         dim=inp_dim, attended_dim=attended_dim, activation=Identity())
     attention = SequenceContentAttention(
-        transition.apply.states, match_dim=inp_dim)
+        state_names=transition.apply.states, match_dim=inp_dim)
     generator = SequenceGenerator(
         LinearReadout(
             readout_dim=inp_dim,
