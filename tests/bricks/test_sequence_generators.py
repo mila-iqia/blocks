@@ -183,7 +183,9 @@ def test_with_attention():
         transition.apply.states, match_dim=inp_dim)
     generator = SequenceGenerator(
         LinearReadout(
-            readout_dim=inp_dim, source_names=["states", "glimpses"],
+            readout_dim=inp_dim,
+            source_names=[transition.apply.states[0],
+                          attention.take_glimpses.outputs[0]],
             emitter=TestEmitter()),
         transition=transition,
         attention=attention,

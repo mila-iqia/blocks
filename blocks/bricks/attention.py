@@ -94,6 +94,10 @@ class AbstractAttention(Brick):
     ----------
     state_names : list of str
         The names of the network states.
+    state_dims : dict
+        The {name: int} dictionary of state dimensions.
+    attended_dim : int
+        The dimension of the attended.
 
     """
     def preprocess(self, attended):
@@ -172,7 +176,62 @@ class AbstractAttention(Brick):
         pass
 
 
-class SequenceContentAttention(AbstractAttention, Initializable):
+class GenericSequenceAttention(AbstractAttention):
+    """Logic common for sequence attention mechanisms."""
+
+    @application
+    def compute_weights(self, energies, attended_mask):
+        """Compute weights from energies in softmax-like fashion.
+
+        .. todo ::
+
+            Use :class:`~blocks.bricks.Softmax`.
+
+        Parameters
+        ----------
+        energies : :class:`~theano.Variable`
+            The energies. Must be of the same shape as the mask.
+        attended_mask : :class:`~theano.Variable`
+            The mask for the attended. The index in the sequence must be
+            the first dimension.
+
+        Returns
+        -------
+        weights : :class:`~theano.Variable`
+            Summing to 1 non-negative weights of the same shape
+            as `energies`.
+
+        """
+        unormalized_weights = tensor.exp(energies)
+        if attended_mask:
+            unormalized_weights *= attended_mask
+        return unormalized_weights / unormalized_weights.sum(axis=0)
+
+    @application
+    def compute_weighted_averages(self, weights, attended):
+        """Compute weighted averages of the attended sequence vectors.
+
+        Parameters
+        ----------
+        weights : :class:`~theano.Variable`
+            The weights. The shape must be equal to the attended shape
+            without the last dimension.
+        attended : :class:`~theano.Variable`
+            The attended. The index in the sequence must be the first
+            dimension.
+
+        Returns
+        -------
+        weighted_averages : :class:`~theano.Variable`
+            The weighted averages of the attended elements. The shape
+            is equal to the attended shape with the first dimension
+            dropped.
+
+        """
+        return (tensor.shape_padright(weights) * attended).sum(axis=0)
+
+
+class SequenceContentAttention(GenericSequenceAttention, Initializable):
     """Attention mechanism that looks for relevant content in a sequence.
 
     This is the attention mechanism used in [BCB]_. The idea in a nutshell:
@@ -188,11 +247,11 @@ class SequenceContentAttention(AbstractAttention, Initializable):
     4. Energies are normalized in softmax-like fashion. The resulting
        summing to one weights are called *attention weights*,
 
-    5. Linear combination of the sequence elements with attention weights
+    5. Weighted average of the sequence elements with attention weights
        is computed.
 
     In terms of the :class:`AbstractAttention` documentation, the sequence
-    is the attended. This linear combinations from 5 and the attention
+    is the attended. The weighted averages from 5 and the attention
     weights from 4 form the set of glimpses produced by this attention
     mechanism.
 
@@ -200,7 +259,7 @@ class SequenceContentAttention(AbstractAttention, Initializable):
     ----------
     state_names : list of str
         The names of the network states.
-    sequence_dim : int
+    attended_dim : int
         The dimension of the sequence elements.
     match_dim : int
         The dimension of the match vector.
@@ -223,14 +282,14 @@ class SequenceContentAttention(AbstractAttention, Initializable):
 
     """
     @lazy
-    def __init__(self, state_names, state_dims, sequence_dim, match_dim,
+    def __init__(self, state_names, state_dims, attended_dim, match_dim,
                  state_transformer=None, sequence_transformer=None,
                  energy_computer=None,
                  **kwargs):
         super(SequenceContentAttention, self).__init__(**kwargs)
         self.state_names = state_names
         self.state_dims = state_dims
-        self.sequence_dim = sequence_dim
+        self.attended_dim = attended_dim
         self.match_dim = match_dim
         self.state_transformer = state_transformer
 
@@ -251,24 +310,37 @@ class SequenceContentAttention(AbstractAttention, Initializable):
         self.state_transformers.input_dims = self.state_dims
         self.state_transformers.output_dims = {name: self.match_dim
                                                for name in self.state_names}
-        self.sequence_transformer.input_dim = self.sequence_dim
+        self.sequence_transformer.input_dim = self.attended_dim
         self.sequence_transformer.output_dim = self.match_dim
         self.energy_computer.input_dim = self.match_dim
         self.energy_computer.output_dim = 1
 
-    @application(outputs=['glimpses', 'weights'])
-    def take_glimpses(self, sequence, preprocessed_sequence=None, mask=None,
+    @application
+    def compute_energies(self, attended, preprocessed_attended, states):
+        if not preprocessed_attended:
+            preprocessed_attended = self.preprocess(attended)
+        transformed_states = self.state_transformers.apply(as_dict=True,
+                                                           **states)
+        # Broadcasting of transformed states should be done automatically
+        match_vectors = sum(transformed_states.values(),
+                            preprocessed_attended)
+        energies = self.energy_computer.apply(match_vectors).reshape(
+            match_vectors.shape[:-1], ndim=match_vectors.ndim - 1)
+        return energies
+
+    @application(outputs=['weighted_averages', 'weights'])
+    def take_glimpses(self, attended, preprocessed_attended=None, attended_mask=None,
                       **states):
         r"""Compute attention weights and produce glimpses.
 
         Parameters
         ----------
-        sequence : :class:`~tensor.TensorVariable`
+        attended : :class:`~tensor.TensorVariable`
             The sequence, time is the 1-st dimension.
-        preprocessed_sequence : :class:`~tensor.TensorVariable`
+        preprocessed_attended : :class:`~tensor.TensorVariable`
             The preprocessed sequence. If ``None``, is computed by calling
             :meth:`preprocess`.
-        mask : :class:`~tensor.TensorVariable`
+        attended_mask : :class:`~tensor.TensorVariable`
             A 0/1 mask specifying available data. 0 means that the
             corresponding sequence element is fake.
         \*\*states
@@ -276,7 +348,7 @@ class SequenceContentAttention(AbstractAttention, Initializable):
 
         Returns
         -------
-        glimpses : :class:`~theano.Variable`
+        weighted_averages : :class:`~theano.Variable`
             Linear combinations of sequence elements with the attention
             weights.
         weights : :class:`~theano.Variable`
@@ -284,33 +356,23 @@ class SequenceContentAttention(AbstractAttention, Initializable):
             is time.
 
         """
-        if not preprocessed_sequence:
-            preprocessed_sequence = self.preprocess(sequence)
-        transformed_states = self.state_transformers.apply(as_dict=True,
-                                                           **states)
-        # Broadcasting of transformed states should be done automatically
-        match_vectors = sum(transformed_states.values(),
-                            preprocessed_sequence)
-        energies = self.energy_computer.apply(match_vectors).reshape(
-            match_vectors.shape[:-1], ndim=match_vectors.ndim - 1)
-        unormalized_weights = tensor.exp(energies)
-        if mask:
-            unormalized_weights *= mask
-        weights = unormalized_weights / unormalized_weights.sum(axis=0)
-        glimpses = (tensor.shape_padright(weights) * sequence).sum(axis=0)
-        return glimpses, weights.dimshuffle(1, 0)
+        energies = self.compute_energies(attended, preprocessed_attended,
+                                         states)
+        weights = self.compute_weights(energies, attended_mask)
+        weighted_averages = self.compute_weighted_averages(weights, attended)
+        return weighted_averages, weights.dimshuffle(1, 0)
 
     @take_glimpses.property('inputs')
     def take_glimpses_inputs(self):
-        return (['sequence', 'preprocessed_sequence', 'mask'] +
+        return (['sequence', 'preprocessed_sequence', 'attended_mask'] +
                 self.state_names)
 
     @application
-    def initial_glimpses(self, name, batch_size, sequence):
-        if name == "glimpses":
-            return tensor.zeros((batch_size, self.sequence_dim))
+    def initial_glimpses(self, name, batch_size, attended):
+        if name == "weighted_averages":
+            return tensor.zeros((batch_size, self.attended_dim))
         elif name == "weights":
-            return tensor.zeros((batch_size, sequence.shape[0]))
+            return tensor.zeros((batch_size, attended.shape[0]))
         else:
             raise ValueError("Unknown glimpse name {}".format(name))
 
@@ -327,9 +389,9 @@ class SequenceContentAttention(AbstractAttention, Initializable):
         return self.sequence_transformer.apply(sequence)
 
     def get_dim(self, name):
-        if name in ['glimpses', 'sequence', 'preprocessed_sequence']:
-            return self.sequence_dim
-        if name in ['mask', 'weights']:
+        if name in ['weighted_averages', 'sequence', 'preprocessed_sequence']:
+            return self.attended_dim
+        if name in ['attended_mask', 'weights']:
             return 0
         return super(SequenceContentAttention, self).get_dim(name)
 
@@ -490,7 +552,7 @@ class AttentionRecurrent(AbstractAttentionRecurrent, Initializable):
 
     def _push_allocation_config(self):
         self.attention.state_dims = self.transition.get_dims(self._state_names)
-        self.attention.sequence_dim = self.get_dim(self.attended_name)
+        self.attention.attended_dim = self.get_dim(self.attended_name)
         self.distribute.source_dim = self.attention.get_dim(
             self.distribute.source_name)
         self.distribute.target_dims = dict_subset(
@@ -523,7 +585,7 @@ class AttentionRecurrent(AbstractAttentionRecurrent, Initializable):
         result = self.attention.take_glimpses(
             kwargs.pop(self.attended_name),
             kwargs.pop(self.preprocessed_attended_name, None),
-            mask=kwargs.pop(self.attended_mask_name, None),
+            kwargs.pop(self.attended_mask_name, None),
             **dict_union(states, glimpses_needed))
         if kwargs:
             raise ValueError("extra args to take_glimpses: {}".format(kwargs))
