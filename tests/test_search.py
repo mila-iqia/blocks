@@ -54,3 +54,9 @@ def test_beam_search():
         results, mask).eval()
     true_costs = (true_costs * mask).sum(axis=0)
     assert_allclose(costs.sum(axis=0), true_costs, rtol=1e-5)
+
+    # Test `as_lists=True`
+    results2, costs2 = search.search({inputs: input_vals},
+                                     0, 3 * length, as_lists=True)
+    for i in range(len(results2)):
+        results2[i] == list(results.T[i, :mask.T[i].sum()])

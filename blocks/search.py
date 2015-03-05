@@ -239,7 +239,7 @@ class BeamSearch(object):
         return numpy.unravel_index(args, matrix.shape), flatten[args]
 
     def search(self, input_values, eol_symbol, max_length,
-               ignore_first_eol=False):
+               ignore_first_eol=False, as_lists=False):
         """Performs beam search.
 
         If the beam search was not compiled, it also compiles it.
@@ -263,10 +263,19 @@ class BeamSearch(object):
             first iteration are ignored. This useful when the sequence
             generator was trained on data with identical symbols for
             sequence start and sequence end.
+        as_lists : bool, optional
+            If ``True``, a list of trimmed output sequences and a list of
+            their costs are returned, instead of the default output format.
 
         Returns
         -------
-        Sequences in the beam, masks, and corresponding log-probabilities.
+        outputs : :class:`numpy.ndarray`
+            The generated sequences, time is the first axis, the number in
+            the beam is the second.
+        mask : :class:`numpy.ndarray`
+            The mask for the outputs, same layout as `outputs`
+        costs : :class:`numpy.ndarray`
+            Generation costs for outputs, same layout as `outputs`.
 
         """
         if not self.compiled:
@@ -318,4 +327,15 @@ class BeamSearch(object):
         all_outputs = all_outputs[1:]
         all_masks = all_masks[:-1]
         all_costs = all_costs[1:] - all_costs[:-1]
-        return all_outputs, all_masks, all_costs
+        result = all_outputs, all_masks, all_costs
+        if as_lists:
+            return self.result_to_lists(result)
+        return result
+
+    @staticmethod
+    def result_to_lists(result):
+        outputs, masks, costs = [array.T for array in result]
+        outputs = [list(output[:mask.sum()])
+                   for output, mask in zip(outputs, masks)]
+        costs = list(costs.T.sum(axis=0))
+        return outputs, costs
