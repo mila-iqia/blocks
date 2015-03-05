@@ -5,6 +5,7 @@ from theano import tensor
 
 from blocks.bricks import Initializable, Linear
 from blocks.bricks.base import lazy, application
+from blocks.utils import pack
 
 
 class Parallel(Initializable):
@@ -313,6 +314,7 @@ class Merge(Parallel):
 
     def apply(self, *args, **kwargs):
         outputs = super(Merge, self).apply(*args, **kwargs)
+        outputs = pack(outputs)
         return tensor.sum(outputs, axis=0)
 
     @property
