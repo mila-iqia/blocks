@@ -315,7 +315,7 @@ class Maxout(Brick):
         return output
 
 
-class LinearMaxout(Initializable):
+class LinearMaxout(Initializable, Feedforward):
     """Maxout pooling following a linear transformation.
 
     This code combines the :class:`Linear` brick with a :class:`Maxout`
@@ -335,24 +335,42 @@ class LinearMaxout(Initializable):
     -----
     See :class:`Initializable` for initialization parameters.
 
-    .. todo:: Name of :attr:`linear_transformation` shouldn't be hardcoded.
-
     """
     @lazy
     def __init__(self, input_dim, output_dim, num_pieces, **kwargs):
         super(LinearMaxout, self).__init__(**kwargs)
+        self.linear_transformation = Linear()
+        self.maxout_transformation = Maxout()
+        self.children = [self.linear_transformation,
+                         self.maxout_transformation]
+
         self.input_dim = input_dim
         self.output_dim = output_dim
         self.num_pieces = num_pieces
 
-        self.linear_transformation = Linear(
-            name=self.name + '_linear_to_maxout', input_dim=input_dim,
-            output_dim=output_dim * num_pieces, weights_init=self.weights_init,
-            biases_init=self.biases_init, use_bias=self.use_bias)
-        self.maxout_transformation = Maxout(name=self.name + '_maxout',
-                                            num_pieces=num_pieces)
-        self.children = [self.linear_transformation,
-                         self.maxout_transformation]
+    @property
+    def input_dim(self):
+        return self.linear_transformation.input_dim
+
+    @input_dim.setter
+    def input_dim(self, value):
+        self.linear_transformation.input_dim = value
+
+    @property
+    def output_dim(self):
+        return self.linear_transformation.output_dim // self.num_pieces
+
+    @output_dim.setter
+    def output_dim(self, value):
+        self.linear_transformation.output_dim = value * self.num_pieces
+
+    @property
+    def num_pieces(self):
+        return self.maxout_transformation.num_pieces
+
+    @num_pieces.setter
+    def num_pieces(self, value):
+        self.maxout_transformation.num_pieces = value
 
     @application(inputs=['input_'], outputs=['output'])
     def apply(self, input_):
