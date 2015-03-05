@@ -164,34 +164,42 @@ class ComputationGraph(object):
         """
         # Due to theano specifics we have to make one replacement in time
         replacements = OrderedDict(replacements)
-        # Replacements with previous replacements
+
+        # `replacements` with previous replacements applied. We have to track
+        # variables in the new graph corresponding to original replacements.
         replacements_cur = replacements
-        # Links to current keys
-        replacement_keys = OrderedDict(zip(replacements.keys(),
-                                           replacements_cur.keys()))
-        vars_sorted = theano.gof.graph.io_toposort(self.inputs, self.outputs)
+
+        # Maps original `replacement` keys to
+        # new, replaced earlier, keys in `replacements_cur`.
+        key_to_key_cur = OrderedDict(zip(replacements.keys(),
+                                         replacements_cur.keys()))
+        apply_nodes_sorted = theano.gof.graph.io_toposort(
+            self.inputs, self.outputs)
         outputs_cur = self.outputs
         # Replace step-by-step in topological order
-        for var in vars_sorted:
-            for input in var.inputs:
-                if input not in replacements:
+        for node in apply_nodes_sorted:
+            for input_ in node.inputs:
+                if input_ not in replacements:
                     continue
+                # Find a source/target to replace during this step.
+                replace_what = key_to_key_cur[input_]
+                replace_by = replacements_cur[key_to_key_cur[input_]]
+
                 # We also want to make changes in future replacements
-                new_vals = theano.clone(
+                outputs_new = theano.clone(
                     outputs_cur +
                     list(replacements_cur.keys()) +
                     list(replacements_cur.values()),
-                    replace={replacement_keys[input]:
-                             replacements_cur[replacement_keys[input]]})
+                    replace={replace_what: replace_by})
                 # Reconstruct outputs, keys, and values
-                outputs_cur = new_vals[:len(outputs_cur)]
-                keys = new_vals[len(outputs_cur):
-                                len(outputs_cur) + len(replacements)]
-                vals = new_vals[len(outputs_cur) + len(replacements):]
-                # Update maps
+                outputs_cur = outputs_new[:len(outputs_cur)]
+                keys = outputs_new[len(outputs_cur):
+                                   len(outputs_cur) + len(replacements)]
+                vals = outputs_new[len(outputs_cur) + len(replacements):]
+                # Update mappings
                 replacements_cur = OrderedDict(zip(keys, vals))
-                replacement_keys = OrderedDict(zip(replacements.keys(),
-                                                   replacements_cur.keys()))
+                key_to_key_cur = OrderedDict(zip(replacements.keys(),
+                                                 replacements_cur.keys()))
         return ComputationGraph(outputs_cur)
 
     def get_theano_function(self, additional_updates=None):
@@ -409,8 +417,8 @@ def apply_dropout(computation_graph, variables, drop_prob=0.5, rng=None,
     -----
     For more information, see [DROPOUT]_.
 
-    .. [DROPOUT] Hinton et al. *Rate MethodImproving neural networks
-    by preventing co-adaptation of feature detectors*, arXiv:1207.0580.
+    .. [DROPOUT] Hinton et al. *Improving neural networks by preventing
+       co-adaptation of feature detectors*, arXiv:1207.0580.
 
     """
     if not rng and not seed:
