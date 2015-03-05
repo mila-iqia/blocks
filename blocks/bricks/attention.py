@@ -199,7 +199,6 @@ class AbstractAttention(Brick):
 
 class GenericSequenceAttention(AbstractAttention):
     """Logic common for sequence attention mechanisms."""
-
     @application
     def compute_weights(self, energies, attended_mask):
         """Compute weights from energies in softmax-like fashion.
