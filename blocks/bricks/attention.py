@@ -375,7 +375,7 @@ class SequenceContentAttention(GenericSequenceAttention, Initializable):
                                          states)
         weights = self.compute_weights(energies, attended_mask)
         weighted_averages = self.compute_weighted_averages(weights, attended)
-        return weighted_averages, weights.dimshuffle(1, 0)
+        return weighted_averages, weights.T
 
     @take_glimpses.property('inputs')
     def take_glimpses_inputs(self):
