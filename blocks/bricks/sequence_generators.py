@@ -145,8 +145,7 @@ class BaseSequenceGenerator(Initializable):
         The contexts are expected as keyword arguments.
 
         """
-        # Assume the the last dimension stands for the feature number and
-        # the second last for the number in the batch.
+        # We assume the data has axes (time, batch, features, ...)
         batch_size = outputs.shape[1]
 
         # Prepare input for the iterative part
