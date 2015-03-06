@@ -32,7 +32,7 @@ in this file:
 Using this terminology, the attention mechanism computes glimpses
 given the states of the network and the attended.
 
-An example: in the machine translation network from [BCB] the attended is a
+An example: in the machine translation network from [BCB]_ the attended is a
 sequence of so-called annotations, that is states of a bidirectional
 network that was driven by word embeddings of the source sentence. The
 attention mechanism assigns weights to the annotations. The weighted sum of
@@ -100,7 +100,9 @@ class AbstractAttention(Brick):
 
     Attributes
     ----------
-    Same as parameteres.
+    state_names : list of str
+    state_dims : dict
+    attended_dim : int
 
     """
     @lazy
