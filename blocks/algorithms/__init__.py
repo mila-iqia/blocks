@@ -663,8 +663,9 @@ class Restrict(StepRule):
     """Applies a given :class:`StepRule` only to certain variables.
 
     Example applications include clipping steps on only certain parameters,
-    or scaling a certain kind of parameter's updates (e.g. adding an additional
-    scalar multiplier to the steps taken on convolutional filters).
+    or scaling a certain kind of parameter's updates (e.g. adding an
+    additional scalar multiplier to the steps taken on convolutional
+    filters).
 
     Parameters
     ----------
@@ -675,6 +676,7 @@ class Restrict(StepRule):
         Variables not appearing in this collection will not have
         `step_rule` applied to them; their updates will be determined
         solely by any previously chained :class:`StepRule`s.
+
     """
     def __init__(self, step_rule, variables):
         self.step_rule = step_rule
