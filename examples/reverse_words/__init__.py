@@ -105,7 +105,7 @@ class WordReverser(Initializable):
             dim=dimension, name="transition")
         attention = SequenceContentAttention(
             state_names=transition.apply.states,
-            sequence_dim=2 * dimension, match_dim=dimension, name="attention")
+            attended_dim=2 * dimension, match_dim=dimension, name="attention")
         readout = LinearReadout(
             readout_dim=alphabet_size, source_names=["states"],
             emitter=SoftmaxEmitter(name="emitter"),
