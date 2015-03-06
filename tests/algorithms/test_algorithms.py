@@ -8,7 +8,7 @@ from theano import tensor
 from blocks.algorithms import (GradientDescent, StepClipping, CompositeRule,
                                Scale, StepRule, BasicMomentum, Momentum,
                                AdaDelta, BasicRMSProp, RMSProp, Adam,
-                               RemoveNotFinite)
+                               RemoveNotFinite, Restrict)
 from blocks.utils import shared_floatx
 
 
@@ -179,3 +179,33 @@ def test_remove_not_finite():
     rval2, _ = rule2.compute_steps(gradients)
     assert_allclose(rval2[1].eval(), 1.0)
     assert_allclose(rval2[2].eval(), 2.0)
+
+
+class DummyUpdatesStepRule(StepRule):
+    def compute_step(self, param, previous_step):
+        return previous_step + 2, [(param * 10, param * 100)]
+
+
+def test_restrict():
+    rule1 = Scale(0.1)
+    rule2 = Restrict(rule1, (1, 4))
+    rval, _ = rule2.compute_steps(OrderedDict((i, shared_floatx(i * i))
+                                              for i in range(6)))
+    assert_allclose(rval[0].eval(), 0.0)
+    assert_allclose(rval[1].eval(), 0.1)
+    assert_allclose(rval[2].eval(), 4.0)
+    assert_allclose(rval[3].eval(), 9.0)
+    assert_allclose(rval[4].eval(), 1.6)
+    assert_allclose(rval[5].eval(), 25.0)
+
+    steps, updates = Restrict(DummyUpdatesStepRule(), (1, 4)).compute_steps(
+        OrderedDict((i, shared_floatx(i * i)) for i in range(6)))
+
+    assert_allclose(steps[0].eval(), 0.0)
+    assert_allclose(steps[1].eval(), 3.0)
+    assert_allclose(steps[2].eval(), 4.0)
+    assert_allclose(steps[3].eval(), 9.0)
+    assert_allclose(steps[4].eval(), 18.0)
+    assert_allclose(steps[5].eval(), 25.0)
+
+    assert updates == [(10, 100), (40, 400)]
