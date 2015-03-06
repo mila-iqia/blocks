@@ -283,24 +283,21 @@ def main(mode, save_path, num_batches, data_path=None):
                 # a new `BeamSearch` object every time if
                 # speed is important for you.
                 beam_search = BeamSearch(input_.shape[1], samples)
-                outputs, _, costs = beam_search.search(
+                outputs, costs = beam_search.search(
                     {chars: input_}, char2code['</S>'],
                     3 * input_.shape[0])
             else:
                 _1, outputs, _2, _3, costs = (
                     model.get_theano_function()(input_))
-                costs = costs.T
-
-            outputs = list(outputs.T)
-            costs = list(costs)
-            for i in range(len(outputs)):
-                outputs[i] = list(outputs[i])
-                try:
-                    true_length = outputs[i].index(char2code['</S>']) + 1
-                except ValueError:
-                    true_length = len(outputs[i])
-                outputs[i] = outputs[i][:true_length]
-                if mode == "sample":
+                outputs = list(outputs.T)
+                costs = list(costs.T)
+                for i in range(len(outputs)):
+                    outputs[i] = list(outputs[i])
+                    try:
+                        true_length = outputs[i].index(char2code['</S>']) + 1
+                    except ValueError:
+                        true_length = len(outputs[i])
+                    outputs[i] = outputs[i][:true_length]
                     costs[i] = costs[i][:true_length].sum()
             return outputs, costs
 

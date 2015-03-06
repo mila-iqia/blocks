@@ -239,7 +239,7 @@ class BeamSearch(object):
         return numpy.unravel_index(args, matrix.shape), flatten[args]
 
     def search(self, input_values, eol_symbol, max_length,
-               ignore_first_eol=False):
+               ignore_first_eol=False, as_arrays=False):
         """Performs beam search.
 
         If the beam search was not compiled, it also compiles it.
@@ -263,10 +263,19 @@ class BeamSearch(object):
             first iteration are ignored. This useful when the sequence
             generator was trained on data with identical symbols for
             sequence start and sequence end.
+        as_arrays : bool, optional
+            If ``True``, the internal representation of search results
+            is returned, that is a (matrix of outputs, mask,
+            costs of all generated outputs) tuple.
 
         Returns
         -------
-        Sequences in the beam, masks, and corresponding log-probabilities.
+        outputs : list of lists of ints
+            A list of the `beam_size` best sequences found in the order
+            of decreasing likelihood.
+        costs : list of floats
+            A list of the costs for the `outputs`, where cost is the
+            negative log-likelihood.
 
         """
         if not self.compiled:
@@ -278,18 +287,19 @@ class BeamSearch(object):
         # This array will store all generated outputs, including those from
         # previous step and those from already finished sequences.
         all_outputs = states['outputs'][None, :]
-        mask = numpy.ones_like(all_outputs[0], dtype=floatX)
-        costs = numpy.zeros_like(all_outputs[0], dtype=floatX)
+        all_masks = numpy.ones_like(all_outputs, dtype=floatX)
+        all_costs = numpy.zeros_like(all_outputs, dtype=floatX)
 
         for i in range(max_length):
-            if mask.sum() == 0:
+            if all_masks[-1].sum() == 0:
                 break
 
             # We carefully hack values of the `logprobs` array to ensure
             # that all finished sequences are continued with `eos_symbol`.
             logprobs = self.compute_logprobs(contexts, states)
-            next_costs = costs[:, None] + logprobs * mask[:, None]
-            (finished,) = numpy.where(mask == 0)
+            next_costs = (all_costs[-1, :, None] +
+                          logprobs * all_masks[-1, :, None])
+            (finished,) = numpy.where(all_masks[-1] == 0)
             next_costs[finished, :eol_symbol] = numpy.inf
             next_costs[finished, eol_symbol + 1:] = numpy.inf
 
@@ -302,22 +312,30 @@ class BeamSearch(object):
             for name in states:
                 states[name] = states[name][indexes]
             all_outputs = all_outputs[:, indexes]
-            mask = mask[indexes]
-            costs = costs[indexes]
+            all_masks = all_masks[:, indexes]
+            all_costs = all_costs[:, indexes]
 
             # Record chosen output and compute new states
             states.update(self.compute_next_states(contexts, states, outputs))
-            all_outputs = numpy.append(all_outputs, outputs[None, :], axis=0)
-            costs = chosen_costs
-            if not ignore_first_eol or i > 0:
-                mask = (outputs != eol_symbol) * mask
+            all_outputs = numpy.vstack([all_outputs, outputs[None, :]])
+            all_costs = numpy.vstack([all_costs, chosen_costs[None, :]])
+            mask = outputs != eol_symbol
+            if ignore_first_eol and i == 0:
+                mask[:] = 1
+            all_masks = numpy.vstack([all_masks, mask[None, :]])
 
         all_outputs = all_outputs[1:]
-        mask = all_outputs != eol_symbol
-        # The first `eol_symbol` should be preserved: we add an additional
-        # 1 to each mask row to ensure that.
-        for row in mask.T:
-            if row.sum() < len(row):
-                row[row.sum()] = 1
+        all_masks = all_masks[:-1]
+        all_costs = all_costs[1:] - all_costs[:-1]
+        result = all_outputs, all_masks, all_costs
+        if as_arrays:
+            return result
+        return self.result_to_lists(result)
 
-        return all_outputs, mask, costs
+    @staticmethod
+    def result_to_lists(result):
+        outputs, masks, costs = [array.T for array in result]
+        outputs = [list(output[:mask.sum()])
+                   for output, mask in zip(outputs, masks)]
+        costs = list(costs.T.sum(axis=0))
+        return outputs, costs
