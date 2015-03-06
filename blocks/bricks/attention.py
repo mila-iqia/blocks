@@ -32,8 +32,8 @@ in this file:
 Using this terminology, the attention mechanism computes glimpses
 given the states of the network and the attended.
 
-An example: in the machine translation network from [BCB]_ the attended is a
-sequence of so-called annotations, that is states of a bidirectional
+An example: in the machine translation network from [BCB]_ the attended is
+a sequence of so-called annotations, that is states of a bidirectional
 network that was driven by word embeddings of the source sentence. The
 attention mechanism assigns weights to the annotations. The weighted sum of
 the annotations is further used by the translation network to predict the
