@@ -89,6 +89,13 @@ As with the usual installation, you can use ``--user`` or ``--no-deps`` if you
 need to. You can now make changes in the ``blocks`` directory created by pip,
 push to your repository and make a pull request.
 
+If you had already cloned the GitHub repository, you can use the following
+command from the folder you cloned Blocks to:
+
+.. code-block:: bash
+
+   $ pip install -e file:.#egg=blocks[test,plot,docs] -r requirements.txt
+
 .. _fork Blocks on GitHub: https://github.com/bartvm/blocks/fork
 
 Documentation
