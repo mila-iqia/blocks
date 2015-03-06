@@ -66,7 +66,7 @@ class TrainingExtension(object):
         simply invokes the callback by its name.
 
         """
-        getattr(self, callback_name)(*args)
+        getattr(self, str(callback_name))(*args)
 
     @callback
     def on_resumption(self):

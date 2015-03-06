@@ -236,16 +236,13 @@ class MainLoop(object):
     def _run_extensions(self, method_name, *args):
         class Callback(str):
             def __eq__(self, other):
-                callbackname = [key for key, value
+                callback_names = [key for key, value
                                 in TrainingExtension.__dict__.items()
                                 if getattr(value, '_is_callback', False)]
-                if other not in callbackname:
-                    if isinstance(other, str):
-                        raise ValueError(str(other) +
-                                         " is not a valid callback!")
-                    raise TypeError("must be a string!")
+                if other not in callback_names:
+                    raise TypeError(
+                            "{} is not a valid callback.".format(other))
                 return str(self) == other
-
         for extension in self.extensions:
             extension.dispatch(Callback(method_name), *args)
 
