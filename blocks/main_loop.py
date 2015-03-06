@@ -237,8 +237,8 @@ class MainLoop(object):
         class Callback(str):
             def __eq__(self, other):
                 callback_names = [key for key, value
-                                in TrainingExtension.__dict__.items()
-                                if getattr(value, '_is_callback', False)]
+                                  in TrainingExtension.__dict__.items()
+                                  if getattr(value, '_is_callback', False)]
                 if other not in callback_names:
                     raise TypeError(
                             "{} is not a valid callback.".format(other))
