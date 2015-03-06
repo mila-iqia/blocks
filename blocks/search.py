@@ -239,7 +239,7 @@ class BeamSearch(object):
         return numpy.unravel_index(args, matrix.shape), flatten[args]
 
     def search(self, input_values, eol_symbol, max_length,
-               ignore_first_eol=False, as_lists=False):
+               ignore_first_eol=False, as_arrays=False):
         """Performs beam search.
 
         If the beam search was not compiled, it also compiles it.
@@ -263,19 +263,19 @@ class BeamSearch(object):
             first iteration are ignored. This useful when the sequence
             generator was trained on data with identical symbols for
             sequence start and sequence end.
-        as_lists : bool, optional
-            If ``True``, a list of trimmed output sequences and a list of
-            their costs are returned, instead of the default output format.
+        as_arrays : bool, optional
+            If ``True``, the internal representation of search results
+            is returned, that is a (matrix of outputs, mask,
+            costs of all generated outputs) tuple.
 
         Returns
         -------
-        outputs : :class:`numpy.ndarray`
-            The generated sequences, time is the first axis, the number in
-            the beam is the second.
-        mask : :class:`numpy.ndarray`
-            The mask for the outputs, same layout as `outputs`
-        costs : :class:`numpy.ndarray`
-            Generation costs for outputs, same layout as `outputs`.
+        outputs : list of lists of ints
+            A list of the `beam_size` best sequences found in the order
+            of decreasing likelihood.
+        costs : list of floats
+            A list of the costs for the `outputs`, where cost is the
+            negative log-likelihood.
 
         """
         if not self.compiled:
@@ -328,9 +328,9 @@ class BeamSearch(object):
         all_masks = all_masks[:-1]
         all_costs = all_costs[1:] - all_costs[:-1]
         result = all_outputs, all_masks, all_costs
-        if as_lists:
-            return self.result_to_lists(result)
-        return result
+        if as_arrays:
+            return result
+        return self.result_to_lists(result)
 
     @staticmethod
     def result_to_lists(result):

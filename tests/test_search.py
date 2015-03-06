@@ -45,8 +45,8 @@ def test_beam_search():
                             (beam_size, 1)).T
 
     search = BeamSearch(10, samples)
-    results, mask, costs = search.search({inputs: input_vals},
-                                         0, 3 * length)
+    results, mask, costs = search.search(
+        {inputs: input_vals}, 0, 3 * length, as_arrays=True)
     assert results.sum() == 1240
 
     true_costs = reverser.cost(
@@ -57,6 +57,6 @@ def test_beam_search():
 
     # Test `as_lists=True`
     results2, costs2 = search.search({inputs: input_vals},
-                                     0, 3 * length, as_lists=True)
+                                     0, 3 * length)
     for i in range(len(results2)):
         results2[i] == list(results.T[i, :mask.T[i].sum()])
