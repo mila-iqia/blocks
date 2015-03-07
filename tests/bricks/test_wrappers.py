@@ -1,7 +1,7 @@
-import cPickle
 import numpy
 import theano
 from numpy.testing import assert_allclose
+from six.moves import cPickle
 from theano import tensor
 
 from blocks.bricks import Linear
