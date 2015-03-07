@@ -9,7 +9,7 @@ from six import add_metaclass
 from theano import tensor
 
 from blocks.graph import ComputationGraph
-from blocks.utils import named_copy, shared_floatx
+from blocks.utils import dict_subset, named_copy, shared_floatx
 from blocks.theano_expressions import l2_norm
 
 logger = logging.getLogger(__name__)
@@ -657,3 +657,35 @@ class RemoveNotFinite(StepRule):
         step = tensor.switch(not_finite, self.scaler * param, previous_step)
 
         return step, []
+
+
+class Restrict(StepRule):
+    """Applies a given :class:`StepRule` only to certain variables.
+
+    Example applications include clipping steps on only certain parameters,
+    or scaling a certain kind of parameter's updates (e.g. adding an
+    additional scalar multiplier to the steps taken on convolutional
+    filters).
+
+    Parameters
+    ----------
+    step_rule : :class:`StepRule`
+        The :class:`StepRule` to be applied on the given variables.
+    variables : iterable
+        A collection of Theano variables on which to apply `step_rule`.
+        Variables not appearing in this collection will not have
+        `step_rule` applied to them.
+
+    """
+    def __init__(self, step_rule, variables):
+        self.step_rule = step_rule
+        self.variables = frozenset(variables)
+
+    def compute_steps(self, previous_steps):
+        filtered_previous_steps = dict_subset(previous_steps, self.variables)
+        steps, updates = self.step_rule.compute_steps(filtered_previous_steps)
+        actual = OrderedDict((param, steps[param])
+                             if param in steps
+                             else (param, previous_steps[param])
+                             for param in previous_steps)
+        return actual, updates
