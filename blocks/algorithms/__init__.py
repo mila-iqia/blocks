@@ -674,8 +674,7 @@ class Restrict(StepRule):
     variables : iterable
         A collection of Theano variables on which to apply `step_rule`.
         Variables not appearing in this collection will not have
-        `step_rule` applied to them; their updates will be determined
-        solely by any previously chained :class:`StepRule`s.
+        `step_rule` applied to them.
 
     """
     def __init__(self, step_rule, variables):
