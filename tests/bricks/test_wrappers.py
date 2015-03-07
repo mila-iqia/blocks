@@ -4,7 +4,7 @@ from numpy.testing import assert_allclose
 from theano import tensor
 
 from blocks.bricks import Linear
-from blocks.bricks.wrappers import As2D
+from blocks.bricks.wrappers import As2D, WithAxesSwapped
 from blocks.initialization import Constant
 
 
@@ -30,3 +30,27 @@ def test_as2d_ndim_leq_2():
     assert_allclose(
         f(numpy.ones(shape=(2, 3), dtype=theano.config.floatX)),
         3 * numpy.ones(shape=(2, 4), dtype=theano.config.floatX))
+
+
+def test_withaxesswapped_dim0_dim1_neq():
+    X = tensor.matrix('X')
+    brick = Linear(input_dim=2, output_dim=2, weights_init=Constant(1),
+                   biases_init=Constant(0))
+    wrapper = WithAxesSwapped(brick.apply, 0, 1)
+    wrapper.initialize()
+    brick.W.set_value(numpy.array([[1, 2], [1, 1]]))
+    f = theano.function([X], wrapper.apply(X))
+    assert_allclose(f(numpy.arange(4).reshape((2, 2))),
+                    numpy.array([[2, 4], [2, 5]]))
+
+
+def test_withaxesswapped_dim0_dim1_eq():
+    X = tensor.matrix('X')
+    brick = Linear(input_dim=2, output_dim=2, weights_init=Constant(1),
+                   biases_init=Constant(0))
+    wrapper = WithAxesSwapped(brick.apply, 0, 0)
+    wrapper.initialize()
+    brick.W.set_value(numpy.array([[1, 2], [1, 1]]))
+    f = theano.function([X], wrapper.apply(X))
+    assert_allclose(f(numpy.arange(4).reshape((2, 2))),
+                    numpy.array([[1, 1], [5, 7]]))
