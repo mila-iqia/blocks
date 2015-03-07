@@ -1,3 +1,4 @@
+from six.moves import range
 from theano import tensor
 
 from blocks.bricks.base import Brick, application
@@ -59,7 +60,7 @@ class WithAxesSwapped(Brick):
     @application(inputs=['input_'], outputs=['output'])
     def apply(self, input_):
         if self.dim0 != self.dim1:
-            dims = range(input_.ndim)
+            dims = list(range(input_.ndim))
             dims[self.dim0], dims[self.dim1] = dims[self.dim1], dims[self.dim0]
             input_ = input_.dimshuffle(*dims)
             output = self.application_method(input_).dimshuffle(*dims)
