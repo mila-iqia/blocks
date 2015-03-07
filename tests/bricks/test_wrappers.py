@@ -47,9 +47,11 @@ def test_withaxesswapped_dim0_dim1_neq():
                    biases_init=Constant(0))
     wrapper = WithAxesSwapped(brick.apply, 0, 1)
     wrapper.initialize()
-    brick.W.set_value(numpy.array([[1, 2], [1, 1]]))
+    brick.W.set_value(
+        numpy.asarray([[1, 2], [1, 1]], dtype=theano.config.floatX))
     f = theano.function([X], wrapper.apply(X))
-    assert_allclose(f(numpy.arange(4).reshape((2, 2))),
+    assert_allclose(f(numpy.arange(
+                        4, dtype=theano.config.floatX).reshape((2, 2))),
                     numpy.array([[2, 4], [2, 5]]))
 
 
@@ -59,9 +61,11 @@ def test_withaxesswapped_dim0_dim1_eq():
                    biases_init=Constant(0))
     wrapper = WithAxesSwapped(brick.apply, 0, 0)
     wrapper.initialize()
-    brick.W.set_value(numpy.array([[1, 2], [1, 1]]))
+    brick.W.set_value(
+        numpy.asarray([[1, 2], [1, 1]], dtype=theano.config.floatX))
     f = theano.function([X], wrapper.apply(X))
-    assert_allclose(f(numpy.arange(4).reshape((2, 2))),
+    assert_allclose(f(numpy.arange(
+                        4, dtype=theano.config.floatX).reshape((2, 2))),
                     numpy.array([[1, 1], [5, 7]]))
 
 
