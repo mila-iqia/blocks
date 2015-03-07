@@ -34,3 +34,35 @@ class As2D(Brick):
         else:
             output = self.application_method(input_)
         return output
+
+
+class WithAxesSwapped(Brick):
+    """Wraps an application around dimshuffles.
+
+    Parameters
+    ----------
+    application_method : callable
+        Some brick's :meth:`apply` method
+    dim0 : int
+        First dimension to swap
+    dim1 : int
+        Second dimension to swap
+
+    """
+    def __init__(self, application_method, dim0, dim1, **kwargs):
+        super(WithAxesSwapped, self).__init__(**kwargs)
+        self.application_method = application_method
+        self.dim0 = dim0
+        self.dim1 = dim1
+        self.children = [self.application_method.brick]
+
+    @application(inputs=['input_'], outputs=['output'])
+    def apply(self, input_):
+        if self.dim0 != self.dim1:
+            dims = range(input_.ndim)
+            dims[self.dim0], dims[self.dim1] = dims[self.dim1], dims[self.dim0]
+            input_ = input_.dimshuffle(*dims)
+            output = self.application_method(input_).dimshuffle(*dims)
+        else:
+            output = self.application_method(input_)
+        return output
