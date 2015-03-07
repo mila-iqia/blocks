@@ -254,7 +254,9 @@ class StepRule(object):
         step : :class:`~theano.Variable`
             Theano variable for the step to take.
         updates : list
-            A list of tuples representing updates to be performed.
+            A list of tuples representing updates to be performed. This
+            is useful for stateful rules such as :class:`Momentum` which
+            need to update shared variables after itetations.
 
         """
         raise NotImplementedError
