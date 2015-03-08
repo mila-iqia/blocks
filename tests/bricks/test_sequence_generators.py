@@ -135,8 +135,6 @@ def test_integer_sequence_generator():
     assert_allclose(cost1.sum(), cost2[:, 1].sum(), rtol=1e-5)
 
 
-
-
 class TestTransition(SimpleRecurrent):
     def __init__(self, attended_dim, **kwargs):
         super(TestTransition, self).__init__(**kwargs)
