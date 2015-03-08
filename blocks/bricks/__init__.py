@@ -339,10 +339,10 @@ class LinearMaxout(Initializable, Feedforward):
     @lazy
     def __init__(self, input_dim, output_dim, num_pieces, **kwargs):
         super(LinearMaxout, self).__init__(**kwargs)
-        self.linear_transformation = Linear()
-        self.maxout_transformation = Maxout()
-        self.children = [self.linear_transformation,
-                         self.maxout_transformation]
+        self.linear = Linear()
+        self.maxout = Maxout()
+        self.children = [self.linear,
+                         self.maxout]
 
         self.input_dim = input_dim
         self.output_dim = output_dim
@@ -350,15 +350,15 @@ class LinearMaxout(Initializable, Feedforward):
 
     @property
     def input_dim(self):
-        return self.linear_transformation.input_dim
+        return self.linear.input_dim
 
     @input_dim.setter
     def input_dim(self, value):
-        self.linear_transformation.input_dim = value
+        self.linear.input_dim = value
 
     def _push_allocation_config(self):
-        self.linear_transformation.output_dim = self.output_dim * self.num_pieces
-        self.maxout_transformation.num_pieces = self.num_pieces
+        self.linear.output_dim = self.output_dim * self.num_pieces
+        self.maxout.num_pieces = self.num_pieces
 
     @application(inputs=['input_'], outputs=['output'])
     def apply(self, input_):
@@ -375,8 +375,8 @@ class LinearMaxout(Initializable, Feedforward):
             The transformed input
 
         """
-        pre_activation = self.linear_transformation.apply(input_)
-        output = self.maxout_transformation.apply(pre_activation)
+        pre_activation = self.linear.apply(input_)
+        output = self.maxout.apply(pre_activation)
         return output
 
 
