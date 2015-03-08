@@ -123,7 +123,7 @@ class Dump(SimpleExtension):
         super(Dump, self).__init__(**kwargs)
         self.manager = MainLoopDumpManager(state_path)
 
-    def do(self, callback_name, **kwargs):
+    def do(self, callback_name, *args, **kwargs):
         try:
             self.main_loop.log.current_row[SAVED_TO] = (
                 self.manager.folder)
