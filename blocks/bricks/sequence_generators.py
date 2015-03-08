@@ -4,7 +4,7 @@ from abc import ABCMeta, abstractmethod
 from six import add_metaclass
 from theano import tensor
 
-from blocks.bricks import Initializable, Identity, MLP, Random
+from blocks.bricks import Initializable, Random
 from blocks.bricks.base import application, Brick, lazy
 from blocks.bricks.parallel import Fork, Distribute, Merge
 from blocks.bricks.lookup import LookupTable
@@ -331,7 +331,7 @@ class Readout(AbstractReadout, Initializable):
     @lazy
     def __init__(self, source_names, readout_dim, emitter=None,
                  feedback_brick=None, merger=None, merge_prototype=None,
-                 post_merge=None, **kwargs):
+                 post_merge=None, post_merge_input_dim=None, **kwargs):
         super(Readout, self).__init__(**kwargs)
         self.source_names = source_names
         self.readout_dim = readout_dim
@@ -346,8 +346,10 @@ class Readout(AbstractReadout, Initializable):
         self.feedback_brick = feedback_brick
         self.merger = merger
         self.post_merge = post_merge
+        self.post_merge_input_dim = post_merge_input_dim
 
-        self.children = [self.emitter, self.feedback_brick, self.merger]
+        self.children = [self.emitter, self.feedback_brick, self.merger,
+                         self.post_merge]
 
     def _push_allocation_config(self):
         self.emitter.readout_dim = self.get_dim('readouts')
