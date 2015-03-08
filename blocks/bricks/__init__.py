@@ -356,27 +356,9 @@ class LinearMaxout(Initializable, Feedforward):
     def input_dim(self, value):
         self.linear_transformation.input_dim = value
 
-    @property
-    def output_dim(self):
-        if self.linear_transformation.output_dim and self.num_pieces:
-            return self.linear_transformation.output_dim // self.num_pieces
-        return self._output_dim
-
-    @output_dim.setter
-    def output_dim(self, value):
-        self._output_dim = value
-        if value and self.num_pieces:
-            self.linear_transformation.output_dim = value * self.num_pieces
-
-    @property
-    def num_pieces(self):
-        return self.maxout_transformation.num_pieces
-
-    @num_pieces.setter
-    def num_pieces(self, value):
-        self.maxout_transformation.num_pieces = value
-        if self.output_dim:
-            self.linear_transformation.output_dim = self.output_dim * value
+    def _push_allocation_config(self):
+        self.linear_transformation.output_dim = self.output_dim * self.num_pieces
+        self.maxout_transformation.num_pieces = self.num_pieces
 
     @application(inputs=['input_'], outputs=['output'])
     def apply(self, input_):
@@ -535,6 +517,25 @@ class Sequence(Brick):
     @apply.property('outputs')
     def apply_outputs(self):
         return self.application_methods[-1].outputs
+
+
+class FeedforwardSequence(Sequence, Feedforward):
+    """A sequence where the first and last bricks are feedforward."""
+    @property
+    def input_dim(self):
+        return self.children[0].input_dim
+
+    @input_dim.setter
+    def input_dim(self, value):
+        self.children[0].input_dim = value
+
+    @property
+    def output_dim(self):
+        return self.children[-1].output_dim
+
+    @output_dim.setter
+    def output_dim(self, value):
+        self.children[-1].output_dim = value
 
 
 class MLP(Sequence, Initializable, Feedforward):
