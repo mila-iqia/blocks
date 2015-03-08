@@ -50,9 +50,9 @@ def test_withaxesswapped_dim0_dim1_neq():
     brick.W.set_value(
         numpy.asarray([[1, 2], [1, 1]], dtype=theano.config.floatX))
     f = theano.function([X], wrapper.apply(X))
-    assert_allclose(f(numpy.arange(
-                        4, dtype=theano.config.floatX).reshape((2, 2))),
-                    numpy.array([[2, 4], [2, 5]]))
+    assert_allclose(
+        f(numpy.arange(4, dtype=theano.config.floatX).reshape((2, 2))),
+        numpy.array([[2, 4], [2, 5]]))
 
 
 def test_withaxesswapped_dim0_dim1_eq():
@@ -64,9 +64,9 @@ def test_withaxesswapped_dim0_dim1_eq():
     brick.W.set_value(
         numpy.asarray([[1, 2], [1, 1]], dtype=theano.config.floatX))
     f = theano.function([X], wrapper.apply(X))
-    assert_allclose(f(numpy.arange(
-                        4, dtype=theano.config.floatX).reshape((2, 2))),
-                    numpy.array([[1, 1], [5, 7]]))
+    assert_allclose(
+        f(numpy.arange(4, dtype=theano.config.floatX).reshape((2, 2))),
+        numpy.array([[1, 1], [5, 7]]))
 
 
 def test_withaxesswapped_is_serializable():

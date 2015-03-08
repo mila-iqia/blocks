@@ -142,8 +142,7 @@ class CallbackName(str):
                           in TrainingExtension.__dict__.items()
                           if getattr(value, '_is_callback', False)]
         if other not in callback_names:
-            raise TypeError(
-                    "{} is not a valid callback.".format(other))
+            raise TypeError("{} is not a valid callback.".format(other))
         return str(self) == other
 
 
