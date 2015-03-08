@@ -514,7 +514,7 @@ class LookupFeedback(AbstractFeedback, Initializable):
     @application
     def feedback(self, outputs):
         assert self.output_dim == 0
-        return self.lookup.lookup(outputs)
+        return self.lookup.apply(outputs)
 
     def get_dim(self, name):
         if name == 'feedback':
