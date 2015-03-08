@@ -311,27 +311,27 @@ class Readout(AbstractReadout, Initializable):
         The emitter component.
     feedback_brick : an instance of :class:`AbstractFeedback`
         The feedback component.
-    merger : :class:`.Brick`, optional
+    merge : :class:`.Brick`, optional
         A brick that takes the sources given in `source_names` as an input
         and combines them into a single output. If given, `merge_prototype`
         cannot be given.
     merge_prototype : :class:`.FeedForward`, optional
-        If `merger` isn't given, the transformation given by
+        If `merge` isn't given, the transformation given by
         `merge_prototype` is applied to each input before being summed. By
         default a :class:`.Linear` transformation without biases is used.
-        If given, `merger` cannot be given.
+        If given, `merge` cannot be given.
     post_merge : :class:`.Feedforward`, optional
         If given, this transformation is applied to the merged inputs to
         the readout model.
-    post_merge_input_dim : int, optional
+    merged_dim : int, optional
         The input dimension of `post_merge` i.e. the output dimension of
-        `merger` (or `merge_prototype`).
+        `merge` (or `merge_prototype`).
 
     """
     @lazy
     def __init__(self, source_names, readout_dim, emitter=None,
-                 feedback_brick=None, merger=None, merge_prototype=None,
-                 post_merge=None, post_merge_input_dim=None, **kwargs):
+                 feedback_brick=None, merge=None, merge_prototype=None,
+                 post_merge=None, merged_dim=None, **kwargs):
         super(Readout, self).__init__(**kwargs)
         self.source_names = source_names
         self.readout_dim = readout_dim
@@ -340,34 +340,34 @@ class Readout(AbstractReadout, Initializable):
             emitter = TrivialEmitter(readout_dim)
         if not feedback_brick:
             feedback_brick = TrivialFeedback(readout_dim)
-        if not merger:
-            merger = Merge(input_names=source_names, prototype=merge_prototype)
+        if not merge:
+            merge = Merge(input_names=source_names, prototype=merge_prototype)
         self.emitter = emitter
         self.feedback_brick = feedback_brick
-        self.merger = merger
+        self.merge = merge
         self.post_merge = post_merge
-        self.post_merge_input_dim = post_merge_input_dim
+        self.merged_dim = merged_dim
 
-        self.children = [self.emitter, self.feedback_brick, self.merger,
+        self.children = [self.emitter, self.feedback_brick, self.merge,
                          self.post_merge]
 
     def _push_allocation_config(self):
         self.emitter.readout_dim = self.get_dim('readouts')
         self.feedback_brick.output_dim = self.get_dim('outputs')
-        self.merger.input_names = self.source_names
-        self.merger.input_dims = {source_name: self.source_dims[source_name]
-                                  for source_name in self.source_names}
+        self.merge.input_names = self.source_names
+        self.merge.input_dims = {source_name: self.source_dims[source_name]
+                                 for source_name in self.source_names}
         if self.post_merge:
             self.post_merge.output_dim = self.readout_dim
-            self.post_merge.input_dim = self.post_merge_input_dim
-            self.merger.output_dim = self.post_merge_input_dim
+            self.post_merge.input_dim = self.merged_dim
+            self.merge.output_dim = self.merged_dim
         else:
-            self.merger.output_dim = self.readout_dim
+            self.merge.output_dim = self.readout_dim
 
     @application
     def readout(self, **kwargs):
-        merged = self.merger.apply(**{name: kwargs[name]
-                                      for name in self.merger.input_names})
+        merged = self.merge.apply(**{name: kwargs[name]
+                                     for name in self.merge.input_names})
         if self.post_merge:
             merged = self.post_merge.apply(merged)
         return merged
