@@ -491,7 +491,8 @@ class Sequence(Brick):
 
     Parameters
     ----------
-    application_methods : list of :class:`.BoundApplication` to apply
+    application_methods : list
+        List of :class:`.BoundApplication` to apply
 
     """
     def __init__(self, application_methods, **kwargs):
@@ -520,7 +521,15 @@ class Sequence(Brick):
 
 
 class FeedforwardSequence(Sequence, Feedforward):
-    """A sequence where the first and last bricks are feedforward."""
+    """A sequence where the first and last bricks are feedforward.
+
+    Parameters
+    ----------
+    application_methods : list
+        List of :class:`.BoundApplication` to apply. The first and last
+        application method should belong to a :class:`Feedforward` brick.
+
+    """
     @property
     def input_dim(self):
         return self.children[0].input_dim
