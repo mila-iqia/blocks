@@ -177,6 +177,8 @@ class BaseSequenceGenerator(Initializable):
         readouts = self.readout.readout(
             feedback=feedback, **dict_union(states, glimpses, contexts))
         costs = self.readout.cost(readouts, outputs)
+        if mask is not None:
+            costs *= mask
 
         for name, variable in glimpses.items():
             application_call.add_auxiliary_variable(
