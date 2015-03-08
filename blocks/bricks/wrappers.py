@@ -1,4 +1,4 @@
-from six.moves import range
+from six.moves import xrange
 from theano import tensor
 
 from blocks.bricks.base import Brick, application
@@ -15,7 +15,8 @@ class As2D(Brick):
     Parameters
     ----------
     application_method : callable
-        Some brick's :meth:`apply` method
+        Some brick's application method. The application is expected to
+        have exactly one input and one output.
 
     """
     def __init__(self, application_method, **kwargs):
@@ -38,16 +39,17 @@ class As2D(Brick):
 
 
 class WithAxesSwapped(Brick):
-    """Wraps an application around dimshuffles.
+    """Swaps axes in both the input and output of an application.
 
     Parameters
     ----------
     application_method : callable
-        Some brick's :meth:`apply` method
+        Some brick's application method. The application is expected to
+        have exactly one input and one output.
     dim0 : int
-        First dimension to swap
+        First dimension to swap.
     dim1 : int
-        Second dimension to swap
+        Second dimension to swap.
 
     """
     def __init__(self, application_method, dim0, dim1, **kwargs):
@@ -60,7 +62,7 @@ class WithAxesSwapped(Brick):
     @application(inputs=['input_'], outputs=['output'])
     def apply(self, input_):
         if self.dim0 != self.dim1:
-            dims = list(range(input_.ndim))
+            dims = list(xrange(input_.ndim))
             dims[self.dim0], dims[self.dim1] = dims[self.dim1], dims[self.dim0]
             input_ = input_.dimshuffle(*dims)
             output = self.application_method(input_).dimshuffle(*dims)
