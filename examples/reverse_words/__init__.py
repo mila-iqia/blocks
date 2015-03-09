@@ -236,11 +236,15 @@ def main(mode, save_path, num_batches, data_path=None):
                 TrainingDataMonitoring(observables, after_every_batch=True),
                 average_monitoring,
                 FinishAfter(after_n_batches=num_batches)
+                # This shows a way to handle NaN emerging during
+                # training: simply finish it.
                 .add_condition("after_batch", _is_nan),
                 Plot(os.path.basename(save_path),
                      [[average_monitoring.record_name(cost)],
                       [average_monitoring.record_name(cost_per_character)]],
                      every_n_batches=10),
+                # Saving the model and the log separately is convenient,
+                # because loading the whole pickle takes quite some time.
                 SerializeMainLoop(save_path, every_n_batches=500,
                                   save_separately=["model", "log"]),
                 Printing(every_n_batches=1)])
