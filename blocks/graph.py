@@ -168,32 +168,33 @@ class ComputationGraph(object):
         apply_nodes_sorted = theano.gof.graph.io_toposort(
             self.inputs, self.outputs)
         outputs_cur = self.outputs
+
+        # `replacements` with previous replacements applied. We have to track
+        # variables in the new graph corresponding to original replacements.
+        replacements_cur = OrderedDict()
         # Sort `replacements` in topological order
-        replacements_sorted = []
         for node in apply_nodes_sorted:
             for input_ in node.inputs:
                 if input_ not in replacements:
                     continue
-                replacements_sorted.append((input_, replacements[input_]))
-        # `replacements` with previous replacements applied. We have to track
-        # variables in the new graph corresponding to original replacements.
-        replacements_cur = replacements_sorted
+                replacements_cur[input_] = replacements[input_]
 
         # Replace step-by-step in topological order
-        for i in range(len(replacements_sorted)):
-            # Find a source/target to replace during this step.
-            replace_what, replace_by = replacements_cur[i]
-
+        for i in range(len(replacements_cur)):
+            replacement = list(replacements_cur.items())[i]
             # We also want to make changes in future replacements
             outputs_new = theano.clone(
                 outputs_cur +
-                list(chain(*replacements_cur)),
-                replace={replace_what: replace_by})
+                list(replacements_cur.keys()) +
+                list(replacements_cur.values()),
+                replace=[replacement])
             # Reconstruct outputs, keys, and values
             outputs_cur = outputs_new[:len(outputs_cur)]
-            replacements_cur_plain = outputs_new[len(outputs_cur):]
-            replacements_cur = list(zip(replacements_cur_plain[::2],
-                                        replacements_cur_plain[1::2]))
+            keys = outputs_new[len(outputs_cur):
+                               len(outputs_cur) + len(replacements)]
+            vals = outputs_new[len(outputs_cur) + len(replacements):]
+
+            replacements_cur = OrderedDict(zip(keys, vals))
         return ComputationGraph(outputs_cur)
 
     def get_theano_function(self, additional_updates=None):
@@ -424,7 +425,7 @@ def apply_dropout(computation_graph, variables, drop_prob=0.5, rng=None,
                                              dtype=floatX) / (1 - drop_prob))
                     for var in variables]
     for variable, replacement in replacements:
-        replacement.tag.roles = variable.tag.roles + [DROPOUT]
+        add_role(replacement, DROPOUT)
         replacement.tag.replacement_of = variable
 
     return computation_graph.replace(replacements)
