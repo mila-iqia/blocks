@@ -29,7 +29,7 @@ if __name__ == "__main__":
              " is `train` OR path to an `.npz` files with learned"
              " parameters if the mode is `test`.")
     parser.add_argument(
-        "--num-batches", default=20000, type=int,
+        "--num-batches", default=10000, type=int,
         help="Train on this many batches.")
     args = parser.parse_args()
     main(**vars(args))
