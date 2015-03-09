@@ -192,30 +192,28 @@ def main(mode, save_path, num_batches, data_path=None):
         for brick in model.get_top_bricks():
             brick.initialize()
 
-        # Fetch variables useful for debugging
-        max_length = named_copy(chars.shape[0], "max_length")
-        cost_per_character = named_copy(
-            aggregation.mean(batch_cost, batch_size * max_length),
-            "character_log_likelihood")
-        cg = ComputationGraph(cost)
-        r = reverser
-        (energies,) = VariableFilter(
-            application=r.generator.readout.readout,
-            name="output")(cg.variables)
-        min_energy = named_copy(energies.min(), "min_energy")
-        max_energy = named_copy(energies.max(), "max_energy")
-        (activations,) = VariableFilter(
-            application=r.generator.transition.apply,
-            name="states")(cg.variables)
-        mean_activation = named_copy(abs(activations).mean(),
-                                     "mean_activation")
-
         # Define the training algorithm.
+        cg = ComputationGraph(cost)
         algorithm = GradientDescent(
             cost=cost, params=cg.parameters,
             step_rule=CompositeRule([StepClipping(10.0), Scale(0.01)]))
 
-        # More variables for debugging
+        # Fetch variables useful for debugging
+        generator = reverser.generator
+        (energies,) = VariableFilter(
+            application=generator.readout.readout,
+            name="output")(cg.variables)
+        (activations,) = VariableFilter(
+            application=generator.transition.apply,
+            name=generator.transition.apply.states[0])(cg.variables)
+        max_length = named_copy(chars.shape[0], "max_length")
+        cost_per_character = named_copy(
+            aggregation.mean(batch_cost, batch_size * max_length),
+            "character_log_likelihood")
+        min_energy = named_copy(energies.min(), "min_energy")
+        max_energy = named_copy(energies.max(), "max_energy")
+        mean_activation = named_copy(abs(activations).mean(),
+                                     "mean_activation")
         observables = [
             cost, min_energy, max_energy, mean_activation,
             batch_size, max_length, cost_per_character,
