@@ -165,41 +165,35 @@ class ComputationGraph(object):
         # Due to theano specifics we have to make one replacement in time
         replacements = OrderedDict(replacements)
 
-        # `replacements` with previous replacements applied. We have to track
-        # variables in the new graph corresponding to original replacements.
-        replacements_cur = replacements
-
-        # Maps original `replacement` keys to
-        # new, replaced earlier, keys in `replacements_cur`.
-        key_to_key_cur = OrderedDict(zip(replacements.keys(),
-                                         replacements_cur.keys()))
         apply_nodes_sorted = theano.gof.graph.io_toposort(
             self.inputs, self.outputs)
         outputs_cur = self.outputs
-        # Replace step-by-step in topological order
+        # Sort `replacements` in topological order
+        replacements_sorted = []
         for node in apply_nodes_sorted:
             for input_ in node.inputs:
                 if input_ not in replacements:
                     continue
-                # Find a source/target to replace during this step.
-                replace_what = key_to_key_cur[input_]
-                replace_by = replacements_cur[key_to_key_cur[input_]]
+                replacements_sorted.append((input_, replacements[input_]))
+        # `replacements` with previous replacements applied. We have to track
+        # variables in the new graph corresponding to original replacements.
+        replacements_cur = replacements_sorted
 
-                # We also want to make changes in future replacements
-                outputs_new = theano.clone(
-                    outputs_cur +
-                    list(replacements_cur.keys()) +
-                    list(replacements_cur.values()),
-                    replace={replace_what: replace_by})
-                # Reconstruct outputs, keys, and values
-                outputs_cur = outputs_new[:len(outputs_cur)]
-                keys = outputs_new[len(outputs_cur):
-                                   len(outputs_cur) + len(replacements)]
-                vals = outputs_new[len(outputs_cur) + len(replacements):]
-                # Update mappings
-                replacements_cur = OrderedDict(zip(keys, vals))
-                key_to_key_cur = OrderedDict(zip(replacements.keys(),
-                                                 replacements_cur.keys()))
+        # Replace step-by-step in topological order
+        for i in range(len(replacements_sorted)):
+            # Find a source/target to replace during this step.
+            replace_what, replace_by = replacements_cur[i]
+
+            # We also want to make changes in future replacements
+            outputs_new = theano.clone(
+                outputs_cur +
+                list(chain(*replacements_cur)),
+                replace={replace_what: replace_by})
+            # Reconstruct outputs, keys, and values
+            outputs_cur = outputs_new[:len(outputs_cur)]
+            replacements_cur_plain = outputs_new[len(outputs_cur):]
+            replacements_cur = list(zip(replacements_cur_plain[::2],
+                                        replacements_cur_plain[1::2]))
         return ComputationGraph(outputs_cur)
 
     def get_theano_function(self, additional_updates=None):
