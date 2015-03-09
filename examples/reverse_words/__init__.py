@@ -152,18 +152,13 @@ def main(mode, save_path, num_batches, data_path=None):
             dataset = TextFile(data_path, **dataset_options)
         else:
             dataset = OneBillionWord("training", [99], **dataset_options)
-        data_stream = Mapping(
-            mapping=_transpose,
-            data_stream=Padding(
-                Batch(
-                    iteration_scheme=ConstantScheme(10),
-                    data_stream=Mapping(
-                        mapping=reverse_words,
-                        add_sources=("targets",),
-                        data_stream=Filter(
-                            predicate=_filter_long,
-                            data_stream=dataset
-                            .get_example_stream())))))
+        data_stream = dataset.get_example_stream()
+        data_stream = Filter(data_stream, _filter_long)
+        data_stream = Mapping(data_stream, reverse_words,
+                              add_sources=("targets",))
+        data_stream = Batch(data_stream, iteration_scheme=ConstantScheme(10))
+        data_stream = Padding(data_stream)
+        data_stream = Mapping(data_stream, _transpose)
 
         # Initialization settings
         reverser.weights_init = IsotropicGaussian(0.1)
