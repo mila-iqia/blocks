@@ -415,6 +415,25 @@ def apply_dropout(computation_graph, variables, drop_prob=0.5, rng=None,
     .. [DROPOUT] Hinton et al. *Improving neural networks by preventing
        co-adaptation of feature detectors*, arXiv:1207.0580.
 
+    Examples
+    --------
+    >>> from theano import tensor
+    >>> from blocks.bricks import MLP, Identity
+    >>> from blocks.filter import VariableFilter
+    >>> from blocks.initialization import Constant
+    >>> from blocks.roles import INPUT
+    >>> linear = MLP([Identity(), Identity()], [10, 10, 10],
+    ...              weights_init=Constant(1), biases_init=Constant(2))
+    >>> x = tensor.matrix('x')
+    >>> y = linear.apply(x)
+    >>> cg = ComputationGraph(y)
+    >>> inputs = VariableFilter(roles=[INPUT])(cg.variables)
+    >>> cg_dropout = apply_dropout(cg, inputs)
+    >>> dropped_out = VariableFilter(roles=[DROPOUT])(cg_dropout.variables)
+    >>> inputs_referenced = [var.tag.replacement_of for var in dropped_out]
+    >>> set(inputs) == set(inputs_referenced)
+    True
+
     """
     if not rng and not seed:
         seed = config.default_seed
