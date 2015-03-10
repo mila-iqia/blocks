@@ -174,11 +174,14 @@ class ComputationGraph(object):
 
         >>> replacements = {y: x * 2, z: y * 3}
         >>> cg = ComputationGraph([a])
-        >>> theano.pprint(a)
-        '(((x + TensorConstant{2}) + TensorConstant{3}) + TensorConstant{5})'
+        >>> theano.pprint(a)  # doctest: +NORMALIZE_WHITESPACE
+        '(((x + TensorConstant{2}) + TensorConstant{3}) +
+        TensorConstant{5})'
         >>> cg_new = cg.replace(replacements)
-        >>> theano.pprint(cg_new.outputs[0])
-        '(((x * TensorConstant{2}) * TensorConstant{3}) + TensorConstant{5})'
+        >>> theano.pprint(
+        ...     cg_new.outputs[0])  # doctest: +NORMALIZE_WHITESPACE
+        '(((x * TensorConstant{2}) * TensorConstant{3}) +
+        TensorConstant{5})'
 
         First two sums turned into multiplications
 
@@ -371,10 +374,10 @@ class Annotation(object):
         >>> from blocks.filter import VariableFilter
         >>> cg = ComputationGraph([y])
         >>> var_filter = VariableFilter(roles=[AUXILIARY])
-        >>> var_filter(cg.variables) # doctest: +SKIP
+        >>> var_filter(cg.variables)  # doctest: +SKIP
         {x_minus_1, mean_W, mean_x}
         >>> var_filter = VariableFilter(roles=[COST])
-        >>> var_filter(cg.variables) # doctest: +SKIP
+        >>> var_filter(cg.variables)  # doctest: +SKIP
         {mean_x}
 
         """
@@ -416,7 +419,7 @@ def apply_noise(computation_graph, variables, level, seed=None):
     return computation_graph.replace(replace)
 
 
-def apply_dropout(computation_graph, variables, drop_prob=0.5, rng=None,
+def apply_dropout(computation_graph, variables, drop_prob, rng=None,
                   seed=None):
     """Returns a graph to variables in a computational graph.
 
@@ -483,12 +486,12 @@ def apply_dropout(computation_graph, variables, drop_prob=0.5, rng=None,
 
     >>> linear.initialize()
     >>> fprop(numpy.ones((3, 2),
-    ...       dtype=theano.config.floatX)) # doctest:+ELLIPSIS
+    ...       dtype=theano.config.floatX))  # doctest:+ELLIPSIS
     array([[ 42.,  42.],
            [ 42.,  42.],
            [ 42.,  42.]]...
     >>> fprop_dropout(numpy.ones((3, 2),
-    ...               dtype=theano.config.floatX)) # doctest:+ELLIPSIS
+    ...               dtype=theano.config.floatX))  # doctest:+ELLIPSIS
     array([[ 0.,  0.],
            [ 0.,  0.],
            [ 0.,  0.]]...
@@ -496,7 +499,7 @@ def apply_dropout(computation_graph, variables, drop_prob=0.5, rng=None,
     And after the second run answer is different
 
     >>> fprop_dropout(numpy.ones((3, 2),
-    ...               dtype=theano.config.floatX)) # doctest:+ELLIPSIS
+    ...               dtype=theano.config.floatX))  # doctest:+ELLIPSIS
     array([[   0.,   52.],
            [ 100.,    0.],
            [   0.,    0.]]...
