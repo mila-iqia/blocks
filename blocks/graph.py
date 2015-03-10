@@ -161,6 +161,30 @@ class ComputationGraph(object):
             The mapping from variables to be replaced to the corresponding
             substitutes.
 
+        Examples
+        --------
+        >>> import theano
+        >>> from theano import tensor, function
+        >>> x = tensor.scalar('x')
+        >>> y = x + 2
+        >>> z = y + 3
+        >>> a = z + 5
+
+        Let's suppose we have dependent replacements like
+
+        >>> replacements = {y: x * 2, z: y * 3}
+        >>> cg = ComputationGraph([a])
+        >>> theano.pprint(a)
+        '(((x + TensorConstant{2}) + TensorConstant{3}) + TensorConstant{5})'
+        >>> cg_new = cg.replace(replacements)
+        >>> theano.pprint(cg_new.outputs[0])
+        '(((x * TensorConstant{2}) * TensorConstant{3}) + TensorConstant{5})'
+
+        First two sums turned into multiplications
+
+        >>> float(function(cg_new.inputs, cg_new.outputs)(3.)[0])
+        23.0
+
         """
         # Due to theano specifics we have to make one replacement in time
         replacements = OrderedDict(replacements)
@@ -458,21 +482,24 @@ def apply_dropout(computation_graph, variables, drop_prob=0.5, rng=None,
     Initialize an MLP and apply these functions
 
     >>> linear.initialize()
-    >>> fprop(numpy.ones((3, 2)))
-    array([[42., 42.],
-           [42., 42.],
-           [42., 42.]])
-    >>> fprop_dropout(numpy.ones((3, 2)))
-    array([[0., 0.],
-           [0., 0.],
-           [0., 0.]])
+    >>> fprop(numpy.ones((3, 2),
+    ...       dtype=theano.config.floatX)) # doctest:+ELLIPSIS
+    array([[ 42.,  42.],
+           [ 42.,  42.],
+           [ 42.,  42.]]...
+    >>> fprop_dropout(numpy.ones((3, 2),
+    ...               dtype=theano.config.floatX)) # doctest:+ELLIPSIS
+    array([[ 0.,  0.],
+           [ 0.,  0.],
+           [ 0.,  0.]]...
 
     And after the second run answer is different
 
-    >>> fprop_dropout(numpy.ones((3, 2)))
-    array([[0., 52.],
-           [100., 0.],
-           [0., 0.]])
+    >>> fprop_dropout(numpy.ones((3, 2),
+    ...               dtype=theano.config.floatX)) # doctest:+ELLIPSIS
+    array([[   0.,   52.],
+           [ 100.,    0.],
+           [   0.,    0.]]...
 
     """
     if not rng and not seed:

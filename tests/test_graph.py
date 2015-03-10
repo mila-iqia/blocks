@@ -1,7 +1,7 @@
 import numpy
 import theano
 from numpy.testing import assert_allclose
-from theano import tensor, function
+from theano import tensor
 from theano.sandbox.rng_mrg import MRG_RandomStreams
 
 from blocks.bricks import MLP, Identity
@@ -69,17 +69,6 @@ def test_computation_graph():
     cg6 = ComputationGraph(s)
     assert cg6.scans == [scan]
     assert all(v in cg6.scan_variables for v in scan.inputs + scan.outputs)
-
-
-def test_computation_graph_replace():
-    x = tensor.scalar('x')
-    y = x + 2
-    z = y + 3
-    a = z + 5
-    replacements = {y: x * 2, z: y * 3}
-    cg = ComputationGraph([a])
-    cg_new = cg.replace(replacements)
-    assert function(cg_new.inputs, cg_new.outputs)(3.) == [23.]
 
 
 def test_apply_noise():
