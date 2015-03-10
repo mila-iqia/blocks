@@ -178,10 +178,9 @@ class BaseSequenceGenerator(Initializable):
             feedback=feedback, **dict_union(states, glimpses, contexts))
         costs = self.readout.cost(readouts, outputs)
 
-        for name, variable in glimpses.items():
+        for name, variable in glimpses.items() + states.items():
             application_call.add_auxiliary_variable(
                 variable.copy(), name=name)
-
         return costs
 
     @recurrent
