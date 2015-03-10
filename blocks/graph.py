@@ -420,22 +420,59 @@ def apply_dropout(computation_graph, variables, drop_prob=0.5, rng=None,
 
     Examples
     --------
-    >>> from theano import tensor
+    >>> import numpy
+    >>> from theano import tensor, function
     >>> from blocks.bricks import MLP, Identity
     >>> from blocks.filter import VariableFilter
     >>> from blocks.initialization import Constant
     >>> from blocks.roles import INPUT
-    >>> linear = MLP([Identity(), Identity()], [10, 10, 10],
+    >>> linear = MLP([Identity(), Identity()], [2, 10, 2],
     ...              weights_init=Constant(1), biases_init=Constant(2))
     >>> x = tensor.matrix('x')
     >>> y = linear.apply(x)
     >>> cg = ComputationGraph(y)
+
+    We are going to drop out all the input variables
+
     >>> inputs = VariableFilter(roles=[INPUT])(cg.variables)
+
+    Here we apply dropout with default setting to our computation graph
+
     >>> cg_dropout = apply_dropout(cg, inputs)
+
+    Dropped out variables have role `DROPOUT` and are tagged with
+    `replacement_of` tag. Let's filter these variables and check if they
+    have the links to original ones.
+
     >>> dropped_out = VariableFilter(roles=[DROPOUT])(cg_dropout.variables)
     >>> inputs_referenced = [var.tag.replacement_of for var in dropped_out]
     >>> set(inputs) == set(inputs_referenced)
     True
+
+    Compiling theano functions to forward propagate in original and dropped
+    out graphs
+
+    >>> fprop = function(cg.inputs, cg.outputs[0])
+    >>> fprop_dropout = function(cg_dropout.inputs, cg_dropout.outputs[0])
+
+    Initialize an MLP and apply these functions
+
+    >>> linear.initialize()
+    >>> fprop(numpy.ones((3, 2)))
+    array([[42., 42.],
+           [42., 42.],
+           [42., 42.]])
+    >>> fprop_dropout(numpy.ones((3, 2)))
+    array([[0., 0.],
+           [0., 0.],
+           [0., 0.]])
+
+    And after the second run answer is different
+
+    >>> fprop_dropout(numpy.ones((3, 2)))
+    array([[0., 52.],
+           [100., 0.],
+           [0., 0.]])
 
     """
     if not rng and not seed:
