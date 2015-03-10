@@ -180,7 +180,7 @@ class BaseSequenceGenerator(Initializable):
         if mask is not None:
             costs *= mask
 
-        for name, variable in glimpses.items() + states.items():
+        for name, variable in list(glimpses.items()) + list(states.items()):
             application_call.add_auxiliary_variable(
                 variable.copy(), name=name)
         return costs
