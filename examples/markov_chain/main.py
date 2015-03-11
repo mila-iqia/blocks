@@ -24,7 +24,7 @@ from blocks.initialization import Orthogonal, IsotropicGaussian, Constant
 from blocks.model import Model
 from blocks.monitoring import aggregation
 from blocks.extensions import FinishAfter, Printing
-from blocks.extensions.saveload import SerializeMainLoop
+from blocks.extensions.saveload import Checkpoint
 from blocks.extensions.monitoring import TrainingDataMonitoring
 from blocks.main_loop import MainLoop
 from blocks.select import Selector
@@ -93,7 +93,7 @@ def main(mode, save_path, steps, num_batches):
                                                after_every_batch=True),
                         TrainingDataMonitoring([cost], prefix="average",
                                                every_n_batches=100),
-                        SerializeMainLoop(save_path, every_n_batches=500),
+                        Checkpoint(save_path, every_n_batches=500),
                         Printing(every_n_batches=100)])
         main_loop.run()
     elif mode == "sample":

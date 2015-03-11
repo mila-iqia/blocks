@@ -17,7 +17,7 @@ from blocks.graph import ComputationGraph
 from blocks.model import Model
 from blocks.monitoring import aggregation
 from blocks.extensions import FinishAfter, Timing, Printing
-from blocks.extensions.saveload import SerializeMainLoop
+from blocks.extensions.saveload import Checkpoint
 from blocks.extensions.monitoring import (DataStreamMonitoring,
                                           TrainingDataMonitoring)
 from blocks.extensions.plot import Plot
@@ -65,7 +65,7 @@ def main(save_to, num_epochs):
                          aggregation.mean(algorithm.total_gradient_norm)],
                         prefix="train",
                         after_every_epoch=True),
-                    SerializeMainLoop(save_to),
+                    Checkpoint(save_to),
                     Plot(
                         'MNIST example',
                         channels=[
