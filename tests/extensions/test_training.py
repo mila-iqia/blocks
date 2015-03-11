@@ -98,22 +98,22 @@ def test_track_the_best():
     main_loop.log.current_row.cost = 5
     extension.dispatch('after_batch')
     assert main_loop.status.best_cost == 5
-    assert main_loop.log.current_row['cost_is_best_so_far'] == True
+    assert main_loop.log.current_row['cost_best_so_far'] == True
 
     main_loop.status.iterations_done += 1
     main_loop.log.current_row.cost = 6
     extension.dispatch('after_batch')
     assert main_loop.status.best_cost == 5
-    assert main_loop.log.current_row['cost_is_best_so_far'] is None
+    assert main_loop.log.current_row['cost_best_so_far'] is None
 
     main_loop.status.iterations_done += 1
     main_loop.log.current_row.cost = 5
     extension.dispatch('after_batch')
     assert main_loop.status.best_cost == 5
-    assert main_loop.log.current_row['cost_is_best_so_far'] is None
+    assert main_loop.log.current_row['cost_best_so_far'] is None
 
     main_loop.status.iterations_done += 1
     main_loop.log.current_row.cost = 4
     extension.dispatch('after_batch')
     assert main_loop.status.best_cost == 4
-    assert main_loop.log.current_row['cost_is_best_so_far'] is True
+    assert main_loop.log.current_row['cost_best_so_far'] is True

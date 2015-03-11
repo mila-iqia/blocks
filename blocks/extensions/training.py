@@ -54,8 +54,8 @@ class TrackTheBest(SimpleExtension):
         The name of the record to track.
     notification_name : str, optional
         Tne name for the record to be made in the log when the current
-        value of the tracked quantity is the best so far.
-
+        value of the tracked quantity is the best so far. It not given,
+        'record_name' plus "best_so_far" suffix is used.
     choose_best : callable, optional
         A function that takes the current value and the best so far
         and return the best of two. By default :func:`min`, which
@@ -66,7 +66,7 @@ class TrackTheBest(SimpleExtension):
                  choose_best=min, **kwargs):
         self.record_name = record_name
         if not notification_name:
-            notification_name = record_name + "_is_best_so_far"
+            notification_name = record_name + "_best_so_far"
         self.notification_name = notification_name
         self.best_name = "best_" + record_name
         self.choose_best = choose_best
