@@ -13,7 +13,7 @@ LOADED_FROM = "loaded_from"
 SAVED_TO = "saved_to"
 
 
-class SerializeMainLoop(SimpleExtension):
+class Checkpoint(SimpleExtension):
     """Saves a pickled version of the main loop to the disk.
 
     The pickled main loop can be later reloaded and training can be
@@ -47,7 +47,7 @@ class SerializeMainLoop(SimpleExtension):
     """
     def __init__(self, path, save_separately=None, **kwargs):
         kwargs.setdefault("after_training", True)
-        super(SerializeMainLoop, self).__init__(**kwargs)
+        super(Checkpoint, self).__init__(**kwargs)
 
         self.path = path
         self.save_separately = save_separately

@@ -30,7 +30,7 @@ from blocks.initialization import Orthogonal, IsotropicGaussian, Constant
 from blocks.model import Model
 from blocks.monitoring import aggregation
 from blocks.extensions import FinishAfter, Printing, Timing
-from blocks.extensions.saveload import SerializeMainLoop
+from blocks.extensions.saveload import Checkpoint
 from blocks.extensions.monitoring import TrainingDataMonitoring
 from blocks.extensions.plot import Plot
 from blocks.main_loop import MainLoop
@@ -247,8 +247,8 @@ def main(mode, save_path, num_batches, data_path=None):
                      every_n_batches=10),
                 # Saving the model and the log separately is convenient,
                 # because loading the whole pickle takes quite some time.
-                SerializeMainLoop(save_path, every_n_batches=500,
-                                  save_separately=["model", "log"]),
+                Checkpoint(save_path, every_n_batches=500,
+                           save_separately=["model", "log"]),
                 Printing(every_n_batches=1)])
         main_loop.run()
     elif mode == "sample" or mode == "beam_search":
