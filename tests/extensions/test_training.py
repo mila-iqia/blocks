@@ -7,7 +7,8 @@ from theano import tensor
 
 from blocks.algorithms import GradientDescent, Scale
 from blocks.extensions import FinishAfter
-from blocks.extensions.training import SharedVariableModifier
+from blocks.extensions.training import SharedVariableModifier, TrackTheBest
+from blocks.log import TrainingLog
 from blocks.main_loop import MainLoop
 from blocks.utils import shared_floatx
 
@@ -77,3 +78,42 @@ def test_shared_variable_modifier_two_params():
     assert_allclose(new_value,
                     0.001 * 0.2 ** n_batches,
                     atol=1e-5)
+
+
+def test_track_the_best():
+    class FakeMainLoop(object):
+
+        def __init__(self):
+            self.log = TrainingLog()
+
+        @property
+        def status(self):
+            return self.log.status
+
+    main_loop = FakeMainLoop()
+    extension = TrackTheBest("cost")
+    extension.main_loop = main_loop
+
+    main_loop.status.iterations_done += 1
+    main_loop.log.current_row.cost = 5
+    extension.dispatch('after_batch')
+    assert main_loop.status.best_cost == 5
+    assert main_loop.log.current_row['cost_is_best_so_far'] == True
+
+    main_loop.status.iterations_done += 1
+    main_loop.log.current_row.cost = 6
+    extension.dispatch('after_batch')
+    assert main_loop.status.best_cost == 5
+    assert main_loop.log.current_row['cost_is_best_so_far'] is None
+
+    main_loop.status.iterations_done += 1
+    main_loop.log.current_row.cost = 5
+    extension.dispatch('after_batch')
+    assert main_loop.status.best_cost == 5
+    assert main_loop.log.current_row['cost_is_best_so_far'] is None
+
+    main_loop.status.iterations_done += 1
+    main_loop.log.current_row.cost = 4
+    extension.dispatch('after_batch')
+    assert main_loop.status.best_cost == 4
+    assert main_loop.log.current_row['cost_is_best_so_far'] is True

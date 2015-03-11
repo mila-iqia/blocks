@@ -49,6 +49,12 @@ class AbstractTrainingStatus(object):
         """
         pass
 
+    def __getitem__(self, key):
+        return getattr(self, key)
+
+    def __setitem__(self, key, value):
+        return setattr(self, key, value)
+
 
 class TrainingLogRow(object):
     """A convenience interface for a row of the training log.
@@ -221,6 +227,9 @@ class AbstractTrainingLog(object):
 
 class TrainingStatus(AbstractTrainingStatus):
     """A simple training status."""
+    def __getattr__(self, key):
+        return None
+
     def __iter__(self):
         for attr, value in self.__dict__.items():
             if not attr.startswith("__"):
