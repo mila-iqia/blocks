@@ -297,7 +297,9 @@ class Application(object):
         # Run the application method on the annotated variables
         if self.call_stack and brick is not self.call_stack[-1] and \
                 brick not in self.call_stack[-1].children:
-            raise ValueError
+            raise ValueError('Brick ' + str(self.call_stack[-1]) + ' tries '
+                             'to call brick ' + str(self.brick) + ' which '
+                             'is not in the list of its children.')
         self.call_stack.append(brick)
         try:
             outputs = self.application_function(brick, *args, **kwargs)
