@@ -465,7 +465,7 @@ def apply_dropout(computation_graph, variables, drop_prob, rng=None,
 
     Here we apply dropout with default setting to our computation graph
 
-    >>> cg_dropout = apply_dropout(cg, inputs)
+    >>> cg_dropout = apply_dropout(cg, inputs, 0.5)
 
     Dropped out variables have role `DROPOUT` and are tagged with
     `replacement_of` tag. Let's filter these variables and check if they
