@@ -348,8 +348,9 @@ class Readout(AbstractReadout, Initializable):
         self.post_merge = post_merge
         self.merged_dim = merged_dim
 
-        self.children = [self.emitter, self.feedback_brick, self.merge,
-                         self.post_merge]
+        self.children = [brick for brick in (self.emitter, self.feedback_brick,
+                                             self.merge, self.post_merge)
+                         if brick is not None]
 
     def _push_allocation_config(self):
         self.emitter.readout_dim = self.get_dim('readouts')
