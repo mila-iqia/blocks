@@ -5,7 +5,7 @@ from collections import OrderedDict
 import six
 
 from blocks.bricks.base import Brick
-from blocks.utils import dict_union
+from blocks.utils import dict_union, equizip
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +80,7 @@ class Path(object):
             raise ValueError
 
         nodes = []
-        for separator, part in zip(separators, parts):
+        for separator, part in equizip(separators, parts):
             if separator == Path.separator:
                 nodes.append(Path.BrickName(part))
             elif Path.param_separator == Path.param_separator:

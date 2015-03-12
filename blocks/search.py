@@ -10,6 +10,7 @@ from blocks.bricks.sequence_generators import SequenceGenerator
 from blocks.filter import VariableFilter, get_application_call, get_brick
 from blocks.graph import ComputationGraph
 from blocks.roles import INPUT, OUTPUT
+from blocks.utils import equizip
 
 floatX = config.floatX
 
@@ -99,7 +100,7 @@ class BeamSearch(object):
         initial_states = [
             self.generator.initial_state(
                 name, self.beam_size,
-                **dict(zip(self.context_names, self.contexts)))
+                **dict(equizip(self.context_names, self.contexts)))
             for name in self.state_names]
         self.initial_state_computer = function(
             self.contexts, initial_states, on_unused_input='ignore')
@@ -151,7 +152,7 @@ class BeamSearch(object):
         """
         contexts = self.context_computer(*[inputs[var]
                                            for var in self.inputs])
-        return OrderedDict(zip(self.context_names, contexts))
+        return OrderedDict(equizip(self.context_names, contexts))
 
     def compute_initial_states(self, contexts):
         """Computes initial states.
@@ -168,7 +169,7 @@ class BeamSearch(object):
 
         """
         init_states = self.initial_state_computer(*list(contexts.values()))
-        return OrderedDict(zip(self.state_names, init_states))
+        return OrderedDict(equizip(self.state_names, init_states))
 
     def compute_logprobs(self, contexts, states):
         """Compute log probabilities of all possible outputs.
@@ -210,7 +211,7 @@ class BeamSearch(object):
         input_states = [states[name] for name in self.input_state_names]
         next_values = self.next_state_computer(*(list(contexts.values()) +
                                                  input_states + [outputs]))
-        return OrderedDict(zip(self.state_names, next_values))
+        return OrderedDict(equizip(self.state_names, next_values))
 
     @staticmethod
     def _smallest(matrix, k, only_first_row=False):
@@ -336,6 +337,6 @@ class BeamSearch(object):
     def result_to_lists(result):
         outputs, masks, costs = [array.T for array in result]
         outputs = [list(output[:mask.sum()])
-                   for output, mask in zip(outputs, masks)]
+                   for output, mask in equizip(outputs, masks)]
         costs = list(costs.T.sum(axis=0))
         return outputs, costs

@@ -11,7 +11,7 @@ from blocks.bricks.lookup import LookupTable
 from blocks.bricks.recurrent import recurrent
 from blocks.bricks.attention import (
     AbstractAttentionRecurrent, AttentionRecurrent)
-from blocks.utils import dict_union, dict_subset
+from blocks.utils import dict_union, dict_subset, equizip
 
 
 class BaseSequenceGenerator(Initializable):
@@ -377,14 +377,14 @@ class LinearReadout(Readout, Initializable):
 
     def _push_allocation_config(self):
         super(LinearReadout, self)._push_allocation_config()
-        for name, projector in zip(self.source_names, self.projectors):
+        for name, projector in equizip(self.source_names, self.projectors):
             projector.input_dim = self.source_dims[name]
             projector.output_dim = self.readout_dim
 
     @application
     def readout(self, **kwargs):
         projections = [projector.apply(kwargs[name]) for name, projector in
-                       zip(self.source_names, self.projectors)]
+                       equizip(self.source_names, self.projectors)]
         if len(projections) == 1:
             return projections[0]
         return sum(projections[1:], projections[0])
