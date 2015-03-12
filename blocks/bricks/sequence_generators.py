@@ -354,16 +354,14 @@ class Readout(AbstractReadout, Initializable):
         self.post_merge = post_merge
         self.merged_dim = merged_dim
 
-        self.children = [brick for brick in (self.emitter, self.feedback_brick,
-                                             self.merge, self.post_merge)
-                         if brick is not None]
+        self.children = [self.emitter, self.feedback_brick,
+                         self.merge, self.post_merge]
 
     def _push_allocation_config(self):
         self.emitter.readout_dim = self.get_dim('readouts')
         self.feedback_brick.output_dim = self.get_dim('outputs')
         self.merge.input_names = self.source_names
-        self.merge.input_dims = {source_name: self.source_dims[source_name]
-                                 for source_name in self.source_names}
+        self.merge.input_dims = self.source_dims
         self.merge.output_dim = self.merged_dim
         self.post_merge.input_dim = self.merged_dim
         self.post_merge.output_dim = self.readout_dim
@@ -372,8 +370,7 @@ class Readout(AbstractReadout, Initializable):
     def readout(self, **kwargs):
         merged = self.merge.apply(**{name: kwargs[name]
                                      for name in self.merge.input_names})
-        if self.post_merge:
-            merged = self.post_merge.apply(merged)
+        merged = self.post_merge.apply(merged)
         return merged
 
     @application
