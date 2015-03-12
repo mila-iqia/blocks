@@ -20,7 +20,10 @@ class Checkpoint(SimpleExtension):
     resumed.
 
     Makes a `SAVED_TO` record in the log with the serialization destination
-    in the case of success and ``None`` in the case of failure.
+    in the case of success and ``None`` in the case of failure. The
+    value of the record is a tuple of paths to which saving was done
+    (there can be more than one if the user added a condition
+    with an argument, see :meth:`do` docs).
 
     Parameters
     ----------
@@ -56,7 +59,13 @@ class Checkpoint(SimpleExtension):
             self.save_separately = []
 
     def do(self, callback_name, *args):
-        """Pickle the main loop object to the disk."""
+        """Pickle the main loop object to the disk.
+
+        If `*args` contain an argument from user, it is treated as
+        saving path to be used instead of the one given at the
+        construction stage.
+
+        """
         from_main_loop, from_user = self.parse_args(callback_name, args)
         try:
             path = self.path

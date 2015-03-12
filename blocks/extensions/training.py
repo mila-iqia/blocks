@@ -61,6 +61,12 @@ class TrackTheBest(SimpleExtension):
         and return the best of two. By default :func:`min`, which
         corresponds to tracking the minimum value.
 
+    Attributes
+    ----------
+    best_name : str
+        The name of the status record to keep the best value so far.
+    notification_name : str
+
     """
     def __init__(self, record_name, notification_name=None,
                  choose_best=min, **kwargs):

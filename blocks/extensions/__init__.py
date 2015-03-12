@@ -331,6 +331,25 @@ class SimpleExtension(TrainingExtension):
 
     @staticmethod
     def parse_args(which_callback, args):
+        """Separates arguments from the main loop from the user given.
+
+        When a :meth:`do` method receives arguments from both the main
+        loop (e.g. a batch) and the user, it often has to separate them.
+        This method is the right tool to use.
+
+        Parameters
+        ----------
+        which_callback : str
+            The name of the callback.
+        args : iterable
+            The arguments.
+
+        Returns
+        -------
+        from_main_loop : tuple
+        from_user : tuple
+
+        """
         args = tuple(args)
         if (which_callback == 'after_batch' or
                 which_callback == 'before_batch'):
