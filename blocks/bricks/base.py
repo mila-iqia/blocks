@@ -746,20 +746,20 @@ class Brick(Annotation):
                          .format(name))
 
     def get_dims(self, names):
-        """Get dictionary of dimensions for a set of input/output variables.
+        """Get list of dimensions for a set of input/output variables.
 
         Parameters
         ----------
-        names : list of str
-            The dictionary of variable names.
+        names : list
+            The variable names.
 
         Returns
         -------
-        dims : dict
-            Dictionary of (variable name, variable dimension) pairs.
+        dims : list
+            The dimensions of the sources.
 
         """
-        return {name: self.get_dim(name) for name in names}
+        return [self.get_dim(name) for name in names]
 
 
 def lazy(func):

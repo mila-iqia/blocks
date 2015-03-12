@@ -94,36 +94,43 @@ class BaseSequenceGenerator(Initializable):
 
     """
     @lazy
-    def __init__(self, readout, transition, fork=None, **kwargs):
+    def __init__(self, readout, transition, fork, **kwargs):
         super(BaseSequenceGenerator, self).__init__(**kwargs)
         self.readout = readout
         self.transition = transition
         self.fork = fork
 
-        self.state_names = transition.compute_states.outputs
-        self.context_names = transition.apply.contexts
-        self.glimpse_names = transition.take_glimpses.outputs
         self.children = [self.readout, self.fork, self.transition]
+
+    @property
+    def _state_names(self):
+        return self.transition.compute_states.outputs
+
+    @property
+    def _context_names(self):
+        return self.transition.apply.contexts
+
+    @property
+    def _glimpse_names(self):
+        return self.transition.take_glimpses.outputs
 
     def _push_allocation_config(self):
         # Configure readout. That involves `get_dim` requests
         # to the transition. To make sure that it answers
         # correctly we should finish its configuration first.
         self.transition.push_allocation_config()
-        state_dims = self.transition.get_dims(self.state_names)
-        context_dims = self.transition.get_dims(self.context_names)
-        self.glimpse_dims = self.transition.get_dims(self.glimpse_names)
-        self.readout.source_dims = dict_union(
-            state_dims, context_dims, self.glimpse_dims,
-            feedback=self.readout.get_dim('feedback'))
+        transition_sources = (self._state_names + self._context_names +
+                              self._glimpse_names)
+        self.readout.source_dims = [self.transition.get_dim(name)
+                                    if name in transition_sources
+                                    else self.readout.get_dim(name)
+                                    for name in self.readout.source_names]
 
         # Configure fork. For similar reasons as outlined above,
         # first push `readout` configuration.
         self.readout.push_allocation_config()
-        feedback_names = self.readout.feedback.outputs
-        if not len(feedback_names) == 1:
-            raise ValueError
-        self.fork.input_dim = self.readout.get_dim(feedback_names[0])
+        feedback_name, = self.readout.feedback.outputs
+        self.fork.input_dim = self.readout.get_dim(feedback_name)
         self.fork.output_dims = self.transition.get_dims(
             self.fork.apply.outputs)
 
@@ -149,11 +156,10 @@ class BaseSequenceGenerator(Initializable):
         batch_size = outputs.shape[1]
 
         # Prepare input for the iterative part
-        states = dict_subset(kwargs, self.state_names, must_have=False)
-        contexts = dict_subset(kwargs, self.context_names)
+        states = dict_subset(kwargs, self._state_names, must_have=False)
+        contexts = dict_subset(kwargs, self._context_names)
         feedback = self.readout.feedback(outputs)
-        inputs = (self.fork.apply(feedback, as_dict=True)
-                  if self.fork else {'feedback': feedback})
+        inputs = self.fork.apply(feedback, as_dict=True)
 
         # Run the recurrent network
         results = self.transition.apply(
@@ -165,8 +171,8 @@ class BaseSequenceGenerator(Initializable):
         # are discarded because they are not used for prediction.
         # Remember, glimpses are computed _before_ output stage, states are
         # computed after.
-        states = {name: results[name][:-1] for name in self.state_names}
-        glimpses = {name: results[name][1:] for name in self.glimpse_names}
+        states = {name: results[name][:-1] for name in self._state_names}
+        glimpses = {name: results[name][1:] for name in self._glimpse_names}
 
         # Compute the cost
         feedback = tensor.roll(feedback, 1, 0)
@@ -200,9 +206,9 @@ class BaseSequenceGenerator(Initializable):
             as keyword arguments.
 
         """
-        states = dict_subset(kwargs, self.state_names)
-        contexts = dict_subset(kwargs, self.context_names)
-        glimpses = dict_subset(kwargs, self.glimpse_names)
+        states = dict_subset(kwargs, self._state_names)
+        contexts = dict_subset(kwargs, self._context_names)
+        glimpses = dict_subset(kwargs, self._glimpse_names)
 
         next_glimpses = self.transition.take_glimpses(
             as_dict=True, **dict_union(states, glimpses, contexts))
@@ -226,15 +232,16 @@ class BaseSequenceGenerator(Initializable):
 
     @generate.property('states')
     def generate_states(self):
-        return self.state_names + ['outputs'] + self.glimpse_names
+        return self._state_names + ['outputs'] + self._glimpse_names
 
     @generate.property('outputs')
     def generate_outputs(self):
-        return (self.state_names + ['outputs'] +
-                self.glimpse_names + ['costs'])
+        return (self._state_names + ['outputs'] +
+                self._glimpse_names + ['costs'])
 
     def get_dim(self, name):
-        if name in self.state_names + self.context_names + self.glimpse_names:
+        if name in (self._state_names + self._context_names +
+                    self._glimpse_names):
             return self.transition.get_dim(name)
         elif name == 'outputs':
             return self.readout.get_dim(name)
@@ -244,7 +251,7 @@ class BaseSequenceGenerator(Initializable):
     def initial_state(self, name, batch_size, *args, **kwargs):
         if name == 'outputs':
             return self.readout.initial_outputs(batch_size)
-        elif name in self.state_names + self.glimpse_names:
+        elif name in self._state_names + self._glimpse_names:
             return self.transition.initial_state(name, batch_size,
                                                  *args, **kwargs)
         else:
@@ -377,8 +384,8 @@ class LinearReadout(Readout, Initializable):
 
     def _push_allocation_config(self):
         super(LinearReadout, self)._push_allocation_config()
-        for name, projector in equizip(self.source_names, self.projectors):
-            projector.input_dim = self.source_dims[name]
+        for input_dim, projector in equizip(self.source_dims, self.projectors):
+            projector.input_dim = input_dim
             projector.output_dim = self.readout_dim
 
     @application
