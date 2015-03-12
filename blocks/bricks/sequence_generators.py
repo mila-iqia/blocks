@@ -6,7 +6,7 @@ from theano import tensor
 
 from blocks.bricks import Initializable, Identity, MLP, Random
 from blocks.bricks.base import application, Brick, lazy
-from blocks.bricks.parallel import Fork, Distribute
+from blocks.bricks.parallel import Fork, Distribute, Merge
 from blocks.bricks.lookup import LookupTable
 from blocks.bricks.recurrent import recurrent
 from blocks.bricks.attention import (
@@ -297,38 +297,79 @@ class AbstractReadout(AbstractEmitter, AbstractFeedback):
         pass
 
 
-@add_metaclass(ABCMeta)
-class Readout(AbstractReadout):
+class Readout(AbstractReadout, Initializable):
     """Readout brick with separated emitting and feedback parts.
 
     Parameters
     ----------
+    source_names : list
+        A list of the source names (outputs) that are needed for the
+        readout part e.g. ``['states']`` or ``['states', 'glimpses']``.
     readout_dim : int
         The dimension of the readout.
     emitter : an instance of :class:`AbstractEmitter`
         The emitter component.
     feedback_brick : an instance of :class:`AbstractFeedback`
         The feedback component.
+    merger : :class:`.Brick`, optional
+        A brick that takes the sources given in `source_names` as an input
+        and combines them into a single output. If given, `merge_prototype`
+        cannot be given.
+    merge_prototype : :class:`.FeedForward`, optional
+        If `merger` isn't given, the transformation given by
+        `merge_prototype` is applied to each input before being summed. By
+        default a :class:`.Linear` transformation without biases is used.
+        If given, `merger` cannot be given.
+    post_merge : :class:`.Feedforward`, optional
+        If given, this transformation is applied to the merged inputs to
+        the readout model.
+    post_merge_input_dim : int, optional
+        The input dimension of `post_merge` i.e. the output dimension of
+        `merger` (or `merge_prototype`).
 
     """
     @lazy
-    def __init__(self, readout_dim=None, emitter=None, feedback_brick=None,
-                 **kwargs):
+    def __init__(self, source_names, readout_dim, emitter=None,
+                 feedback_brick=None, merger=None, merge_prototype=None,
+                 post_merge=None, **kwargs):
         super(Readout, self).__init__(**kwargs)
+        self.source_names = source_names
         self.readout_dim = readout_dim
 
         if not emitter:
             emitter = TrivialEmitter(readout_dim)
         if not feedback_brick:
             feedback_brick = TrivialFeedback(readout_dim)
+        if not merger:
+            merger = Merge(input_names=source_names, prototype=merge_prototype)
         self.emitter = emitter
         self.feedback_brick = feedback_brick
+        self.merger = merger
+        self.post_merge = post_merge
 
-        self.children = [self.emitter, self.feedback_brick]
+        self.children = [self.emitter, self.feedback_brick, self.merger]
 
     def _push_allocation_config(self):
         self.emitter.readout_dim = self.get_dim('readouts')
         self.feedback_brick.output_dim = self.get_dim('outputs')
+        self.merger.input_names = self.source_names
+        self.merger.input_dims = {source_name: self.source_dims[source_name]
+                                  for source_name in self.source_names}
+        if self.post_merge:
+            self.post_merge.output_dim = self.readout_dim
+            self.post_merge.input_dim = self.post_merge_input_dim
+            self.merger.output_dim = self.post_merge_input_dim
+        else:
+            self.merger.output_dim = self.readout_dim
+
+    @application
+    def readout(self, **kwargs):
+        if set(kwargs.keys()) != set(self.merger.input_names):
+            raise ValueError
+        merged = self.merger.apply(**kwargs)
+        if self.post_merge:
+            merged = self.post_merge.apply(merged)
+        return merged
 
     @application
     def emit(self, readouts):
@@ -354,47 +395,6 @@ class Readout(AbstractReadout):
         elif name == 'readouts':
             return self.readout_dim
         return super(Readout, self).get_dim(name)
-
-
-class LinearReadout(Readout, Initializable):
-    """Readout computed as sum of linear projections.
-
-    Parameters
-    ----------
-    readout_dim : int
-        The dimension of the readout.
-    source_names : list of strs
-        The names of information sources.
-
-    Notes
-    -----
-    See :class:`.Initializable` for initialization parameters.
-
-    """
-    @lazy
-    def __init__(self, readout_dim, source_names, **kwargs):
-        super(LinearReadout, self).__init__(readout_dim, **kwargs)
-        self.readout_dim = readout_dim
-        self.source_names = source_names
-
-        self.projectors = [MLP(name="project_{}".format(name),
-                               activations=[Identity()])
-                           for name in self.source_names]
-        self.children.extend(self.projectors)
-
-    def _push_allocation_config(self):
-        super(LinearReadout, self)._push_allocation_config()
-        for input_dim, projector in equizip(self.source_dims, self.projectors):
-            projector.input_dim = input_dim
-            projector.output_dim = self.readout_dim
-
-    @application
-    def readout(self, **kwargs):
-        projections = [projector.apply(kwargs[name]) for name, projector in
-                       equizip(self.source_names, self.projectors)]
-        if len(projections) == 1:
-            return projections[0]
-        return sum(projections[1:], projections[0])
 
 
 class TrivialEmitter(AbstractEmitter):
