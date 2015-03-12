@@ -11,7 +11,7 @@ from blocks.bricks.lookup import LookupTable
 from blocks.bricks.recurrent import recurrent
 from blocks.bricks.attention import (
     AbstractAttentionRecurrent, AttentionRecurrent)
-from blocks.utils import dict_union, dict_subset, equizip
+from blocks.utils import dict_union, dict_subset
 
 
 class BaseSequenceGenerator(Initializable):

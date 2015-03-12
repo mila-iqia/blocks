@@ -1,8 +1,6 @@
 """Generic transformations with multiple inputs and/or outputs."""
 import copy
 
-from theano import tensor
-
 from blocks.bricks import Initializable, Linear
 from blocks.bricks.base import lazy, application
 from blocks.utils import pack, equizip
