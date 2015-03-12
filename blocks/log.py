@@ -16,7 +16,7 @@ class AbstractTrainingStatus(object):
 
     To support various backends (such as database tables) the
     descendants of this class are expected to override the
-    `__getattr__` and `__setattr__` methods.
+    `__getattr__`, `__setattr__`, `__hasattr__` methods.
 
     Attributes
     ----------
@@ -54,6 +54,9 @@ class AbstractTrainingStatus(object):
 
     def __setitem__(self, key, value):
         return setattr(self, key, value)
+
+    def __contains__(self, key):
+        return hasattr(self, key)
 
 
 class TrainingLogRow(object):
@@ -227,9 +230,6 @@ class AbstractTrainingLog(object):
 
 class TrainingStatus(AbstractTrainingStatus):
     """A simple training status."""
-    def __getattr__(self, key):
-        return None
-
     def __iter__(self):
         for attr, value in self.__dict__.items():
             if not attr.startswith("__"):

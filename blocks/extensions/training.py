@@ -77,7 +77,7 @@ class TrackTheBest(SimpleExtension):
         current_value = self.main_loop.log.current_row[self.record_name]
         if current_value is None:
             return
-        best_value = self.main_loop.status[self.best_name]
+        best_value = getattr(self.main_loop.status, self.best_name, None)
         if (best_value is None or
                 (current_value != best_value and
                  self.choose_best(current_value, best_value) ==
