@@ -57,9 +57,17 @@ class Checkpoint(SimpleExtension):
 
     def do(self, callback_name, *args):
         """Pickle the main loop object to the disk."""
+        from_main_loop, from_user = self.parse_args(callback_name, args)
         try:
-            self.main_loop.log.current_row[SAVED_TO] = self.path
-            secure_pickle_dump(self.main_loop, self.path)
+            path = self.path
+            if len(from_user):
+                path, = from_user
+            already_saved_to = self.main_loop.log.current_row[SAVED_TO]
+            if not already_saved_to:
+                already_saved_to = ()
+            self.main_loop.log.current_row[SAVED_TO] = (
+                already_saved_to + (path,))
+            secure_pickle_dump(self.main_loop, path)
             for attribute in self.save_separately:
                 root, ext = os.path.splitext(self.path)
                 path = root + "_" + attribute + ext
