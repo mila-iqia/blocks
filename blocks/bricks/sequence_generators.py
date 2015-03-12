@@ -4,7 +4,7 @@ from abc import ABCMeta, abstractmethod
 from six import add_metaclass
 from theano import tensor
 
-from blocks.bricks import Initializable, Random
+from blocks.bricks import Initializable, Random, Bias
 from blocks.bricks.base import application, Brick, lazy
 from blocks.bricks.parallel import Fork, Distribute, Merge
 from blocks.bricks.lookup import LookupTable
@@ -321,11 +321,13 @@ class Readout(AbstractReadout, Initializable):
         default a :class:`.Linear` transformation without biases is used.
         If given, `merge` cannot be given.
     post_merge : :class:`.Feedforward`, optional
-        If given, this transformation is applied to the merged inputs to
-        the readout model.
+        This transformation is applied to the merged inputs. By default
+        :class:`.Bias` is used.
     merged_dim : int, optional
         The input dimension of `post_merge` i.e. the output dimension of
-        `merge` (or `merge_prototype`).
+        `merge` (or `merge_prototype`). If not give, it is assumed to be
+        the same as `readout_dim` (i.e. `post_merge` is assumed to not
+        change dimensions).
 
     """
     @lazy
@@ -342,6 +344,10 @@ class Readout(AbstractReadout, Initializable):
             feedback_brick = TrivialFeedback(readout_dim)
         if not merge:
             merge = Merge(input_names=source_names, prototype=merge_prototype)
+        if not post_merge:
+            post_merge = Bias(dim=readout_dim)
+        if not merged_dim:
+            merged_dim = readout_dim
         self.emitter = emitter
         self.feedback_brick = feedback_brick
         self.merge = merge
@@ -358,12 +364,9 @@ class Readout(AbstractReadout, Initializable):
         self.merge.input_names = self.source_names
         self.merge.input_dims = {source_name: self.source_dims[source_name]
                                  for source_name in self.source_names}
-        if self.post_merge:
-            self.post_merge.output_dim = self.readout_dim
-            self.post_merge.input_dim = self.merged_dim
-            self.merge.output_dim = self.merged_dim
-        else:
-            self.merge.output_dim = self.readout_dim
+        self.merge.output_dim = self.merged_dim
+        self.post_merge.input_dim = self.merged_dim
+        self.post_merge.output_dim = self.readout_dim
 
     @application
     def readout(self, **kwargs):

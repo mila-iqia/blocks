@@ -316,19 +316,11 @@ class Merge(Parallel):
         )
 
     def apply(self, *args, **kwargs):
-        inputs = args + tuple(kwargs[name] for name in
-                              self.input_names[len(args):])
         outputs = super(Merge, self).apply(*args, **kwargs)
         outputs = pack(outputs)
-        needs_broadcast = False
-        for i, (input_, output) in enumerate(zip(inputs, outputs)):
-            if input_.broadcastable[0]:
-                outputs[i] = tensor.addbroadcast(output, 0)
-                needs_broadcast = True
-        if needs_broadcast:
-            return sum(outputs)
-        else:
-            return tensor.sum(outputs, axis=0)
+        # Sum is often faster than tensor.sum(outputs, axis=0) for a
+        # small number of outputs
+        return sum(outputs)
 
     def _push_allocation_config(self):
         self.output_dims = [self.output_dim for input_name in self.input_names]
