@@ -112,7 +112,7 @@ def test_track_the_best():
     main_loop.log.current_row.cost = 4
     extension.dispatch('after_batch')
     assert main_loop.status.best_cost == 4
-    assert main_loop.log.current_row['cost_best_so_far'] is True
+    assert main_loop.log.current_row['cost_best_so_far'] == True
 
 
 class WriteCostExtension(TrainingExtension):
