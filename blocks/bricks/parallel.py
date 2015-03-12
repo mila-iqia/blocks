@@ -5,7 +5,7 @@ from theano import tensor
 
 from blocks.bricks import Initializable, Linear
 from blocks.bricks.base import lazy, application
-from blocks.utils import pack
+from blocks.utils import pack, equizip
 
 
 class Parallel(Initializable):
@@ -81,7 +81,7 @@ class Parallel(Initializable):
         self.children = self.transforms
 
     def _push_allocation_config(self):
-        for name, transform in zip(self.input_names, self.transforms):
+        for name, transform in equizip(self.input_names, self.transforms):
             transform.input_dim = self.input_dims[name]
             transform.output_dim = self.output_dims[name]
 
@@ -90,7 +90,7 @@ class Parallel(Initializable):
         args = args + tuple(kwargs[name] for name in
                             self.input_names[len(args):])
         return [transform.apply(arg) for arg, transform
-                in zip(args, self.transforms)]
+                in equizip(args, self.transforms)]
 
     @apply.property('inputs')
     def apply_inputs(self):

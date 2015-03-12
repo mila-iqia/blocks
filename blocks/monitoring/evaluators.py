@@ -7,7 +7,7 @@ from theano import tensor
 from blocks.utils import dict_subset
 from blocks.monitoring.aggregation import _DataIndependent, Mean, TakeLast
 from blocks.graph import ComputationGraph
-from blocks.utils import reraise_as
+from blocks.utils import equizip, reraise_as
 
 logger = logging.getLogger()
 
@@ -133,7 +133,7 @@ class AggregationBuffer(object):
             raise Exception("To readout you must first initialize, then"
                             "process batches!")
         ret_vals = self._readout_fun()
-        return dict(zip(self.variable_names, ret_vals))
+        return dict(equizip(self.variable_names, ret_vals))
 
 
 class DatasetEvaluator(object):

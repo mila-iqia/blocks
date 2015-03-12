@@ -12,7 +12,7 @@ from blocks.bricks.base import Application, application, Brick, lazy
 from blocks.initialization import NdarrayInitialization
 from blocks.roles import add_role, WEIGHTS, BIASES
 from blocks.utils import (pack, shared_floatx_nans, dict_union, dict_subset,
-                          is_shared_variable)
+                          is_shared_variable, equizip)
 
 logger = logging.getLogger()
 
@@ -185,7 +185,7 @@ def recurrent(*args, **kwargs):
                 args = list(args)
                 arg_names = (list(sequences_given) + list(states_given) +
                              list(contexts_given))
-                kwargs = dict(zip(arg_names, args))
+                kwargs = dict(equizip(arg_names, args))
                 kwargs.update(rest_kwargs)
                 outputs = getattr(brick, application_function.__name__)(
                     iterate=False, **kwargs)
@@ -616,4 +616,4 @@ class Bidirectional(Initializable):
                     self.children[1].apply(reverse=True, as_list=True,
                                            *args, **kwargs)]
         return [tensor.concatenate([f, b], axis=2)
-                for f, b in zip(forward, backward)]
+                for f, b in equizip(forward, backward)]

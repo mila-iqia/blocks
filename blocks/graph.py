@@ -13,7 +13,7 @@ from toolz import unique
 from blocks import config
 from blocks.roles import add_role, has_roles, AUXILIARY, PARAMETER
 from blocks.utils import (is_graph_input, is_shared_variable, dict_union,
-                          shared_like)
+                          shared_like, equizip)
 
 logger = logging.getLogger(__name__)
 
@@ -189,11 +189,12 @@ class ComputationGraph(object):
                           if hasattr(var.tag, "roles") and
                           not is_shared_variable(var)]
         value_holders = [shared_like(var) for var in role_variables]
-        function = self.get_theano_function(zip(value_holders, role_variables))
+        function = self.get_theano_function(equizip(value_holders,
+                                                    role_variables))
         function(*(data[input_.name] for input_ in self.inputs))
         return OrderedDict([(var, value_holder.get_value(borrow=True))
-                            for var, value_holder in zip(role_variables,
-                                                         value_holders)])
+                            for var, value_holder in equizip(role_variables,
+                                                             value_holders)])
 
     def has_inputs(self, variable):
         """Check if a variable depends on input variables.

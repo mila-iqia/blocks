@@ -10,7 +10,7 @@ from toolz import interleave
 from blocks import config
 from blocks.bricks.base import application, _Brick, Brick, lazy
 from blocks.roles import add_role, WEIGHTS, BIASES
-from blocks.utils import pack, shared_floatx_nans
+from blocks.utils import pack, shared_floatx_nans, equizip
 
 logger = logging.getLogger(__name__)
 
@@ -621,8 +621,9 @@ class MLP(Sequence, Initializable, Feedforward):
     def _push_allocation_config(self):
         if not len(self.dims) - 1 == len(self.linear_transformations):
             raise ValueError
-        for input_dim, output_dim, layer in zip(self.dims[:-1], self.dims[1:],
-                                                self.linear_transformations):
+        for input_dim, output_dim, layer in \
+                equizip(self.dims[:-1], self.dims[1:],
+                        self.linear_transformations):
             layer.input_dim = input_dim
             layer.output_dim = output_dim
             layer.use_bias = self.use_bias

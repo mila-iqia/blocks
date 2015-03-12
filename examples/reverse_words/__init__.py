@@ -35,7 +35,7 @@ from blocks.extensions.monitoring import TrainingDataMonitoring
 from blocks.extensions.plot import Plot
 from blocks.main_loop import MainLoop
 from blocks.filter import VariableFilter
-from blocks.utils import named_copy, dict_union
+from blocks.utils import named_copy, dict_union, equizip
 
 from blocks.search import BeamSearch
 
@@ -318,7 +318,7 @@ def main(mode, save_path, num_batches, data_path=None):
                 numpy.repeat(numpy.array(encoded_input)[:, None],
                              batch_size, axis=1))
             messages = []
-            for sample, cost in zip(samples, costs):
+            for sample, cost in equizip(samples, costs):
                 message = "({})".format(cost)
                 message += "".join(code2char[code] for code in sample)
                 if sample == target:
