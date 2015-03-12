@@ -402,9 +402,8 @@ def test_sequence_variable_outputs():
                       biases_init=Constant(1))
 
     fork = Fork(input_dim=8, output_names=['linear_2_1', 'linear_2_2'],
-                output_dims=dict(linear_2_1=4, linear_2_2=5),
-                prototype=Linear(), weights_init=Constant(3),
-                biases_init=Constant(4))
+                output_dims=[4, 5], prototype=Linear(),
+                weights_init=Constant(3), biases_init=Constant(4))
     sequence = Sequence([linear_1.apply, fork.apply])
     sequence.initialize()
     y_1, y_2 = sequence.apply(x)
@@ -423,13 +422,11 @@ def test_sequence_variable_inputs():
     x, y = tensor.matrix(), tensor.matrix()
 
     parallel_1 = Parallel(input_names=['input_1', 'input_2'],
-                          input_dims=dict(input_1=4, input_2=5),
-                          output_dims=dict(input_1=3, input_2=2),
+                          input_dims=[4, 5], output_dims=[3, 2],
                           prototype=Linear(), weights_init=Constant(2),
                           biases_init=Constant(1))
     parallel_2 = Parallel(input_names=['input_1', 'input_2'],
-                          input_dims=dict(input_1=3, input_2=2),
-                          output_dims=dict(input_1=5, input_2=4),
+                          input_dims=[3, 2], output_dims=[5, 4],
                           prototype=Linear(), weights_init=Constant(2),
                           biases_init=Constant(1))
     sequence = Sequence([parallel_1.apply, parallel_2.apply])
