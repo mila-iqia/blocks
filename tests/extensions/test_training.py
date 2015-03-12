@@ -10,7 +10,7 @@ from theano import tensor
 
 from blocks.algorithms import GradientDescent, Scale
 from blocks.extensions import FinishAfter, TrainingExtension
-from blocks.extensions.saveload import SerializeMainLoop
+from blocks.extensions.saveload import Checkpoint
 from blocks.extensions.training import SharedVariableModifier, TrackTheBest
 from blocks.extensions.predicates import OnLogRecord
 from blocks.main_loop import MainLoop
@@ -130,7 +130,7 @@ def test_save_the_best():
             extensions=[FinishAfter(after_n_epochs=1),
                         WriteCostExtension(),
                         track_cost,
-                        SerializeMainLoop(dst.name, after_every_batch=True).
+                        Checkpoint(dst.name, after_every_batch=True).
                         add_condition(
                             "after_batch",
                             OnLogRecord(track_cost.notification_name),
