@@ -208,7 +208,8 @@ def test_with_attention():
     outputs = tensor.tensor3('outputs')
     mask = tensor.matrix('mask')
     costs = generator.cost_matrix(outputs, mask,
-                                  attended=attended, attended_mask=attended_mask)
+                                  attended=attended,
+                                  attended_mask=attended_mask)
     costs_vals = costs.eval({outputs: output_vals,
                              mask: output_mask_vals,
                              attended: attended_vals,
