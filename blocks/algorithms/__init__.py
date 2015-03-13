@@ -622,7 +622,7 @@ class VariableClipping(StepRule):
     def compute_step(self, param, previous_step):
         if any(axis >= previous_step.ndim for axis in self.axes):
             raise ValueError("Invalid axes {} for {}, ndim={}".format(
-                self.axes, param, param.ndim))
+                self.axes, param, previous_step.ndim))
         squares = tensor.sqr(previous_step)
         if len(self.axes) == 0:
             norms = l2_norm([previous_step])
