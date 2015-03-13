@@ -583,9 +583,9 @@ class VariableClipping(StepRule):
     This :class:`StepRule` can be used to implement L2 norm constraints on
     individual hidden units, groups of hidden units, convolutional
     filters or entire weight tensors. Combine with :class:`Restrict`
-    (and possibly :class:`CompositeRule`), to apply such constraints only to
-    certain variables and/or apply different norm constraints to different
-    variables.
+    (and possibly :class:`CompositeRule`), to apply such constraints only
+    to certain variables and/or apply different norm constraints to
+    different variables.
 
     Parameters
     ----------
