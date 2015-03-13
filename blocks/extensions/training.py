@@ -53,7 +53,7 @@ class TrackTheBest(SimpleExtension):
     record_name : str
         The name of the record to track.
     notification_name : str, optional
-        Tne name for the record to be made in the log when the current
+        The name for the record to be made in the log when the current
         value of the tracked quantity is the best so far. It not given,
         'record_name' plus "best_so_far" suffix is used.
     choose_best : callable, optional

@@ -331,7 +331,7 @@ class SimpleExtension(TrainingExtension):
 
     @staticmethod
     def parse_args(which_callback, args):
-        """Separates arguments from the main loop from the user given.
+        """Separates :meth:`do` arguments coming from different sources.
 
         When a :meth:`do` method receives arguments from both the main
         loop (e.g. a batch) and the user, it often has to separate them.
