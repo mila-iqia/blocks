@@ -174,6 +174,10 @@ def test_variable_clipping():
         numpy.array([[[[5], [6]], [[7], [8]]]]) *
         10 / numpy.sqrt(174)]))
 
+    # Test exceptions.
+    assert_raises(ValueError, rule3.compute_steps, {0: shared_floatx([1.0])})
+    assert_raises(ValueError, VariableClipping, 50, axes=(0, 0))
+
 
 def test_composite_rule():
     rule = CompositeRule([StepClipping(4), Scale(0.1)])
