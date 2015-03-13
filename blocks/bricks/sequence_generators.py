@@ -11,6 +11,7 @@ from blocks.bricks.lookup import LookupTable
 from blocks.bricks.recurrent import recurrent
 from blocks.bricks.attention import (
     AbstractAttentionRecurrent, AttentionRecurrent)
+from blocks.roles import add_role, COST
 from blocks.utils import dict_union, dict_subset
 
 
@@ -136,6 +137,34 @@ class BaseSequenceGenerator(Initializable):
 
     @application
     def cost(self, application_call, outputs, mask=None, **kwargs):
+        """Returns sum of generation costs for output sequences.
+
+        Parameters
+        ----------
+        outputs : :class:`~tensor.TensorVariable`
+            The 3(2) dimensional tensor containing output sequences.
+            The dimension 0 must stand for time, the dimension 1 for the
+            position on the batch.
+        mask : :class:`~tensor.TensorVariable`
+            The binary matrix identifying fake outputs.
+
+        Notes
+        -----
+        The contexts are expected as keyword arguments.
+
+        """
+        # Compute the sum of costs
+        cost = self.cost_matrix(outputs, mask=mask, **kwargs).sum()
+        add_role(cost, COST)
+
+        # Add auxiliary variable for per sequence element cost
+        application_call.add_auxiliary_variable(
+            (cost / mask.sum()) if mask is not None else cost,
+            name='per_sequence_element')
+        return cost
+
+    @application
+    def cost_matrix(self, application_call, outputs, mask=None, **kwargs):
         """Returns generation costs for output sequences.
 
         Parameters

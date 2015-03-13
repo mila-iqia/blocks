@@ -75,7 +75,7 @@ def main(mode, save_path, steps, num_batches):
 
         # Build the cost computation graph.
         x = tensor.lmatrix('data')
-        cost = aggregation.mean(generator.cost(x[:, :]).sum(),
+        cost = aggregation.mean(generator.cost_matrix(x[:, :]).sum(),
                                 x.shape[1])
         cost.name = "sequence_log_likelihood"
 

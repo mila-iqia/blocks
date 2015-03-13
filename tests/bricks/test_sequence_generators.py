@@ -50,7 +50,7 @@ def test_sequence_generator():
     # Test 'cost' method
     y = tensor.tensor3('y')
     mask = tensor.matrix('mask')
-    costs = generator.cost(y, mask)
+    costs = generator.cost_matrix(y, mask)
     assert costs.ndim == 2
     costs_val = theano.function([y, mask], [costs])(
         rng.uniform(size=(n_steps, batch_size, output_dim)).astype(floatX),
@@ -104,7 +104,7 @@ def test_integer_sequence_generator():
     # Test cost
     y = tensor.lmatrix('y')
     mask = tensor.matrix('mask')
-    costs = generator.cost(y, mask)
+    costs = generator.cost_matrix(y, mask)
     assert costs.ndim == 2
     costs_fun = theano.function([y, mask], [costs])
     costs_val = costs_fun(
@@ -207,8 +207,8 @@ def test_with_attention():
     attended_mask = tensor.matrix("attended_mask")
     outputs = tensor.tensor3('outputs')
     mask = tensor.matrix('mask')
-    costs = generator.cost(outputs, mask,
-                           attended=attended, attended_mask=attended_mask)
+    costs = generator.cost_matrix(outputs, mask,
+                                  attended=attended, attended_mask=attended_mask)
     costs_vals = costs.eval({outputs: output_vals,
                              mask: output_mask_vals,
                              attended: attended_vals,
