@@ -5,9 +5,9 @@ import theano
 from numpy.testing import assert_allclose, assert_raises
 from theano import tensor
 
-from blocks.algorithms import (GradientDescent, StepClipping, CompositeRule,
-                               Scale, StepRule, BasicMomentum, Momentum,
-                               AdaDelta, BasicRMSProp, RMSProp, Adam,
+from blocks.algorithms import (GradientDescent, StepClipping, VariableClipping,
+                               CompositeRule, Scale, StepRule, BasicMomentum,
+                               Momentum, AdaDelta, BasicRMSProp, RMSProp, Adam,
                                RemoveNotFinite, Restrict)
 from blocks.utils import shared_floatx
 
@@ -134,6 +134,45 @@ def test_step_clipping():
     clipped2, _ = rule2.compute_steps(gradients)
     assert_allclose(clipped2[0].eval(), 3.0)
     assert_allclose(clipped2[1].eval(), 4.0)
+
+
+def test_variable_clipping():
+    # Test simple variable clipping with no axes.
+    rule1 = VariableClipping(5)
+
+    gradients = OrderedDict([(0, shared_floatx([4, 3])),
+                             (1, shared_floatx([[3, 9, 2]])),
+                             (2, shared_floatx([[[1], [2], [3], [2]]]))])
+    steps, _ = rule1.compute_steps(gradients)
+    border, clipped, notclipped = steps.items()
+    assert_allclose(border[1].eval(), [4, 3])
+    assert_allclose(clipped[1].eval(), 5 * numpy.array([[3., 9., 2.]]) /
+                    numpy.sqrt(94))
+    assert_allclose(notclipped[1].eval(),
+                    numpy.array([[[1.], [2.], [3.], [2.]]]))
+    # Test variable clipping on one axis.
+    rule2 = VariableClipping(10, axes=(1,))
+    gradients = {0: shared_floatx([[1, 2, 3, 4], [5, 6, 7, 8]])}
+    steps, _ = rule2.compute_steps(gradients)
+    clipped, = steps.items()
+    assert_allclose(clipped[1].eval(), numpy.concatenate([
+        [[1, 2, 3, 4]],
+        numpy.array([[5, 6, 7, 8]]) * 10 / numpy.sqrt(174)]))
+
+    # Test variable clipping on two axes.
+    rule3 = VariableClipping(10, axes=(1, 2))
+    gradients = {0: shared_floatx([
+        [[[1], [2]],
+         [[3], [4]]],
+        [[[5], [6]],
+         [[7], [8]]]
+    ])}
+    steps, _ = rule3.compute_steps(gradients)
+    clipped, = steps.items()
+    assert_allclose(clipped[1].eval(), numpy.concatenate([
+        [[[[1], [2]], [[3], [4]]]],
+        numpy.array([[[[5], [6]], [[7], [8]]]]) *
+        10 / numpy.sqrt(174)]))
 
 
 def test_composite_rule():
