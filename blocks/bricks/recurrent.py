@@ -4,6 +4,7 @@ import inspect
 import logging
 from functools import wraps
 
+from picklable_itertools.extras import equizip
 import theano
 from theano import tensor, Variable
 
@@ -12,7 +13,7 @@ from blocks.bricks.base import Application, application, Brick, lazy
 from blocks.initialization import NdarrayInitialization
 from blocks.roles import add_role, WEIGHTS, BIASES
 from blocks.utils import (pack, shared_floatx_nans, dict_union, dict_subset,
-                          is_shared_variable, equizip)
+                          is_shared_variable)
 
 logger = logging.getLogger()
 

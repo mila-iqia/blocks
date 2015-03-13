@@ -6,11 +6,12 @@ from six import add_metaclass
 from theano import tensor
 from theano.sandbox.rng_mrg import MRG_RandomStreams
 from toolz import interleave
+from picklable_itertools.extras import equizip
 
 from blocks import config
 from blocks.bricks.base import application, _Brick, Brick, lazy
 from blocks.roles import add_role, WEIGHTS, BIASES
-from blocks.utils import pack, shared_floatx_nans, equizip
+from blocks.utils import pack, shared_floatx_nans
 
 logger = logging.getLogger(__name__)
 

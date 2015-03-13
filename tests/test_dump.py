@@ -2,11 +2,11 @@ import tempfile
 
 import numpy
 import theano
+from picklable_itertools.extras import equizip
 
 from blocks.dump import (
     load_parameter_values, save_parameter_values,
     MainLoopDumpManager)
-from blocks.utils import equizip
 from examples.sqrt import main as sqrt_example
 from tests import silence_printing
 

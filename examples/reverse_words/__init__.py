@@ -8,6 +8,7 @@ import operator
 
 import theano
 from six.moves import input
+from picklable_itertools.extras import equizip
 from theano import tensor
 
 from blocks.bricks import Tanh, Initializable
@@ -35,7 +36,7 @@ from blocks.extensions.monitoring import TrainingDataMonitoring
 from blocks.extensions.plot import Plot
 from blocks.main_loop import MainLoop
 from blocks.filter import VariableFilter
-from blocks.utils import named_copy, dict_union, equizip
+from blocks.utils import named_copy, dict_union
 
 from blocks.search import BeamSearch
 

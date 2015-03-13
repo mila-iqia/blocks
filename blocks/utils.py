@@ -70,45 +70,6 @@ def unpack(arg, singleton=False):
         return arg
 
 
-class IterableLengthMismatch(Exception):
-    """Custom error for equizip."""
-
-
-def equizip(*iterables):
-    r"""Like zip but ensure iterables are of equal length.
-
-    .. warning::
-
-       Behaves like :func:`zip` in Python 3 i.e. as :class:`itertools.izip`
-       in Python 2.
-
-    Parameters
-    ----------
-    \*iterables
-        A collection of iterables to be zipped.
-
-    """
-    iterators = [iter(iterable) for iterable in iterables]
-    while True:
-        try:
-            first_value = next(iterators[0])
-            try:
-                other_values = [next(iterator) for iterator in iterators[1:]]
-            except StopIteration:
-                raise IterableLengthMismatch
-            else:
-                yield tuple([first_value] + other_values)
-        except StopIteration:
-            for iterator in iterators[1:]:
-                try:
-                    next(iterator)
-                except StopIteration:
-                    pass
-                else:
-                    raise IterableLengthMismatch
-            raise
-
-
 def shared_floatx_zeros(shape, **kwargs):
     r"""Creates a shared variable array filled with zeros.
 

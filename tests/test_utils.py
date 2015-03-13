@@ -1,8 +1,7 @@
 from numpy.testing import assert_raises
 from theano import tensor
 
-from blocks.utils import (check_theano_variable, unpack, equizip,
-                          IterableLengthMismatch)
+from blocks.utils import check_theano_variable, unpack
 
 
 def test_unpack():
@@ -21,10 +20,3 @@ def test_check_theano_variable():
                   tensor.vector(), 2, 'float')
     assert_raises(ValueError, check_theano_variable,
                   tensor.vector(), 1, 'int')
-
-
-def test_equizip():
-    assert_raises(IterableLengthMismatch, list, equizip(range(4), range(5)))
-    assert_raises(IterableLengthMismatch, list, equizip(range(4), range(3)))
-    assert (list(equizip((i for i in range(2)), (i for i in range(2)))) ==
-            [(0, 0), (1, 1)])
