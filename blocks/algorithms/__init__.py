@@ -582,7 +582,10 @@ class VariableClipping(StepRule):
 
     This :class:`StepRule` can be used to implement L2 norm constraints on
     individual hidden units, groups of hidden units, convolutional
-    filters or entire weight tensors.
+    filters or entire weight tensors. Combine with :class:`Restrict`
+    (and possibly :class:`CompositeRule`), to apply such constraints only to
+    certain variables and/or apply different norm constraints to different
+    variables.
 
     Parameters
     ----------
@@ -607,6 +610,7 @@ class VariableClipping(StepRule):
        Alex Krizhevsky, Ilya Sutskever, Ruslan R. Salakhutdinov.
        "Improving neural networks by preventing co-adaptation of
        feature detectors". arXiv:1207.0580.
+
     """
     def __init__(self, threshold, axes=None):
         axes = axes if axes is not None else ()
