@@ -1,8 +1,6 @@
 """Generic transformations with multiple inputs and/or outputs."""
 import copy
 
-from theano import tensor
-
 from blocks.bricks import Initializable, Linear
 from blocks.bricks.base import lazy, application
 from blocks.utils import pack, equizip
@@ -318,7 +316,9 @@ class Merge(Parallel):
     def apply(self, *args, **kwargs):
         outputs = super(Merge, self).apply(*args, **kwargs)
         outputs = pack(outputs)
-        return tensor.sum(outputs, axis=0)
+        # Sum is often faster than tensor.sum(outputs, axis=0) for a
+        # small number of outputs
+        return sum(outputs)
 
     def _push_allocation_config(self):
         self.output_dims = [self.output_dim for input_name in self.input_names]

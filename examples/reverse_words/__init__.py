@@ -17,7 +17,7 @@ from blocks.bricks.recurrent import SimpleRecurrent, Bidirectional
 from blocks.bricks.attention import SequenceContentAttention
 from blocks.bricks.parallel import Fork
 from blocks.bricks.sequence_generators import (
-    SequenceGenerator, LinearReadout, SoftmaxEmitter, LookupFeedback)
+    SequenceGenerator, Readout, SoftmaxEmitter, LookupFeedback)
 from blocks.config_parser import config
 from blocks.graph import ComputationGraph
 from fuel.transformers import Mapping, Batch, Padding, Filter
@@ -106,7 +106,7 @@ class WordReverser(Initializable):
         attention = SequenceContentAttention(
             state_names=transition.apply.states,
             attended_dim=2 * dimension, match_dim=dimension, name="attention")
-        readout = LinearReadout(
+        readout = Readout(
             readout_dim=alphabet_size,
             source_names=[transition.apply.states[0],
                           attention.take_glimpses.outputs[0]],

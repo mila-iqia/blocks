@@ -265,6 +265,54 @@ class Linear(Initializable, Feedforward):
         super(Linear, self).get_dim(name)
 
 
+class Bias(Feedforward, Initializable):
+    """Add a bias (i.e. sum with a vector)."""
+    @lazy
+    def __init__(self, dim, **kwargs):
+        super(Bias, self).__init__(**kwargs)
+        self.dim = dim
+
+    def _allocate(self):
+        b = shared_floatx_nans((self.output_dim,), name='b')
+        add_role(b, BIASES)
+        self.params.append(b)
+
+    def _initialize(self):
+        b, = self.params
+        self.biases_init.initialize(b, self.rng)
+
+    @application(inputs=['input_'], outputs=['output'])
+    def apply(self, input_):
+        """Apply the linear transformation.
+
+        Parameters
+        ----------
+        input_ : :class:`~tensor.TensorVariable`
+            The input on which to apply the transformation
+
+        Returns
+        -------
+        output : :class:`~tensor.TensorVariable`
+            The transformed input plus optional bias
+
+        """
+        b, = self.params
+        return input_ + b
+
+    def get_dim(self, name):
+        if name in ['input_', 'output']:
+            return self.dim
+        super(Linear, self).get_dim(name)
+
+    def _get_dim(self):
+        return self.dim
+
+    def _set_dim(self, value):
+        self.dim = value
+
+    input_dim = output_dim = property(_get_dim, _set_dim)
+
+
 class Maxout(Brick):
     """Maxout pooling transformation.
 

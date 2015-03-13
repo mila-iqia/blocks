@@ -15,7 +15,7 @@ from theano import tensor
 from blocks.bricks import Tanh
 from blocks.bricks.recurrent import GatedRecurrent
 from blocks.bricks.sequence_generators import (
-    SequenceGenerator, LinearReadout, SoftmaxEmitter, LookupFeedback)
+    SequenceGenerator, Readout, SoftmaxEmitter, LookupFeedback)
 from blocks.graph import ComputationGraph
 from fuel.streams import DataStream
 from fuel.schemes import ConstantScheme
@@ -50,11 +50,11 @@ def main(mode, save_path, steps, num_batches):
         transition = GatedRecurrent(name="transition", activation=Tanh(),
                                     dim=dim)
         generator = SequenceGenerator(
-            LinearReadout(readout_dim=num_states, source_names=["states"],
-                          emitter=SoftmaxEmitter(name="emitter"),
-                          feedback_brick=LookupFeedback(
-                              num_states, feedback_dim, name='feedback'),
-                          name="readout"),
+            Readout(readout_dim=num_states, source_names=["states"],
+                    emitter=SoftmaxEmitter(name="emitter"),
+                    feedback_brick=LookupFeedback(
+                        num_states, feedback_dim, name='feedback'),
+                    name="readout"),
             transition,
             weights_init=IsotropicGaussian(0.01), biases_init=Constant(0),
             name="generator")
