@@ -3,14 +3,13 @@ from collections import OrderedDict
 from six.moves import range
 
 import numpy
-
+from picklable_itertools.extras import equizip
 from theano import config, function, tensor
 
 from blocks.bricks.sequence_generators import SequenceGenerator
 from blocks.filter import VariableFilter, get_application_call, get_brick
 from blocks.graph import ComputationGraph
 from blocks.roles import INPUT, OUTPUT
-from blocks.utils import equizip
 
 floatX = config.floatX
 

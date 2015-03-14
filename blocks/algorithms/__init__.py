@@ -3,13 +3,14 @@ import logging
 import itertools
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
+from picklable_itertools.extras import equizip
 
 import theano
 from six import add_metaclass
 from theano import tensor
 
 from blocks.graph import ComputationGraph
-from blocks.utils import dict_subset, named_copy, shared_floatx, equizip
+from blocks.utils import dict_subset, named_copy, shared_floatx
 from blocks.theano_expressions import l2_norm
 
 logger = logging.getLogger(__name__)

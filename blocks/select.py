@@ -2,10 +2,11 @@ import logging
 import re
 from collections import OrderedDict
 
+from picklable_itertools.extras import equizip
 import six
 
 from blocks.bricks.base import Brick
-from blocks.utils import dict_union, equizip
+from blocks.utils import dict_union
 
 logger = logging.getLogger(__name__)
 

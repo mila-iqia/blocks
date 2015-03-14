@@ -3,6 +3,7 @@ import logging
 from collections import OrderedDict
 from itertools import chain
 
+from picklable_itertools.extras import equizip
 import theano
 from theano import Variable
 from theano.gof import graph
@@ -13,7 +14,7 @@ from toolz import unique
 from blocks import config
 from blocks.roles import add_role, has_roles, AUXILIARY, PARAMETER, DROPOUT
 from blocks.utils import (is_graph_input, is_shared_variable, dict_union,
-                          shared_like, equizip)
+                          shared_like)
 
 logger = logging.getLogger(__name__)
 floatX = theano.config.floatX

@@ -1,9 +1,11 @@
 """Generic transformations with multiple inputs and/or outputs."""
 import copy
 
+from picklable_itertools.extras import equizip
+
 from blocks.bricks import Initializable, Linear
 from blocks.bricks.base import lazy, application
-from blocks.utils import pack, equizip
+from blocks.utils import pack
 
 
 class Parallel(Initializable):
