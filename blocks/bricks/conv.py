@@ -233,7 +233,8 @@ class ConvolutionalLayer(Sequence, Initializable):
 
     See Also
     --------
-    :class:`Convolutional` and :class:`MaxPooling` for the other parameters.
+    :class:`Convolutional` and :class:`MaxPooling` for the other
+    parameters.
 
     Notes
     -----
