@@ -47,16 +47,22 @@ def test_sequence_generator():
         seed=1234)
     generator.initialize()
 
-    # Test 'cost' method
+    # Test 'cost_matrix' method
     y = tensor.tensor3('y')
     mask = tensor.matrix('mask')
     costs = generator.cost_matrix(y, mask)
     assert costs.ndim == 2
-    costs_val = theano.function([y, mask], [costs])(
-        rng.uniform(size=(n_steps, batch_size, output_dim)).astype(floatX),
-        numpy.ones((n_steps, batch_size), dtype=floatX))[0]
+    y_test = rng.uniform(size=(n_steps, batch_size, output_dim)).astype(floatX)
+    m_test = numpy.ones((n_steps, batch_size), dtype=floatX)
+    costs_val = theano.function([y, mask], [costs])(y_test, m_test)[0]
     assert costs_val.shape == (n_steps, batch_size)
     assert_allclose(costs_val.sum(), 115.593, rtol=1e-5)
+
+    # Test 'cost' method
+    cost = generator.cost(y, mask)
+    assert cost.ndim == 0
+    cost_val = theano.function([y, mask], [cost])(y_test, m_test)
+    assert_allclose(cost_val, 115.593, rtol=1e-5)
 
     # Test 'generate' method
     states, outputs, costs = [variable.eval() for variable in
@@ -101,17 +107,23 @@ def test_integer_sequence_generator():
         seed=1234)
     generator.initialize()
 
-    # Test cost
+    # Test 'cost_matrix' method
     y = tensor.lmatrix('y')
     mask = tensor.matrix('mask')
     costs = generator.cost_matrix(y, mask)
     assert costs.ndim == 2
     costs_fun = theano.function([y, mask], [costs])
-    costs_val = costs_fun(
-        rng.randint(readout_dim, size=(n_steps, batch_size)),
-        numpy.ones((n_steps, batch_size), dtype=floatX))[0]
+    y_test = rng.randint(readout_dim, size=(n_steps, batch_size))
+    m_test = numpy.ones((n_steps, batch_size), dtype=floatX)
+    costs_val = costs_fun(y_test, m_test)[0]
     assert costs_val.shape == (n_steps, batch_size)
     assert_allclose(costs_val.sum(), 482.827, rtol=1e-5)
+
+    # Test 'cost' method
+    cost = generator.cost(y, mask)
+    assert cost.ndim == 0
+    cost_val = theano.function([y, mask], [cost])(y_test, m_test)
+    assert_allclose(cost_val, 482.827, rtol=1e-5)
 
     # Test generate
     states, outputs, costs = generator.generate(
@@ -202,7 +214,7 @@ def test_with_attention():
         add_contexts=False, seed=1234)
     generator.initialize()
 
-    # Test 'cost' method
+    # Test 'cost_matrix' method
     attended = tensor.tensor3("attended")
     attended_mask = tensor.matrix("attended_mask")
     outputs = tensor.tensor3('outputs')
