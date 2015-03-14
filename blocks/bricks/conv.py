@@ -185,7 +185,9 @@ class ConvolutionalActivation(Sequence, Initializable):
         The application method to apply after convolution (i.e.
         the nonlinear activation function)
 
-    See :class:`Convolutional` for explanation of other parameters.
+    See Also
+    --------
+    :class:`Convolutional` for the other parameters.
 
     """
     @lazy
@@ -229,8 +231,9 @@ class ConvolutionalLayer(Sequence, Initializable):
         The application method to apply in the detector stage (i.e. the
         nonlinearity before pooling. Needed for ``__init__``.
 
-    See :class:`Convolutional` and :class:`MaxPooling` for explanations of
-    other parameters.
+    See Also
+    --------
+    :class:`Convolutional` and :class:`MaxPooling` for the other parameters.
 
     Notes
     -----
