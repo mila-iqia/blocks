@@ -3,8 +3,9 @@ import logging
 from collections import OrderedDict
 from itertools import chain
 
-from picklable_itertools.extras import equizip
+import numpy
 import theano
+from picklable_itertools.extras import equizip
 from theano import Variable
 from theano.gof import graph
 from theano.sandbox.rng_mrg import MRG_RandomStreams
@@ -14,7 +15,7 @@ from toolz import unique
 from blocks import config
 from blocks.roles import add_role, has_roles, AUXILIARY, PARAMETER, DROPOUT
 from blocks.utils import (is_graph_input, is_shared_variable, dict_union,
-                          shared_like)
+                          shared_floatx_zeros, shared_like)
 
 logger = logging.getLogger(__name__)
 floatX = theano.config.floatX
@@ -419,6 +420,85 @@ def apply_noise(computation_graph, variables, level, seed=None):
         replace[variable] = (variable +
                              rng.normal(variable.shape, std=level))
     return computation_graph.replace(replace)
+
+
+def collect_parameters(computation_graph, params):
+    """Replace parameters with a single shared variable.
+
+    This can be useful if you need to calculate the full Hessian of a
+    computational graph. It replaces parameters with slices of a single
+    large vectors like
+
+    >>> from blocks.utils import shared_floatx
+    >>> W1 = shared_floatx(numpy.random.rand(10, 10))
+    >>> W2 = shared_floatx(numpy.random.rand(10, 10))
+    >>> all_params = shared_floatx(numpy.concatenate(
+    ...     [W1.get_value().flatten(), W2.get_value().flatten()]))
+    >>> W1 = all_params[:W1.size]
+    >>> W2 = all_params[W1.size:]
+
+    Parameters
+    ----------
+    computation_graph : :class:`ComputationGraph` instance
+        The managed Theano graph in which to collect parameters.
+    params : list of Theano shared variables
+        The parameters whose values should be collected.
+
+    Returns
+    -------
+    ComputationGraph instance
+        A new Theano graph which has all the given parameters collected
+        into a single large shared variable.
+
+    Notes
+    -----
+    Note that this replacement makes the training of the model
+    significantly slower because of the large amount of Theano's
+    ``set_subtensor`` calls needed to train the model.
+
+    Examples
+    --------
+    >>> from blocks.bricks import MLP, Sigmoid
+    >>> from blocks.bricks.cost import SquaredError
+    >>> from theano import tensor
+    >>> x = tensor.matrix()
+    >>> mlp = MLP(activations=[Sigmoid(), Sigmoid()], dims=[784, 100, 784])
+    >>> cost = SquaredError().apply(x, mlp.apply(x))
+    >>> cg = ComputationGraph(cost)
+    >>> new_cg = collect_parameters(cg, cg.shared_variables)
+
+    The new graph only has a single shared variable.
+
+    >>> new_cg.shared_variables
+    [collected_params]
+
+    The bricks' variables have been replaced with reshaped segments of this
+    single shared variable.
+
+    >>> from blocks.filter import VariableFilter
+    >>> from blocks.roles import PARAMETER
+    >>> var_filter = VariableFilter(roles=[PARAMETER])
+    >>> var_filter(new_cg.variables) # doctest: +SKIP
+    [Reshape{1}.0, Reshape{1}.0, Reshape{2}.0, Reshape{2}.0]
+
+    """
+    param_values, param_sizes, param_shapes = [], [], []
+    for param in params:
+        param_values.append(param.get_value(borrow=True))
+        param_sizes.append(param_values[-1].size)
+        param_shapes.append(param_values[-1].shape)
+
+    new_params = shared_floatx_zeros(sum(param_sizes))
+    new_params.name = 'collected_params'
+
+    replacements = {}
+    for param, shape, i, j in zip(params, param_shapes,
+                                  numpy.cumsum([0] + param_sizes[:-1]),
+                                  numpy.cumsum(param_sizes)):
+        new_param = new_params[i:j].reshape(shape)
+        new_param.tag = param.tag
+        replacements[param] = new_param
+    return computation_graph.replace(replacements)
 
 
 def apply_dropout(computation_graph, variables, drop_prob, rng=None,
