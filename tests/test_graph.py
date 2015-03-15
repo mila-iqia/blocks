@@ -9,7 +9,7 @@ from blocks.bricks.cost import SquaredError
 from blocks.filter import VariableFilter
 from blocks.graph import apply_noise, collect_parameters, ComputationGraph
 from blocks.initialization import Constant
-from blocks.roles import PARAMETER
+from blocks.roles import COLLECTED, PARAMETER
 from tests.bricks.test_bricks import TestBrick
 
 
@@ -142,7 +142,7 @@ def test_collect():
     assert numpy.all(collected_params.get_value()[:784 * 100] == 1.)
     assert numpy.all(collected_params.get_value()[784 * 100:] == 2.)
     assert collected_params.ndim == 1
-    W1, W2 = var_filter(new_cg.variables)
+    W1, W2 = VariableFilter(roles=[COLLECTED])(new_cg.variables)
     assert W1.eval().shape == (784, 100)
     assert numpy.all(W1.eval() == 1.)
     assert W2.eval().shape == (100, 784)
