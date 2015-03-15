@@ -13,7 +13,8 @@ from theano.scan_module.scan_op import Scan
 from toolz import unique
 
 from blocks import config
-from blocks.roles import add_role, has_roles, AUXILIARY, PARAMETER, DROPOUT
+from blocks.roles import (add_role, has_roles, AUXILIARY, PARAMETER, DROPOUT,
+                          COLLECTED)
 from blocks.utils import (is_graph_input, is_shared_variable, dict_union,
                           shared_floatx_zeros, shared_like)
 
@@ -492,6 +493,8 @@ def collect_parameters(computation_graph, params):
     new_params.set_value(numpy.concatenate([value.flatten()
                                             for value in param_values]))
     new_params.name = 'collected_params'
+    add_role(new_params, COLLECTED)
+    new_params.replacement_of = params
 
     replacements = {}
     for param, shape, i, j in zip(params, param_shapes,
