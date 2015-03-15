@@ -134,5 +134,12 @@ DROPOUT = DropoutRole()
 class CollectedRole(VariableRole):
     pass
 
-#: A shared variable that holds the values of multiple parameters
+#: The replacement of a variable collected into a single shared variable
 COLLECTED = CollectedRole()
+
+
+class CollectorRole(VariableRole):
+    pass
+
+#: A collection of parameters combined into a single shared variable
+COLLECTOR = CollectorRole()

@@ -14,7 +14,7 @@ from toolz import unique
 
 from blocks import config
 from blocks.roles import (add_role, has_roles, AUXILIARY, PARAMETER, DROPOUT,
-                          COLLECTED)
+                          COLLECTED, COLLECTOR)
 from blocks.utils import (is_graph_input, is_shared_variable, dict_union,
                           shared_floatx_zeros, shared_like)
 
@@ -468,18 +468,20 @@ def collect_parameters(computation_graph, params):
     >>> cg = ComputationGraph(cost)
     >>> new_cg = collect_parameters(cg, cg.shared_variables)
 
-    The new graph only has a single shared variable.
+    The new graph only has a single shared variable. This variable receives
+    the :const:`COLLECTOR` role.
 
     >>> new_cg.shared_variables
     [collected_params]
 
     The bricks' variables have been replaced with reshaped segments of this
-    single shared variable.
+    single shared variable. These replacements are given the
+    :const:`.COLLECTED` role.
 
     >>> from blocks.filter import VariableFilter
     >>> from blocks.roles import PARAMETER
-    >>> var_filter = VariableFilter(roles=[PARAMETER])
-    >>> var_filter(new_cg.variables) # doctest: +SKIP
+    >>> var_filter = VariableFilter(roles=[COLLECTED])
+    >>> var_filter(new_cg.variables)  # doctest: +SKIP
     [Reshape{1}.0, Reshape{1}.0, Reshape{2}.0, Reshape{2}.0]
 
     """
@@ -493,15 +495,15 @@ def collect_parameters(computation_graph, params):
     new_params.set_value(numpy.concatenate([value.flatten()
                                             for value in param_values]))
     new_params.name = 'collected_params'
-    add_role(new_params, COLLECTED)
-    new_params.replacement_of = params
+    add_role(new_params, COLLECTOR)
 
     replacements = {}
     for param, shape, i, j in zip(params, param_shapes,
                                   numpy.cumsum([0] + param_sizes[:-1]),
                                   numpy.cumsum(param_sizes)):
         new_param = new_params[i:j].reshape(shape)
-        new_param.tag = param.tag
+        new_param.replacement_of = param
+        add_role(new_param, COLLECTED)
         replacements[param] = new_param
     return computation_graph.replace(replacements)
 
