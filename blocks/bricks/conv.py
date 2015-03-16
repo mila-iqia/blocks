@@ -40,7 +40,8 @@ class Convolutional(Initializable):
     """
     @lazy
     def __init__(self, filter_size, num_filters, num_channels, batch_size=None,
-                 image_size=None, step=(1, 1), border_mode='valid', tied_biases=False, **kwargs):
+                 image_size=None, step=(1, 1), border_mode='valid',
+                 tied_biases=False, **kwargs):
         super(Convolutional, self).__init__(**kwargs)
 
         self.filter_size = filter_size
@@ -216,7 +217,8 @@ class ConvolutionalActivation(Sequence, Initializable):
 
     def _push_allocation_config(self):
         for attr in ['filter_size', 'num_filters', 'step', 'border_mode',
-                     'batch_size', 'num_channels', 'image_size', 'tied_biases']:
+                     'batch_size', 'num_channels', 'image_size',
+                     'tied_biases']:
             setattr(self.convolution, attr, getattr(self, attr))
 
     def get_dim(self, name):
