@@ -1,7 +1,7 @@
 from blocks.bricks import Bias, Linear, Sigmoid
 from blocks.filter import VariableFilter
 from blocks.graph import ComputationGraph
-from blocks.roles import BIASES, FILTERS, PARAMETER
+from blocks.roles import BIAS, FILTER, PARAMETER
 
 from theano import tensor
 
@@ -25,22 +25,22 @@ def test_variable_filter():
     # Testing filtering by role
     role_filter = VariableFilter(roles=[PARAMETER])
     assert parameters == role_filter(cg.variables)
-    role_filter = VariableFilter(roles=[FILTERS])
+    role_filter = VariableFilter(roles=[FILTER])
     assert [] == role_filter(cg.variables)
 
     # Testing filtering by role using each_role flag
-    role_filter = VariableFilter(roles=[PARAMETER, BIASES])
+    role_filter = VariableFilter(roles=[PARAMETER, BIAS])
     assert parameters == role_filter(cg.variables)
-    role_filter = VariableFilter(roles=[PARAMETER, BIASES], each_role=True)
+    role_filter = VariableFilter(roles=[PARAMETER, BIAS], each_role=True)
     assert not parameters == role_filter(cg.variables)
     assert bias == role_filter(cg.variables)
 
     # Testing filtering by bricks classes
-    brick_filter = VariableFilter(roles=[BIASES], bricks=[Linear])
+    brick_filter = VariableFilter(roles=[BIAS], bricks=[Linear])
     assert brick1_bias == brick_filter(cg.variables)
 
     # Testing filtering by bricks instances
-    brick_filter = VariableFilter(roles=[BIASES], bricks=[brick1])
+    brick_filter = VariableFilter(roles=[BIAS], bricks=[brick1])
     assert brick1_bias == brick_filter(cg.variables)
 
     # Testing filtering by name
