@@ -53,10 +53,9 @@ class Random(Brick):
         The default seed can be set through ``blocks.config``.
 
         """
-        if getattr(self, '_theano_rng', None) is not None:
-            return self._theano_rng
-        else:
-            return MRG_RandomStreams(self.theano_seed)
+        if not hasattr(self, '_theano_rng'):
+            self._theano_rng = MRG_RandomStreams(self.theano_seed)
+        return self._theano_rng
 
     @theano_rng.setter
     def theano_rng(self, theano_rng):
