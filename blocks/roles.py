@@ -103,25 +103,25 @@ class AuxiliaryRole(VariableRole):
 AUXILIARY = AuxiliaryRole()
 
 
-class WeightsRole(ParameterRole):
+class WeightRole(ParameterRole):
     pass
 
 #: The weight matrices of linear transformations
-WEIGHT = WeightsRole()
+WEIGHT = WeightRole()
 
 
-class BiasesRole(ParameterRole):
+class BiasRole(ParameterRole):
     pass
 
 #: Biases of linear transformations
-BIAS = BiasesRole()
+BIAS = BiasRole()
 
 
-class FiltersRole(WeightsRole):
+class FilterRole(WeightRole):
     pass
 
 #: The filters (kernels) of a convolution operation
-FILTER = FiltersRole()
+FILTER = FilterRole()
 
 
 class DropoutRole(VariableRole):
