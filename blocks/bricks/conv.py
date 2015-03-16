@@ -40,7 +40,7 @@ class Convolutional(Initializable):
     """
     @lazy
     def __init__(self, filter_size, num_filters, num_channels, batch_size=None,
-                 image_size=None, step=(1, 1), border_mode='valid', **kwargs):
+                 image_size=None, step=(1, 1), border_mode='valid', tied_biases=False, **kwargs):
         super(Convolutional, self).__init__(**kwargs)
 
         self.filter_size = filter_size
@@ -50,6 +50,7 @@ class Convolutional(Initializable):
         self.image_size = image_size
         self.step = step
         self.border_mode = border_mode
+        self.tied_biases = tied_biases
 
     def _allocate(self):
         W = shared_floatx_nans((self.num_filters, self.num_channels) +
@@ -58,7 +59,10 @@ class Convolutional(Initializable):
         self.params.append(W)
         self.add_auxiliary_variable(W.norm(2), name='W_norm')
         if self.use_bias:
-            b = shared_floatx_nans(self.get_dim('output'), name='b')
+            if self.tied_biases:
+                b = shared_floatx_nans((self.num_filters,), name='b')
+            else:
+                b = shared_floatx_nans(self.get_dim('output'), name='b')
             add_role(b, BIAS)
             self.params.append(b)
             self.add_auxiliary_variable(b.norm(2), name='b_norm')
@@ -107,7 +111,10 @@ class Convolutional(Initializable):
             filter_shape=((self.num_filters, self.num_channels) +
                           self.filter_size))
         if self.use_bias:
-            output += b.dimshuffle('x', 0, 1, 2)
+            if self.tied_biases:
+                output += b.dimshuffle('x', 0, 'x', 'x')
+            else:
+                output += b.dimshuffle('x', 0, 1, 2)
         return output
 
     def get_dim(self, name):
@@ -185,15 +192,13 @@ class ConvolutionalActivation(Sequence, Initializable):
         The application method to apply after convolution (i.e.
         the nonlinear activation function)
 
-    See Also
-    --------
-    :class:`Convolutional` for the other parameters.
+    See :class:`Convolutional` for explanation of other parameters.
 
     """
     @lazy
     def __init__(self, activation, filter_size, num_filters, num_channels,
                  batch_size=None, image_size=None, step=(1, 1),
-                 border_mode='valid', **kwargs):
+                 border_mode='valid', tied_biases=False, **kwargs):
         self.convolution = Convolutional()
 
         self.filter_size = filter_size
@@ -203,6 +208,7 @@ class ConvolutionalActivation(Sequence, Initializable):
         self.image_size = image_size
         self.step = step
         self.border_mode = border_mode
+        self.tied_biases = tied_biases
 
         super(ConvolutionalActivation, self).__init__(
             application_methods=[self.convolution.apply, activation],
@@ -210,7 +216,7 @@ class ConvolutionalActivation(Sequence, Initializable):
 
     def _push_allocation_config(self):
         for attr in ['filter_size', 'num_filters', 'step', 'border_mode',
-                     'batch_size', 'num_channels', 'image_size']:
+                     'batch_size', 'num_channels', 'image_size', 'tied_biases']:
             setattr(self.convolution, attr, getattr(self, attr))
 
     def get_dim(self, name):
@@ -231,10 +237,8 @@ class ConvolutionalLayer(Sequence, Initializable):
         The application method to apply in the detector stage (i.e. the
         nonlinearity before pooling. Needed for ``__init__``.
 
-    See Also
-    --------
-    :class:`Convolutional` and :class:`MaxPooling` for the other
-    parameters.
+    See :class:`Convolutional` and :class:`MaxPooling` for explanations of
+    other parameters.
 
     Notes
     -----
@@ -266,7 +270,11 @@ class ConvolutionalLayer(Sequence, Initializable):
 
     def _push_allocation_config(self):
         for attr in ['filter_size', 'num_filters', 'num_channels',
+<<<<<<< HEAD
                      'batch_size', 'border_mode', 'image_size']:
+=======
+                     'border_mode', 'image_size', 'tied_biases']:
+>>>>>>> 1807e0d... tied biases
             setattr(self.convolution, attr, getattr(self, attr))
         self.convolution.step = self.conv_step
         self.convolution._push_allocation_config()
@@ -320,11 +328,13 @@ class ConvolutionalSequence(Sequence, Initializable, Feedforward):
     """
     @lazy
     def __init__(self, layers, num_channels, batch_size=None, image_size=None,
-                 **kwargs):
+                 border_mode='valid', tied_biases=False, **kwargs):
         self.layers = layers
         self.image_size = image_size
         self.num_channels = num_channels
         self.batch_size = batch_size
+        self.border_mode = border_mode
+        self.tied_biases = tied_biases
 
         application_methods = [brick.apply for brick in layers]
         super(ConvolutionalSequence, self).__init__(
@@ -341,6 +351,8 @@ class ConvolutionalSequence(Sequence, Initializable, Feedforward):
         num_channels = self.num_channels
         image_size = self.image_size
         for layer in self.layers:
+            for attr in ['border_mode', 'tied_biases']:
+                setattr(layer, attr, getattr(self, attr))
             layer.image_size = image_size
             layer.num_channels = num_channels
             layer.batch_size = self.batch_size
