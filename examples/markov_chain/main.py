@@ -47,8 +47,8 @@ def main(mode, save_path, steps, num_batches):
         feedback_dim = 8
 
         # Build the bricks and initialize them
-        transition = GatedRecurrent(name="transition", activation=Tanh(),
-                                    dim=dim)
+        transition = GatedRecurrent(name="transition", dim=dim,
+                                    activation=Tanh())
         generator = SequenceGenerator(
             Readout(readout_dim=num_states, source_names=["states"],
                     emitter=SoftmaxEmitter(name="emitter"),
