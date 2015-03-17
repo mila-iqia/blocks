@@ -623,16 +623,21 @@ class VariableClipping(StepRule):
         if any(axis >= previous_step.ndim for axis in self.axes):
             raise ValueError("Invalid axes {} for {}, ndim={}".format(
                 self.axes, param, previous_step.ndim))
-        squares = tensor.sqr(previous_step)
         if len(self.axes) == 0:
-            norms = l2_norm([previous_step])
+            norms = l2_norm([param - previous_step])
         else:
+            squares = tensor.sqr(param - previous_step)
             norms = tensor.sqrt(
                 reduce(lambda t, a: t.sum(axis=a, keepdims=True),
                        sorted(self.axes), squares))
-        return (previous_step * tensor.switch(norms > self.threshold,
-                                              self.threshold / norms,
-                                              1.), ())
+        # We want a step s* that is the same as scaling (param - previous_step)
+        # by threshold / norm when threshold < norm.
+
+        shrinking_step = (param -
+                          (self.threshold / norms) * (param - previous_step))
+        return tensor.switch(norms > self.threshold,
+                             shrinking_step,
+                             previous_step), ()
 
 
 class Adam(StepRule):

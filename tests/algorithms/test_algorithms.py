@@ -140,39 +140,47 @@ def test_variable_clipping():
     # Test simple variable clipping with no axes.
     rule1 = VariableClipping(5)
 
-    gradients = OrderedDict([(0, shared_floatx([4, 3])),
-                             (1, shared_floatx([[3, 9, 2]])),
-                             (2, shared_floatx([[[1], [2], [3], [2]]]))])
+    gradients = OrderedDict([(shared_floatx([1, 1]), shared_floatx([3, 2])),
+                             (shared_floatx([-1, -1, -1]),
+                              shared_floatx([[3, 9, 2]])),
+                             (shared_floatx([[[1], [-1], [1], [-1]]]),
+                              shared_floatx([[[1], [2], [3], [2]]]))])
     steps, _ = rule1.compute_steps(gradients)
     border, clipped, notclipped = steps.items()
-    assert_allclose(border[1].eval(), [4, 3])
-    assert_allclose(clipped[1].eval(), 5 * numpy.array([[3., 9., 2.]]) /
-                    numpy.sqrt(94))
-    assert_allclose(notclipped[1].eval(),
-                    numpy.array([[[1.], [2.], [3.], [2.]]]))
+    assert_allclose(border[1].eval(), [3, 2])
+    assert_allclose(clipped[1].eval(),
+                    numpy.array([[0.78885438, 3.47213595, 0.34164079]]))
+    assert_allclose(clipped[1].eval(),
+                    numpy.array([[0.78885438, 3.47213595, 0.34164079]]))
+    assert_allclose(notclipped[1].eval(), [[[1], [2], [3], [2]]])
+
     # Test variable clipping on one axis.
     rule2 = VariableClipping(10, axes=(1,))
-    gradients = {0: shared_floatx([[1, 2, 3, 4], [5, 6, 7, 8]])}
+    gradients = {shared_floatx([[1, -1, 1, -1], [-1, 1, -1, 1]]):
+                 shared_floatx([[1, 2, 3, 4], [5, 6, 7, 8]])}
     steps, _ = rule2.compute_steps(gradients)
     clipped, = steps.items()
-    assert_allclose(clipped[1].eval(), numpy.concatenate([
-        [[1, 2, 3, 4]],
-        numpy.array([[5, 6, 7, 8]]) * 10 / numpy.sqrt(174)]))
+    assert_allclose(clipped[1].eval(),
+                    [[1, 2, 3, 4],
+                     [3.54858826, 4.79049022, 5.06478435, 6.30668631]])
 
     # Test variable clipping on two axes.
     rule3 = VariableClipping(10, axes=(1, 2))
-    gradients = {0: shared_floatx([
-        [[[1], [2]],
-         [[3], [4]]],
-        [[[5], [6]],
-         [[7], [8]]]
-    ])}
+    gradients = {shared_floatx([[[[1], [-1]],
+                                 [[-1], [1]]],
+                                [[[-1], [1]],
+                                 [[2], [-1]]]]):
+                 shared_floatx([[[[1], [2]],
+                                 [[3], [4]]],
+                                [[[5], [6]],
+                                 [[7], [8]]]])}
     steps, _ = rule3.compute_steps(gradients)
     clipped, = steps.items()
-    assert_allclose(clipped[1].eval(), numpy.concatenate([
-        [[[[1], [2]], [[3], [4]]]],
-        numpy.array([[[[5], [6]], [[7], [8]]]]) *
-        10 / numpy.sqrt(174)]))
+    assert_allclose(clipped[1].eval(),
+                    [[[[1], [2]],
+                      [[3], [4]]],
+                     [[[3.6429394], [4.86911616]],
+                      [[5.86911616], [5.96440909]]]])
 
     # Test exceptions.
     assert_raises(ValueError, rule3.compute_steps, {0: shared_floatx([1.0])})
