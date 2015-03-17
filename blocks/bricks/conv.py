@@ -260,12 +260,13 @@ class ConvolutionalLayer(Sequence, Initializable):
         self.pooling_size = pooling_size
         self.conv_step = conv_step
         self.pooling_step = pooling_step
+        self.batch_size = batch_size
         self.border_mode = border_mode
         self.image_size = image_size
 
     def _push_allocation_config(self):
         for attr in ['filter_size', 'num_filters', 'num_channels',
-                     'border_mode', 'image_size']:
+                     'batch_size', 'border_mode', 'image_size']:
             setattr(self.convolution, attr, getattr(self, attr))
         self.convolution.step = self.conv_step
         self.convolution._push_allocation_config()
@@ -276,6 +277,7 @@ class ConvolutionalLayer(Sequence, Initializable):
         self.pooling.input_dim = pooling_input_dim
         self.pooling.pooling_size = self.pooling_size
         self.pooling.step = self.pooling_step
+        self.pooling.batch_size = self.batch_size
 
     def get_dim(self, name):
         if name == 'input_':
