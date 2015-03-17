@@ -5,7 +5,7 @@ from numpy.testing import assert_allclose, assert_raises
 from theano import tensor
 
 from blocks.bricks import (Identity, Linear, Maxout, LinearMaxout, MLP, Tanh,
-                           Sequence)
+                           Sequence, Random)
 from blocks.bricks.base import Application, application, Brick, lazy
 from blocks.bricks.parallel import Parallel, Fork
 from blocks.filter import get_application_call, get_brick
@@ -278,6 +278,13 @@ def test_rng():
     linear = Linear()
     linear2 = Linear()
     assert linear.seed != linear2.seed
+
+
+def test_random_brick():
+    random = Random()
+    # This makes sure that a Random brick doesn't instantiate more than one
+    # Theano RNG during its lifetime (see PR #485 on Github)
+    assert random.theano_rng is random.theano_rng
 
 
 def test_linear():
