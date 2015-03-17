@@ -593,7 +593,9 @@ class VariableClipping(StepRule):
         Maximum norm for a given (portion of a) tensor.
     axes : iterable, optional
         An iterable collection of integer axes over which to
-        sum in order to calculate the L2 norm.
+        sum in order to calculate the L2 norm. If `None`
+        (the default), the norm is computed over all elements
+        of the tensor.
 
     Notes
     -----
