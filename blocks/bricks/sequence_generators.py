@@ -137,24 +137,41 @@ class BaseSequenceGenerator(Initializable):
 
     @application
     def cost(self, application_call, outputs, mask=None, **kwargs):
-        """Returns sum of generation costs for output sequences.
+        """Returns the average cost of the sum of per token costs in a sequence
+        over the minibatch.
+
+        .. warning::
+            Note that, the computed cost can be problematic when batches
+            consist of vastly different sequence lengths.
 
         Parameters
         ----------
         outputs : :class:`~tensor.TensorVariable`
             The 3(2) dimensional tensor containing output sequences.
-            The dimension 0 must stand for time, the dimension 1 for the
-            position on the batch.
+            The axis 0 must stand for time, the axis 1 for the
+            position in the batch.
         mask : :class:`~tensor.TensorVariable`
             The binary matrix identifying fake outputs.
+
+        Returns
+        -------
+        cost : :class:`~tensor.Variable`
+            Theano variable for cost, computed by summing over timesteps
+            and then averaging over the minibatch.
 
         Notes
         -----
         The contexts are expected as keyword arguments.
 
+        Adds average cost per sequence element `AUXILIARY`
+        variable to the computational graph with name
+        `sequencegenerator_cost_per_sequence_element`
+
         """
         # Compute the sum of costs
-        cost = self.cost_matrix(outputs, mask=mask, **kwargs).sum()
+        cost = tensor.mean(self.cost_matrix(outputs,
+                                            mask=mask,
+                                            **kwargs).sum(axis=0))
         add_role(cost, COST)
 
         # Add auxiliary variable for per sequence element cost
@@ -167,18 +184,9 @@ class BaseSequenceGenerator(Initializable):
     def cost_matrix(self, application_call, outputs, mask=None, **kwargs):
         """Returns generation costs for output sequences.
 
-        Parameters
-        ----------
-        outputs : :class:`~tensor.TensorVariable`
-            The 3(2) dimensional tensor containing output sequences.
-            The dimension 0 must stand for time, the dimension 1 for the
-            position on the batch.
-        mask : :class:`~tensor.TensorVariable`
-            The binary matrix identifying fake outputs.
-
-        Notes
-        -----
-        The contexts are expected as keyword arguments.
+        See Also
+        --------
+        :meth:`cost` documentation for parameters.
 
         """
         # We assume the data has axes (time, batch, features, ...)

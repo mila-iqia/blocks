@@ -62,7 +62,7 @@ def test_sequence_generator():
     cost = generator.cost(y, mask)
     assert cost.ndim == 0
     cost_val = theano.function([y, mask], [cost])(y_test, m_test)
-    assert_allclose(cost_val, 115.593, rtol=1e-5)
+    assert_allclose(cost_val, 3.8531, rtol=1e-5)
 
     # Test 'generate' method
     states, outputs, costs = [variable.eval() for variable in
@@ -123,7 +123,7 @@ def test_integer_sequence_generator():
     cost = generator.cost(y, mask)
     assert cost.ndim == 0
     cost_val = theano.function([y, mask], [cost])(y_test, m_test)
-    assert_allclose(cost_val, 482.827, rtol=1e-5)
+    assert_allclose(cost_val, 16.0942, rtol=1e-5)
 
     # Test generate
     states, outputs, costs = generator.generate(
