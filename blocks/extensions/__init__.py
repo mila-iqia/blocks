@@ -353,8 +353,8 @@ class SimpleExtension(TrainingExtension):
         args = tuple(args)
         if (which_callback == 'after_batch' or
                 which_callback == 'before_batch'):
-            return args[0], args[1:]
-        return (), args[1:]
+            return (args[0],), args[1:]
+        return (), args
 
 
 class FinishAfter(SimpleExtension):
