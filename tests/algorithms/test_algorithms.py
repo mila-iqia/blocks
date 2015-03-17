@@ -149,9 +149,8 @@ def test_variable_clipping():
     border, clipped, notclipped = steps.items()
     assert_allclose(border[1].eval(), [3, 2])
     assert_allclose(clipped[1].eval(),
-                    numpy.array([[0.78885438, 3.47213595, 0.34164079]]))
-    assert_allclose(clipped[1].eval(),
-                    numpy.array([[0.78885438, 3.47213595, 0.34164079]]))
+                    numpy.array([[0.78885438, 3.47213595, 0.34164079]]),
+                    rtol=1e-5)
     assert_allclose(notclipped[1].eval(), [[[1], [2], [3], [2]]])
 
     # Test variable clipping on one axis.
@@ -162,7 +161,8 @@ def test_variable_clipping():
     clipped, = steps.items()
     assert_allclose(clipped[1].eval(),
                     [[1, 2, 3, 4],
-                     [3.54858826, 4.79049022, 5.06478435, 6.30668631]])
+                     [3.54858826, 4.79049022, 5.06478435, 6.30668631]],
+                    rtol=1e-5)
 
     # Test variable clipping on two axes.
     rule3 = VariableClipping(10, axes=(1, 2))
@@ -180,7 +180,8 @@ def test_variable_clipping():
                     [[[[1], [2]],
                       [[3], [4]]],
                      [[[3.6429394], [4.86911616]],
-                      [[5.86911616], [5.96440909]]]])
+                      [[5.86911616], [5.96440909]]]],
+                    rtol=1e-5)
 
     # Test exceptions.
     assert_raises(ValueError, rule3.compute_steps, {0: shared_floatx([1.0])})
