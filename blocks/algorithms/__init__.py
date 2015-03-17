@@ -5,13 +5,15 @@ from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 from picklable_itertools.extras import equizip
 
+import numpy
 import theano
+from scipy.sparse.linalg import LinearOperator, lobpcg
 from six import add_metaclass
 from theano import tensor
 
 from blocks.graph import ComputationGraph
 from blocks.utils import dict_subset, named_copy, shared_floatx
-from blocks.theano_expressions import l2_norm
+from blocks.theano_expressions import l2_norm, hessian_times_vector
 
 logger = logging.getLogger(__name__)
 
@@ -230,6 +232,45 @@ class GradientDescent(DifferentiableCostMinimizer):
                                  variables=[v.name for v in self.inputs]))
         ordered_batch = [batch[v.name] for v in self.inputs]
         self._function(*ordered_batch)
+
+
+class NegativeProjection(DifferentiableCostMinimizer):
+    def __init__(self, cost, parameter, lr=1):
+        super(NegativeProjection, self).__init__(cost, [parameter])
+        self.lr = lr
+
+    def initialize(self):
+        v = tensor.col('vector')
+        parameter, = self.params
+        gradient = tensor.grad(self.cost, parameter)
+        Hv = hessian_times_vector(gradient, parameter, v.flatten())
+        self.Hv_func = theano.function(self.inputs + [v], [Hv, gradient],
+                                       allow_input_downcast=True)
+        self.n = len(parameter.get_value())
+
+        flat_v = tensor.vector('flat_vector')
+        projection = (flat_v * -gradient).sum() * flat_v / (flat_v ** 2).sum()
+        self.update_func = theano.function(
+            self.inputs + [flat_v], [projection],
+            updates=OrderedDict([(parameter,
+                                  parameter + self.lr * projection)] +
+                                self.updates),
+            allow_input_downcast=True
+        )
+
+    def process_batch(self, batch):
+        def Hv_operator(v):
+            Hv, gradient = self.Hv_func(*batch.values() + [v])
+            return Hv
+        linear_operator = LinearOperator((self.n, self.n), Hv_operator,
+                                         dtype=theano.config.floatX)
+        initial_ev = getattr(self, 'initial_ev', numpy.random.randn(self.n, 1))
+        eigenvalue, eigenvector, eigenvalue_history, residual_norms = \
+            lobpcg(linear_operator, initial_ev, retLambdaHistory=True,
+                   retResidualNormsHistory=True, largest=False)
+        self.update_func(*batch.values() + [eigenvector.flatten()])
+
+        self.initial_ev = eigenvector
 
 
 @add_metaclass(ABCMeta)
