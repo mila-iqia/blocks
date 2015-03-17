@@ -597,12 +597,12 @@ class VariableClipping(StepRule):
 
     Notes
     -----
-    Investigations into max-norm regularization date from [SREBRO2005]_.
+    Investigations into max-norm regularization date from [Srebro2005]_.
     The first appearance of this technique as a regularization method
     for the weight vectors of individual hidden units in feed-forward
     neural networks may be [Hinton2012]_.
 
-    .. [SREBRO2005] Nathan Srebro and Adi Shraibman.
+    .. [Srebro2005] Nathan Srebro and Adi Shraibman.
        "Rank, Trace-Norm and Max-Norm". *18th Annual Conference
        on Learning Theory (COLT)*, June 2005.
 
