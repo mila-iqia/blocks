@@ -139,8 +139,8 @@ class BaseSequenceGenerator(Initializable):
     def cost(self, application_call, outputs, mask=None, **kwargs):
         """Returns the average cost of over the minibatch.
 
-        The cost is computed by averaging the sum of per token costs for each
-        sequence over the minibatch.
+        The cost is computed by averaging the sum of per token costs for
+        each sequence over the minibatch.
 
         .. warning::
             Note that, the computed cost can be problematic when batches
