@@ -247,7 +247,7 @@ See the instructions at the bottom of the :doc:`installation instructions
 
 Sending a pull request
 ----------------------
-See our :doc:`pull request workflow <pullrequest>` for a refresher on the
+See our :doc:`pull request workflow <pull_request>` for a refresher on the
 general recipe for sending a pull request to Blocks.
 
 .. toctree::
@@ -255,4 +255,4 @@ general recipe for sending a pull request to Blocks.
 
    internal_api
    docs
-   pullrequest
+   pull_request
