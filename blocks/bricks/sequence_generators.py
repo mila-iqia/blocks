@@ -137,7 +137,7 @@ class BaseSequenceGenerator(Initializable):
 
     @application
     def cost(self, application_call, outputs, mask=None, **kwargs):
-        """Returns the average cost of over the minibatch.
+        """Returns the average cost over the minibatch.
 
         The cost is computed by averaging the sum of per token costs for
         each sequence over the minibatch.
@@ -165,20 +165,18 @@ class BaseSequenceGenerator(Initializable):
         -----
         The contexts are expected as keyword arguments.
 
-        Adds average cost per sequence element `AUXILIARY`
-        variable to the computational graph with name
-        `~sequencegenerator_cost_per_sequence_element`
+        Adds average cost per sequence element `AUXILIARY` variable to
+        the computational graph with name `~per_sequence_element`
 
         """
         # Compute the sum of costs
-        cost = tensor.mean(self.cost_matrix(outputs,
-                                            mask=mask,
-                                            **kwargs).sum(axis=0))
+        costs = self.cost_matrix(outputs, mask=mask, **kwargs)
+        cost = tensor.mean(costs.sum(axis=0))
         add_role(cost, COST)
 
         # Add auxiliary variable for per sequence element cost
         application_call.add_auxiliary_variable(
-            (cost / mask.sum()) if mask is not None else cost,
+            (costs / mask.sum()) if mask is not None else costs.sum(),
             name='per_sequence_element')
         return cost
 
