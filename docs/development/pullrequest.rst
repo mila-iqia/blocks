@@ -19,7 +19,7 @@ Before you begin
 
 Create a GitHub account
 ~~~~~~~~~~~~~~~~~~~~~~~
-If you don't already have one, you should 
+If you don't already have one, you should
 `create yourself a GitHub account <https://github.com/join>`_.
 
 Fork the Blocks repository
@@ -48,6 +48,8 @@ setting up `SSH key authentication <https://help.github.com/categories/ssh/>`_.
 
 Add the official Blocks repository as a remote
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In order to keep up with changes to the official Blocks repository, notify
+Git of its existence and location by running
 
 .. code-block:: bash
 
@@ -60,26 +62,43 @@ Beginning a pull request
 
 Verify that origin points to your fork
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Running the command
 
 .. code-block:: bash
 
     $ git remote -v |grep origin
 
-Should display two lines. The URLs therein should contain your GitHub username.
+should display two lines. The URLs therein should contain your GitHub username.
 
 Update your upstream remote
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Your cloned repository stores a local history of the activity in remote
+repositories, and only interacts with the Internet when certain commands
+are invoked. In order to synchronize the activity in the official Blocks
+repository (which Git now knows as ``upstream``) with the local mirror of
+the history related  to ``upstream``, run
+
 .. code-block:: bash
 
     $ git fetch upstream
 
-Create a new branch for your pull request based on ``upstream/master``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+You should do this before starting every pull request, for reasons that
+will become clear below.
+
+Create a new branch for your pull request based on the latest development version of Blocks
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In order to create a new branch *starting from the latest commit in the
+master branch of the official Blocks repository*, make sure you've fetched
+from ``upstream`` (see above) and run
+
 .. code-block:: bash
 
     $ git checkout -b my_branch_name_for_my_cool_feature upstream/master
 
-Obviously you'll probably want to choose a better branch name.
+Obviously, you'll probably want to choose a better branch name.
+
+Note that doing this (rather than simply creating a new branch from some
+arbtirary point) may save you from a (possibly painful) rebase later on.
 
 Working on your pull request
 ----------------------------
@@ -112,7 +131,10 @@ This can be done from the GitHub web interface for your fork. See
 **Give your pull request an appropriate title** which makes it obvious what
 the content is. If it is intended to resolve a specific issue, put "Fixes
 #*NNN*." in the pull request description field, where *NNN* is the issue
-number.
+number. By doing this, GitHub will know to `automatically close the issue`_
+when your pull request is merged.
+
+.. _automatically close the issue: https://github.com/blog/1506-closing-issues-via-pull-requests
 
 Incorporating feedback
 ----------------------
