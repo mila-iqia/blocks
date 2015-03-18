@@ -129,8 +129,8 @@ This can be done from the GitHub web interface for your fork. See
 .. _this documentation from GitHub: https://help.github.com/articles/using-pull-requests/#initiating-the-pull-request
 
 **Give your pull request an appropriate title** which makes it obvious what
-the content is. If it is intended to resolve a specific issue, put "Fixes
-#*NNN*." in the pull request description field, where *NNN* is the issue
+the content is. **If it is intended to resolve a specific ticket**, put "Fixes
+#NNN." in the pull request description field, where *NNN* is the issue
 number. By doing this, GitHub will know to `automatically close the issue`_
 when your pull request is merged.
 
