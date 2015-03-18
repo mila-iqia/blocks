@@ -243,10 +243,16 @@ to Blocks, have a look at the :doc:`user API reference </api/index>` instead.
 Installation
 ------------
 See the instructions at the bottom of the :doc:`installation instructions
-<setup>`.
+<../setup>`.
+
+Sending a pull request
+----------------------
+See our :doc:`pull request workflow <pull_request>` for a refresher on the
+general recipe for sending a pull request to Blocks.
 
 .. toctree::
    :hidden:
 
    internal_api
    docs
+   pull_request
