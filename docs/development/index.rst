@@ -243,7 +243,7 @@ to Blocks, have a look at the :doc:`user API reference </api/index>` instead.
 Installation
 ------------
 See the instructions at the bottom of the :doc:`installation instructions
-<setup>`.
+<../setup>`.
 
 Sending a pull request
 ----------------------
