@@ -66,7 +66,7 @@ class DataStreamMonitoring(SimpleExtension, MonitoringExtension):
     PREFIX_SEPARATOR = '_'
 
     def __init__(self, variables, data_stream, updates=None, **kwargs):
-        kwargs.setdefault("after_every_epoch", True)
+        kwargs.setdefault("after_epoch", True)
         kwargs.setdefault("before_first_epoch", True)
         super(DataStreamMonitoring, self).__init__(**kwargs)
         self._evaluator = DatasetEvaluator(variables, updates)

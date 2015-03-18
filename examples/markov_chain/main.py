@@ -90,7 +90,7 @@ def main(mode, save_path, steps, num_batches):
             model=Model(cost),
             extensions=[FinishAfter(after_n_batches=num_batches),
                         TrainingDataMonitoring([cost], prefix="this_step",
-                                               after_every_batch=True),
+                                               after_batch=True),
                         TrainingDataMonitoring([cost], prefix="average",
                                                every_n_batches=100),
                         Checkpoint(save_path, every_n_batches=500),

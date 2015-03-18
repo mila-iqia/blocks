@@ -29,7 +29,7 @@ class SharedVariableModifier(SimpleExtension):
 
     """
     def __init__(self, parameter, function, **kwargs):
-        kwargs.setdefault("after_every_batch", True)
+        kwargs.setdefault("after_batch", True)
         super(SharedVariableModifier, self).__init__(**kwargs)
         self.parameter = parameter
         self.function = function
@@ -76,7 +76,7 @@ class TrackTheBest(SimpleExtension):
         self.notification_name = notification_name
         self.best_name = "best_" + record_name
         self.choose_best = choose_best
-        kwargs.setdefault("after_every_batch", True)
+        kwargs.setdefault("after_batch", True)
         super(TrackTheBest, self).__init__(**kwargs)
 
     def do(self, which_callback, *args):

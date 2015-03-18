@@ -236,7 +236,7 @@ def main(mode, save_path, num_batches, data_path=None):
             algorithm=algorithm,
             extensions=[
                 Timing(),
-                TrainingDataMonitoring(observables, after_every_batch=True),
+                TrainingDataMonitoring(observables, after_batch=True),
                 average_monitoring,
                 FinishAfter(after_n_batches=num_batches)
                 # This shows a way to handle NaN emerging during

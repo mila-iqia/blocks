@@ -1,3 +1,4 @@
+import os.path
 from tempfile import NamedTemporaryFile
 from six.moves import cPickle
 
@@ -130,8 +131,9 @@ def test_save_the_best():
             extensions=[FinishAfter(after_n_epochs=1),
                         WriteCostExtension(),
                         track_cost,
-                        Checkpoint(dst.name, after_every_batch=True).
-                        add_condition(
+                        Checkpoint(dst.name, after_batch=True,
+                                   save_separately=['log'])
+                        .add_condition(
                             "after_batch",
                             OnLogRecord(track_cost.notification_name),
                             (dst_best.name,))])
@@ -142,3 +144,7 @@ def test_save_the_best():
         assert main_loop.log[6].saved_to == (dst.name,)
         with open(dst_best.name, 'rb') as src:
             assert cPickle.load(src).log.status.iterations_done == 5
+        root, ext = os.path.splitext(dst_best.name)
+        log_path = root + "_log" + ext
+        with open(log_path, 'rb') as src:
+            assert cPickle.load(src).status.iterations_done == 5

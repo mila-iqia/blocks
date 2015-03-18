@@ -78,7 +78,7 @@ class Checkpoint(SimpleExtension):
                 already_saved_to + (path,))
             secure_pickle_dump(self.main_loop, path)
             for attribute in self.save_separately:
-                root, ext = os.path.splitext(self.path)
+                root, ext = os.path.splitext(path)
                 path = root + "_" + attribute + ext
                 secure_pickle_dump(getattr(self.main_loop, attribute), path)
         except Exception:
