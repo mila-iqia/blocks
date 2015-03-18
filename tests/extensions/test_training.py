@@ -131,7 +131,7 @@ def test_save_the_best():
             extensions=[FinishAfter(after_n_epochs=1),
                         WriteCostExtension(),
                         track_cost,
-                        Checkpoint(dst.name, after_every_batch=True,
+                        Checkpoint(dst.name, after_batch=True,
                                    save_separately=['log'])
                         .add_condition(
                             "after_batch",

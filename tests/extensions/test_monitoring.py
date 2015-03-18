@@ -44,9 +44,9 @@ def test_training_data_monitoring():
         extensions=[
             FinishAfter(after_n_epochs=1),
             TrainingDataMonitoring([W_sum, cost, V], prefix="train1",
-                                   after_every_batch=True),
+                                   after_batch=True),
             TrainingDataMonitoring([aggregation.mean(W_sum), cost],
-                                   prefix="train2", after_every_epoch=True),
+                                   prefix="train2", after_epoch=True),
             TrueCostExtension()])
 
     main_loop.run()

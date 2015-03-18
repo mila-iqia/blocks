@@ -69,7 +69,7 @@ def main(save_to, num_batches, continue_=False):
             DataStreamMonitoring(
                 [cost], get_data_stream(range(100, 200)),
                 prefix="test"),
-            TrainingDataMonitoring([cost], after_every_epoch=True),
+            TrainingDataMonitoring([cost], after_epoch=True),
             Dump(save_to),
             Printing()])
     main_loop.run()

@@ -96,7 +96,7 @@ class Plot(SimpleExtension):
         if open_browser:
             show()
 
-        kwargs.setdefault('after_every_epoch', True)
+        kwargs.setdefault('after_epoch', True)
         kwargs.setdefault("before_first_epoch", True)
         super(Plot, self).__init__(**kwargs)
 
