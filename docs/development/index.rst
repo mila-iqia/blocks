@@ -245,8 +245,14 @@ Installation
 See the instructions at the bottom of the :doc:`installation instructions
 <setup>`.
 
+Sending a pull request
+----------------------
+See our :doc:`pull request workflow <pullrequest>` for a refresher on the
+general recipe for sending a pull request to Blocks.
+
 .. toctree::
    :hidden:
 
    internal_api
    docs
+   pullrequest
