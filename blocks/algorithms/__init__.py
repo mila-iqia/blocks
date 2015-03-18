@@ -599,6 +599,16 @@ class VariableClipping(StepRule):
 
     Notes
     -----
+    Because of the way the :class:`StepRule` API works, this particular
+    rule implements norm clipping of the value *after* update in the
+    following way: it computes ``param - previous_step``, scales it
+    to have (possibly axes-wise) norm(s) of at most `threshold`,
+    then subtracts *that* value from `param` to yield an 'equivalent
+    step' that respects the desired norm constraints. This procedure
+    implicitly assumes one is doing simple (stochastic) gradient descent,
+    and so steps computed by this step rule may not make sense for use
+    in other contexts.
+
     Investigations into max-norm regularization date from [Srebro2005]_.
     The first appearance of this technique as a regularization method
     for the weight vectors of individual hidden units in feed-forward
@@ -634,7 +644,6 @@ class VariableClipping(StepRule):
                        sorted(self.axes), squares))
         # We want a step s* that is the same as scaling (param - previous_step)
         # by threshold / norm when threshold < norm.
-
         shrinking_step = (param -
                           (self.threshold / norms) * (param - previous_step))
         return tensor.switch(norms > self.threshold,
