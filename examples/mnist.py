@@ -64,7 +64,7 @@ def main(save_to, num_epochs):
                         [cost, error_rate,
                          aggregation.mean(algorithm.total_gradient_norm)],
                         prefix="train",
-                        after_every_epoch=True),
+                        after_epoch=True),
                     Checkpoint(save_to),
                     Plot(
                         'MNIST example',
