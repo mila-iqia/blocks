@@ -439,14 +439,14 @@ class GatedRecurrent(BaseRecurrent, Initializable):
 
     Parameters
     ----------
+    dim : int
+        The dimension of the hidden state.
     activation : :class:`.Brick` or None
         The brick to apply as activation. If ``None`` a
         :class:`.Tanh` brick is used.
     gate_activation : :class:`.Brick` or None
         The brick to apply as activation for gates. If ``None`` a
         :class:`.Sigmoid` brick is used.
-    dim : int
-        The dimension of the hidden state.
     use_upgate_gate : bool
         If True the update gates are used.
     use_reset_gate : bool
