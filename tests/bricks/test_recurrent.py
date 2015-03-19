@@ -144,13 +144,13 @@ class TestLSTM(unittest.TestCase):
 class TestGatedRecurrent(unittest.TestCase):
     def setUp(self):
         self.gated = GatedRecurrent(
-            dim=3, weights_init=Constant(2),
-            activation=Tanh(), gate_activation=Tanh())
+            dim=3, activation=Tanh(),
+            gate_activation=Tanh(), weights_init=Constant(2))
         self.gated.initialize()
         self.reset_only = GatedRecurrent(
-            dim=3, weights_init=IsotropicGaussian(),
-            activation=Tanh(), gate_activation=Tanh(),
-            use_update_gate=False, seed=1)
+            dim=3, activation=Tanh(),
+            gate_activation=Tanh(), use_update_gate=False,
+            weights_init=IsotropicGaussian(), seed=1)
         self.reset_only.initialize()
 
     def test_one_step(self):

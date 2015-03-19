@@ -439,13 +439,14 @@ class GatedRecurrent(BaseRecurrent, Initializable):
 
     Parameters
     ----------
-    activation : :class:`.Brick`
-        The brick to apply as activation.
-    gated_activation : :class:`.Brick` or None
-        The brick to apply as activation for gates. If ``None`` a
-        :class:`.Sigmoid` brick is used.
     dim : int
         The dimension of the hidden state.
+    activation : :class:`.Brick` or None
+        The brick to apply as activation. If ``None`` a
+        :class:`.Tanh` brick is used.
+    gate_activation : :class:`.Brick` or None
+        The brick to apply as activation for gates. If ``None`` a
+        :class:`.Sigmoid` brick is used.
     use_upgate_gate : bool
         If True the update gates are used.
     use_reset_gate : bool
@@ -462,13 +463,15 @@ class GatedRecurrent(BaseRecurrent, Initializable):
 
     """
     @lazy
-    def __init__(self, activation, gate_activation, dim,
+    def __init__(self, dim, activation=None, gate_activation=None,
                  use_update_gate=True, use_reset_gate=True, **kwargs):
         super(GatedRecurrent, self).__init__(**kwargs)
         self.dim = dim
         self.use_update_gate = use_update_gate
         self.use_reset_gate = use_reset_gate
 
+        if not activation:
+            activation = Tanh()
         if not gate_activation:
             gate_activation = Sigmoid()
         self.activation = activation
