@@ -204,17 +204,15 @@ class ComputationGraph(object):
         # Sort `replacements` in topological order
         for node in apply_nodes_sorted:
             for input_ in node.inputs:
-                if input_ not in replacements:
-                    continue
-                replacement_keys_cur.append(input_)
-                replacement_vals_cur.append(replacements[input_])
+                if input_ in replacements:
+                    replacement_keys_cur.append(input_)
+                    replacement_vals_cur.append(replacements[input_])
 
         # Add outputs of the computation graph
         for output in self.outputs:
-            if output not in replacements:
-                continue
-            replacement_keys_cur.append(output)
-            replacement_vals_cur.append(replacements[output])
+            if output in replacements:
+                replacement_keys_cur.append(output)
+                replacement_vals_cur.append(replacements[output])
 
         # Replace step-by-step in topological order
         while replacement_keys_cur:
