@@ -209,6 +209,13 @@ class ComputationGraph(object):
                 replacement_keys_cur.append(input_)
                 replacement_vals_cur.append(replacements[input_])
 
+        # Add outputs of the computation graph
+        for output in self.outputs:
+            if output not in replacements:
+                continue
+            replacement_keys_cur.append(output)
+            replacement_vals_cur.append(replacements[output])
+
         # Replace step-by-step in topological order
         while replacement_keys_cur:
             replace_what = replacement_keys_cur[0]
