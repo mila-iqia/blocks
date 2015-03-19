@@ -188,8 +188,7 @@ def recurrent(*args, **kwargs):
                              list(contexts_given))
                 kwargs = dict(equizip(arg_names, args))
                 kwargs.update(rest_kwargs)
-                outputs = getattr(brick, application_function.__name__)(
-                    iterate=False, **kwargs)
+                outputs = application(iterate=False, **kwargs)
                 # We want to save the computation graph returned by the
                 # `application_function` when it is called inside the
                 # `theano.scan`.
