@@ -70,7 +70,7 @@ def test_sequence_generator():
     cg = ComputationGraph([cost])
     var_filter = VariableFilter(roles=[AUXILIARY])
     aux_var_name = '_'.join([generator.name, generator.cost.name,
-                   'per_sequence_element'])
+                             'per_sequence_element'])
     cost_per_el = [el for el in var_filter(cg.variables)
                    if el.name == aux_var_name][0]
     assert cost_per_el.ndim == 0
@@ -142,7 +142,7 @@ def test_integer_sequence_generator():
     cg = ComputationGraph([cost])
     var_filter = VariableFilter(roles=[AUXILIARY])
     aux_var_name = '_'.join([generator.name, generator.cost.name,
-                   'per_sequence_element'])
+                             'per_sequence_element'])
     cost_per_el = [el for el in var_filter(cg.variables)
                    if el.name == aux_var_name][0]
     assert cost_per_el.ndim == 0
