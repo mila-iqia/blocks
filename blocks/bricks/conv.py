@@ -65,6 +65,7 @@ class Convolutional(Initializable):
             else:
                 b = shared_floatx_nans(self.get_dim('output'), name='b')
             add_role(b, BIAS)
+
             self.params.append(b)
             self.add_auxiliary_variable(b.norm(2), name='b_norm')
 
@@ -272,11 +273,8 @@ class ConvolutionalLayer(Sequence, Initializable):
 
     def _push_allocation_config(self):
         for attr in ['filter_size', 'num_filters', 'num_channels',
-<<<<<<< HEAD
-                     'batch_size', 'border_mode', 'image_size']:
-=======
-                     'border_mode', 'image_size', 'tied_biases']:
->>>>>>> 1807e0d... tied biases
+                     'batch_size', 'border_mode', 'image_size',
+                     'tied_biases']:
             setattr(self.convolution, attr, getattr(self, attr))
         self.convolution.step = self.conv_step
         self.convolution._push_allocation_config()
