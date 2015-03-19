@@ -252,7 +252,7 @@ class ConvolutionalLayer(Sequence, Initializable):
     def __init__(self, activation, filter_size, num_filters, pooling_size,
                  num_channels, conv_step=(1, 1), pooling_step=None,
                  batch_size=None, image_size=None, border_mode='valid',
-                 **kwargs):
+                 tied_biases=False, **kwargs):
         self.convolution = ConvolutionalActivation(activation)
         self.pooling = MaxPooling()
         super(ConvolutionalLayer, self).__init__(
@@ -270,6 +270,7 @@ class ConvolutionalLayer(Sequence, Initializable):
         self.batch_size = batch_size
         self.border_mode = border_mode
         self.image_size = image_size
+        self.tied_biases = tied_biases
 
     def _push_allocation_config(self):
         for attr in ['filter_size', 'num_filters', 'num_channels',
