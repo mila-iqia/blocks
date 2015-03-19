@@ -7,6 +7,7 @@ from numpy.testing import assert_allclose
 from theano import tensor
 from theano.gof.graph import is_same_graph
 
+from blocks.bricks.base import application
 from blocks.bricks import Tanh
 from blocks.bricks.recurrent import (
     GatedRecurrent, SimpleRecurrent, Bidirectional, LSTM)
@@ -259,3 +260,22 @@ def test_saved_inner_graph():
     assert is_same_graph(application_call.inner_outputs[0],
                          recurrent.apply(*application_call.inner_inputs,
                                          iterate=False))
+
+
+def test_super_in_recurrent_overrider():
+    # A regression test for the issue #475
+    class SimpleRecurrentWithContext(SimpleRecurrent):
+        @application(contexts=['context'])
+        def apply(self, context, *args, **kwargs):
+            kwargs['inputs'] += context
+            return super(SimpleRecurrentWithContext, self).apply(*args,
+                                                                 **kwargs)
+
+        @apply.delegate
+        def apply_delegate(self):
+            return super(SimpleRecurrentWithContext, self).apply
+
+    brick = SimpleRecurrentWithContext(100, Tanh())
+    inputs = tensor.tensor3('inputs')
+    context = tensor.matrix('context').dimshuffle('x', 0, 1)
+    brick.apply(context, inputs=inputs)
