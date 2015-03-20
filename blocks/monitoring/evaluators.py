@@ -50,7 +50,7 @@ class AggregationBuffer(object):
         self.variables = variables
         self.use_take_last = use_take_last
 
-        self.variable_names = set(v.name for v in self.variables)
+        self.variable_names = {v.name for v in self.variables}
         if len(self.variable_names) < len(self.variables):
             raise ValueError("variables should have different names")
         self._computation_graph = ComputationGraph(self.variables)
