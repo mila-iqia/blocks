@@ -11,8 +11,10 @@ from blocks.bricks.attention import SequenceContentAttention
 from blocks.bricks.sequence_generators import (
     SequenceGenerator, Readout, TrivialEmitter,
     SoftmaxEmitter, LookupFeedback)
+from blocks.filter import VariableFilter
 from blocks.graph import ComputationGraph
 from blocks.initialization import Orthogonal, IsotropicGaussian, Constant
+from blocks.roles import AUXILIARY
 
 floatX = theano.config.floatX
 
@@ -47,16 +49,33 @@ def test_sequence_generator():
         seed=1234)
     generator.initialize()
 
-    # Test 'cost' method
+    # Test 'cost_matrix' method
     y = tensor.tensor3('y')
     mask = tensor.matrix('mask')
-    costs = generator.cost(y, mask)
+    costs = generator.cost_matrix(y, mask)
     assert costs.ndim == 2
-    costs_val = theano.function([y, mask], [costs])(
-        rng.uniform(size=(n_steps, batch_size, output_dim)).astype(floatX),
-        numpy.ones((n_steps, batch_size), dtype=floatX))[0]
+    y_test = rng.uniform(size=(n_steps, batch_size, output_dim)).astype(floatX)
+    m_test = numpy.ones((n_steps, batch_size), dtype=floatX)
+    costs_val = theano.function([y, mask], [costs])(y_test, m_test)[0]
     assert costs_val.shape == (n_steps, batch_size)
     assert_allclose(costs_val.sum(), 115.593, rtol=1e-5)
+
+    # Test 'cost' method
+    cost = generator.cost(y, mask)
+    assert cost.ndim == 0
+    cost_val = theano.function([y, mask], [cost])(y_test, m_test)
+    assert_allclose(cost_val, 3.8531, rtol=1e-5)
+
+    # Test 'AUXILIARY' variable 'per_sequence_element' in 'cost' method
+    cg = ComputationGraph([cost])
+    var_filter = VariableFilter(roles=[AUXILIARY])
+    aux_var_name = '_'.join([generator.name, generator.cost.name,
+                             'per_sequence_element'])
+    cost_per_el = [el for el in var_filter(cg.variables)
+                   if el.name == aux_var_name][0]
+    assert cost_per_el.ndim == 0
+    cost_per_el_val = theano.function([y, mask], [cost_per_el])(y_test, m_test)
+    assert_allclose(cost_per_el_val, 0.38531, rtol=1e-5)
 
     # Test 'generate' method
     states, outputs, costs = [variable.eval() for variable in
@@ -101,17 +120,34 @@ def test_integer_sequence_generator():
         seed=1234)
     generator.initialize()
 
-    # Test cost
+    # Test 'cost_matrix' method
     y = tensor.lmatrix('y')
     mask = tensor.matrix('mask')
-    costs = generator.cost(y, mask)
+    costs = generator.cost_matrix(y, mask)
     assert costs.ndim == 2
     costs_fun = theano.function([y, mask], [costs])
-    costs_val = costs_fun(
-        rng.randint(readout_dim, size=(n_steps, batch_size)),
-        numpy.ones((n_steps, batch_size), dtype=floatX))[0]
+    y_test = rng.randint(readout_dim, size=(n_steps, batch_size))
+    m_test = numpy.ones((n_steps, batch_size), dtype=floatX)
+    costs_val = costs_fun(y_test, m_test)[0]
     assert costs_val.shape == (n_steps, batch_size)
     assert_allclose(costs_val.sum(), 482.827, rtol=1e-5)
+
+    # Test 'cost' method
+    cost = generator.cost(y, mask)
+    assert cost.ndim == 0
+    cost_val = theano.function([y, mask], [cost])(y_test, m_test)
+    assert_allclose(cost_val, 16.0942, rtol=1e-5)
+
+    # Test 'AUXILIARY' variable 'per_sequence_element' in 'cost' method
+    cg = ComputationGraph([cost])
+    var_filter = VariableFilter(roles=[AUXILIARY])
+    aux_var_name = '_'.join([generator.name, generator.cost.name,
+                             'per_sequence_element'])
+    cost_per_el = [el for el in var_filter(cg.variables)
+                   if el.name == aux_var_name][0]
+    assert cost_per_el.ndim == 0
+    cost_per_el_val = theano.function([y, mask], [cost_per_el])(y_test, m_test)
+    assert_allclose(cost_per_el_val, 1.60942, rtol=1e-5)
 
     # Test generate
     states, outputs, costs = generator.generate(
@@ -202,13 +238,14 @@ def test_with_attention():
         add_contexts=False, seed=1234)
     generator.initialize()
 
-    # Test 'cost' method
+    # Test 'cost_matrix' method
     attended = tensor.tensor3("attended")
     attended_mask = tensor.matrix("attended_mask")
     outputs = tensor.tensor3('outputs')
     mask = tensor.matrix('mask')
-    costs = generator.cost(outputs, mask,
-                           attended=attended, attended_mask=attended_mask)
+    costs = generator.cost_matrix(outputs, mask,
+                                  attended=attended,
+                                  attended_mask=attended_mask)
     costs_vals = costs.eval({outputs: output_vals,
                              mask: output_mask_vals,
                              attended: attended_vals,

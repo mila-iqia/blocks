@@ -126,7 +126,7 @@ class WordReverser(Initializable):
 
     @application
     def cost(self, chars, chars_mask, targets, targets_mask):
-        return self.generator.cost(
+        return self.generator.cost_matrix(
             targets, targets_mask,
             attended=self.encoder.apply(
                 **dict_union(

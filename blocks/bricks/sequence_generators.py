@@ -11,6 +11,7 @@ from blocks.bricks.lookup import LookupTable
 from blocks.bricks.recurrent import recurrent
 from blocks.bricks.attention import (
     AbstractAttentionRecurrent, AttentionRecurrent)
+from blocks.roles import add_role, COST
 from blocks.utils import dict_union, dict_subset
 
 
@@ -136,20 +137,56 @@ class BaseSequenceGenerator(Initializable):
 
     @application
     def cost(self, application_call, outputs, mask=None, **kwargs):
-        """Returns generation costs for output sequences.
+        """Returns the average cost over the minibatch.
+
+        The cost is computed by averaging the sum of per token costs for
+        each sequence over the minibatch.
+
+        .. warning::
+            Note that, the computed cost can be problematic when batches
+            consist of vastly different sequence lengths.
 
         Parameters
         ----------
         outputs : :class:`~tensor.TensorVariable`
             The 3(2) dimensional tensor containing output sequences.
-            The dimension 0 must stand for time, the dimension 1 for the
-            position on the batch.
+            The axis 0 must stand for time, the axis 1 for the
+            position in the batch.
         mask : :class:`~tensor.TensorVariable`
             The binary matrix identifying fake outputs.
+
+        Returns
+        -------
+        cost : :class:`~tensor.Variable`
+            Theano variable for cost, computed by summing over timesteps
+            and then averaging over the minibatch.
 
         Notes
         -----
         The contexts are expected as keyword arguments.
+
+        Adds average cost per sequence element `AUXILIARY` variable to
+        the computational graph with name `~per_sequence_element`
+
+        """
+        # Compute the sum of costs
+        costs = self.cost_matrix(outputs, mask=mask, **kwargs)
+        cost = tensor.mean(costs.sum(axis=0))
+        add_role(cost, COST)
+
+        # Add auxiliary variable for per sequence element cost
+        application_call.add_auxiliary_variable(
+            (costs.sum() / mask.sum()) if mask is not None else costs.sum(),
+            name='per_sequence_element')
+        return cost
+
+    @application
+    def cost_matrix(self, application_call, outputs, mask=None, **kwargs):
+        """Returns generation costs for output sequences.
+
+        See Also
+        --------
+        :meth:`cost` documentation for parameters.
 
         """
         # We assume the data has axes (time, batch, features, ...)
