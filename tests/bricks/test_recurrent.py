@@ -10,13 +10,63 @@ from theano.gof.graph import is_same_graph
 from blocks.bricks.base import application
 from blocks.bricks import Tanh
 from blocks.bricks.recurrent import (
-    GatedRecurrent, SimpleRecurrent, Bidirectional, LSTM)
+    recurrent, BaseRecurrent, GatedRecurrent,
+    SimpleRecurrent, Bidirectional, LSTM)
 from blocks.initialization import Constant, IsotropicGaussian, Orthogonal
 from blocks.filter import get_application_call, VariableFilter
 from blocks.graph import ComputationGraph
 
 
 floatX = theano.config.floatX
+
+
+class RecurrentWrapperTestClass(BaseRecurrent):
+    def __init__(self, dim, ** kwargs):
+        super(RecurrentWrapperTestClass, self).__init__(self, ** kwargs)
+        self.dim = dim
+
+    def get_dim(self, name):
+        if name in ['inputs', 'states', 'outputs', 'states_2', 'outputs_2']:
+            return self.dim
+        if name == 'mask':
+            return 0
+        return super(RecurrentWrapperTestClass, self).get_dim(name)
+
+    @recurrent(sequences=['inputs', 'mask'], states=['states', 'states_2'],
+               outputs=['outputs', 'states_2', 'outputs_2', 'states'],
+               contexts=[])
+    def apply(self, inputs=None, states=None, states_2=None, mask=None):
+        next_states = states + inputs
+        next_states_2 = states_2 + .5
+        if mask:
+            next_states = (mask[:, None] * next_states +
+                           (1 - mask[:, None]) * states)
+        outputs = 10 * next_states
+        outputs_2 = 10 * next_states_2
+        return outputs, next_states_2, outputs_2, next_states
+
+
+class TestRecurrentWrapper(unittest.TestCase):
+    def setUp(self):
+        self.recurrent_example = RecurrentWrapperTestClass(dim=1)
+
+    def test(self):
+        X = tensor.tensor3('X')
+        out, H2, out_2, H = self.recurrent_example.apply(
+            inputs=X, mask=None)
+
+        x_val = numpy.ones((5, 1, 1), dtype=floatX)
+
+        h = H.eval({X: x_val})
+        h2 = H2.eval({X: x_val})
+
+        out_eval = out.eval({X: x_val})
+        out_2_eval = out_2.eval({X: x_val})
+
+        assert_allclose(h, x_val.cumsum(axis=0))
+        assert_allclose(h2, .5 * (numpy.arange(5).reshape((5, 1, 1)) + 1))
+        assert_allclose(h * 10, out_eval)
+        assert_allclose(h2 * 10, out_2_eval)
 
 
 class TestRecurrent(unittest.TestCase):
