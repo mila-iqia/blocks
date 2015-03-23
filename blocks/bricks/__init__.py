@@ -1,5 +1,6 @@
 """The interface of bricks and some simple implementations."""
 import logging
+from abc import ABCMeta
 
 import numpy
 from six import add_metaclass
@@ -9,7 +10,7 @@ from toolz import interleave
 from picklable_itertools.extras import equizip
 
 from blocks import config
-from blocks.bricks.base import application, _Brick, Brick, lazy
+from blocks.bricks.base import application, Brick, lazy
 from blocks.roles import add_role, WEIGHT, BIAS
 from blocks.utils import pack, shared_floatx_nans
 
@@ -428,7 +429,7 @@ class LinearMaxout(Initializable, Feedforward):
         return output
 
 
-class ActivationDocumentation(_Brick):
+class ActivationDocumentation(ABCMeta):
     """Dynamically adds documentation to activations.
 
     Notes
