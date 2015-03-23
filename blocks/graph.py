@@ -205,8 +205,9 @@ class ComputationGraph(object):
         for node in apply_nodes_sorted:
             for input_ in node.inputs:
                 if input_ in replacements:
-                    replacement_keys_cur.append(input_)
-                    replacement_vals_cur.append(replacements[input_])
+                    if input_ not in replacement_keys_cur:
+                        replacement_keys_cur.append(input_)
+                        replacement_vals_cur.append(replacements[input_])
 
         # Add outputs of the computation graph
         for output in self.outputs:
