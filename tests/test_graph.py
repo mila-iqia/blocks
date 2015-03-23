@@ -80,6 +80,7 @@ def test_replace():
     out_val = doubled_cg.outputs[0].eval({x: 2})
     assert out_val == 6.0
 
+
 def test_replace_multiple_inputs():
     # Test if replace works on variables that are input to multiple nodes
     x = tensor.scalar('x')
