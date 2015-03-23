@@ -89,7 +89,7 @@ def test_integer_sequence_generator():
     batch_size = 30
     n_steps = 10
 
-    transition = GatedRecurrent(activation=Tanh(), dim=dim,
+    transition = GatedRecurrent(dim=dim, activation=Tanh(),
                                 weights_init=Orthogonal())
     generator = SequenceGenerator(
         Readout(readout_dim=readout_dim, source_names=["states"],

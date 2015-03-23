@@ -71,6 +71,16 @@ def test_computation_graph():
     assert all(v in cg6.scan_variables for v in scan.inputs + scan.outputs)
 
 
+def test_replace():
+    # Test if replace works with outputs
+    x = tensor.scalar()
+    y = x + 1
+    cg = ComputationGraph([y])
+    doubled_cg = cg.replace([(y, 2 * y)])
+    out_val = doubled_cg.outputs[0].eval({x: 2})
+    assert out_val == 6.0
+
+
 def test_apply_noise():
     x = tensor.scalar()
     y = tensor.scalar()

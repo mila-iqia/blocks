@@ -7,6 +7,7 @@ from numpy.testing import assert_allclose
 from theano import tensor
 from theano.gof.graph import is_same_graph
 
+from blocks.bricks.base import application
 from blocks.bricks import Tanh
 from blocks.bricks.recurrent import (
     GatedRecurrent, SimpleRecurrent, Bidirectional, LSTM)
@@ -144,13 +145,13 @@ class TestLSTM(unittest.TestCase):
 class TestGatedRecurrent(unittest.TestCase):
     def setUp(self):
         self.gated = GatedRecurrent(
-            dim=3, weights_init=Constant(2),
-            activation=Tanh(), gate_activation=Tanh())
+            dim=3, activation=Tanh(),
+            gate_activation=Tanh(), weights_init=Constant(2))
         self.gated.initialize()
         self.reset_only = GatedRecurrent(
-            dim=3, weights_init=IsotropicGaussian(),
-            activation=Tanh(), gate_activation=Tanh(),
-            use_update_gate=False, seed=1)
+            dim=3, activation=Tanh(),
+            gate_activation=Tanh(), use_update_gate=False,
+            weights_init=IsotropicGaussian(), seed=1)
         self.reset_only.initialize()
 
     def test_one_step(self):
@@ -259,3 +260,22 @@ def test_saved_inner_graph():
     assert is_same_graph(application_call.inner_outputs[0],
                          recurrent.apply(*application_call.inner_inputs,
                                          iterate=False))
+
+
+def test_super_in_recurrent_overrider():
+    # A regression test for the issue #475
+    class SimpleRecurrentWithContext(SimpleRecurrent):
+        @application(contexts=['context'])
+        def apply(self, context, *args, **kwargs):
+            kwargs['inputs'] += context
+            return super(SimpleRecurrentWithContext, self).apply(*args,
+                                                                 **kwargs)
+
+        @apply.delegate
+        def apply_delegate(self):
+            return super(SimpleRecurrentWithContext, self).apply
+
+    brick = SimpleRecurrentWithContext(100, Tanh())
+    inputs = tensor.tensor3('inputs')
+    context = tensor.matrix('context').dimshuffle('x', 0, 1)
+    brick.apply(context, inputs=inputs)

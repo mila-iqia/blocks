@@ -310,7 +310,7 @@ def fix_apply(app, what, name, obj, options, signature, return_annotation):
         if keywords:
             signature += ', **' + keywords
         signature += ')'
-    for key, attr in getattr(obj, '__dict__', {}).items():
+    for key, attr in list(getattr(obj, '__dict__', {}).items()):
         if key.startswith('_abc'):
             delattr(obj, key)
     return signature, return_annotation

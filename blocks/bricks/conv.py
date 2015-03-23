@@ -64,7 +64,7 @@ class Convolutional(Initializable):
                 b = shared_floatx_nans((self.num_filters,), name='b')
             else:
                 b = shared_floatx_nans(self.get_dim('output'), name='b')
-                add_role(b, BIASES)
+            add_role(b, BIAS)
 
             self.params.append(b)
             self.add_auxiliary_variable(b.norm(2), name='b_norm')
@@ -252,7 +252,7 @@ class ConvolutionalLayer(Sequence, Initializable):
     def __init__(self, activation, filter_size, num_filters, pooling_size,
                  num_channels, conv_step=(1, 1), pooling_step=None,
                  batch_size=None, image_size=None, border_mode='valid',
-                 **kwargs):
+                 tied_biases=False, **kwargs):
         self.convolution = ConvolutionalActivation(activation)
         self.pooling = MaxPooling()
         super(ConvolutionalLayer, self).__init__(
@@ -267,12 +267,15 @@ class ConvolutionalLayer(Sequence, Initializable):
         self.pooling_size = pooling_size
         self.conv_step = conv_step
         self.pooling_step = pooling_step
+        self.batch_size = batch_size
         self.border_mode = border_mode
         self.image_size = image_size
+        self.tied_biases = tied_biases
 
     def _push_allocation_config(self):
         for attr in ['filter_size', 'num_filters', 'num_channels',
-                     'border_mode', 'image_size', 'tied_biases']:
+                     'batch_size', 'border_mode', 'image_size',
+                     'tied_biases']:
             setattr(self.convolution, attr, getattr(self, attr))
         self.convolution.step = self.conv_step
         self.convolution._push_allocation_config()
@@ -283,6 +286,7 @@ class ConvolutionalLayer(Sequence, Initializable):
         self.pooling.input_dim = pooling_input_dim
         self.pooling.pooling_size = self.pooling_size
         self.pooling.step = self.pooling_step
+        self.pooling.batch_size = self.batch_size
 
     def get_dim(self, name):
         if name == 'input_':

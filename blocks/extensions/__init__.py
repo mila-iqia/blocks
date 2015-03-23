@@ -192,9 +192,9 @@ class SimpleExtension(TrainingExtension):
         If ``True``, :meth:`do` is invoked when training is resumed.
     on_interrupt : bool, optional
         If ``True``, :meth:`do` is invoked when training is interrupted.
-    after_every_epoch : bool
+    after_epoch : bool
         If ``True``, :meth:`do` is invoked after every epoch.
-    after_every_batch: bool
+    after_batch: bool
         If ``True``, :meth:`do` is invoked after every batch.
     after_training : bool
         If ``True``, :meth:`do` is invoked after training.
@@ -212,7 +212,7 @@ class SimpleExtension(TrainingExtension):
     """
     BOOLEAN_TRIGGERS = frozenset(["before_training", "before_first_epoch",
                                   "on_resumption", "on_interrupt",
-                                  "after_every_epoch", "after_every_batch",
+                                  "after_epoch", "after_batch",
                                   "after_training"])
 
     INTEGER_TRIGGERS = frozenset(["after_n_epochs", "after_n_batches",
@@ -244,8 +244,8 @@ class SimpleExtension(TrainingExtension):
         predicates = {'before_first_epoch': has_done_epochs}
         conditions = {
             'before_first_epoch': 'before_epoch',
-            'after_every_epoch': 'after_epoch',
-            'after_every_batch': 'after_batch',
+            'after_epoch': 'after_epoch',
+            'after_batch': 'after_batch',
             'every_n_batches': 'after_batch',
             'every_n_epochs': 'after_epoch',
             'after_n_batches': 'after_batch',
@@ -353,8 +353,8 @@ class SimpleExtension(TrainingExtension):
         args = tuple(args)
         if (which_callback == 'after_batch' or
                 which_callback == 'before_batch'):
-            return args[0], args[1:]
-        return (), args[1:]
+            return (args[0],), args[1:]
+        return (), args
 
 
 class FinishAfter(SimpleExtension):
@@ -372,7 +372,7 @@ class Printing(SimpleExtension):
         kwargs.setdefault("before_first_epoch", True)
         kwargs.setdefault("on_resumption", True)
         kwargs.setdefault("after_training", True)
-        kwargs.setdefault("after_every_epoch", True)
+        kwargs.setdefault("after_epoch", True)
         kwargs.setdefault("on_interrupt", True)
         super(Printing, self).__init__(**kwargs)
 

@@ -5,9 +5,9 @@ import theano
 from numpy.testing import assert_allclose, assert_raises
 from theano import tensor
 
-from blocks.algorithms import (GradientDescent, StepClipping, CompositeRule,
-                               Scale, StepRule, BasicMomentum, Momentum,
-                               AdaDelta, BasicRMSProp, RMSProp, Adam,
+from blocks.algorithms import (GradientDescent, StepClipping, VariableClipping,
+                               CompositeRule, Scale, StepRule, BasicMomentum,
+                               Momentum, AdaDelta, BasicRMSProp, RMSProp, Adam,
                                RemoveNotFinite, Restrict)
 from blocks.utils import shared_floatx
 
@@ -134,6 +134,58 @@ def test_step_clipping():
     clipped2, _ = rule2.compute_steps(gradients)
     assert_allclose(clipped2[0].eval(), 3.0)
     assert_allclose(clipped2[1].eval(), 4.0)
+
+
+def test_variable_clipping():
+    # Test simple variable clipping with no axes.
+    rule1 = VariableClipping(5)
+
+    gradients = OrderedDict([(shared_floatx([1, 1]), shared_floatx([3, 2])),
+                             (shared_floatx([-1, -1, -1]),
+                              shared_floatx([[3, 9, 2]])),
+                             (shared_floatx([[[1], [-1], [1], [-1]]]),
+                              shared_floatx([[[1], [2], [3], [2]]]))])
+    steps, _ = rule1.compute_steps(gradients)
+    border, clipped, notclipped = steps.items()
+    assert_allclose(border[1].eval(), [3, 2])
+    assert_allclose(clipped[1].eval(),
+                    numpy.array([[0.78885438, 3.47213595, 0.34164079]]),
+                    rtol=1e-5)
+    assert_allclose(notclipped[1].eval(), [[[1], [2], [3], [2]]])
+
+    # Test variable clipping on one axis.
+    rule2 = VariableClipping(10, axes=(1,))
+    gradients = {shared_floatx([[1, -1, 1, -1], [-1, 1, -1, 1]]):
+                 shared_floatx([[1, 2, 3, 4], [5, 6, 7, 8]])}
+    steps, _ = rule2.compute_steps(gradients)
+    clipped, = steps.items()
+    assert_allclose(clipped[1].eval(),
+                    [[1, 2, 3, 4],
+                     [3.54858826, 4.79049022, 5.06478435, 6.30668631]],
+                    rtol=1e-5)
+
+    # Test variable clipping on two axes.
+    rule3 = VariableClipping(10, axes=(1, 2))
+    gradients = {shared_floatx([[[[1], [-1]],
+                                 [[-1], [1]]],
+                                [[[-1], [1]],
+                                 [[2], [-1]]]]):
+                 shared_floatx([[[[1], [2]],
+                                 [[3], [4]]],
+                                [[[5], [6]],
+                                 [[7], [8]]]])}
+    steps, _ = rule3.compute_steps(gradients)
+    clipped, = steps.items()
+    assert_allclose(clipped[1].eval(),
+                    [[[[1], [2]],
+                      [[3], [4]]],
+                     [[[3.6429394], [4.86911616]],
+                      [[5.86911616], [5.96440909]]]],
+                    rtol=1e-5)
+
+    # Test exceptions.
+    assert_raises(ValueError, rule3.compute_steps, {0: shared_floatx([1.0])})
+    assert_raises(ValueError, VariableClipping, 50, axes=(0, 0))
 
 
 def test_composite_rule():
