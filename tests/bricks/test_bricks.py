@@ -14,7 +14,7 @@ from blocks.utils import shared_floatx
 
 
 class TestBrick(Brick):
-    @lazy
+    @lazy(allocation=['config'])
     def __init__(self, config, **kwargs):
         super(TestBrick, self).__init__(**kwargs)
         self.config = config
