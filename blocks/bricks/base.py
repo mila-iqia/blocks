@@ -609,20 +609,15 @@ class Brick(Annotation):
         reset the parameters.
 
         """
+        if any(getattr(self, arg) is NoneAllocation
+               for arg in self.allocation_args):
+            raise ValueError('allocation config not set')
         if not self.allocation_config_pushed:
             self.push_allocation_config()
         for child in self.children:
             child.allocate()
         self.params = []
-        try:
-            self._allocate()
-        except Exception:
-            if self.lazy:
-                reraise_as("Lazy initialization is enabled, so please make "
-                           "sure you have set all the required configuration "
-                           "for this method call.")
-            else:
-                raise
+        self._allocate()
         self.allocated = True
 
     def _allocate(self):
@@ -649,21 +644,16 @@ class Brick(Annotation):
         call the :meth:`allocate` method in order to do so.
 
         """
+        if any(getattr(self, arg) is NoneInitialization
+               for arg in self.initialization_args):
+            raise ValueError('initialization config not set')
         if not self.allocated:
             self.allocate()
         if not self.initialization_config_pushed:
             self.push_initialization_config()
         for child in self.children:
             child.initialize()
-        try:
-            self._initialize()
-        except Exception:
-            if self.lazy:
-                reraise_as("Lazy initialization is enabled, so please make "
-                           "sure you have set all the required configuration "
-                           "for this method call.")
-            else:
-                raise
+        self._initialize()
         self.initialized = True
 
     def _initialize(self):
