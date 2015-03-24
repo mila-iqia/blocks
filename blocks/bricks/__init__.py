@@ -622,7 +622,6 @@ class MLP(Sequence, Initializable, Feedforward):
     configuration to the child layers manually before initialization.
 
     >>> from blocks.initialization import IsotropicGaussian, Constant
-    >>> Brick.lazy = True
     >>> mlp = MLP(activations=[Tanh(), None], dims=[30, 20, 10],
     ...           weights_init=IsotropicGaussian(),
     ...           biases_init=Constant(1))

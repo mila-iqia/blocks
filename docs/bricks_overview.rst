@@ -116,7 +116,7 @@ it fully (or at all):
 
     >>> linear2 = Linear(output_dim=10)
     >>> print(linear2.input_dim)
-    None
+    NoneAllocation
 
 Of course, as long as the brick is not configured, we cannot actually apply it!
 

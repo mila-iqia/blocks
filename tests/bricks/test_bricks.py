@@ -6,7 +6,7 @@ from theano import tensor
 
 from blocks.bricks import (Identity, Linear, Maxout, LinearMaxout, MLP, Tanh,
                            Sequence, Random)
-from blocks.bricks.base import Application, application, Brick, lazy
+from blocks.bricks.base import application, Brick, lazy, NoneAllocation
 from blocks.bricks.parallel import Parallel, Fork
 from blocks.filter import get_application_call, get_brick
 from blocks.initialization import Constant
@@ -114,12 +114,8 @@ def test_repr():
 
 
 def test_lazy():
-    Brick.lazy = False
-    assert_raises(TypeError, TestBrick)
-    Brick.lazy = True
-
     brick = TestBrick()
-    assert brick.config is None
+    assert brick.config is NoneAllocation
     brick = TestBrick(config='config')
     assert brick.config == 'config'
     assert_raises(ValueError, TestBrick, 'config', config='config')
@@ -150,12 +146,10 @@ def test_allocate():
     assert not broken_parent_brick.allocation_config_pushed
     assert not broken_parent_brick.allocated
 
-    Brick.lazy = False
     broken_parent_brick = ParentBrick(BrokenAllocateBrick())
     assert_raises(AttributeError, broken_parent_brick.allocate)
     assert not broken_parent_brick.allocation_config_pushed
     assert not broken_parent_brick.allocated
-    Brick.lazy = True
 
 
 def test_initialize():
@@ -168,10 +162,8 @@ def test_initialize():
     broken_parent_brick = ParentBrick(BrokenInitializeBrick())
     assert_raises(AttributeError, broken_parent_brick.initialize)
 
-    Brick.lazy = False
     broken_parent_brick = ParentBrick(BrokenInitializeBrick())
     assert_raises(AttributeError, broken_parent_brick.initialize)
-    Brick.lazy = True
 
 
 def test_tagging():
@@ -253,15 +245,6 @@ def test_application():
     test_brick.delegated_apply.inputs = ['x']
     assert test_brick.delegated_apply.inputs == ['x']
     assert TestBrick.delegated_apply.inputs == ['w']
-
-    Brick.lazy = False
-    brick = TestBrick('config')
-    x = tensor.vector()
-    brick.apply(x)
-    assert brick.initialized
-
-    assert_raises(AttributeError, getattr, Application(lambda x: x), 'brick')
-    Brick.lazy = True
 
 
 def test_apply():

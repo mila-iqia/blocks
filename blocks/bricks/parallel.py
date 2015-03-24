@@ -56,7 +56,7 @@ class Parallel(Initializable):
     See :class:`.Initializable` for initialization parameters.
 
     """
-    @lazy(allocation=['input_dims'])
+    @lazy(allocation=['input_dims', 'input_dims', 'output_dims'])
     def __init__(self, input_names, input_dims, output_dims,
                  prototype=None, child_prefix=None, **kwargs):
         super(Parallel, self).__init__(**kwargs)
@@ -212,7 +212,7 @@ class Distribute(Fork):
     See :class:`.Initializable` for initialization parameters.
 
     """
-    @lazy(allocation=['source_name', 'target_dims'])
+    @lazy(allocation=['source_name', 'target_dims', 'source_dim'])
     def __init__(self, target_names, source_name, target_dims, source_dim,
                  prototype=None, **kwargs):
         self.target_names = target_names

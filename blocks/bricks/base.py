@@ -8,7 +8,7 @@ import six
 from six import add_metaclass
 from theano import tensor
 from theano.gof import Variable
-from toolz import merge
+from toolz import first, merge_with
 
 from blocks.graph import add_annotation, Annotation
 from blocks.roles import add_role, PARAMETER, INPUT, OUTPUT
@@ -265,8 +265,6 @@ class Application(object):
         # Allocate before applying, and optionally initialize
         if not brick.allocated:
             brick.allocate()
-        if not brick.initialized and not brick.lazy:
-            brick.initialize()
 
         # Annotate all the input variables which are Theano variables
         def copy_and_tag(variable, role, name):
@@ -458,13 +456,6 @@ class Brick(Annotation):
     ----------
     name : str
         The name of this brick.
-    lazy : bool
-        ``True`` by default. When bricks are lazy, not all configuration
-        needs to be provided to the constructor, allowing it to be set in
-        another way after construction. Many parts of the library rely on
-        this behavior. However, it does require a separate call to
-        :meth:`initialize`. If set to ``False`` on the other hand, bricks
-        will be ready to run after construction.
     print_shapes : bool
         ``False`` by default. If ``True`` it logs the shapes of all the
         input and output variables, which can be useful for debugging.
@@ -515,7 +506,7 @@ class Brick(Annotation):
 
     Examples
     --------
-    By default, bricks have lazy initialization enabled.
+    Most bricks have lazy initialization enabled.
 
     >>> import theano
     >>> from blocks.initialization import IsotropicGaussian, Constant
@@ -528,23 +519,7 @@ class Brick(Annotation):
     linear_apply_output
     >>> linear.initialize()  # Initializes the weight matrix
 
-    In simple cases, eager bricks are easier to deal with.
-
-    >>> from blocks.initialization import IsotropicGaussian, Constant
-    >>> Brick.lazy = False
-    >>> linear = Linear(5, 3, weights_init=IsotropicGaussian(),
-    ...                 biases_init=Constant(0))
-    >>> linear.apply(x)
-    linear_apply_output
-
-    .. doctest::
-       :hide:
-
-       >>> Brick.lazy = True  # Reset for other doctests
-
     """
-    #: See :attr:`Brick.lazy`
-    lazy = True
     #: See :attr:`Brick.print_shapes`
     print_shapes = False
 
@@ -819,11 +794,17 @@ def lazy(allocation=None, initialization=None):
         initialization = []
 
     def lazy_wrapper(init):
+        def strict_merge(values):
+            if len(values) > 1:
+                raise ValueError
+            return first(values)
+
         def lazy_init(*args, **kwargs):
             self = args[0]
             self.allocation_args = allocation
             self.initialization_args = initialization
-            kwargs = merge(args_to_kwargs(args, init), kwargs)
+            kwargs = merge_with(strict_merge, args_to_kwargs(args, init),
+                                kwargs)
             for allocation_arg in allocation:
                 kwargs.setdefault(allocation_arg, NoneAllocation)
             for initialization_arg in initialization:
