@@ -139,7 +139,8 @@ class Initializable(Brick):
     def rng(self, rng):
         self._rng = rng
 
-    def _push_initialization_config(self):
+    @initialization_push
+    def push_initialization_config(self):
         for child in self.children:
             if isinstance(child, Initializable):
                 child.rng = self.rng
@@ -409,7 +410,8 @@ class LinearMaxout(Initializable, Feedforward):
     def input_dim(self, value):
         self.linear.input_dim = value
 
-    def _push_allocation_config(self):
+    @allocation_push
+    def push_allocation_config(self):
         self.linear.output_dim = self.output_dim * self.num_pieces
         self.maxout.num_pieces = self.num_pieces
 
@@ -671,7 +673,8 @@ class MLP(Sequence, Initializable, Feedforward):
     def output_dim(self, value):
         self.dims[-1] = value
 
-    def _push_allocation_config(self):
+    @allocation_push
+    def push_allocation_config(self):
         if not len(self.dims) - 1 == len(self.linear_transformations):
             raise ValueError
         for input_dim, output_dim, layer in \

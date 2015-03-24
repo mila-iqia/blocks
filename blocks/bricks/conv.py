@@ -210,7 +210,8 @@ class ConvolutionalActivation(Sequence, Initializable):
             application_methods=[self.convolution.apply, activation],
             **kwargs)
 
-    def _push_allocation_config(self):
+    @allocation_push
+    def push_allocation_config(self):
         for attr in ['filter_size', 'num_filters', 'step', 'border_mode',
                      'batch_size', 'num_channels', 'image_size']:
             setattr(self.convolution, attr, getattr(self, attr))
@@ -266,7 +267,8 @@ class ConvolutionalLayer(Sequence, Initializable):
         self.border_mode = border_mode
         self.image_size = image_size
 
-    def _push_allocation_config(self):
+    @allocation_push
+    def push_allocation_config(self):
         for attr in ['filter_size', 'num_filters', 'num_channels',
                      'batch_size', 'border_mode', 'image_size']:
             setattr(self.convolution, attr, getattr(self, attr))
@@ -339,7 +341,8 @@ class ConvolutionalSequence(Sequence, Initializable, Feedforward):
             return self.layers[-1].get_dim(name)
         return super(ConvolutionalSequence, self).get_dim(name)
 
-    def _push_allocation_config(self):
+    @allocation_push
+    def push_allocation_config(self):
         num_channels = self.num_channels
         image_size = self.image_size
         for layer in self.layers:

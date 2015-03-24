@@ -115,7 +115,8 @@ class BaseSequenceGenerator(Initializable):
     def _glimpse_names(self):
         return self.transition.take_glimpses.outputs
 
-    def _push_allocation_config(self):
+    @allocation_push
+    def push_allocation_config(self):
         # Configure readout. That involves `get_dim` requests
         # to the transition. To make sure that it answers
         # correctly we should finish its configuration first.
@@ -394,7 +395,8 @@ class Readout(AbstractReadout, Initializable):
         self.children = [self.emitter, self.feedback_brick,
                          self.merge, self.post_merge]
 
-    def _push_allocation_config(self):
+    @allocation_push
+    def push_allocation_config(self):
         self.emitter.readout_dim = self.get_dim('readouts')
         self.feedback_brick.output_dim = self.get_dim('outputs')
         self.merge.input_names = self.source_names
@@ -552,7 +554,8 @@ class LookupFeedback(AbstractFeedback, Initializable):
                                   weights_init=self.weights_init)
         self.children = [self.lookup]
 
-    def _push_allocation_config(self):
+    @allocation_push
+    def push_allocation_config(self):
         self.lookup.length = self.num_outputs
         self.lookup.dim = self.feedback_dim
 

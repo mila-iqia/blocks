@@ -323,7 +323,8 @@ class SequenceContentAttention(GenericSequenceAttention, Initializable):
         self.children = [self.state_transformers, attended_transformer,
                          energy_computer]
 
-    def _push_allocation_config(self):
+    @allocation_push
+    def push_allocation_config(self):
         self.state_transformers.input_dims = self.state_dims
         self.state_transformers.output_dims = [self.match_dim
                                                for name in self.state_names]
@@ -566,7 +567,8 @@ class AttentionRecurrent(AbstractAttentionRecurrent, Initializable):
 
         self.children = [self.transition, self.attention, self.distribute]
 
-    def _push_allocation_config(self):
+    @allocation_push
+    def push_allocation_config(self):
         self.attention.state_dims = self.transition.get_dims(
             self.attention.state_names)
         self.attention.attended_dim = self.get_dim(self.attended_name)
