@@ -145,8 +145,6 @@ class Application(object):
 
         if not brick.allocated:
             brick.allocate()
-        if not brick.initialized:
-            brick.initialize()
 
         # Annotate all the input variables which are Theano variables
         def copy_and_tag(variable, role, name):

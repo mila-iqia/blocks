@@ -245,7 +245,8 @@ class ConvolutionalLayer(Sequence, Initializable):
     Uses max pooling.
 
     """
-    @lazy(allocation=['filter_size', 'num_filters'])
+    @lazy(allocation=['filter_size', 'num_filters', 'pooling_size',
+                      'num_channels'])
     def __init__(self, activation, filter_size, num_filters, pooling_size,
                  num_channels, conv_step=(1, 1), pooling_step=None,
                  batch_size=None, image_size=None, border_mode='valid',
