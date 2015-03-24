@@ -243,8 +243,20 @@ def args_to_kwargs(args, f):
                 in zip(arg_names + [vararg_names], args))
 
 
-NoneAllocation = object()
-NoneInitialization = object()
+class LazyNone(object):
+    def __init__(self, name):
+        self.name = name
+
+    def __repr__(self):
+        return self.name
+
+    def __bool__(self):
+        return False
+
+    __nonzero__ = __bool__
+
+NoneAllocation = LazyNone('NoneAllocation')
+NoneInitialization = LazyNone('NoneInitialization')
 
 
 def lazy(allocation=None, initialization=None):
