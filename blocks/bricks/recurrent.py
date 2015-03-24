@@ -184,10 +184,10 @@ def recurrent(*args, **kwargs):
 
             def scan_function(*args):
                 args = list(args)
-                arg_names = (list(sequences_given)
-                             + [output for output in application.outputs
-                                if output in application.states]
-                             + list(contexts_given))
+                arg_names = (list(sequences_given) +
+                             [output for output in application.outputs
+                              if output in application.states] +
+                             list(contexts_given))
                 kwargs = dict(equizip(arg_names, args))
                 kwargs.update(rest_kwargs)
                 outputs = application(iterate=False, **kwargs)
