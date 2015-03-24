@@ -128,8 +128,8 @@ class ComputationGraph(object):
             main_vars = (
                 [var for var in list(chain(
                     *[apply_node.inputs for apply_node in sorted_apply_nodes]))
-                 if not (var in seen or seen.add(var))]
-                + [var for var in self.outputs if var not in seen])
+                 if not (var in seen or seen.add(var))] +
+                [var for var in self.outputs if var not in seen])
 
             # While preserving order add auxiliary variables, and collect
             # updates
