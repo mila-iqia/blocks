@@ -215,7 +215,8 @@ class Linear(Initializable, Feedforward):
     def b(self):
         return self.params[1]
 
-    def _allocate(self):
+    @allocation
+    def allocate(self):
         W = shared_floatx_nans((self.input_dim, self.output_dim), name='W')
         add_role(W, WEIGHT)
         self.params.append(W)
@@ -226,7 +227,8 @@ class Linear(Initializable, Feedforward):
             self.params.append(b)
             self.add_auxiliary_variable(b.norm(2), name='b_norm')
 
-    def _initialize(self):
+    @initialization
+    def initialize(self):
         if self.use_bias:
             W, b = self.params
             self.biases_init.initialize(b, self.rng)
@@ -273,12 +275,14 @@ class Bias(Feedforward, Initializable):
         super(Bias, self).__init__(**kwargs)
         self.dim = dim
 
-    def _allocate(self):
+    @allocation
+    def allocate(self):
         b = shared_floatx_nans((self.output_dim,), name='b')
         add_role(b, BIAS)
         self.params.append(b)
 
-    def _initialize(self):
+    @initialization
+    def initialize(self):
         b, = self.params
         self.biases_init.initialize(b, self.rng)
 

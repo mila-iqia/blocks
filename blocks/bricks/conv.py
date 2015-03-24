@@ -51,7 +51,8 @@ class Convolutional(Initializable):
         self.step = step
         self.border_mode = border_mode
 
-    def _allocate(self):
+    @allocation
+    def allocate(self):
         W = shared_floatx_nans((self.num_filters, self.num_channels) +
                                self.filter_size, name='W')
         add_role(W, FILTER)
@@ -63,7 +64,8 @@ class Convolutional(Initializable):
             self.params.append(b)
             self.add_auxiliary_variable(b.norm(2), name='b_norm')
 
-    def _initialize(self):
+    @initialization
+    def initialize(self):
         if self.use_bias:
             W, b = self.params
             self.biases_init.initialize(b, self.rng)

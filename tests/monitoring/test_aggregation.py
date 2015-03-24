@@ -11,7 +11,8 @@ from blocks.utils import shared_floatx
 
 
 class TestBrick(bricks.Brick):
-    def _allocate(self):
+    @allocation
+    def allocate(self):
         self.params = [shared_floatx(2, name='V')]
 
     @application(inputs=['input_'], outputs=['output'])

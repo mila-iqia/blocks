@@ -77,17 +77,20 @@ class BrokenAllocateBrick(Brick):
     def _push_allocation_config(self):
         raise AttributeError
 
-    def _allocate(self):
+    @allocation
+    def allocate(self):
         raise AttributeError
 
 
 class BrokenInitializeBrick(Brick):
-    def _initialize(self):
+    @initialization
+    def initialize(self):
         raise AttributeError
 
 
 class ParameterBrick(Brick):
-    def _allocate(self):
+    @allocation
+    def allocate(self):
         self.params.append(
             theano.shared(numpy.zeros((10, 10), dtype=theano.config.floatX)))
 

@@ -270,10 +270,12 @@ class SimpleRecurrent(BaseRecurrent, Initializable):
             return self.dim
         return super(SimpleRecurrent, self).get_dim(name)
 
-    def _allocate(self):
+    @allocation
+    def allocate(self):
         self.params.append(shared_floatx_nans((self.dim, self.dim), name="W"))
 
-    def _initialize(self):
+    @initialization
+    def initialize(self):
         self.weights_init.initialize(self.W, self.rng)
 
     @recurrent(sequences=['inputs', 'mask'], states=['states'],
@@ -356,7 +358,8 @@ class LSTM(BaseRecurrent, Initializable):
             return 0
         return super(LSTM, self).get_dim(name)
 
-    def _allocate(self):
+    @allocation
+    def allocate(self):
         self.W_state = shared_floatx_nans((self.dim, 4*self.dim),
                                           name='W_state')
         self.W_cell_to_in = shared_floatx_nans((self.dim,),
@@ -375,7 +378,8 @@ class LSTM(BaseRecurrent, Initializable):
         self.params = [self.W_state, self.W_cell_to_in, self.W_cell_to_forget,
                        self.W_cell_to_out, self.biases]
 
-    def _initialize(self):
+    @initialization
+    def initialize(self):
         self.biases_init.initialize(self.biases, self.rng)
         for w in self.params[:-1]:
             self.weights_init.initialize(w, self.rng)
@@ -500,7 +504,8 @@ class GatedRecurrent(BaseRecurrent, Initializable):
             return self.dim
         return super(GatedRecurrent, self).get_dim(name)
 
-    def _allocate(self):
+    @allocation
+    def allocate(self):
         def new_param(name):
             return shared_floatx_nans((self.dim, self.dim), name=name)
 
@@ -510,7 +515,8 @@ class GatedRecurrent(BaseRecurrent, Initializable):
         self.params.append(new_param('state_to_reset')
                            if self.use_reset_gate else None)
 
-    def _initialize(self):
+    @initialization
+    def initialize(self):
         self.weights_init.initialize(self.state_to_state, self.rng)
         if self.use_update_gate:
             self.weights_init.initialize(self.state_to_update, self.rng)

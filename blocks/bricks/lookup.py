@@ -32,11 +32,13 @@ class LookupTable(Initializable):
     def W(self):
         return self.params[0]
 
-    def _allocate(self):
+    @allocation
+    def allocate(self):
         self.params.append(shared_floatx_nans((self.length, self.dim),
                            name='W'))
 
-    def _initialize(self):
+    @initialization
+    def initialize(self):
         self.weights_init.initialize(self.W, self.rng)
 
     @application
