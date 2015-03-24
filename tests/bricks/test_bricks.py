@@ -53,7 +53,7 @@ class ParentBrick(Brick):
         super(ParentBrick, self).__init__(**kwargs)
         self.child = child
         if child is None:
-            child = TestBrick()
+            child = TestBrick(0)
         self.children = [child]
 
     @application
@@ -114,6 +114,8 @@ def test_repr():
 
 
 def test_lazy():
+    linear = Linear()
+    assert linear.allocation_args == ['input_dim', 'output_dim']
     brick = TestBrick()
     assert brick.config is NoneAllocation
     brick = TestBrick(config='config')
@@ -122,7 +124,7 @@ def test_lazy():
 
 
 def test_allocate():
-    brick = TestBrick()
+    brick = TestBrick(0)
     brick.allocate()
     assert brick.allocated
     assert brick.allocation_config_pushed
@@ -153,7 +155,7 @@ def test_allocate():
 
 
 def test_initialize():
-    brick = TestBrick()
+    brick = TestBrick(0)
     brick.initialize()
 
     parent_brick = ParentBrick()
@@ -167,7 +169,7 @@ def test_initialize():
 
 
 def test_tagging():
-    brick = TestBrick()
+    brick = TestBrick(0)
     x = tensor.vector('x')
     y = tensor.vector('y')
     z = tensor.vector('z')
@@ -248,7 +250,7 @@ def test_application():
 
 
 def test_apply():
-    brick = TestBrick()
+    brick = TestBrick(0)
     assert TestBrick.apply(brick, [0]) == [0, 1]
     if six.PY2:
         assert_raises(TypeError, TestBrick.apply, [0])
@@ -437,7 +439,7 @@ def test_sequence_variable_inputs():
 
 def test_application_call():
     X = tensor.matrix('X')
-    brick = TestBrick()
+    brick = TestBrick(0)
     Y = brick.access_application_call(X)
     (auxiliary_variable,) = get_application_call(Y).auxiliary_variables
     assert auxiliary_variable.name == 'test_val'

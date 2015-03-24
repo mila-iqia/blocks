@@ -14,7 +14,7 @@ floatX = theano.config.floatX
 
 def test_application_graph_auxiliary_vars():
     X = tensor.matrix('X')
-    brick = TestBrick()
+    brick = TestBrick(0)
     Y = brick.access_application_call(X)
     graph = ComputationGraph(outputs=[Y])
     test_val_found = False

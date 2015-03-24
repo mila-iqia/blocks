@@ -100,8 +100,8 @@ class Initializable(Brick):
     has_biases = True
     seed_rng = numpy.random.RandomState(config.default_seed)
 
-    @lazy(initialization=['weights_init'])
-    def __init__(self, weights_init, biases_init=None, use_bias=True,
+    @lazy()
+    def __init__(self, weights_init=None, biases_init=None, use_bias=True,
                  seed=None, **kwargs):
         super(Initializable, self).__init__(**kwargs)
         self.weights_init = weights_init

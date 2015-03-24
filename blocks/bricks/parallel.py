@@ -148,6 +148,7 @@ class Fork(Parallel):
 
         super(Fork, self).__init__(output_names, prototype=prototype,
                                    child_prefix="fork", **kwargs)
+        self.input_dims = None
 
     def _push_allocation_config(self):
         self.input_dims = [self.input_dim for name in self.output_names]

@@ -123,8 +123,7 @@ Of course, as long as the brick is not configured, we cannot actually apply it!
     >>> linear2.apply(x)
     Traceback (most recent call last):
       ...
-    TypeError: Lazy initialization is enabled, so please make sure you have set
-    all the required configuration for this method call.
+    ValueError: allocation config not set: input_dim
 
 We can now easily configure our brick based on other bricks.
 
