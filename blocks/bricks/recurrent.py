@@ -261,7 +261,7 @@ class SimpleRecurrent(BaseRecurrent, Initializable):
 
     @property
     def W(self):
-        return self.params[0]
+        return self.parameters[0]
 
     def get_dim(self, name):
         if name == 'mask':
@@ -273,7 +273,8 @@ class SimpleRecurrent(BaseRecurrent, Initializable):
 
     @allocation
     def allocate(self):
-        self.params.append(shared_floatx_nans((self.dim, self.dim), name="W"))
+        self.parameters.append(shared_floatx_nans((self.dim, self.dim),
+                                                  name="W"))
 
     @initialization
     def initialize(self):
@@ -376,13 +377,14 @@ class LSTM(BaseRecurrent, Initializable):
         add_role(self.W_cell_to_out, WEIGHT)
         add_role(self.biases, BIAS)
 
-        self.params = [self.W_state, self.W_cell_to_in, self.W_cell_to_forget,
-                       self.W_cell_to_out, self.biases]
+        self.parameters = [self.W_state, self.W_cell_to_in,
+                           self.W_cell_to_forget, self.W_cell_to_out,
+                           self.biases]
 
     @initialization
     def initialize(self):
         self.biases_init.initialize(self.biases, self.rng)
-        for w in self.params[:-1]:
+        for w in self.parameters[:-1]:
             self.weights_init.initialize(w, self.rng)
 
     @recurrent(sequences=['inputs', 'mask'], states=['states', 'cells'],
@@ -488,15 +490,15 @@ class GatedRecurrent(BaseRecurrent, Initializable):
 
     @property
     def state_to_state(self):
-        return self.params[0]
+        return self.parameters[0]
 
     @property
     def state_to_update(self):
-        return self.params[1]
+        return self.parameters[1]
 
     @property
     def state_to_reset(self):
-        return self.params[2]
+        return self.parameters[2]
 
     def get_dim(self, name):
         if name == 'mask':
@@ -510,11 +512,11 @@ class GatedRecurrent(BaseRecurrent, Initializable):
         def new_param(name):
             return shared_floatx_nans((self.dim, self.dim), name=name)
 
-        self.params.append(new_param('state_to_state'))
-        self.params.append(new_param('state_to_update')
-                           if self.use_update_gate else None)
-        self.params.append(new_param('state_to_reset')
-                           if self.use_reset_gate else None)
+        self.parameters.append(new_param('state_to_state'))
+        self.parameters.append(new_param('state_to_update')
+                               if self.use_update_gate else None)
+        self.parameters.append(new_param('state_to_reset')
+                               if self.use_reset_gate else None)
 
     @initialization
     def initialize(self):

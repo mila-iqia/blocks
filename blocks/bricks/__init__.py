@@ -212,31 +212,31 @@ class Linear(Initializable, Feedforward):
 
     @property
     def W(self):
-        return self.params[0]
+        return self.parameters[0]
 
     @property
     def b(self):
-        return self.params[1]
+        return self.parameters[1]
 
     @allocation
     def allocate(self):
         W = shared_floatx_nans((self.input_dim, self.output_dim), name='W')
         add_role(W, WEIGHT)
-        self.params.append(W)
+        self.parameters.append(W)
         self.add_auxiliary_variable(W.norm(2), name='W_norm')
         if self.use_bias:
             b = shared_floatx_nans((self.output_dim,), name='b')
             add_role(b, BIAS)
-            self.params.append(b)
+            self.parameters.append(b)
             self.add_auxiliary_variable(b.norm(2), name='b_norm')
 
     @initialization
     def initialize(self):
         if self.use_bias:
-            W, b = self.params
+            W, b = self.parameters
             self.biases_init.initialize(b, self.rng)
         else:
-            W, = self.params
+            W, = self.parameters
         self.weights_init.initialize(W, self.rng)
 
     @application(inputs=['input_'], outputs=['output'])
@@ -255,9 +255,9 @@ class Linear(Initializable, Feedforward):
 
         """
         if self.use_bias:
-            W, b = self.params
+            W, b = self.parameters
         else:
-            W, = self.params
+            W, = self.parameters
         output = tensor.dot(input_, W)
         if self.use_bias:
             output += b
@@ -282,11 +282,11 @@ class Bias(Feedforward, Initializable):
     def allocate(self):
         b = shared_floatx_nans((self.output_dim,), name='b')
         add_role(b, BIAS)
-        self.params.append(b)
+        self.parameters.append(b)
 
     @initialization
     def initialize(self):
-        b, = self.params
+        b, = self.parameters
         self.biases_init.initialize(b, self.rng)
 
     @application(inputs=['input_'], outputs=['output'])
@@ -304,7 +304,7 @@ class Bias(Feedforward, Initializable):
             The transformed input plus optional bias
 
         """
-        b, = self.params
+        b, = self.parameters
         return input_ + b
 
     def get_dim(self, name):

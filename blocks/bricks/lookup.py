@@ -30,12 +30,12 @@ class LookupTable(Initializable):
 
     @property
     def W(self):
-        return self.params[0]
+        return self.parameters[0]
 
     @allocation
     def allocate(self):
-        self.params.append(shared_floatx_nans((self.length, self.dim),
-                           name='W'))
+        self.parameters.append(shared_floatx_nans((self.length, self.dim),
+                               name='W'))
 
     @initialization
     def initialize(self):

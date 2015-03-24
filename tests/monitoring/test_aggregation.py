@@ -13,11 +13,11 @@ from blocks.utils import shared_floatx
 class TestBrick(bricks.Brick):
     @allocation
     def allocate(self):
-        self.params = [shared_floatx(2, name='V')]
+        self.parameters = [shared_floatx(2, name='V')]
 
     @application(inputs=['input_'], outputs=['output'])
     def apply(self, input_, application_call):
-        V = self.params[0]
+        V = self.parameters[0]
         mean_row_mean = mean(input_.mean(axis=1).sum(), input_.shape[0])
         application_call.add_auxiliary_variable((V ** 2).sum(),
                                                 name='V_squared')
