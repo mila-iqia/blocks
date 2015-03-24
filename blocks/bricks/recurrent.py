@@ -9,7 +9,8 @@ import theano
 from theano import tensor, Variable
 
 from blocks.bricks import Initializable, Sigmoid, Tanh
-from blocks.bricks.base import Application, application, Brick, lazy
+from blocks.bricks.base import (Application, application, Brick, lazy,
+                                allocation, initialization)
 from blocks.initialization import NdarrayInitialization
 from blocks.roles import add_role, WEIGHT, BIAS
 from blocks.utils import (pack, shared_floatx_nans, dict_union, dict_subset,

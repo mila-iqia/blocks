@@ -5,7 +5,7 @@ from six import add_metaclass
 from theano import tensor
 
 from blocks.bricks import Initializable, Random, Bias
-from blocks.bricks.base import application, Brick, lazy
+from blocks.bricks.base import application, Brick, lazy, allocation_push
 from blocks.bricks.parallel import Fork, Distribute, Merge
 from blocks.bricks.lookup import LookupTable
 from blocks.bricks.recurrent import recurrent

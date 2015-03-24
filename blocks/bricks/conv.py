@@ -2,7 +2,8 @@ from theano.tensor.nnet.conv import conv2d, ConvOp
 from theano.tensor.signal.downsample import max_pool_2d, DownsampleFactorMax
 
 from blocks.bricks import Initializable, Feedforward, Sequence
-from blocks.bricks.base import application, Brick, lazy
+from blocks.bricks.base import (application, Brick, lazy, allocation,
+                                initialization, allocation_push)
 from blocks.roles import add_role, FILTER, BIAS
 from blocks.utils import shared_floatx_nans
 

@@ -10,7 +10,9 @@ from toolz import interleave
 from picklable_itertools.extras import equizip
 
 from blocks import config
-from blocks.bricks.base import application, Brick, lazy
+from blocks.bricks.base import (application, Brick, lazy, allocation,
+                                initialization, allocation_push,
+                                initialization_push)
 from blocks.roles import add_role, WEIGHT, BIAS
 from blocks.utils import pack, shared_floatx_nans
 

@@ -49,7 +49,7 @@ from six import add_metaclass
 
 from blocks.bricks import (MLP, Identity, Brick, Initializable, Sequence,
                            Feedforward, Linear, Tanh)
-from blocks.bricks.base import lazy, application
+from blocks.bricks.base import lazy, application, allocation_push
 from blocks.bricks.parallel import Parallel, Distribute
 from blocks.bricks.recurrent import recurrent, BaseRecurrent
 from blocks.utils import dict_union, dict_subset

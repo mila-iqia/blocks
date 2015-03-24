@@ -6,7 +6,8 @@ from theano import tensor
 
 from blocks.bricks import (Identity, Linear, Maxout, LinearMaxout, MLP, Tanh,
                            Sequence, Random)
-from blocks.bricks.base import Application, application, Brick, lazy
+from blocks.bricks.base import (Application, application, Brick, lazy,
+                                allocation_push, allocation, initialization)
 from blocks.bricks.parallel import Parallel, Fork
 from blocks.filter import get_application_call, get_brick
 from blocks.initialization import Constant

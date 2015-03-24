@@ -4,7 +4,7 @@ import copy
 from picklable_itertools.extras import equizip
 
 from blocks.bricks import Initializable, Linear
-from blocks.bricks.base import lazy, application
+from blocks.bricks.base import lazy, application, allocation_push
 from blocks.utils import pack
 
 
