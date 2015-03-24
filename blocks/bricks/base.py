@@ -139,11 +139,12 @@ class Application(object):
 
         # Construct the ApplicationCall, used to store data in for this call
         call = ApplicationCall(brick, self)
+        bound_application = getattr(brick, self.name)
         args = list(args)
+        if 'application' in args_names:
+            args.insert(args_names.index('application'), bound_application)
         if 'application_call' in args_names:
             args.insert(args_names.index('application_call'), call)
-        if 'application' in args_names:
-            args.insert(args_names.index('application'), self)
 
         if not brick.allocated:
             brick.allocate()
@@ -187,7 +188,7 @@ class Application(object):
         for i, output in enumerate(outputs):
             if isinstance(output, tensor.Variable):
                 try:
-                    name = self.outputs[i]
+                    name = bound_application.outputs[i]
                 except AttributeError:
                     name = "output_{}".format(i)
                 except IndexError:
@@ -200,7 +201,7 @@ class Application(object):
         if as_list:
             return outputs
         if as_dict:
-            return OrderedDict(equizip(self.outputs, outputs))
+            return OrderedDict(equizip(bound_application.outputs, outputs))
         return unpack(outputs)  # TODO What if output is single element list?
 
     def property(self, name):
