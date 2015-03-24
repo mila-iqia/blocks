@@ -274,7 +274,7 @@ class ConvolutionalLayer(Sequence, Initializable):
                      'batch_size', 'border_mode', 'image_size']:
             setattr(self.convolution, attr, getattr(self, attr))
         self.convolution.step = self.conv_step
-        self.convolution._push_allocation_config()
+        self.convolution.push_allocation_config()
         if self.image_size is not None:
             pooling_input_dim = self.convolution.get_dim('output')
         else:
@@ -352,7 +352,7 @@ class ConvolutionalSequence(Sequence, Initializable, Feedforward):
             layer.batch_size = self.batch_size
 
             # Push input dimensions to children
-            layer._push_allocation_config()
+            layer.push_allocation_config()
 
             # Retrieve output dimensions
             # and set it for next layer

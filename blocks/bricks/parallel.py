@@ -153,7 +153,7 @@ class Fork(Parallel):
     @allocation_push
     def push_allocation_config(self):
         self.input_dims = [self.input_dim for name in self.output_names]
-        super(Fork, self)._push_allocation_config()
+        super(Fork, self).push_allocation_config()
 
     @application(inputs=['input_'])
     def apply(self, input_):
@@ -230,7 +230,7 @@ class Distribute(Fork):
     def push_allocation_config(self):
         self.input_dim = self.source_dim
         self.output_dims = self.target_dims
-        super(Distribute, self)._push_allocation_config()
+        super(Distribute, self).push_allocation_config()
 
     @application
     def apply(self, **kwargs):
@@ -328,4 +328,4 @@ class Merge(Parallel):
     @allocation_push
     def push_allocation_config(self):
         self.output_dims = [self.output_dim for input_name in self.input_names]
-        super(Merge, self)._push_allocation_config()
+        super(Merge, self).push_allocation_config()
