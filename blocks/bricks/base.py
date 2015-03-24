@@ -142,6 +142,8 @@ class Application(object):
         args = list(args)
         if 'application_call' in args_names:
             args.insert(args_names.index('application_call'), call)
+        if 'application' in args_names:
+            args.insert(args_names.index('application'), self)
 
         if not brick.allocated:
             brick.allocate()
