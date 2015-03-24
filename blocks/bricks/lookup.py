@@ -22,7 +22,7 @@ class LookupTable(Initializable):
     """
     has_bias = False
 
-    @lazy
+    @lazy(allocation=['length', 'dim'])
     def __init__(self, length, dim, **kwargs):
         super(LookupTable, self).__init__(**kwargs)
         self.length = length

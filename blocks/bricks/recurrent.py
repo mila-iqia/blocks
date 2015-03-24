@@ -252,7 +252,7 @@ class SimpleRecurrent(BaseRecurrent, Initializable):
     See :class:`.Initializable` for initialization parameters.
 
     """
-    @lazy
+    @lazy(allocation=['dim'])
     def __init__(self, dim, activation, **kwargs):
         super(SimpleRecurrent, self).__init__(**kwargs)
         self.dim = dim
@@ -338,7 +338,7 @@ class LSTM(BaseRecurrent, Initializable):
     See :class:`.Initializable` for initialization parameters.
 
     """
-    @lazy
+    @lazy(allocation=['dim'])
     def __init__(self, dim, activation=None, **kwargs):
         super(LSTM, self).__init__(**kwargs)
         self.dim = dim
@@ -464,7 +464,7 @@ class GatedRecurrent(BaseRecurrent, Initializable):
         for Statistical Machine Translation*, EMNLP (2014), pp. 1724-1734.
 
     """
-    @lazy
+    @lazy(allocation=['dim'])
     def __init__(self, dim, activation=None, gate_activation=None,
                  use_update_gate=True, use_reset_gate=True, **kwargs):
         super(GatedRecurrent, self).__init__(**kwargs)
@@ -605,7 +605,7 @@ class Bidirectional(Initializable):
     """
     has_bias = False
 
-    @lazy
+    @lazy()
     def __init__(self, prototype, **kwargs):
         super(Bidirectional, self).__init__(**kwargs)
         self.prototype = prototype

@@ -94,7 +94,7 @@ class BaseSequenceGenerator(Initializable):
     See :class:`.Initializable` for initialization parameters.
 
     """
-    @lazy
+    @lazy()
     def __init__(self, readout, transition, fork, **kwargs):
         super(BaseSequenceGenerator, self).__init__(**kwargs)
         self.readout = readout
@@ -367,7 +367,7 @@ class Readout(AbstractReadout, Initializable):
         change dimensions).
 
     """
-    @lazy
+    @lazy(allocation=['source_names', 'readout_dim'])
     def __init__(self, source_names, readout_dim, emitter=None,
                  feedback_brick=None, merge=None, merge_prototype=None,
                  post_merge=None, merged_dim=None, **kwargs):
@@ -449,7 +449,7 @@ class TrivialEmitter(AbstractEmitter):
     By default :meth:`cost` always returns zero tensor.
 
     """
-    @lazy
+    @lazy(allocation=['readout_dim'])
     def __init__(self, readout_dim, **kwargs):
         super(TrivialEmitter, self).__init__(**kwargs)
         self.readout_dim = readout_dim
@@ -526,7 +526,7 @@ class SoftmaxEmitter(AbstractEmitter, Initializable, Random):
 
 class TrivialFeedback(AbstractFeedback):
     """A feedback brick for the case when readout are outputs."""
-    @lazy
+    @lazy(allocation=['output_dim'])
     def __init__(self, output_dim, **kwargs):
         super(TrivialFeedback, self).__init__(**kwargs)
         self.output_dim = output_dim
