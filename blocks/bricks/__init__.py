@@ -22,8 +22,8 @@ class Random(Brick):
     Parameters
     ----------
     theano_seed : int or list, optional
-        Seed to use for an :class:`~theano.sandbox.rng_mrg.MRG_RandomStreams`
-        object.
+        Seed to use for a
+        :class:`~theano.sandbox.rng_mrg.MRG_RandomStreams` object.
     """
     seed_rng = numpy.random.RandomState(config.default_seed)
 
