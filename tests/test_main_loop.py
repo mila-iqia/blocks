@@ -10,7 +10,8 @@ from tests import MockAlgorithm
 class WriteBatchExtension(TrainingExtension):
     """Writes data saved by MockAlgorithm to the log."""
     def after_batch(self, _):
-        self.main_loop.log.current_row['batch'] = self.main_loop.algorithm.batch
+        self.main_loop.log.current_row['batch'] = \
+            self.main_loop.algorithm.batch
 
 
 def test_main_loop():

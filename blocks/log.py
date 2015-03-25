@@ -1,9 +1,7 @@
 """The event-based main loop of Blocks."""
-from abc import ABCMeta
 from collections import defaultdict
 from numbers import Integral
 
-from six import add_metaclass
 try:
     from pandas import DataFrame
     PANDAS_AVAILABLE = True
