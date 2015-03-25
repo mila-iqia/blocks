@@ -252,7 +252,7 @@ class Application(object):
         args_names = args_names[1:]
 
         # Construct the ApplicationCall, used to store data in for this call
-        call = ApplicationCall(brick, bound_application)
+        call = ApplicationCall(bound_application)
         args = list(args)
         if 'application' in args_names:
             args.insert(args_names.index('application'), bound_application)
@@ -840,8 +840,6 @@ class ApplicationCall(Annotation):
 
     Parameters
     ----------
-    brick : :class:`Brick` instance
-        The brick whose application is called
     application : :class:`BoundApplication` instance
         The bound application (i.e. belong to a brick instance) object
         being called
@@ -860,18 +858,17 @@ class ApplicationCall(Annotation):
     <blocks.bricks.base.ApplicationCall object at ...>
 
     """
-    def __init__(self, brick, application):
-        self.brick = brick
+    def __init__(self, application):
         self.application = application
         super(ApplicationCall, self).__init__()
 
     def add_auxiliary_variable(self, variable, roles=None, name=None):
         if name:
             variable.name = _variable_name(
-                self.brick.name, self.application.name, name)
+                self.application.brick.name, self.application.name, name)
             variable.tag.name = name
             name = None
-        add_annotation(variable, self.brick)
+        add_annotation(variable, self.application.brick)
         return super(ApplicationCall, self).add_auxiliary_variable(
             variable, roles, name)
 

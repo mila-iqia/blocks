@@ -181,8 +181,9 @@ def test_tagging():
     z = tensor.vector('z')
 
     def check_output_variable(o):
-        assert get_application_call(o).brick is brick
-        assert get_application_call(o.owner.inputs[0]).brick is brick
+        assert get_application_call(o).application.brick is brick
+        assert (get_application_call(o.owner.inputs[0]).application.brick
+                is brick)
 
     # Case 1: both positional arguments are provided.
     u, v = brick.apply(x, y)
