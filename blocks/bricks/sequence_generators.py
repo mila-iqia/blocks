@@ -483,9 +483,10 @@ class SoftmaxEmitter(AbstractEmitter, Initializable, Random):
         The initial output.
 
     """
-    def __init__(self, initial_output):
-        self.initial_output = output
-    
+    def __init__(self, initial_output=0, **kwargs):
+        self.initial_output = initial_output
+        super(SoftmaxEmitter, self).__init__(**kwargs)
+
     @application
     def probs(self, readouts):
         shape = readouts.shape
