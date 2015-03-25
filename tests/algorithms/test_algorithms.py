@@ -137,7 +137,7 @@ def test_step_clipping():
 
 
 def test_variable_clipping():
-    # Test simple variable clipping with no axes.
+    # Test simple variable clipping with no axis.
     rule1 = VariableClipping(5)
 
     gradients = OrderedDict([(shared_floatx([1, 1]), shared_floatx([3, 2])),
@@ -154,7 +154,7 @@ def test_variable_clipping():
     assert_allclose(notclipped[1].eval(), [[[1], [2], [3], [2]]])
 
     # Test variable clipping on one axis.
-    rule2 = VariableClipping(10, axes=(1,))
+    rule2 = VariableClipping(10, axis=1)
     gradients = {shared_floatx([[1, -1, 1, -1], [-1, 1, -1, 1]]):
                  shared_floatx([[1, 2, 3, 4], [5, 6, 7, 8]])}
     steps, _ = rule2.compute_steps(gradients)
@@ -164,8 +164,8 @@ def test_variable_clipping():
                      [3.54858826, 4.79049022, 5.06478435, 6.30668631]],
                     rtol=1e-5)
 
-    # Test variable clipping on two axes.
-    rule3 = VariableClipping(10, axes=(1, 2))
+    # Test variable clipping on two axis.
+    rule3 = VariableClipping(10, axis=(1, 2))
     gradients = {shared_floatx([[[[1], [-1]],
                                  [[-1], [1]]],
                                 [[[-1], [1]],
@@ -185,7 +185,7 @@ def test_variable_clipping():
 
     # Test exceptions.
     assert_raises(ValueError, rule3.compute_steps, {0: shared_floatx([1.0])})
-    assert_raises(ValueError, VariableClipping, 50, axes=(0, 0))
+    assert_raises(ValueError, VariableClipping, 50, axis=(0, 0))
 
 
 def test_composite_rule():

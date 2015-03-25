@@ -12,7 +12,7 @@ from six import add_metaclass
 from theano import tensor
 
 from blocks.graph import ComputationGraph
-from blocks.utils import dict_subset, named_copy, shared_floatx
+from blocks.utils import dict_subset, named_copy, pack, shared_floatx
 from blocks.theano_expressions import l2_norm
 
 logger = logging.getLogger(__name__)
@@ -591,10 +591,10 @@ class VariableClipping(StepRule):
     ----------
     threshold : float
         Maximum norm for a given (portion of a) tensor.
-    axes : iterable, optional
-        An iterable collection of integer axes over which to
-        sum in order to calculate the L2 norm. If `None`
-        (the default), the norm is computed over all elements
+    axis : int or iterable, optional
+        An integer single axis, or an iterable collection of integer
+        axes over which to sum in order to calculate the L2 norm. If
+        `None` (the default), the norm is computed over all elements
         of the tensor.
 
     Notes
@@ -624,24 +624,24 @@ class VariableClipping(StepRule):
        feature detectors". arXiv:1207.0580.
 
     """
-    def __init__(self, threshold, axes=None):
-        axes = axes if axes is not None else ()
-        self.axes = set(axes)
+    def __init__(self, threshold, axis=None):
+        axis = pack(axis) if axis is not None else ()
+        self.axis = set(axis)
         self.threshold = shared_floatx(threshold)
-        if len(axes) != len(self.axes):
-            raise ValueError("axes must be unique")
+        if len(axis) != len(self.axis):
+            raise ValueError("axis must be unique")
 
     def compute_step(self, param, previous_step):
-        if any(axis >= previous_step.ndim for axis in self.axes):
-            raise ValueError("Invalid axes {} for {}, ndim={}".format(
-                self.axes, param, previous_step.ndim))
-        if len(self.axes) == 0:
+        if any(ax >= previous_step.ndim for ax in self.axis):
+            raise ValueError("Invalid axis {} for {}, ndim={}".format(
+                self.axis, param, previous_step.ndim))
+        if len(self.axis) == 0:
             norms = l2_norm([param - previous_step])
         else:
             squares = tensor.sqr(param - previous_step)
             norms = tensor.sqrt(
                 reduce(lambda t, a: t.sum(axis=a, keepdims=True),
-                       sorted(self.axes), squares))
+                       sorted(self.axis), squares))
         # We want a step s* that is the same as scaling (param - previous_step)
         # by threshold / norm when threshold < norm.
         shrinking_step = (param -
