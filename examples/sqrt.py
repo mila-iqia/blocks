@@ -64,14 +64,14 @@ def main(save_to, num_batches, continue_=False):
         get_data_stream(range(100)),
         model=Model(cost),
         extensions=([LoadFromDump(save_to)] if continue_ else []) +
-        [Timing(),
-            FinishAfter(after_n_batches=num_batches),
-            DataStreamMonitoring(
-                [cost], get_data_stream(range(100, 200)),
-                prefix="test"),
-            TrainingDataMonitoring([cost], after_epoch=True),
-            Dump(save_to),
-            Printing()])
+        [FinishAfter(after_n_batches=num_batches),
+         DataStreamMonitoring(
+             [cost], get_data_stream(range(100, 200)),
+             prefix="test"),
+         TrainingDataMonitoring([cost], after_epoch=True),
+         Dump(save_to),
+         Printing(),
+         Timing()])
     main_loop.run()
     return main_loop
 

@@ -53,6 +53,7 @@ class Timer(object):
 
     def enter(self, name):
         self.current.append(name)
+        # We record the order in which sections were first called
         self.order.add(tuple(self.current))
 
     def exit(self, t):
@@ -60,6 +61,14 @@ class Timer(object):
         self.current.pop()
 
     def report(self):
+        """Print a report of timing information to standard output.
+
+        .. todo::
+
+           This method could accept different I/O objects (e.g. standard
+           error or write to a file).
+
+        """
         total = sum(v for k, v in self.total.items() if len(k) == 1)
 
         def print_report(keys, level=0):
@@ -92,6 +101,19 @@ class Timer(object):
 
 
 class TimeIt(object):
+    """A context manager to time the execution time of code within it.
+
+    Parameters
+    ----------
+    name : str
+        The name of this section. Expected to adhere to variable naming
+        styles.
+    timer : :class:`Timer`
+        The timer of the main loop. This is the object this context manager
+        will report the execution time to. The accumulation and processing
+        of timing information is handled by this object.
+
+    """
     def __init__(self, name, timer):
         self.name = name
         self.timer = timer

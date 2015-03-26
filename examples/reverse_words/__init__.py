@@ -235,7 +235,6 @@ def main(mode, save_path, num_batches, data_path=None):
             data_stream=data_stream,
             algorithm=algorithm,
             extensions=[
-                Timing(),
                 TrainingDataMonitoring(observables, after_batch=True),
                 average_monitoring,
                 FinishAfter(after_n_batches=num_batches)
@@ -250,7 +249,8 @@ def main(mode, save_path, num_batches, data_path=None):
                 # because loading the whole pickle takes quite some time.
                 Checkpoint(save_path, every_n_batches=500,
                            save_separately=["model", "log"]),
-                Printing(every_n_batches=1)])
+                Printing(every_n_batches=1),
+                Timing()])
         main_loop.run()
     elif mode == "sample" or mode == "beam_search":
         chars = tensor.lmatrix("input")

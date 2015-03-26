@@ -52,8 +52,7 @@ def main(save_to, num_epochs):
                    iteration_scheme=SequentialScheme(
                        mnist_train.num_examples, 50)),
         model=Model(cost),
-        extensions=[Timing(),
-                    FinishAfter(after_n_epochs=num_epochs),
+        extensions=[FinishAfter(after_n_epochs=num_epochs),
                     DataStreamMonitoring(
                         [cost, error_rate],
                         DataStream(mnist_test,
@@ -72,7 +71,8 @@ def main(save_to, num_epochs):
                             ['test_final_cost',
                              'test_misclassificationrate_apply_error_rate'],
                             ['train_total_gradient_norm']]),
-                    Printing()])
+                    Printing(),
+                    Timing()])
     main_loop.run()
 
 if __name__ == "__main__":
