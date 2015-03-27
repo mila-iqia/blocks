@@ -97,7 +97,10 @@ class Timer(object):
 
         print('{:30}{:>15}{:>15}'.format('Section', 'Time', '% of total'))
         print('-' * 60)
-        print_report(self.order)
+        if total:
+            print_report(self.order)
+        else:
+            print('No profile information collected.')
 
 
 class TimeIt(object):
