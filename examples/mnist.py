@@ -16,7 +16,7 @@ from blocks.filter import VariableFilter
 from blocks.graph import ComputationGraph
 from blocks.model import Model
 from blocks.monitoring import aggregation
-from blocks.extensions import FinishAfter, Timing, Printing
+from blocks.extensions import FinishAfter, Printing
 from blocks.extensions.saveload import Checkpoint
 from blocks.extensions.monitoring import (DataStreamMonitoring,
                                           TrainingDataMonitoring)
@@ -71,8 +71,7 @@ def main(save_to, num_epochs):
                             ['test_final_cost',
                              'test_misclassificationrate_apply_error_rate'],
                             ['train_total_gradient_norm']]),
-                    Printing(),
-                    Timing()])
+                    Printing()])
     main_loop.run()
 
 if __name__ == "__main__":

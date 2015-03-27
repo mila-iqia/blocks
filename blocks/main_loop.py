@@ -269,6 +269,8 @@ class MainLoop(object):
             finally:
                 if self.log.current_row.get('training_finished', False):
                     self._run_extensions('after_training')
+                if config.profile:
+                    self.timer.report()
                 self._restore_signal_handlers()
 
     def find_extension(self, name):

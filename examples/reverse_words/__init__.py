@@ -30,7 +30,7 @@ from blocks.algorithms import (GradientDescent, Scale,
 from blocks.initialization import Orthogonal, IsotropicGaussian, Constant
 from blocks.model import Model
 from blocks.monitoring import aggregation
-from blocks.extensions import FinishAfter, Printing, Timing
+from blocks.extensions import FinishAfter, Printing
 from blocks.extensions.saveload import Checkpoint
 from blocks.extensions.monitoring import TrainingDataMonitoring
 from blocks.extensions.plot import Plot
@@ -249,8 +249,7 @@ def main(mode, save_path, num_batches, data_path=None):
                 # because loading the whole pickle takes quite some time.
                 Checkpoint(save_path, every_n_batches=500,
                            save_separately=["model", "log"]),
-                Printing(every_n_batches=1),
-                Timing()])
+                Printing(every_n_batches=1)])
         main_loop.run()
     elif mode == "sample" or mode == "beam_search":
         chars = tensor.lmatrix("input")

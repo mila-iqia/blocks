@@ -22,7 +22,7 @@ from blocks.model import Model
 from fuel.datasets import IterableDataset
 from fuel.transformers import Batch, Mapping
 from fuel.schemes import ConstantScheme
-from blocks.extensions import FinishAfter, Timing, Printing
+from blocks.extensions import FinishAfter, Printing
 from blocks.extensions.saveload import LoadFromDump, Dump
 from blocks.extensions.monitoring import (TrainingDataMonitoring,
                                           DataStreamMonitoring)
@@ -70,8 +70,7 @@ def main(save_to, num_batches, continue_=False):
              prefix="test"),
          TrainingDataMonitoring([cost], after_epoch=True),
          Dump(save_to),
-         Printing(),
-         Timing()])
+         Printing()])
     main_loop.run()
     return main_loop
 

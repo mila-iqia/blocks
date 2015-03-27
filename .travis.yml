@@ -41,6 +41,7 @@ script:
   - # Must export environment variable so that the subprocess is aware of it
   - export THEANO_FLAGS=floatX=$TESTS,optimizer=fast_compile
   - export FUEL_FLOATX=$TESTS
+  - export BLOCKS_PROFILE=true
   - # Running nose2 within coverage makes imports count towards coverage
   - bokeh-server &> /dev/null &
   - coverage run -p --source=blocks -m nose2.__main__ -v doctests

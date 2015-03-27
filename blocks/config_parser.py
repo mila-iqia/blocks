@@ -54,6 +54,7 @@ The following configurations are supported:
 import logging
 import os
 
+import six
 import yaml
 
 logger = logging.getLogger(__name__)
@@ -137,11 +138,18 @@ class Configuration(object):
         if default is not NOT_SET:
             self.config[key]['default'] = default
 
-config = Configuration()
+
+def bool_(val):
+    """Like `bool`, but the string 'False' evaluates to `False`."""
+    if isinstance(val, six.string_types) and val.lower() == 'false':
+        return False
+    return bool(val)
 
 # Define configuration options
+config = Configuration()
 config.add_config('default_seed', type_=int, default=1)
 config.add_config('recursion_limit', type_=int, default=10000)
 config.add_config('bokeh_server', type_=str, default='http://localhost:5006/')
-
+config.add_config('profile', type_=bool_, default=False,
+                  env_var='BLOCKS_PROFILE')
 config.load_yaml()

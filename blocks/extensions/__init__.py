@@ -494,32 +494,3 @@ class ProgressBar(TrainingExtension):
 
         self.iter_count += 1
         self.bar.update(self.iter_count)
-
-
-class Timing(SimpleExtension):
-    """Print a timing report.
-
-    Prints a full timing report, with the time spent in different parts of
-    the training loop. Timings are reported using the :func:`time.clock`
-    function, both in seconds and as a percentage of the total time spent
-    in the training loop.
-
-    .. note::
-
-       If you want to measure the time spent in extensions after training
-       has ended, be sure to add this extension as the very last in the
-       list.
-
-    By default the extension prints the report at the end of the training.
-    Note that printing a report does not reset the timer.
-
-    The "Other" section in the report refers to the time spent outside of
-    the different timed sections (e.g. incrementing the iteration count).
-
-    """
-    def __init__(self, **kwargs):
-        kwargs.setdefault("after_training", True)
-        super(Timing, self).__init__(**kwargs)
-
-    def do(self, which_callback, *args):
-        self.main_loop.timer.report()
