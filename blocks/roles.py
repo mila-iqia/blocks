@@ -1,3 +1,6 @@
+import re
+
+
 def add_role(var, role):
     r"""Add a role to a given Theano variable.
 
@@ -65,7 +68,8 @@ class VariableRole(object):
         return self.__class__ == other.__class__
 
     def __repr__(self):
-        return self.__class__.__name__[:-4].upper()
+        return re.sub(r'(?!^)([A-Z]+)', r'_\1',
+                      self.__class__.__name__[:-4]).upper()
 
 
 class InputRole(VariableRole):
