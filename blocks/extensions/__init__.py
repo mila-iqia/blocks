@@ -511,7 +511,7 @@ class Timing(SimpleExtension):
        list.
 
     By default the extension prints the report at the end of the training.
-    Not that printing a report does not reset the timer.
+    Note that printing a report does not reset the timer.
 
     The "Other" section in the report refers to the time spent outside of
     the different timed sections (e.g. incrementing the iteration count).
