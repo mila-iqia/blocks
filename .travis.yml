@@ -34,7 +34,7 @@ before_install:
   - export FUEL_DATA_PATH=$PWD
 install:
   # Install all Python dependencies
-  - conda install -q --yes python=$TRAVIS_PYTHON_VERSION mkl bokeh nose numpy pip coverage six scipy toolz
+  - conda install -q --yes python=$TRAVIS_PYTHON_VERSION mkl bokeh nose numpy pip coverage six scipy toolz h5py
   - pip install -q nose2[coverage-plugin] coveralls
 script:
   - pip install . -r requirements.txt # Tests setup.py
