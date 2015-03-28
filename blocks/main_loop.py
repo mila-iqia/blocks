@@ -6,6 +6,7 @@ import traceback
 from blocks import config
 from blocks.log import TrainingLog
 from blocks.utils import reraise_as, unpack, change_recursion_limit
+from blocks.utils.profile import Profile, Timer
 from blocks.algorithms import DifferentiableCostMinimizer
 from blocks.extensions import CallbackName
 
@@ -80,6 +81,9 @@ class MainLoop(object):
     extensions : list of :class:`.TrainingExtension` instances
         The training extensions. Will be called in the same order as given
         here.
+    profile : :class:`.Profile`
+        Keeps track of the times spent in differen segments of the training
+        loop.
 
     """
     def __init__(self, algorithm, data_stream,
@@ -93,6 +97,8 @@ class MainLoop(object):
         self.algorithm = algorithm
         self.log = log
         self.extensions = extensions
+
+        self.profile = Profile()
 
         self._model = model
 
@@ -154,7 +160,8 @@ class MainLoop(object):
                     for extension in self.extensions:
                         extension.main_loop = self
                     self._run_extensions('before_training')
-                    self.algorithm.initialize()
+                    with Timer('initialization', self.profile):
+                        self.algorithm.initialize()
                     self.status['training_started'] = True
                 # We can not write "else:" here because extensions
                 # called "before_training" could have changed the status
@@ -163,8 +170,9 @@ class MainLoop(object):
                     self._run_extensions('on_resumption')
                     self.status['epoch_interrupt_received'] = False
                     self.status['batch_interrupt_received'] = False
-                while self._run_epoch():
-                    pass
+                with Timer('training', self.profile):
+                    while self._run_epoch():
+                        pass
             except TrainingFinish:
                 self.log.current_row['training_finished'] = True
             except Exception as e:
@@ -181,6 +189,8 @@ class MainLoop(object):
             finally:
                 if self.log.current_row.get('training_finished', False):
                     self._run_extensions('after_training')
+                if config.profile:
+                    self.profile.report()
                 self._restore_signal_handlers()
 
     def find_extension(self, name):
@@ -209,8 +219,9 @@ class MainLoop(object):
                 return False
             self.status['epoch_started'] = True
             self._run_extensions('before_epoch')
-        while self._run_iteration():
-            pass
+        with Timer('epoch', self.profile):
+            while self._run_iteration():
+                pass
         self.status['epoch_started'] = False
         self.status['epochs_done'] += 1
         self.status['_epoch_ends'].append(self.status['iterations_done'])
@@ -220,22 +231,26 @@ class MainLoop(object):
 
     def _run_iteration(self):
         try:
-            batch = next(self.epoch_iterator)
+            with Timer('read_data', self.profile):
+                batch = next(self.epoch_iterator)
         except StopIteration:
             if not self.log.status['received_first_batch']:
                 reraise_as(ValueError("epoch iterator yielded zero batches"))
             return False
         self.log.status['received_first_batch'] = True
         self._run_extensions('before_batch', batch)
-        self.algorithm.process_batch(batch)
+        with Timer('train', self.profile):
+            self.algorithm.process_batch(batch)
         self.status['iterations_done'] += 1
         self._run_extensions('after_batch', batch)
         self._check_finish_training('batch')
         return True
 
     def _run_extensions(self, method_name, *args):
-        for extension in self.extensions:
-            extension.dispatch(CallbackName(method_name), *args)
+        with Timer(method_name, self.profile):
+            for extension in self.extensions:
+                with Timer(type(extension).__name__, self.profile):
+                    extension.dispatch(CallbackName(method_name), *args)
 
     def _check_finish_training(self, level):
         """Checks whether the current training should be terminated.
