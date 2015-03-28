@@ -10,5 +10,4 @@ git+https://github.com/bartvm/fuel#egg=fuel
 --allow-unverified theano
 git+https://github.com/Theano/Theano.git#egg=theano
 
-markupsafe
-sphinxcontrib-napoleon==0.2.9
+sphinxcontrib-napoleon==0.2.11
