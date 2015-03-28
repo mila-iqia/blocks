@@ -30,10 +30,12 @@ class Profile(object):
     def report(self, f=sys.stderr):
         """Print a report of timing information to standard output.
 
-        .. todo::
-
-           This method could accept different I/O objects (e.g. standard
-           error or write to a file).
+        Parameters
+        ----------
+        f : object, optional
+            An object with a ``write`` method that accepts string inputs.
+            Can be a file object, ``sys.stdout``, etc. Defaults to
+            ``sys.stderr``.
 
         """
         total = sum(v for k, v in self.total.items() if len(k) == 1)
