@@ -1,10 +1,9 @@
 from __future__ import print_function
 
 import logging
-import progressbar
-
 from abc import ABCMeta, abstractmethod
 
+import progressbar
 from six import add_metaclass
 from toolz import first
 
@@ -494,3 +493,53 @@ class ProgressBar(TrainingExtension):
 
         self.iter_count += 1
         self.bar.update(self.iter_count)
+
+
+class Timing(SimpleExtension):
+    """Add timing information to the log.
+
+    This adds data about the time spent in the algorithm's
+    :meth:`~.Algorithm.process_batch` method as well as the time spent
+    reading data per batch or epoch. It also reports the time spent
+    initializing the algorithm.
+
+    Notes
+    -----
+    Add this extension *before* the :class:`Printing` extension.
+
+    This extension does *not* enable full profiling information. To see a
+    full profile of the main loop at the end of training, use the
+    ``profile`` configuration (e.g.  by setting ``BLOCKS_PROFILE=true``).
+
+    """
+    def __init__(self, **kwargs):
+        kwargs.setdefault('before_first_epoch', True)
+        kwargs.setdefault('after_epoch', True)
+        super(Timing, self).__init__(**kwargs)
+        self.current = {
+            level: {'train': 0, 'read_data': 0}
+            for level in ['batch', 'epoch']
+        }
+        self.previous = {
+            level: {'train': 0, 'read_data': 0}
+            for level in ['batch', 'epoch']
+        }
+
+    def do(self, which_callback, *args):
+        current_row = self.main_loop.log.current_row
+        profile = self.main_loop.profile.total
+
+        if which_callback == 'before_epoch':
+            current_row['time_initialization'] = profile[('initialization',)]
+            return
+        if which_callback == 'after_batch':
+            level = 'batch'
+        elif which_callback == 'after_epoch':
+            level = 'epoch'
+        for action in ['train', 'read_data']:
+            self.previous[level][action] = self.current[level][action]
+            self.current[level][action] = profile['training', 'epoch', action]
+            current_row['time_{}_this_{}'.format(action, level)] = \
+                self.current[level][action] - self.previous[level][action]
+            current_row['time_{}_total'.format(action)] = \
+                self.current[level][action]

@@ -16,7 +16,7 @@ from blocks.filter import VariableFilter
 from blocks.graph import ComputationGraph
 from blocks.model import Model
 from blocks.monitoring import aggregation
-from blocks.extensions import FinishAfter, Printing
+from blocks.extensions import FinishAfter, Timing, Printing
 from blocks.extensions.saveload import Checkpoint
 from blocks.extensions.monitoring import (DataStreamMonitoring,
                                           TrainingDataMonitoring)
@@ -52,7 +52,8 @@ def main(save_to, num_epochs):
                    iteration_scheme=SequentialScheme(
                        mnist_train.num_examples, 50)),
         model=Model(cost),
-        extensions=[FinishAfter(after_n_epochs=num_epochs),
+        extensions=[Timing(),
+                    FinishAfter(after_n_epochs=num_epochs),
                     DataStreamMonitoring(
                         [cost, error_rate],
                         DataStream(mnist_test,

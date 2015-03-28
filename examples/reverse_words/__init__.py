@@ -30,7 +30,7 @@ from blocks.algorithms import (GradientDescent, Scale,
 from blocks.initialization import Orthogonal, IsotropicGaussian, Constant
 from blocks.model import Model
 from blocks.monitoring import aggregation
-from blocks.extensions import FinishAfter, Printing
+from blocks.extensions import FinishAfter, Printing, Timing
 from blocks.extensions.saveload import Checkpoint
 from blocks.extensions.monitoring import TrainingDataMonitoring
 from blocks.extensions.plot import Plot
@@ -235,6 +235,7 @@ def main(mode, save_path, num_batches, data_path=None):
             data_stream=data_stream,
             algorithm=algorithm,
             extensions=[
+                Timing(),
                 TrainingDataMonitoring(observables, after_batch=True),
                 average_monitoring,
                 FinishAfter(after_n_batches=num_batches)

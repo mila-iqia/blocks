@@ -239,7 +239,7 @@ class MainLoop(object):
             return False
         self.log.status['received_first_batch'] = True
         self._run_extensions('before_batch', batch)
-        with Timer('batch', self.profile):
+        with Timer('train', self.profile):
             self.algorithm.process_batch(batch)
         self.status['iterations_done'] += 1
         self._run_extensions('after_batch', batch)

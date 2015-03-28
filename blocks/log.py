@@ -45,6 +45,10 @@ class TrainingLog(defaultdict):
         self._check_time(time)
         return super(TrainingLog, self).__getitem__(time)
 
+    def __setitem__(self, time, value):
+        self._check_time(time)
+        return super(TrainingLog, self).__setitem__(time, value)
+
     def _check_time(self, time):
         if not isinstance(time, Integral) or time < 0:
             raise ValueError("time must be a positive integer")
