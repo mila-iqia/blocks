@@ -1,14 +1,12 @@
 """The event-based main loop of Blocks."""
 import signal
 import logging
-import time
 import traceback
-from collections import defaultdict
 
 from blocks import config
 from blocks.log import TrainingLog
 from blocks.utils import reraise_as, unpack, change_recursion_limit
-from blocks.utils.containers import OrderedSet
+from blocks.utils.profile import Profile, Timer
 from blocks.algorithms import DifferentiableCostMinimizer
 from blocks.extensions import CallbackName
 
@@ -43,90 +41,6 @@ no_model_message = """
 
 A possible reason: one of your extensions requires the main loop to have \
 a model. Check documentation of your extensions."""
-
-
-class Timer(object):
-    def __init__(self):
-        self.total = defaultdict(int)
-        self.current = []
-        self.order = OrderedSet()
-
-    def enter(self, name):
-        self.current.append(name)
-        # We record the order in which sections were first called
-        self.order.add(tuple(self.current))
-
-    def exit(self, t):
-        self.total[tuple(self.current)] += t
-        self.current.pop()
-
-    def report(self):
-        """Print a report of timing information to standard output.
-
-        .. todo::
-
-           This method could accept different I/O objects (e.g. standard
-           error or write to a file).
-
-        """
-        total = sum(v for k, v in self.total.items() if len(k) == 1)
-
-        def print_report(keys, level=0):
-            subtotal = 0
-            for key in keys:
-                if len(key) > level + 1:
-                    continue
-                subtotal += self.total[key]
-                section = ' '.join(key[-1].split('_'))
-                section = section[0].upper() + section[1:]
-                print('{:30}{:15.2f}{:15.2%}'.format(
-                    level * '  ' + section, self.total[key],
-                    self.total[key] / total
-                ))
-                children = [k for k in keys
-                            if k[level] == key[level] and
-                            len(k) > level + 1]
-                child_total = print_report(children, level + 1)
-                if children:
-                    print('{:30}{:15.2f}{:15.2%}'.format(
-                        (level + 1) * '  ' + 'Other',
-                        self.total[key] - child_total,
-                        (self.total[key] - child_total) / total
-                    ))
-            return subtotal
-
-        print('{:30}{:>15}{:>15}'.format('Section', 'Time', '% of total'))
-        print('-' * 60)
-        if total:
-            print_report(self.order)
-        else:
-            print('No profile information collected.')
-
-
-class TimeIt(object):
-    """A context manager to time the execution time of code within it.
-
-    Parameters
-    ----------
-    name : str
-        The name of this section. Expected to adhere to variable naming
-        styles.
-    timer : :class:`Timer`
-        The timer of the main loop. This is the object this context manager
-        will report the execution time to. The accumulation and processing
-        of timing information is handled by this object.
-
-    """
-    def __init__(self, name, timer):
-        self.name = name
-        self.timer = timer
-
-    def __enter__(self):
-        self.timer.enter(self.name)
-        self.start = time.clock()
-
-    def __exit__(self, *args):
-        self.timer.exit(time.clock() - self.start)
 
 
 class MainLoop(object):
@@ -167,6 +81,9 @@ class MainLoop(object):
     extensions : list of :class:`.TrainingExtension` instances
         The training extensions. Will be called in the same order as given
         here.
+    profile : :class:`.Profile`
+        Keeps track of the times spent in differen segments of the training
+        loop.
 
     """
     def __init__(self, algorithm, data_stream,
@@ -181,7 +98,7 @@ class MainLoop(object):
         self.log = log
         self.extensions = extensions
 
-        self.timer = Timer()
+        self.profile = Profile()
 
         self._model = model
 
@@ -243,7 +160,7 @@ class MainLoop(object):
                     for extension in self.extensions:
                         extension.main_loop = self
                     self._run_extensions('before_training')
-                    with TimeIt('initialization', self.timer):
+                    with Timer('initialization', self.profile):
                         self.algorithm.initialize()
                     self.status['training_started'] = True
                 # We can not write "else:" here because extensions
@@ -253,7 +170,7 @@ class MainLoop(object):
                     self._run_extensions('on_resumption')
                     self.status['epoch_interrupt_received'] = False
                     self.status['batch_interrupt_received'] = False
-                with TimeIt('training', self.timer):
+                with Timer('training', self.profile):
                     while self._run_epoch():
                         pass
             except TrainingFinish:
@@ -273,7 +190,7 @@ class MainLoop(object):
                 if self.log.current_row.get('training_finished', False):
                     self._run_extensions('after_training')
                 if config.profile:
-                    self.timer.report()
+                    self.profile.report()
                 self._restore_signal_handlers()
 
     def find_extension(self, name):
@@ -302,7 +219,7 @@ class MainLoop(object):
                 return False
             self.status['epoch_started'] = True
             self._run_extensions('before_epoch')
-        with TimeIt('epoch', self.timer):
+        with Timer('epoch', self.profile):
             while self._run_iteration():
                 pass
         self.status['epoch_started'] = False
@@ -314,7 +231,7 @@ class MainLoop(object):
 
     def _run_iteration(self):
         try:
-            with TimeIt('read_data', self.timer):
+            with Timer('read_data', self.profile):
                 batch = next(self.epoch_iterator)
         except StopIteration:
             if not self.log.status['received_first_batch']:
@@ -322,7 +239,7 @@ class MainLoop(object):
             return False
         self.log.status['received_first_batch'] = True
         self._run_extensions('before_batch', batch)
-        with TimeIt('batch', self.timer):
+        with Timer('batch', self.profile):
             self.algorithm.process_batch(batch)
         self.status['iterations_done'] += 1
         self._run_extensions('after_batch', batch)
@@ -330,9 +247,9 @@ class MainLoop(object):
         return True
 
     def _run_extensions(self, method_name, *args):
-        with TimeIt(method_name, self.timer):
+        with Timer(method_name, self.profile):
             for extension in self.extensions:
-                with TimeIt(type(extension).__name__, self.timer):
+                with Timer(type(extension).__name__, self.profile):
                     extension.dispatch(CallbackName(method_name), *args)
 
     def _check_finish_training(self, level):
