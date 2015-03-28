@@ -48,8 +48,8 @@ The following configurations are supported:
 
 .. option:: profile, BLOCKS_PROFILE
 
-   A boolean value which determines whether to print profiling information at
-   the end of a call to :meth:`.MainLoop.run`.
+   A boolean value which determines whether to print profiling information
+   at the end of a call to :meth:`.MainLoop.run`.
 
 .. _YAML: http://yaml.org/
 .. _environment variables:
