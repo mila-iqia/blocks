@@ -255,7 +255,7 @@ Log records from the iteration 235:
 .. _multilayer perceptron: https://en.wikipedia.org/wiki/Multilayer_perceptron
 .. _MNIST handwritten digit database: http://yann.lecun.com/exdb/mnist/
 .. _rectifier: https://en.wikipedia.org/wiki/Rectifier_%28neural_networks%29
-.. _softmax: https://en.wikipedia.org/wiki/Softmax
+.. _softmax: https://en.wikipedia.org/wiki/Softmax_function
 .. _stochastic gradient descent: https://en.wikipedia.org/wiki/Stochastic_gradient_descent
 .. _doctest mode: http://ipython.org/ipython-doc/dev/interactive/tips.html#run-doctests
 .. _download the MNIST files: http://yann.lecun.com/exdb/mnist/
