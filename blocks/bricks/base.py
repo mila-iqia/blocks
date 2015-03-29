@@ -1,6 +1,7 @@
 import inspect
 from abc import ABCMeta
 from collections import OrderedDict
+from functools import wraps
 from types import MethodType
 
 import six
@@ -112,6 +113,7 @@ class Application(object):
     call_stack = []
 
     def __init__(self, application_function):
+        self.__doc__ = application_function.__doc__
         self._application_function = application_function
         self.application_name = application_function.__name__
         self.delegate_function = None
@@ -822,6 +824,7 @@ def lazy(func):
                 args[i] = kwargs.pop(arg_name)
 
         return func(self, *args, **kwargs)
+    wraps(func)(init)
     return init
 
 

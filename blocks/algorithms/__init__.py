@@ -393,8 +393,7 @@ class Momentum(CompositeRule):
 
     See Also
     --------
-    :class:`SharedVariableModifier` for a parameter decay during the
-    training.
+    :class:`SharedVariableModifier`
 
     """
     def __init__(self, learning_rate=1.0, momentum=0.):
@@ -529,8 +528,7 @@ class RMSProp(CompositeRule):
 
     See Also
     --------
-    :class:`SharedVariableModifier` for a parameter decay during the
-    training.
+    :class:`SharedVariableModifier`
 
     """
     def __init__(self, learning_rate=1.0, decay_rate=0.9, max_scaling=1e5):

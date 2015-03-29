@@ -166,7 +166,7 @@ class BaseSequenceGenerator(Initializable):
         The contexts are expected as keyword arguments.
 
         Adds average cost per sequence element `AUXILIARY` variable to
-        the computational graph with name `~per_sequence_element`
+        the computational graph with name ``per_sequence_element``.
 
         """
         # Compute the sum of costs
@@ -186,7 +186,7 @@ class BaseSequenceGenerator(Initializable):
 
         See Also
         --------
-        :meth:`cost` documentation for parameters.
+        :meth:`cost` : Scalar cost.
 
         """
         # We assume the data has axes (time, batch, features, ...)
@@ -239,8 +239,8 @@ class BaseSequenceGenerator(Initializable):
 
         Notes
         -----
-            The contexts, previous states and glimpses are expected
-            as keyword arguments.
+        The contexts, previous states and glimpses are expected as keyword
+        arguments.
 
         """
         states = dict_subset(kwargs, self._state_names)
