@@ -8,6 +8,7 @@ import six
 from six import add_metaclass
 from theano import tensor
 from theano.gof import Variable
+from toolz import merge
 
 from blocks.graph import add_annotation, Annotation
 from blocks.roles import add_role, PARAMETER, INPUT, OUTPUT
@@ -555,6 +556,9 @@ class Brick(Annotation):
         self.children = []
         self.parents = []
 
+        self.allocation_args = []
+        self.initialization_args = []
+
         self.allocated = False
         self.allocation_config_pushed = False
         self.initialized = False
@@ -768,64 +772,76 @@ class Brick(Annotation):
         return [self.get_dim(name) for name in names]
 
 
-def lazy(func):
+def args_to_kwargs(args, f):
+    arg_names, vararg_names, _, _ = inspect.getargspec(f)
+    return dict((arg_name, arg) for arg_name, arg
+                in zip(arg_names + [vararg_names], args))
+
+
+class LazyNone(object):
+    def __init__(self, name):
+        self.name = name
+
+    def __repr__(self):
+        return self.name
+
+    def __bool__(self):
+        return False
+
+    __nonzero__ = __bool__
+
+NoneAllocation = LazyNone('NoneAllocation')
+NoneInitialization = LazyNone('NoneInitialization')
+
+
+def lazy(allocation=None, initialization=None):
     """Makes the initialization lazy.
 
-    Any positional argument not given will be set to ``None``. Positional
-    arguments can also be given as keyword arguments.
+    This decorator allows the user to define positional arguments which
+    will not be needed until the allocation or initialization stage of the
+    brick. If these arguments are not passed, it will automatically replace
+    them with a custom ``None`` object. It is assumed that the missing
+    arguments can be set after initialization by setting attributes with
+    the same name.
 
     Parameters
     ----------
-    func : method
-        The __init__ method to make lazy.
+    allocation : list
+        A list of argument names that are needed for allocation.
+    initialization : list
+        A list of argument names that are needed for initialization.
 
     Examples
     --------
     >>> class SomeBrick(Brick):
-    ...     @lazy
+    ...     @lazy(allocation=['a'], initialization=['b'])
     ...     def __init__(self, a, b, c='c', d=None):
     ...         print(a, b, c, d)
     >>> brick = SomeBrick('a')
-    a None c None
+    a NoneInitialization c None
     >>> brick = SomeBrick(d='d', b='b')
-    None b c d
-    >>> Brick.lazy = False
-    >>> brick = SomeBrick('a')
-    Traceback (most recent call last):
-      ...
-    TypeError: __init__() missing 1 required positional argument: 'b'
-
-    .. doctest::
-       :hide:
-
-       >>> Brick.lazy = True  # Reset for other doctests
+    NoneAllocation b c d
 
     """
-    arg_spec = inspect.getargspec(func)
-    arg_names = arg_spec.args[1:]
-    defaults = arg_spec.defaults
-    if defaults is None:
-        defaults = []
+    if not allocation:
+        allocation = []
+    if not initialization:
+        initialization = []
 
-    def init(self, *args, **kwargs):
-        if not self.lazy:
-            return func(self, *args, **kwargs)
-        # Fill any missing positional arguments with None
-        args = args + (None,) * (len(arg_names) - len(defaults) -
-                                 len(args))
-
-        # Check if positional arguments were passed as keyword arguments
-        args = list(args)
-        for i, arg_name in enumerate(arg_names[:len(arg_names) -
-                                               len(defaults)]):
-            if arg_name in kwargs:
-                if args[i] is not None:
-                    raise ValueError
-                args[i] = kwargs.pop(arg_name)
-
-        return func(self, *args, **kwargs)
-    wraps(func)(init)
-    return init
+    def lazy_wrapper(init):
+        def lazy_init(*args, **kwargs):
+            self = args[0]
+            self.allocation_args = allocation
+            self.initialization_args = initialization
+            kwargs = merge(args_to_kwargs(args, init), kwargs)
+            for allocation_arg in allocation:
+                kwargs.setdefault(allocation_arg, NoneAllocation)
+            for initialization_arg in initialization:
+                kwargs.setdefault(initialization_arg, NoneInitialization)
+            return init(**kwargs)
+        wraps(init)(lazy_init)
+        return lazy_init
+    return lazy_wrapper
 
 
 class ApplicationCall(Annotation):
