@@ -24,7 +24,7 @@ Theano. Currently it supports and provides:
 * Saving and resuming of training
 * Monitoring and analyzing values during training progress (on the training set
   as well as on test sets)
-* Application of graph transformations, such as dropout (*limited support*)
+* Application of graph transformations, such as dropout
 
 In the future we also hope to support:
 
