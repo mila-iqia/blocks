@@ -187,7 +187,7 @@ class ConvolutionalActivation(Sequence, Initializable):
 
     See Also
     --------
-    :class:`Convolutional` for the other parameters.
+    :class:`Convolutional` : For the documentation of other parameters.
 
     """
     @lazy
@@ -233,9 +233,8 @@ class ConvolutionalLayer(Sequence, Initializable):
 
     See Also
     --------
-    :class:`Convolutional` and :class:`MaxPooling` for the other
-    parameters.
-
+    :class:`Convolutional` : Documentation of convolution arguments.
+    :class:`MaxPooling` : Documentation of pooling arguments.
     Notes
     -----
     Uses max pooling.

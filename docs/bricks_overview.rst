@@ -7,6 +7,7 @@ concept of "bricks", which you might have already come across in :ref:`the
 introduction tutorial <model_building>`. 
 
 .. _bricks:
+
 Bricks life-cycle
 -----------------
 

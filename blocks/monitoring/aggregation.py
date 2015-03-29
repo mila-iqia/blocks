@@ -165,8 +165,8 @@ class MonitoredQuantity(object):
 
     See Also
     ------------
-       :class:`~blocks.monitoring.evaluators.DatasetEvaluator`,
-       :class:`~blocks.extensions.DataStreamMonitoring`
+    :class:`~blocks.monitoring.evaluators.DatasetEvaluator`
+    :class:`~blocks.extensions.DataStreamMonitoring`
 
     Attributes
     ----------

@@ -159,7 +159,7 @@ class AbstractAttention(Brick):
             padded structured output, e.g. when a number of sequences are
             force to be the same length. The mask identifies position of
             the `attended` that actually contain information.
-        **kwargs : dict
+        \*\*kwargs : dict
             Includes the states and the glimpses to be carried over from
             the previous step in the case when the attention mechanism is
             applied sequentially.
@@ -360,7 +360,7 @@ class SequenceContentAttention(GenericSequenceAttention, Initializable):
         attended_mask : :class:`~tensor.TensorVariable`
             A 0/1 mask specifying available data. 0 means that the
             corresponding sequence element is fake.
-        **states
+        \*\*states
             The states of the network.
 
         Returns
