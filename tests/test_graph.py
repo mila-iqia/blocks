@@ -5,7 +5,6 @@ from theano import tensor
 from theano.sandbox.rng_mrg import MRG_RandomStreams
 
 from blocks.bricks import MLP, Identity
-from blocks.bricks.base import Brick
 from blocks.graph import apply_noise, ComputationGraph
 from blocks.initialization import Constant
 from tests.bricks.test_bricks import TestBrick
@@ -15,8 +14,7 @@ floatX = theano.config.floatX
 
 def test_application_graph_auxiliary_vars():
     X = tensor.matrix('X')
-    Brick.lazy = True
-    brick = TestBrick()
+    brick = TestBrick(0)
     Y = brick.access_application_call(X)
     graph = ComputationGraph(outputs=[Y])
     test_val_found = False

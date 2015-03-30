@@ -100,8 +100,8 @@ class Initializable(Brick):
     has_biases = True
     seed_rng = numpy.random.RandomState(config.default_seed)
 
-    @lazy
-    def __init__(self, weights_init, biases_init=None, use_bias=True,
+    @lazy()
+    def __init__(self, weights_init=None, biases_init=None, use_bias=True,
                  seed=None, **kwargs):
         super(Initializable, self).__init__(**kwargs)
         self.weights_init = weights_init
@@ -201,7 +201,7 @@ class Linear(Initializable, Feedforward):
     .. math:: f(\mathbf{x}) = \mathbf{W}\mathbf{x} + \mathbf{b}
 
     """
-    @lazy
+    @lazy(allocation=['input_dim', 'output_dim'])
     def __init__(self, input_dim, output_dim, **kwargs):
         super(Linear, self).__init__(**kwargs)
         self.input_dim = input_dim
@@ -268,7 +268,7 @@ class Linear(Initializable, Feedforward):
 
 class Bias(Feedforward, Initializable):
     """Add a bias (i.e. sum with a vector)."""
-    @lazy
+    @lazy(allocation=['dim'])
     def __init__(self, dim, **kwargs):
         super(Bias, self).__init__(**kwargs)
         self.dim = dim
@@ -335,7 +335,7 @@ class Maxout(Brick):
     for each output dimension the result with the highest value.
 
     """
-    @lazy
+    @lazy(allocation=['num_pieces'])
     def __init__(self, num_pieces, **kwargs):
         super(Maxout, self).__init__(**kwargs)
         self.num_pieces = num_pieces
@@ -385,7 +385,7 @@ class LinearMaxout(Initializable, Feedforward):
     See :class:`Initializable` for initialization parameters.
 
     """
-    @lazy
+    @lazy(allocation=['input_dim', 'output_dim', 'num_pieces'])
     def __init__(self, input_dim, output_dim, num_pieces, **kwargs):
         super(LinearMaxout, self).__init__(**kwargs)
         self.linear = Linear()
@@ -622,7 +622,6 @@ class MLP(Sequence, Initializable, Feedforward):
     configuration to the child layers manually before initialization.
 
     >>> from blocks.initialization import IsotropicGaussian, Constant
-    >>> Brick.lazy = True
     >>> mlp = MLP(activations=[Tanh(), None], dims=[30, 20, 10],
     ...           weights_init=IsotropicGaussian(),
     ...           biases_init=Constant(1))
@@ -631,7 +630,7 @@ class MLP(Sequence, Initializable, Feedforward):
     >>> mlp.initialize()
 
     """
-    @lazy
+    @lazy(allocation=['dims'])
     def __init__(self, activations, dims, **kwargs):
         self.activations = activations
 

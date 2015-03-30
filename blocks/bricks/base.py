@@ -11,7 +11,7 @@ from theano.gof import Variable
 
 from blocks.graph import add_annotation, Annotation
 from blocks.roles import add_role, PARAMETER, INPUT, OUTPUT
-from blocks.utils import pack, repr_attrs, reraise_as, unpack
+from blocks.utils import dict_union, pack, repr_attrs, reraise_as, unpack
 from blocks.utils.containers import AnnotatingList
 
 
@@ -264,8 +264,6 @@ class Application(object):
         # Allocate before applying, and optionally initialize
         if not brick.allocated:
             brick.allocate()
-        if not brick.initialized and not brick.lazy:
-            brick.initialize()
 
         # Annotate all the input variables which are Theano variables
         def copy_and_tag(variable, role, name):
@@ -457,13 +455,6 @@ class Brick(Annotation):
     ----------
     name : str
         The name of this brick.
-    lazy : bool
-        ``True`` by default. When bricks are lazy, not all configuration
-        needs to be provided to the constructor, allowing it to be set in
-        another way after construction. Many parts of the library rely on
-        this behavior. However, it does require a separate call to
-        :meth:`initialize`. If set to ``False`` on the other hand, bricks
-        will be ready to run after construction.
     print_shapes : bool
         ``False`` by default. If ``True`` it logs the shapes of all the
         input and output variables, which can be useful for debugging.
@@ -514,7 +505,7 @@ class Brick(Annotation):
 
     Examples
     --------
-    By default, bricks have lazy initialization enabled.
+    Most bricks have lazy initialization enabled.
 
     >>> import theano
     >>> from blocks.initialization import IsotropicGaussian, Constant
@@ -527,23 +518,7 @@ class Brick(Annotation):
     linear_apply_output
     >>> linear.initialize()  # Initializes the weight matrix
 
-    In simple cases, eager bricks are easier to deal with.
-
-    >>> from blocks.initialization import IsotropicGaussian, Constant
-    >>> Brick.lazy = False
-    >>> linear = Linear(5, 3, weights_init=IsotropicGaussian(),
-    ...                 biases_init=Constant(0))
-    >>> linear.apply(x)
-    linear_apply_output
-
-    .. doctest::
-       :hide:
-
-       >>> Brick.lazy = True  # Reset for other doctests
-
     """
-    #: See :attr:`Brick.lazy`
-    lazy = True
     #: See :attr:`Brick.print_shapes`
     print_shapes = False
 
@@ -605,20 +580,18 @@ class Brick(Annotation):
         reset the parameters.
 
         """
+        if hasattr(self, 'allocation_args'):
+            missing_config = [arg for arg in self.allocation_args
+                              if getattr(self, arg) is NoneAllocation]
+            if missing_config:
+                raise ValueError('allocation config not set: '
+                                 '{}'.format(', '.join(missing_config)))
         if not self.allocation_config_pushed:
             self.push_allocation_config()
         for child in self.children:
             child.allocate()
         self.params = []
-        try:
-            self._allocate()
-        except Exception:
-            if self.lazy:
-                reraise_as("Lazy initialization is enabled, so please make "
-                           "sure you have set all the required configuration "
-                           "for this method call.")
-            else:
-                raise
+        self._allocate()
         self.allocated = True
 
     def _allocate(self):
@@ -645,21 +618,19 @@ class Brick(Annotation):
         call the :meth:`allocate` method in order to do so.
 
         """
+        if hasattr(self, 'initialization_args'):
+            missing_config = [arg for arg in self.initialization_args
+                              if getattr(self, arg) is NoneInitialization]
+            if missing_config:
+                raise ValueError('initialization config not set: '
+                                 '{}'.format(', '.join(missing_config)))
         if not self.allocated:
             self.allocate()
         if not self.initialization_config_pushed:
             self.push_initialization_config()
         for child in self.children:
             child.initialize()
-        try:
-            self._initialize()
-        except Exception:
-            if self.lazy:
-                reraise_as("Lazy initialization is enabled, so please make "
-                           "sure you have set all the required configuration "
-                           "for this method call.")
-            else:
-                raise
+        self._initialize()
         self.initialized = True
 
     def _initialize(self):
@@ -768,64 +739,78 @@ class Brick(Annotation):
         return [self.get_dim(name) for name in names]
 
 
-def lazy(func):
+def args_to_kwargs(args, f):
+    arg_names, vararg_names, _, _ = inspect.getargspec(f)
+    return dict((arg_name, arg) for arg_name, arg
+                in zip(arg_names + [vararg_names], args))
+
+
+class LazyNone(object):
+    def __init__(self, name):
+        self.name = name
+
+    def __repr__(self):
+        return self.name
+
+    def __bool__(self):
+        return False
+
+    __nonzero__ = __bool__
+
+NoneAllocation = LazyNone('NoneAllocation')
+NoneInitialization = LazyNone('NoneInitialization')
+
+
+def lazy(allocation=None, initialization=None):
     """Makes the initialization lazy.
 
-    Any positional argument not given will be set to ``None``. Positional
-    arguments can also be given as keyword arguments.
+    This decorator allows the user to define positional arguments which
+    will not be needed until the allocation or initialization stage of the
+    brick. If these arguments are not passed, it will automatically replace
+    them with a custom ``None`` object. It is assumed that the missing
+    arguments can be set after initialization by setting attributes with
+    the same name.
 
     Parameters
     ----------
-    func : method
-        The __init__ method to make lazy.
+    allocation : list
+        A list of argument names that are needed for allocation.
+    initialization : list
+        A list of argument names that are needed for initialization.
 
     Examples
     --------
     >>> class SomeBrick(Brick):
-    ...     @lazy
+    ...     @lazy(allocation=['a'], initialization=['b'])
     ...     def __init__(self, a, b, c='c', d=None):
     ...         print(a, b, c, d)
     >>> brick = SomeBrick('a')
-    a None c None
+    a NoneInitialization c None
     >>> brick = SomeBrick(d='d', b='b')
-    None b c d
-    >>> Brick.lazy = False
-    >>> brick = SomeBrick('a')
-    Traceback (most recent call last):
-      ...
-    TypeError: __init__() missing 1 required positional argument: 'b'
-
-    .. doctest::
-       :hide:
-
-       >>> Brick.lazy = True  # Reset for other doctests
+    NoneAllocation b c d
 
     """
-    arg_spec = inspect.getargspec(func)
-    arg_names = arg_spec.args[1:]
-    defaults = arg_spec.defaults
-    if defaults is None:
-        defaults = []
+    if not allocation:
+        allocation = []
+    if not initialization:
+        initialization = []
 
-    def init(self, *args, **kwargs):
-        if not self.lazy:
-            return func(self, *args, **kwargs)
-        # Fill any missing positional arguments with None
-        args = args + (None,) * (len(arg_names) - len(defaults) -
-                                 len(args))
-
-        # Check if positional arguments were passed as keyword arguments
-        args = list(args)
-        for i, arg_name in enumerate(arg_names[:len(arg_names) -
-                                               len(defaults)]):
-            if arg_name in kwargs:
-                if args[i] is not None:
-                    raise ValueError
-                args[i] = kwargs.pop(arg_name)
-
-        return func(self, *args, **kwargs)
-    wraps(func)(init)
-    return init
+    def lazy_wrapper(init):
+        def lazy_init(*args, **kwargs):
+            self = args[0]
+            self.allocation_args = (getattr(self, 'allocation_args',
+                                            []) + allocation)
+            self.initialization_args = (getattr(self, 'initialization_args',
+                                                []) + initialization)
+            kwargs = dict_union(args_to_kwargs(args, init), kwargs)
+            for allocation_arg in allocation:
+                kwargs.setdefault(allocation_arg, NoneAllocation)
+            for initialization_arg in initialization:
+                kwargs.setdefault(initialization_arg, NoneInitialization)
+            return init(**kwargs)
+        wraps(init)(lazy_init)
+        return lazy_init
+    return lazy_wrapper
 
 
 class ApplicationCall(Annotation):

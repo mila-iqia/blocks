@@ -56,7 +56,7 @@ class Parallel(Initializable):
     See :class:`.Initializable` for initialization parameters.
 
     """
-    @lazy
+    @lazy(allocation=['input_dims', 'input_dims', 'output_dims'])
     def __init__(self, input_names, input_dims, output_dims,
                  prototype=None, child_prefix=None, **kwargs):
         super(Parallel, self).__init__(**kwargs)
@@ -141,13 +141,14 @@ class Fork(Parallel):
     See :class:`.Initializable` for initialization parameters.
 
     """
-    @lazy
+    @lazy(allocation=['input_dim'])
     def __init__(self, output_names, input_dim,  prototype=None, **kwargs):
         self.output_names = output_names
         self.input_dim = input_dim
 
         super(Fork, self).__init__(output_names, prototype=prototype,
                                    child_prefix="fork", **kwargs)
+        self.input_dims = None
 
     def _push_allocation_config(self):
         self.input_dims = [self.input_dim for name in self.output_names]
@@ -212,7 +213,7 @@ class Distribute(Fork):
     See :class:`.Initializable` for initialization parameters.
 
     """
-    @lazy
+    @lazy(allocation=['source_name', 'target_dims', 'source_dim'])
     def __init__(self, target_names, source_name, target_dims, source_dim,
                  prototype=None, **kwargs):
         self.target_names = target_names
@@ -307,7 +308,7 @@ class Merge(Parallel):
     array([[ 11.,  11.]]...
 
     """
-    @lazy
+    @lazy(allocation=['input_dims', 'output_dim'])
     def __init__(self, input_names, input_dims, output_dim, **kwargs):
         self.output_dim = output_dim
         super(Merge, self).__init__(

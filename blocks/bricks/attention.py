@@ -105,7 +105,7 @@ class AbstractAttention(Brick):
     attended_dim : int
 
     """
-    @lazy
+    @lazy(allocation=['state_names', 'state_dims', 'attended_dim'])
     def __init__(self, state_names, state_dims, attended_dim, **kwargs):
         self.state_names = state_names
         self.state_dims = state_dims
@@ -303,7 +303,7 @@ class SequenceContentAttention(GenericSequenceAttention, Initializable):
        Machine Translation by Jointly Learning to Align and Translate.
 
     """
-    @lazy
+    @lazy(allocation=['match_dim'])
     def __init__(self, match_dim, state_transformer=None,
                  attended_transformer=None, energy_computer=None, **kwargs):
         super(SequenceContentAttention, self).__init__(**kwargs)
@@ -414,7 +414,7 @@ class SequenceContentAttention(GenericSequenceAttention, Initializable):
 
 class ShallowEnergyComputer(Sequence, Initializable, Feedforward):
     """A simple energy computer: first tanh, then weighted sum."""
-    @lazy
+    @lazy()
     def __init__(self, **kwargs):
         super(ShallowEnergyComputer, self).__init__(
             [Tanh().apply, MLP([Identity()]).apply], **kwargs)

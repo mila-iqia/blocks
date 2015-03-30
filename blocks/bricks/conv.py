@@ -38,7 +38,7 @@ class Convolutional(Initializable):
         details. Defaults to 'valid'.
 
     """
-    @lazy
+    @lazy(allocation=['filter_size', 'num_filters', 'num_channels'])
     def __init__(self, filter_size, num_filters, num_channels, batch_size=None,
                  image_size=None, step=(1, 1), border_mode='valid', **kwargs):
         super(Convolutional, self).__init__(**kwargs)
@@ -137,7 +137,7 @@ class MaxPooling(Initializable, Feedforward):
         two dimensions will be used to calculate the output dimension.
 
     """
-    @lazy
+    @lazy(allocation=['pooling_size'])
     def __init__(self, pooling_size, step=None, input_dim=None, **kwargs):
         super(MaxPooling, self).__init__(**kwargs)
 
@@ -190,7 +190,7 @@ class ConvolutionalActivation(Sequence, Initializable):
     :class:`Convolutional` : For the documentation of other parameters.
 
     """
-    @lazy
+    @lazy(allocation=['filter_size', 'num_filters', 'num_channels'])
     def __init__(self, activation, filter_size, num_filters, num_channels,
                  batch_size=None, image_size=None, step=(1, 1),
                  border_mode='valid', **kwargs):
@@ -240,7 +240,8 @@ class ConvolutionalLayer(Sequence, Initializable):
     Uses max pooling.
 
     """
-    @lazy
+    @lazy(allocation=['filter_size', 'num_filters', 'pooling_size',
+                      'num_channels'])
     def __init__(self, activation, filter_size, num_filters, pooling_size,
                  num_channels, conv_step=(1, 1), pooling_step=None,
                  batch_size=None, image_size=None, border_mode='valid',
@@ -317,7 +318,7 @@ class ConvolutionalSequence(Sequence, Initializable, Feedforward):
     layer by the :meth:`~.Brick.push_allocation_config` method.
 
     """
-    @lazy
+    @lazy(allocation=['num_channels'])
     def __init__(self, layers, num_channels, batch_size=None, image_size=None,
                  **kwargs):
         self.layers = layers
