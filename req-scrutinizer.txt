@@ -1,4 +1,4 @@
-flake8==2.3.0
+flake8==2.3.0  # rq.filter: <2.4.0
 
 --allow-external pep257
 --allow-unverified pep257

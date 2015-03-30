@@ -10,5 +10,5 @@ git+https://github.com/bartvm/fuel#egg=fuel
 --allow-unverified theano
 git+https://github.com/Theano/Theano.git#egg=theano
 
-sphinx==1.2.2
-sphinxcontrib-napoleon==0.2.11
+sphinx==1.2.2  # rq.filter: ==1.2.2
+sphinxcontrib-napoleon==0.2.11  # rq.filter: ==0.2.11
