@@ -29,7 +29,7 @@ Formatting guidelines
 
 Code guidelines
   If you're going to write a lot of code, have a read through our `coding
-  guidelines`.
+  guidelines`_.
 
 .. _Blocks users mailing list: https://groups.google.com/forum/#!forum/blocks-users
 .. _quick reference: https://blocks.readthedocs.org/en/latest/development/pull_request.html
