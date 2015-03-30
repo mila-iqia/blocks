@@ -1,3 +1,10 @@
+numpy==1.9.2
+six==1.9.0
+pandas==0.16.0
+progressbar2==2.7.3
+PyYaml==3.11
+toolz==0.7.1
+
 --allow-external picklable-itertools
 --allow-unverified picklable-itertools
 git+https://github.com/dwf/picklable_itertools.git#egg=picklable-itertools

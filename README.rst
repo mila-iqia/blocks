@@ -10,6 +10,9 @@
 .. image:: https://img.shields.io/scrutinizer/g/bartvm/blocks.svg
    :target: https://scrutinizer-ci.com/g/bartvm/blocks/
 
+.. image:: https://requires.io/github/bartvm/blocks/requirements.svg?branch=master
+   :target: https://requires.io/github/bartvm/blocks/requirements/?branch=master
+
 .. image:: https://img.shields.io/badge/license-MIT-blue.svg
    :target: https://github.com/bartvm/blocks/blob/master/LICENSE
 
