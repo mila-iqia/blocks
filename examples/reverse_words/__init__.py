@@ -167,7 +167,7 @@ def main(mode, save_path, num_batches, data_path=None):
         reverser.weights_init = IsotropicGaussian(0.1)
         reverser.biases_init = Constant(0.0)
         reverser.push_initialization_config()
-        reverser.encoder.weghts_init = Orthogonal()
+        reverser.encoder.weights_init = Orthogonal()
         reverser.generator.transition.weights_init = Orthogonal()
 
         # Build the cost computation graph
