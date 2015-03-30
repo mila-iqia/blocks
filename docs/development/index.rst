@@ -145,6 +145,7 @@ order to do so it takes a radical approach, serializing the entire training
 state using pickle_. Some things cannot be pickled, so their use should be
 avoided when the object will be pickled as part of the main loop:
 
+* Lambda functions
 * Iterators and generators (use picklable_itertools_)
 * References to methods as attributes
 * Any variable that lies outside of the global namespace e.g. nested functions
