@@ -1,0 +1,7 @@
+bokeh==0.8.1
+coverage==3.7.1
+h5py==2.4.0
+numpy==1.9.2
+pytables=3.1.1
+six==1.9.0
+toolz==0.7.1

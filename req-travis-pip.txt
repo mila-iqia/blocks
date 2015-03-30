@@ -1,0 +1,2 @@
+nose2[coverage-plugin]==0.5.0
+coveralls==0.5

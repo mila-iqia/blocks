@@ -1,8 +1,7 @@
 build:
   dependencies:
     override:
-      - pip install -q flake8
-      - pip install -q git+git://github.com/bartvm/pep257.git@numpy
+      - pip install -r req-scrutinizer.txt
   tests:
     override:
       - flake8 --filename=* bin
