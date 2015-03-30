@@ -1,4 +1,33 @@
-"""Sequence generation framework."""
+"""Sequence generation framework.
+
+Recurrent networks are often used to generate/model sequences.
+Examples include language modelling, machine translation, handwriting
+synthesis, etc.. A typical pattern in this context is that
+sequence elements are generated one ofter another, and every generated
+element is fed back into the recurrent network state. Sometimes
+also an attention mechanism is used to condition sequence generation
+on some structured input like another sequence or an image.
+
+This module provides :class:`SequenceGenerator` that builds a sequence
+generating network from three main components:
+
+* a core recurrent transition, e.g. :class:`~blocks.bricks.recurrent.LSTM`
+  or :class:`~blocks.bricks.recurrent.GatedRecurrent`
+
+* a readout component that can produce sequence elements using
+  the network state and the information from the attention mechanism
+
+* an attention mechanism (see :mod:`~blocks.bricks.attention` for
+  more information)
+
+Implementation-wise :class:`SequenceGenerator` fully relies on
+:class:`BaseSequenceGenerator`. At the level of the latter an
+attention is mandatory, moreover it must be a part of the recurrent
+transition (see :class:`~blocks.bricks.attention.AttentionRecurrent`).
+To simulate optional attention, :class:`SequenceGenerator` wraps the
+pure recurrent network in :class:`FakeAttentionRecurrent`.
+
+"""
 from abc import ABCMeta, abstractmethod
 
 from six import add_metaclass
@@ -20,49 +49,72 @@ class BaseSequenceGenerator(Initializable):
 
     This class combines two components, a readout network and an
     attention-equipped recurrent transition, into a context-dependent
-    sequence generator. Optionally a third component can be used which
+    sequence generator. Third component must be also given which
     forks feedback from the readout network to obtain inputs for the
     transition.
 
-    **Definitions:**
-
-    * *States* of the generator are the states of the transition as
-      specified in `transition.state_names`.
-
-    * *Contexts* of the generator are the contexts of the transition as
-      specified in `transition.context_names`.
-
-    * *Glimpses* are intermediate entities computed at every generation
-      step from states, contexts and the previous step glimpses. They are
-      computed in the transition's `apply` method when not given or by
-      explicitly calling the transition's `take_glimpses` method. The set
-      of glimpses considered is specified in `transition.glimpse_names`.
+    The class provides two methods: :meth:`generate` and :meth:`cost`. The
+    former is to actually generate sequences and the latter is to compute
+    the cost of generating given sequences.
 
     The generation algorithm description follows.
 
+    **Definitions and notation:**
+
+    * States :math:`s_i` of the generator are the states of the transition
+      as specified in `transition.state_names`.
+
+    * Contexts of the generator are the contexts of the
+      transition as specified in `transition.context_names`.
+
+    * Glimpses :math:`g_i` are intermediate entities computed at every
+      generation step from states, contexts and the previous step glimpses.
+      They are computed in the transition's `apply` method when not given
+      or by explicitly calling the transition's `take_glimpses` method. The
+      set of glimpses considered is specified in
+      `transition.glimpse_names`.
+
+    * Outputs :math:`y_i` are produced at every step and form the output
+      sequence. A generation cost :math:`c_i` is assigned to each output.
+
     **Algorithm:**
 
-    1. The initial states are computed from the contexts. This includes
-       fake initial outputs given by the `initial_outputs` method of the
-       readout, initial states and glimpses given by the `initial_state`
-       method of the transition.
+    1. Initialization.
 
-    2. Given the contexts, the current state and the glimpses from the
-       previous step the attention mechanism hidden in the transition
-       produces current step glimpses. This happens in the `take_glimpses`
-       method of the transition.
+       :math:`y_0 = readout.initial\_outputs(contexts)`
 
-    3. Using the contexts, the fed back output from the previous step, the
-       current states and glimpses, the readout brick is used to generate
-       the new output by calling its `readout` and `emit` methods.
+       :math:`s_0, g_0 = transition.initial\_states(contexts)`
 
-    4. The new output is fed back in the `feedback` method of the readout
-       brick. This feedback, together with the contexts, the glimpses and
-       the previous states is used to get the new states in the
-       transition's `apply` method. Optionally the `fork` brick is used in
-       between to compute the transition's inputs from the feedback.
+       :math:`i = 1`
 
-    5. Back to step 1 if desired sequence length is not yet reached.
+    2. New glimpses are computed:
+
+       :math:`g_i = transition.take\_glimpses(s_{i-1}, g_{i-1}, contexts)`
+
+    3. A new output is generated by the readout and its cost is
+       computed:
+
+       :math:`f_{i-1} = readout.feedback(y_{i-1})`
+
+       :math:`r_i = readout.readout(f_{i-1}, s_{i-1}, g_i, contexts)`
+
+       :math:`y_i = readout.emit(r_i)`
+
+       :math:`c_i = readout.cost(r_i, y_i)`
+
+       Note that the *new* glimpses and the *old* states are used at this
+       step. The reason for not merging all readout methods into one is
+       to make an efficient implementation of :meth:`cost` possible.
+
+    4. New states are computed:
+
+       :math:`f_i = readout.feedback(y_i)`
+
+       :math:`s_i = transition.compute\_states(s_{i-1}, g_i,\
+              fork.apply(f_i), contexts)`
+
+    5. Increment :math:`i` and back to step 2 if the desired sequence
+       length has not been yet reached.
 
     | A scheme of the algorithm described above follows.
 
@@ -71,14 +123,6 @@ class BaseSequenceGenerator(Initializable):
             :width: 500px
 
     ..
-
-    **Notes:**
-
-    * For machine translation we would have only one glimpse: the weighted
-      average of the annotations.
-
-    * For speech recognition we would have three: the weighted average,
-      the alignment and the monotonicity penalty.
 
     Parameters
     ----------
@@ -324,9 +368,9 @@ class AbstractFeedback(Brick):
 class AbstractReadout(AbstractEmitter, AbstractFeedback):
     """The interface for the readout component of a sequence generator.
 
-    .. todo::
-
-       Explain what the methods should do.
+    See Also
+    --------
+    :class:`BaseSequenceGenerator`
 
     """
     @abstractmethod
@@ -546,11 +590,6 @@ class LookupFeedback(AbstractFeedback, Initializable):
 
     Stores and retrieves distributed representations of integers.
 
-    Notes
-    -----
-    Currently works only with lazy initialization (can not be initialized
-    with a single constructor call).
-
     """
     def __init__(self, num_outputs=None, feedback_dim=None, **kwargs):
         super(LookupFeedback, self).__init__(**kwargs)
@@ -577,14 +616,7 @@ class LookupFeedback(AbstractFeedback, Initializable):
 
 
 class FakeAttentionRecurrent(AbstractAttentionRecurrent, Initializable):
-    """Adds fake attention interface to a transition.
-
-    Notes
-    -----
-    Currently works only with lazy initialization (can not be initialized
-    with a single constructor call).
-
-    """
+    """Adds fake attention interface to a transition."""
     def __init__(self, transition, **kwargs):
         super(FakeAttentionRecurrent, self).__init__(**kwargs)
         self.transition = transition
@@ -625,7 +657,7 @@ class FakeAttentionRecurrent(AbstractAttentionRecurrent, Initializable):
 
 
 class SequenceGenerator(BaseSequenceGenerator):
-    """A more user-friendly interface for BaseSequenceGenerator.
+    """A more user-friendly interface for :class:`BaseSequenceGenerator`.
 
     Parameters
     ----------
@@ -641,11 +673,6 @@ class SequenceGenerator(BaseSequenceGenerator):
         If ``True``, the :class:`AttentionRecurrent` wrapping the
         `transition` will add additional contexts for the attended and
         its mask.
-
-    Notes
-    -----
-    Currently works only with lazy initialization (uses blocks that can not
-    be constructed with a single call).
 
     """
     def __init__(self, readout, transition, attention=None,
