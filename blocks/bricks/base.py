@@ -8,11 +8,10 @@ import six
 from six import add_metaclass
 from theano import tensor
 from theano.gof import Variable
-from toolz import first, merge_with
 
 from blocks.graph import add_annotation, Annotation
 from blocks.roles import add_role, PARAMETER, INPUT, OUTPUT
-from blocks.utils import pack, repr_attrs, reraise_as, unpack
+from blocks.utils import dict_union, pack, repr_attrs, reraise_as, unpack
 from blocks.utils.containers import AnnotatingList
 
 
@@ -797,19 +796,13 @@ def lazy(allocation=None, initialization=None):
         initialization = []
 
     def lazy_wrapper(init):
-        def strict_merge(values):
-            if len(values) > 1:
-                raise ValueError
-            return first(values)
-
         def lazy_init(*args, **kwargs):
             self = args[0]
             self.allocation_args = (getattr(self, 'allocation_args',
                                             []) + allocation)
             self.initialization_args = (getattr(self, 'initialization_args',
                                                 []) + initialization)
-            kwargs = merge_with(strict_merge, args_to_kwargs(args, init),
-                                kwargs)
+            kwargs = dict_union(args_to_kwargs(args, init), kwargs)
             for allocation_arg in allocation:
                 kwargs.setdefault(allocation_arg, NoneAllocation)
             for initialization_arg in initialization:
