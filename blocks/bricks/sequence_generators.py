@@ -88,9 +88,6 @@ class BaseSequenceGenerator(Initializable):
         The transition component of the sequence generator.
     fork : :class:`.Brick`
         The brick to compute the transition's inputs from the feedback.
-        If not given, :class:`~blocks.bricks.parallel.Fork` is used
-        and all the sequential inputs which names do not contain
-        the 'mask' substring are forked.
 
     Notes
     -----
@@ -98,12 +95,8 @@ class BaseSequenceGenerator(Initializable):
 
     """
     @lazy()
-    def __init__(self, readout, transition, fork=None, **kwargs):
+    def __init__(self, readout, transition, fork, **kwargs):
         super(BaseSequenceGenerator, self).__init__(**kwargs)
-        if not fork:
-            fork = Fork([name for name in transition.apply.sequences 
-                         if not 'mask' in name])
-        
         self.readout = readout
         self.transition = transition
         self.fork = fork
@@ -657,9 +650,13 @@ class SequenceGenerator(BaseSequenceGenerator):
     """
     def __init__(self, readout, transition, attention=None,
                  add_contexts=True, **kwargs):
+        fork_inputs = [name for name in transition.apply.sequences
+                       if 'mask' not in name]
+        kwargs.setdefault('fork', Fork(fork_inputs))
         if attention:
-            distribute = Distribute(fork_inputs,
-                                    attention.take_glimpses.outputs[0])
+            distribute = Distribute(
+                fork_inputs,
+                attention.take_glimpses.outputs[0])
             transition = AttentionRecurrent(
                 transition, attention, distribute,
                 add_contexts=add_contexts, name="att_trans")
