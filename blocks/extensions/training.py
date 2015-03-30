@@ -80,7 +80,7 @@ class TrackTheBest(SimpleExtension):
         super(TrackTheBest, self).__init__(**kwargs)
 
     def do(self, which_callback, *args):
-        current_value = self.main_loop.log.current_row[self.record_name]
+        current_value = self.main_loop.log.current_row.get(self.record_name)
         if current_value is None:
             return
         best_value = self.main_loop.status.get(self.best_name, None)
