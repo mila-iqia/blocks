@@ -75,7 +75,7 @@ class BeamSearch(object):
         # Parsing the inner computation graph of sampling scan
         self.contexts = [
             VariableFilter(bricks=[self.generator],
-                           name_regex='^' + name + '$',
+                           name=name,
                            roles=[INPUT])(self.inner_cg)[0]
             for name in self.context_names]
         self.input_states = []
@@ -84,7 +84,7 @@ class BeamSearch(object):
         self.input_state_names = []
         for name in self.generator.generate.states:
             var = VariableFilter(
-                bricks=[self.generator], name_regex='^' + name + '$',
+                bricks=[self.generator], name=name,
                 roles=[INPUT])(self.inner_cg)
             if var:
                 self.input_state_names.append(name)
@@ -107,7 +107,7 @@ class BeamSearch(object):
 
     def _compile_next_state_computer(self):
         next_states = [VariableFilter(bricks=[self.generator],
-                                      name_regex='^' + name + '$',
+                                      name=name,
                                       roles=[OUTPUT])(self.inner_cg)[-1]
                        for name in self.state_names]
         next_outputs = VariableFilter(
