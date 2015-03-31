@@ -259,8 +259,7 @@ class BaseSequenceGenerator(Initializable):
         feedback = tensor.roll(feedback, 1, 0)
         feedback = tensor.set_subtensor(
             feedback[0],
-            self.readout.feedback(self.readout.initial_outputs(
-                batch_size, **contexts)))
+            self.readout.feedback(self.readout.initial_outputs(batch_size)))
         readouts = self.readout.readout(
             feedback=feedback, **dict_union(states, glimpses, contexts))
         costs = self.readout.cost(readouts, outputs)
@@ -342,25 +341,71 @@ class BaseSequenceGenerator(Initializable):
 
 @add_metaclass(ABCMeta)
 class AbstractEmitter(Brick):
-    """The interface for the emitter component of a readout."""
+    """The interface for the emitter component of a readout.
+
+    See Also
+    --------
+    :class:`AbstractReadout`
+
+    :class:`SoftmaxEmitter` for integer outputs
+
+    """
     @abstractmethod
     def emit(self, readouts):
+        """Produce outputs from readouts.
+
+        Parameters
+        ----------
+        readouts : :class:`~theano.Variable`
+            Readouts produced by an :class:`AbstractReadout` instance
+            of (batch_size, readout_dim) shape.
+
+        """
         pass
 
     @abstractmethod
     def cost(self, readouts, outputs):
+        """Compute generation cost of outputs given readouts.
+
+        Parameters
+        ----------
+        readouts : :class:`~theano.Variable`
+            Readouts produced by an :class:`AbstractReadout` instance
+            of a (..., readout dim) shape.
+        outputs : :class:`~theano.Variable`
+            Outputs whose cost should be computed. Should have as many
+            or one less dimensions compared to `readout`. If readout has
+            `n` dimensions, first `n - 1` dimensions of `outputs` should
+            match with those of `readouts`.
+
+        """
         pass
 
     @abstractmethod
-    def initial_outputs(self, batch_size, *args, **kwargs):
+    def initial_outputs(self, batch_size):
+        """Compute initial outputs for the generator's first step.
+
+        In the notation from the :class:`BaseSequenceGenerator`
+        documentation this method should compute :math:`y_0`.
+
+        """
         pass
 
 
 @add_metaclass(ABCMeta)
 class AbstractFeedback(Brick):
-    """The interface for the feedback component of a readout."""
+    """The interface for the feedback component of a readout.
+
+    See Also
+    --------
+    :class:`AbstractReadout`
+
+    :class:`LookupFeedback` for integer outputs
+
+    """
     @abstractmethod
     def feedback(self, outputs):
+        """Feeds outputs back be used as inputs of the  transition."""
         pass
 
 
@@ -463,8 +508,8 @@ class Readout(AbstractReadout, Initializable):
         return self.emitter.cost(readouts, outputs)
 
     @application
-    def initial_outputs(self, batch_size, *args, **kwargs):
-        return self.emitter.initial_outputs(batch_size, **kwargs)
+    def initial_outputs(self, batch_size):
+        return self.emitter.initial_outputs(batch_size)
 
     @application(outputs=['feedback'])
     def feedback(self, outputs):
@@ -507,7 +552,7 @@ class TrivialEmitter(AbstractEmitter):
         return tensor.zeros_like(outputs)
 
     @application
-    def initial_outputs(self, batch_size, *args, **kwargs):
+    def initial_outputs(self, batch_size):
         return tensor.zeros((batch_size, self.readout_dim))
 
     def get_dim(self, name):
@@ -559,7 +604,7 @@ class SoftmaxEmitter(AbstractEmitter, Initializable, Random):
                             flat_outputs].reshape(outputs.shape))
 
     @application
-    def initial_outputs(self, batch_size, *args, **kwargs):
+    def initial_outputs(self, batch_size):
         return self.initial_output * tensor.ones((batch_size,), dtype='int64')
 
     def get_dim(self, name):
@@ -666,13 +711,20 @@ class SequenceGenerator(BaseSequenceGenerator):
     transition : instance of :class:`.BaseRecurrent`
         The recurrent transition to be used in the sequence generator.
         Will be combined with `attention`, if that one is given.
-    attention : :class:`.Brick`
-        The attention mechanism to be added to ``transition``. Can be
-        ``None``, in which case no attention mechanism is used.
+    attention : instance of\
+                :class:`~blocks.bricks.attention.AbstractAttention`\
+                , optional
+        The attention mechanism to be added to ``transition``.
     add_contexts : bool
-        If ``True``, the :class:`AttentionRecurrent` wrapping the
-        `transition` will add additional contexts for the attended and
-        its mask.
+        If ``True``, the
+        :class:`.AttentionRecurrent` wrapping the
+        `transition` will add additional contexts for the attended and its
+        mask.
+    **kwargs
+        All keywords arguments are passed to the base class. If `fork`
+        keyword argument is not provided, :class:`.Fork` is created
+        that forks all transition sequential inputs without a "mask"
+        substring in them.
 
     """
     def __init__(self, readout, transition, attention=None,
