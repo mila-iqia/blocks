@@ -6,7 +6,7 @@ from theano import tensor
 
 from blocks.bricks import Initializable, Random, Bias
 from blocks.bricks.base import application, Brick, lazy
-from blocks.bricks.parallel import Fork, Distribute, Merge
+from blocks.bricks.parallel import Fork, Merge
 from blocks.bricks.lookup import LookupTable
 from blocks.bricks.recurrent import recurrent
 from blocks.bricks.attention import (
@@ -649,20 +649,16 @@ class SequenceGenerator(BaseSequenceGenerator):
 
     """
     def __init__(self, readout, transition, attention=None,
-                 fork_inputs=None, add_contexts=True, **kwargs):
-        if not fork_inputs:
-            fork_inputs = [name for name in transition.apply.sequences
-                           if name != 'mask']
-
-        fork = Fork(fork_inputs)
+                 add_contexts=True, **kwargs):
+        normal_inputs = [name for name in transition.apply.sequences
+                         if 'mask' not in name]
+        kwargs.setdefault('fork', Fork(normal_inputs))
         if attention:
-            distribute = Distribute(fork_inputs,
-                                    attention.take_glimpses.outputs[0])
             transition = AttentionRecurrent(
-                transition, attention, distribute,
+                transition, attention,
                 add_contexts=add_contexts, name="att_trans")
         else:
             transition = FakeAttentionRecurrent(transition,
                                                 name="with_fake_attention")
         super(SequenceGenerator, self).__init__(
-            readout, transition, fork, **kwargs)
+            readout, transition, **kwargs)
