@@ -6,7 +6,7 @@ from theano import tensor
 
 from blocks.bricks import Initializable, Random, Bias
 from blocks.bricks.base import application, Brick, lazy
-from blocks.bricks.parallel import Fork, Distribute, Merge
+from blocks.bricks.parallel import Fork, Merge
 from blocks.bricks.lookup import LookupTable
 from blocks.bricks.recurrent import recurrent
 from blocks.bricks.attention import (
@@ -651,7 +651,7 @@ class SequenceGenerator(BaseSequenceGenerator):
     def __init__(self, readout, transition, attention=None,
                  add_contexts=True, **kwargs):
         normal_inputs = [name for name in transition.apply.sequences
-                       if 'mask' not in name]
+                         if 'mask' not in name]
         kwargs.setdefault('fork', Fork(normal_inputs))
         if attention:
             transition = AttentionRecurrent(
