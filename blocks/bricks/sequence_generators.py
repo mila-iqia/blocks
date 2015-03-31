@@ -413,13 +413,25 @@ class AbstractFeedback(Brick):
 class AbstractReadout(AbstractEmitter, AbstractFeedback):
     """The interface for the readout component of a sequence generator.
 
+    The readout component of a sequence generator is a bridge between
+    the core recurrent network and that output sequence.
+
     See Also
     --------
-    :class:`BaseSequenceGenerator`
+    :class:`BaseSequenceGenerator` to see how exactly a readout is used
 
     """
     @abstractmethod
     def readout(self, **kwargs):
+        r"""Compute the readout vector from states, glimpses, etc.
+
+        Parameters
+        ----------
+        **kwargs: dict
+            Contains sequence generator states, glimpses,
+            contexts and feedback from the previous outputs.
+
+        """
         pass
 
 
