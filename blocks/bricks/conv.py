@@ -235,6 +235,7 @@ class ConvolutionalLayer(Sequence, Initializable):
     --------
     :class:`Convolutional` : Documentation of convolution arguments.
     :class:`MaxPooling` : Documentation of pooling arguments.
+    
     Notes
     -----
     Uses max pooling.
