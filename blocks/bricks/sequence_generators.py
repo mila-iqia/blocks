@@ -650,15 +650,12 @@ class SequenceGenerator(BaseSequenceGenerator):
     """
     def __init__(self, readout, transition, attention=None,
                  add_contexts=True, **kwargs):
-        fork_inputs = [name for name in transition.apply.sequences
+        normal_inputs = [name for name in transition.apply.sequences
                        if 'mask' not in name]
-        kwargs.setdefault('fork', Fork(fork_inputs))
+        kwargs.setdefault('fork', Fork(normal_inputs))
         if attention:
-            distribute = Distribute(
-                fork_inputs,
-                attention.take_glimpses.outputs[0])
             transition = AttentionRecurrent(
-                transition, attention, distribute,
+                transition, attention,
                 add_contexts=add_contexts, name="att_trans")
         else:
             transition = FakeAttentionRecurrent(transition,
