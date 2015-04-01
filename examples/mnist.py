@@ -24,7 +24,7 @@ from blocks.extensions.plot import Plot
 from blocks.main_loop import MainLoop
 
 
-def main(save_to, num_epochs, no_bokeh):
+def main(save_to, num_epochs, bokeh=False):
     mlp = MLP([Tanh(), Softmax()], [784, 100, 10],
               weights_init=IsotropicGaussian(0.01),
               biases_init=Constant(0))
@@ -62,7 +62,7 @@ def main(save_to, num_epochs, no_bokeh):
                   Checkpoint(save_to),
                   Printing()]
 
-    if not no_bokeh:
+    if bokeh:
         extensions.append(Plot(
             'MNIST example',
             channels=[
@@ -89,7 +89,7 @@ if __name__ == "__main__":
     parser.add_argument("save_to", default="mnist.pkl", nargs="?",
                         help=("Destination to save the state of the training "
                               "process."))
-    parser.add_argument("--no-bokeh", type=bool, default=False,
-                        help="Set to True if you don't want to use Bokeh ")
+    parser.add_argument("--bokeh", action='store_true',
+                        help="Set if you want to use Bokeh ")
     args = parser.parse_args()
-    main(args.save_to, args.num_epochs, args.no_bokeh)
+    main(args.save_to, args.num_epochs, args.bokeh)
