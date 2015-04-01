@@ -88,7 +88,7 @@ class Checkpoint(SimpleExtension):
         from_main_loop, from_user = self.parse_args(callback_name, args)
         try:
             path = self.path
-            if len(from_user):
+            if from_user:
                 path, = from_user
             already_saved_to = self.main_loop.log.current_row.get(SAVED_TO, ())
             self.main_loop.log.current_row[SAVED_TO] = (
