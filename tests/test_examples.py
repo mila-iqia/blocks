@@ -24,7 +24,7 @@ def test_sqrt():
 def test_mnist():
     skip_if_not_available(modules=['bokeh'])
     with tempfile.NamedTemporaryFile() as f:
-        mnist_test(f.name, 1)
+        mnist_test(f.name, 1, True)
         with open(f.name, "rb") as source:
             main_loop = cPickle.load(source)
         main_loop.find_extension("FinishAfter").set_conditions(
