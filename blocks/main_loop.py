@@ -88,9 +88,9 @@ class MainLoop(object):
     """
     def __init__(self, algorithm, data_stream,
                  model=None, log=None, extensions=None):
-        if not log:
+        if log is None:
             log = TrainingLog()
-        if not extensions:
+        if extensions is None:
             extensions = []
 
         self.data_stream = data_stream
