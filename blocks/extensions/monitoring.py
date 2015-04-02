@@ -55,7 +55,7 @@ class DataStreamMonitoring(SimpleExtension, MonitoringExtension):
         :class:`~tensor.TensorSharedVariable` updates to be performed
         during evaluation. This parameter is only for Theano variables.
         Be careful not to update any model parameters as this is not
-        intended to alter your model in any meaningfull way. A typical
+        intended to alter your model in any meaningful way. A typical
         use case of this option arises when the theano function used
         for evaluation contains a call to :func:`~theano.scan` which
         might have returned shared variable updates.
