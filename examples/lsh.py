@@ -1,5 +1,6 @@
 import cPickle
 import logging
+import os
 from argparse import ArgumentParser
 from itertools import izip, chain, count
 
@@ -13,6 +14,7 @@ from blocks.initialization import IsotropicGaussian, Constant
 from blocks.utils import shared_floatx_zeros
 from blocks.filter import VariableFilter
 
+from fuel import config as fuel_config
 from fuel.transformers import Batch
 from fuel.transformers.text import NGrams
 from fuel.datasets import OneBillionWord
@@ -97,8 +99,8 @@ def main(training_scheme, vocab_size, n_gram_order, embedding_size, bits,
     output_layer.initialize()
 
     # Creat the vocabulary
-    with open('/data/lisa/datasets/1-billion-word/processed/'
-              'one_billion_counter_full.pkl') as f:
+    with open(os.path.join(fuel_config.data_path, '1-billion-word/processed/'
+                           'one_billion_counter_full.pkl')) as f:
         counter = cPickle.load(f)
     freq_words = list(izip(*counter.most_common(vocab_size - 3)))[0]
     vocab = dict(izip(chain(['<UNK>', '<S>', '</S>'], freq_words), count()))
