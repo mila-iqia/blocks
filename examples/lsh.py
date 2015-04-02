@@ -23,8 +23,7 @@ from blocks.graph import ComputationGraph
 from blocks.main_loop import MainLoop
 from blocks.extensions import Printing
 from blocks.extensions.saveload import Checkpoint
-from blocks.extensions.monitoring import (DataStreamMonitoring,
-                                          TrainingDataMonitoring)
+from blocks.extensions.monitoring import DataStreamMonitoring
 
 
 def main(training_scheme, vocab_size, n_gram_order, embedding_size, bits,
@@ -120,7 +119,7 @@ def main(training_scheme, vocab_size, n_gram_order, embedding_size, bits,
     # Exclude the hash table from the parameters, we don't want to train it
     params = VariableFilter(bricks=[Linear, LookupTable])(cg.parameters)
     algorithm = GradientDescent(
-        cost=cost, step_rule=Scale(learning_rate=0.001),
+        cost=cost, step_rule=Scale(learning_rate=0.01),
         params=params)
     algorithm.add_updates(
         [(hashes,
@@ -129,11 +128,10 @@ def main(training_scheme, vocab_size, n_gram_order, embedding_size, bits,
     main_loop = MainLoop(
         model=None, data_stream=train_stream, algorithm=algorithm,
         extensions=[DataStreamMonitoring([real_cost], valid_stream,
-                                         prefix='valid', every_n_batches=5000),
-                    TrainingDataMonitoring([cost, real_cost, cost_difference],
-                                           prefix='train', after_batch=True),
-                    Printing(every_n_batches=1),
-                    Checkpoint('lsh.pkl', every_n_batches=500)])
+                                         prefix='valid',
+                                         every_n_batches=10000),
+                    Printing(every_n_batches=10000),
+                    Checkpoint('lsh.pkl', every_n_batches=10000)])
     main_loop.run()
 
 if __name__ == "__main__":
