@@ -44,7 +44,7 @@ def test_variable_filter():
     assert brick1_bias == brick_filter(cg.variables)
 
     # Testing filtering by brick instance
-    brick_filter = VariableFilter(roles=[BIAS], bricks=brick1)
+    brick_filter = VariableFilter(roles=[BIAS], bricks=[brick1])
     assert brick1_bias == brick_filter(cg.variables)
 
     # Testing filtering by name
@@ -56,7 +56,7 @@ def test_variable_filter():
     assert [cg.variables[2]] == name_filter_regex(cg.variables)
 
     # Testing filtering by application
-    appli_filter = VariableFilter(applications=brick1.apply)
+    appli_filter = VariableFilter(applications=[brick1.apply])
     variables = [cg.variables[1], cg.variables[8]]
     assert variables == appli_filter(cg.variables)
 
