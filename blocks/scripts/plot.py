@@ -21,11 +21,11 @@ except ImportError:
 
 
 def load_log(fname):
-    """Load a :claas:`TrainingLog` object from disk.
+    """Load a :class:`TrainingLog` object from disk.
 
     This function automatically handles various file formats that contain
-    an instance of an :claas:`TrainingLog`. This includes a pickled
-    Log object, a pickled :claas:`MainLoop` or an experiment dump (TODO).
+    an instance of an :class:`TrainingLog`. This includes a pickled
+    Log object, a pickled :class:`MainLoop` or an experiment dump (TODO).
 
     """
     with change_recursion_limit(config.recursion_limit):
