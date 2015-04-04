@@ -13,7 +13,6 @@ except ImportError:
 
 import numpy
 from six import StringIO
-from theano.sandbox.cuda import CudaNdarray
 from theano.compile.sharedvalue import SharedVariable
 
 
@@ -55,21 +54,7 @@ class PersistentNdarrayID(object):
             return self.seen[id(obj)]
 
 
-class PersistentCudaNdarrayID(PersistentNdarrayID):
-    """Adds support for persisting CudaNdarray objects."""
-    def __call__(self, obj):
-        if type(obj) is CudaNdarray:
-            if id(obj) not in self.seen:
-                def write_array(f):
-                    numpy.lib.format.write_array(f, numpy.asarray(obj))
-                name = self._resolve_name(obj)
-                zipadd(write_array, self.zip_file, name)
-                self.seen[id(obj)] = 'cudandarray.{}'.format(name)
-            return self.seen[id(obj)]
-        return super(PersistentCudaNdarrayID, self).__call__(obj)
-
-
-class PersistentSharedVariableID(PersistentCudaNdarrayID):
+class PersistentSharedVariableID(PersistentNdarrayID):
     """Persist the names of shared variable arrays in the zip file.
 
     If a shared variable has a name, this name is used as the name of the
@@ -143,15 +128,6 @@ class PersistentNdarrayLoad(object):
         return numpy.lib.format.read_array(self.zip_file.open(name))
 
 
-class PersistentCudaNdarrayLoad(PersistentNdarrayLoad):
-    def __call__(self, persid):
-        array_type, name = persid.split('.')
-        if array_type == 'cudandarray':
-            data = numpy.lib.format.read_array(self.zip_file.open(name))
-            return CudaNdarray(data)
-        return super(PersistentCudaNdarrayLoad, self).__call__(persid)
-
-
 def dump(obj, f, protocol=DEFAULT_PROTOCOL,
          persistent_id=PersistentSharedVariableID):
     """Pickles an object to a zip file using external persistence.
@@ -203,7 +179,7 @@ def dump(obj, f, protocol=DEFAULT_PROTOCOL,
         zipadd(func, zip_file, 'pkl')
 
 
-def load(f, persistent_load=PersistentCudaNdarrayLoad):
+def load(f, persistent_load=PersistentNdarrayLoad):
     """Load a file that was dumped to a zip file.
 
     Parameters
