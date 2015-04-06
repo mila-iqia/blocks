@@ -227,7 +227,7 @@ class GenericSequenceAttention(AbstractAttention):
         unormalized_weights = tensor.exp(energies)
         if attended_mask:
             unormalized_weights *= attended_mask
-        return unormalized_weights / unormalized_weights.sum(axis=0)
+        return unormalized_weights / (unormalized_weights.sum(axis=0) + 1e-5)
 
     @application
     def compute_weighted_averages(self, weights, attended):
