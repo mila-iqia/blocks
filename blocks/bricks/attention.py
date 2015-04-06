@@ -42,7 +42,6 @@ are the glimpses. A generalized attention mechanism for this paper is
 represented here as :class:`SequenceContentAttention`.
 
 """
-import numpy
 from abc import ABCMeta, abstractmethod
 
 from theano import tensor
@@ -228,8 +227,11 @@ class GenericSequenceAttention(AbstractAttention):
         unnormalized_weights = tensor.exp(energies)
         if attended_mask:
             unnormalized_weights *= attended_mask
-        return unnormalized_weights / (unnormalized_weights.sum(axis=0) +
-                                       numpy.finfo('float32').tiny)
+
+        # If mask consists of all zeros use 1 as the normalization coefficient
+        normalization = (unnormalized_weights.sum(axis=0) +
+                         tensor.all(1 - attended_mask, axis=0))
+        return unnormalized_weights / normalization
 
     @application
     def compute_weighted_averages(self, weights, attended):
