@@ -623,3 +623,7 @@ class Bidirectional(Initializable):
                                            *args, **kwargs)]
         return [tensor.concatenate([f, b], axis=2)
                 for f, b in equizip(forward, backward)]
+
+    @apply.delegate
+    def apply_delegate(self):
+        return self.children[0].apply
