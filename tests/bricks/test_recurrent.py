@@ -287,7 +287,6 @@ class TestBidirectional(unittest.TestCase):
         h_simple = calc_simple(self.x_val, self.mask_val)[0]
         h_simple_rev = calc_simple(self.x_val[::-1], self.mask_val[::-1])[0]
 
-
         output_names = self.bidir.apply.outputs
 
         assert output_names == ['states']
