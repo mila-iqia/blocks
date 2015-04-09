@@ -905,12 +905,14 @@ def application(*args, **kwargs):
     if args:
         application_function, = args
         application = Application(application_function)
+        application.__doc__ = application_function.__doc__
         return application
     else:
         def wrap_application(application_function):
             application = Application(application_function)
             for key, value in kwargs.items():
                 setattr(application, key, value)
+            application.__doc__ = application_function.__doc__
             return application
         return wrap_application
 
