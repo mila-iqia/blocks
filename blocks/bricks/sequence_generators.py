@@ -3,7 +3,7 @@
 Recurrent networks are often used to generate/model sequences.
 Examples include language modelling, machine translation, handwriting
 synthesis, etc.. A typical pattern in this context is that
-sequence elements are generated one ofter another, and every generated
+sequence elements are generated one often another, and every generated
 element is fed back into the recurrent network state. Sometimes
 also an attention mechanism is used to condition sequence generation
 on some structured input like another sequence or an image.
