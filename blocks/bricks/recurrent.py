@@ -12,8 +12,8 @@ from blocks.bricks import Initializable, Sigmoid, Tanh
 from blocks.bricks.base import Application, application, Brick, lazy
 from blocks.initialization import NdarrayInitialization
 from blocks.roles import add_role, WEIGHT
-from blocks.utils import (pack, shared_floatx_nans, dict_union, dict_subset,
-                          is_shared_variable)
+from blocks.utils import (pack, shared_floatx_nans, shared_floatx_zeros,
+                          dict_union, dict_subset, is_shared_variable)
 
 logger = logging.getLogger()
 
@@ -508,6 +508,7 @@ class GatedRecurrent(BaseRecurrent, Initializable):
                            if self.use_update_gate else None)
         self.params.append(new_param('state_to_reset')
                            if self.use_reset_gate else None)
+        self.params.append(shared_floatx_zeros((self.dim,), name="initial_state"))
 
     def _initialize(self):
         self.weights_init.initialize(self.state_to_state, self.rng)
@@ -583,6 +584,10 @@ class GatedRecurrent(BaseRecurrent, Initializable):
         if self.use_reset_gate:
             sequences.append('reset_inputs')
         return sequences
+
+    @application
+    def initial_state(self, state_name, batch_size, *args, **kwargs):
+        return tensor.repeat(self.params[3][None, :], batch_size, 0)
 
 
 class Bidirectional(Initializable):
