@@ -45,7 +45,7 @@ from blocks.utils import dict_union, dict_subset
 
 
 class BaseSequenceGenerator(Initializable):
-    """A generic sequence generator.
+    r"""A generic sequence generator.
 
     This class combines two components, a readout network and an
     attention-equipped recurrent transition, into a context-dependent
@@ -776,7 +776,7 @@ class FakeAttentionRecurrent(AbstractAttentionRecurrent, Initializable):
 
 
 class SequenceGenerator(BaseSequenceGenerator):
-    """A more user-friendly interface for :class:`BaseSequenceGenerator`.
+    r"""A more user-friendly interface for :class:`BaseSequenceGenerator`.
 
     Parameters
     ----------
