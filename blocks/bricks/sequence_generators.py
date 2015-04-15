@@ -481,7 +481,7 @@ class Readout(AbstractReadout):
     specifications of the emitter and feedback contracts.
 
     """
-    def __init__(self,  emitter=None, feedback_brick=None,
+    def __init__(self, emitter=None, feedback_brick=None,
                  merge=None, merge_prototype=None,
                  post_merge=None, merged_dim=None, **kwargs):
         super(Readout, self).__init__(**kwargs)
