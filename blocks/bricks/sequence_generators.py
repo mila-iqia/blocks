@@ -340,16 +340,37 @@ class BaseSequenceGenerator(Initializable):
 
 
 @add_metaclass(ABCMeta)
-class AbstractEmitter(Brick):
-    """The interface for the emitter component of a readout.
+class AbstractReadout(Initializable):
+    """The interface for the readout component of a sequence generator.
+
+    The readout component of a sequence generator is a bridge between
+    the core recurrent network and the output sequence.
+
+    Parameters
+    ----------
+    source_names : list
+        A list of the source names (outputs) that are needed for the
+        readout part e.g. ``['states']`` or ``['states',
+        'weighted_averages']`` or ``['states', 'feedback']``.
+    readout_dim : int
+        The dimension of the readout.
+
+    Attributes
+    ----------
+    source_names : list
+    readout_dim : int
 
     See Also
     --------
-    :class:`AbstractReadout`
-
-    :class:`SoftmaxEmitter` for integer outputs
+    :class:`BaseSequenceGenerator` to see how exactly a readout is used
 
     """
+    @lazy(allocation=['source_names', 'readout_dim'])
+    def __init__(self, source_names, readout_dim, **kwargs):
+        self.source_names = source_names
+        self.readout_dim = readout_dim
+        super(AbstractReadout, self).__init__(**kwargs)
+
     @abstractmethod
     def emit(self, readouts):
         """Produce outputs from readouts.
@@ -357,8 +378,8 @@ class AbstractEmitter(Brick):
         Parameters
         ----------
         readouts : :class:`~theano.Variable`
-            Readouts produced by an :class:`AbstractReadout` instance
-            of (batch_size, readout_dim) shape.
+            Readouts produced by the :meth:`readout` method of
+            a `(batch_size, readout_dim)` shape.
 
         """
         pass
@@ -370,8 +391,8 @@ class AbstractEmitter(Brick):
         Parameters
         ----------
         readouts : :class:`~theano.Variable`
-            Readouts produced by an :class:`AbstractReadout` instance
-            of a (..., readout dim) shape.
+            Readouts produced by the :meth:`readout` method
+            of a `(..., readout dim)` shape.
         outputs : :class:`~theano.Variable`
             Outputs whose cost should be computed. Should have as many
             or one less dimensions compared to `readout`. If readout has
@@ -391,36 +412,6 @@ class AbstractEmitter(Brick):
         """
         pass
 
-
-@add_metaclass(ABCMeta)
-class AbstractFeedback(Brick):
-    """The interface for the feedback component of a readout.
-
-    See Also
-    --------
-    :class:`AbstractReadout`
-
-    :class:`LookupFeedback` for integer outputs
-
-    """
-    @abstractmethod
-    def feedback(self, outputs):
-        """Feeds outputs back be used as inputs of the  transition."""
-        pass
-
-
-@add_metaclass(ABCMeta)
-class AbstractReadout(AbstractEmitter, AbstractFeedback):
-    """The interface for the readout component of a sequence generator.
-
-    The readout component of a sequence generator is a bridge between
-    the core recurrent network and that output sequence.
-
-    See Also
-    --------
-    :class:`BaseSequenceGenerator` to see how exactly a readout is used
-
-    """
     @abstractmethod
     def readout(self, **kwargs):
         r"""Compute the readout vector from states, glimpses, etc.
@@ -434,17 +425,30 @@ class AbstractReadout(AbstractEmitter, AbstractFeedback):
         """
         pass
 
+    @abstractmethod
+    def feedback(self, outputs):
+        """Feeds outputs back to be used as inputs of the transition."""
+        pass
 
-class Readout(AbstractReadout, Initializable):
-    """Readout brick with separated emitting and feedback parts.
+
+class Readout(AbstractReadout):
+    r"""Readout brick with separated emitter and feedback parts.
+
+    :class:`Readout` combines a few bits and pieces into an object
+    that can be used as the readout component in
+    :class:`BaseSequenceGenerator`. This includes an emitter brick,
+    to which :meth:`emit`, :meth:`cost` and :meth:`initial_outputs`
+    calls are delegated, a feedback brick to which :meth:`feedback`
+    functionality is delegated, and a pipeline to actually compute
+    readouts from all the sources (see the `source_names` attribute
+    of :class:`AbstractReadout`).
+
+    The readout computation pipeline is constructed from `merge` and
+    `post_merge` brick, whose responsibilites are described in the
+    respective docstrings.
 
     Parameters
     ----------
-    source_names : list
-        A list of the source names (outputs) that are needed for the
-        readout part e.g. ``['states']`` or ``['states', 'glimpses']``.
-    readout_dim : int
-        The dimension of the readout.
     emitter : an instance of :class:`AbstractEmitter`
         The emitter component.
     feedback_brick : an instance of :class:`AbstractFeedback`
@@ -466,26 +470,33 @@ class Readout(AbstractReadout, Initializable):
         `merge` (or `merge_prototype`). If not give, it is assumed to be
         the same as `readout_dim` (i.e. `post_merge` is assumed to not
         change dimensions).
+    **kwargs : dict
+        Passed to the parent's constructor.
+
+    See Also
+    --------
+    :class:`BaseSequenceGenerator` to see how exactly a readout is used
+
+    :class:`AbstractEmitter` and :class:`AbstractFeedback` for exact
+    specifications of the emitter and feedback contracts.
 
     """
-    @lazy(allocation=['source_names', 'readout_dim'])
-    def __init__(self, source_names, readout_dim, emitter=None,
-                 feedback_brick=None, merge=None, merge_prototype=None,
+    def __init__(self,  emitter=None, feedback_brick=None,
+                 merge=None, merge_prototype=None,
                  post_merge=None, merged_dim=None, **kwargs):
         super(Readout, self).__init__(**kwargs)
-        self.source_names = source_names
-        self.readout_dim = readout_dim
 
         if not emitter:
-            emitter = TrivialEmitter(readout_dim)
+            emitter = TrivialEmitter(self.readout_dim)
         if not feedback_brick:
-            feedback_brick = TrivialFeedback(readout_dim)
+            feedback_brick = TrivialFeedback(self.readout_dim)
         if not merge:
-            merge = Merge(input_names=source_names, prototype=merge_prototype)
+            merge = Merge(input_names=self.source_names,
+                          prototype=merge_prototype)
         if not post_merge:
-            post_merge = Bias(dim=readout_dim)
+            post_merge = Bias(dim=self.readout_dim)
         if not merged_dim:
-            merged_dim = readout_dim
+            merged_dim = self.readout_dim
         self.emitter = emitter
         self.feedback_brick = feedback_brick
         self.merge = merge
@@ -535,6 +546,57 @@ class Readout(AbstractReadout, Initializable):
         elif name == 'readouts':
             return self.readout_dim
         return super(Readout, self).get_dim(name)
+
+
+@add_metaclass(ABCMeta)
+class AbstractEmitter(Brick):
+    """The interface for the emitter component of a readout.
+
+    Attributes
+    ----------
+    readout_dim : int
+        The dimension of the readout. Is given by the
+        :class:`Readout` brick when allocation configuration
+        is pushed.
+
+    See Also
+    --------
+    :class:`Readout`
+
+    :class:`SoftmaxEmitter` for integer outputs
+
+    """
+    @abstractmethod
+    def emit(self, readouts):
+        """Implements the respective method of :class:`Readout`."""
+        pass
+
+    @abstractmethod
+    def cost(self, readouts, outputs):
+        """Implements the respective method of :class:`Readout`."""
+        pass
+
+    @abstractmethod
+    def initial_outputs(self, batch_size):
+        """Implements the respective method of :class:`Readout`."""
+        pass
+
+
+@add_metaclass(ABCMeta)
+class AbstractFeedback(Brick):
+    """The interface for the feedback component of a readout.
+
+    See Also
+    --------
+    :class:`Readout`
+
+    :class:`LookupFeedback` for integer outputs
+
+    """
+    @abstractmethod
+    def feedback(self, outputs):
+        """Implements the respective method of :class:`Readout`."""
+        pass
 
 
 class TrivialEmitter(AbstractEmitter):
