@@ -87,6 +87,11 @@ class BaseSequenceGenerator(Initializable):
            s_0, g_0 = transition.initial\_states(contexts)\\
            i = 1\\
 
+        The default `initial_states` method that a recurrent transition
+        inherits from :class:`.BaseRecurrent` creates an initial states
+        of all zeros. Use your own transition classes to get have custom
+        initial states.
+
     2. New glimpses are computed:
 
        .. math:: g_i = transition.take\_glimpses(
