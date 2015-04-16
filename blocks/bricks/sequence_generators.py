@@ -89,7 +89,7 @@ class BaseSequenceGenerator(Initializable):
 
         The default `initial_states` method that a recurrent transition
         inherits from :class:`.BaseRecurrent` creates an initial states
-        of all zeros. Use your own transition classes to get have custom
+        of all zeros. Use your own transition classes to get custom
         initial states.
 
     2. New glimpses are computed:
