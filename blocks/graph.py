@@ -496,6 +496,8 @@ def collect_parameters(computation_graph, params):
         param_shapes.append(param_values[-1].shape)
 
     new_params = shared_floatx_zeros(sum(param_sizes))
+    new_params.set_value(numpy.concatenate([value.flatten()
+                                            for value in param_values]))
     new_params.name = 'collected_params'
 
     replacements = {}
