@@ -430,7 +430,7 @@ class AbstractReadout(Initializable):
 
         Parameters
         ----------
-        **kwargs: dict
+        \*\*kwargs: dict
             Contains sequence generator states, glimpses,
             contexts and feedback from the previous outputs.
 
@@ -482,7 +482,7 @@ class Readout(AbstractReadout):
         `merge` (or `merge_prototype`). If not give, it is assumed to be
         the same as `readout_dim` (i.e. `post_merge` is assumed to not
         change dimensions).
-    **kwargs : dict
+    \*\*kwargs : dict
         Passed to the parent's constructor.
 
     See Also
@@ -820,7 +820,7 @@ class SequenceGenerator(BaseSequenceGenerator):
         :class:`.AttentionRecurrent` wrapping the
         `transition` will add additional contexts for the attended and its
         mask.
-    **kwargs : dict
+    \*\*kwargs : dict
         All keywords arguments are passed to the base class. If `fork`
         keyword argument is not provided, :class:`.Fork` is created
         that forks all transition sequential inputs without a "mask"
