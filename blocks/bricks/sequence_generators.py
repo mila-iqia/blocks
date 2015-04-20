@@ -87,10 +87,10 @@ class BaseSequenceGenerator(Initializable):
            s_0, g_0 = transition.initial\_states(contexts)\\
            i = 1\\
 
-        The default `initial_states` method that a recurrent transition
-        inherits from :class:`.BaseRecurrent` creates an initial states
-        of all zeros. Use your own transition classes to get custom
-        initial states.
+       The default `initial_states` method that a recurrent transition
+       inherits from :class:`.BaseRecurrent` creates an initial states
+       of all zeros. Use your own transition classes to get custom
+       initial states.
 
     2. New glimpses are computed:
 
@@ -353,7 +353,6 @@ class BaseSequenceGenerator(Initializable):
 class AbstractReadout(Initializable):
     """The interface for the readout component of a sequence generator.
 
-
     The readout component of a sequence generator is a bridge between
     the core recurrent network and the output sequence.
 
@@ -445,7 +444,7 @@ class AbstractReadout(Initializable):
 
 
 class Readout(AbstractReadout):
-    """Readout brick with separated emitter and feedback parts.
+    r"""Readout brick with separated emitter and feedback parts.
 
     :class:`Readout` combines a few bits and pieces into an object
     that can be used as the readout component in
@@ -483,7 +482,7 @@ class Readout(AbstractReadout):
         `merge` (or `merge_prototype`). If not give, it is assumed to be
         the same as `readout_dim` (i.e. `post_merge` is assumed to not
         change dimensions).
-    \*\*kwargs : dict
+    **kwargs : dict
         Passed to the parent's constructor.
 
     See Also
@@ -803,7 +802,7 @@ class FakeAttentionRecurrent(AbstractAttentionRecurrent, Initializable):
 
 
 class SequenceGenerator(BaseSequenceGenerator):
-    """A more user-friendly interface for :class:`BaseSequenceGenerator`.
+    r"""A more user-friendly interface for :class:`BaseSequenceGenerator`.
 
     Parameters
     ----------
@@ -812,16 +811,16 @@ class SequenceGenerator(BaseSequenceGenerator):
     transition : instance of :class:`.BaseRecurrent`
         The recurrent transition to be used in the sequence generator.
         Will be combined with `attention`, if that one is given.
-    attention : instance of\
-                :class:`~blocks.bricks.attention.AbstractAttention`\
-                , optional
-        The attention mechanism to be added to ``transition``.
+    attention : object, optional
+        The attention mechanism to be added to ``transition``,
+        an instance of
+        :class:`~blocks.bricks.attention.AbstractAttention`.
     add_contexts : bool
         If ``True``, the
         :class:`.AttentionRecurrent` wrapping the
         `transition` will add additional contexts for the attended and its
         mask.
-    \*\*kwargs : dict
+    **kwargs : dict
         All keywords arguments are passed to the base class. If `fork`
         keyword argument is not provided, :class:`.Fork` is created
         that forks all transition sequential inputs without a "mask"
