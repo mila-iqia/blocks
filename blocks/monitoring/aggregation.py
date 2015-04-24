@@ -110,7 +110,8 @@ class Mean(AggregationScheme):
         conditional_update = ifelse(initialized,
                                     self.numerator + numerator_acc,
                                     self.numerator)
-        initialization_updates = [(numerator_acc, tensor.zeros_like(numerator_acc)),
+        initialization_updates = [(numerator_acc,
+                                   tensor.zeros_like(numerator_acc)),
                                   (denominator_acc, 0.0),
                                   (initialized, 0.0)]
         accumulation_updates = [(numerator_acc,
