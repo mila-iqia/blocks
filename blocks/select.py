@@ -177,6 +177,12 @@ class Selector(object):
             for child in brick.children:
                 for path, param in recursion(child).items():
                     new_path = Path([Path.BrickName(brick.name)]) + path
+                    if new_path in result:
+                        raise ValueError(
+                            "name collision while retrieving parameters (" +
+                            "'{}' appears more than once). ".format(new_path) +
+                            "Make sure that for all bricks, children of a "
+                            "given brick have different names.")
                     result[new_path] = param
             return result
         result = dict_union(*[recursion(brick)
