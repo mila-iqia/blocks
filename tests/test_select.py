@@ -14,6 +14,7 @@ class MockBrickTop(Brick):
         self.children = children
         self.params = []
 
+
 class MockBrickBottom(Brick):
 
     def __init__(self, **kwargs):
