@@ -410,9 +410,9 @@ class AdaDelta(StepRule):
     Parameters
     ----------
     decay_rate : float, optional
-        Decay rate in [0, 1]. Defaults to 0.
+        Decay rate in [0, 1]. Defaults to 0.95.
     epsilon : float, optional
-        Stabilizing constant for RMS. Defaults to 1e-7.
+        Stabilizing constant for RMS. Defaults to 1e-6.
 
     Notes
     -----
@@ -422,7 +422,7 @@ class AdaDelta(StepRule):
        Rate Method*, arXiv:1212.5701.
 
     """
-    def __init__(self, decay_rate=0., epsilon=1e-7):
+    def __init__(self, decay_rate=0.95, epsilon=1e-6):
         if not 0.0 <= decay_rate <= 1.0:
             raise ValueError("decay rate needs to be in [0, 1]")
         self.decay_rate = shared_floatx(decay_rate)
