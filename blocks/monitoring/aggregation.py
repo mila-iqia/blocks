@@ -4,6 +4,7 @@ from abc import ABCMeta, abstractmethod
 
 from six import add_metaclass
 from theano import tensor
+from theano.ifelse import ifelse
 
 from blocks.utils import shared_like
 
@@ -103,14 +104,20 @@ class Mean(AggregationScheme):
         self.denominator = denominator
 
     def get_aggregator(self):
+        initialized = shared_like(0.)
         numerator_acc = shared_like(self.numerator)
         denominator_acc = shared_like(self.denominator)
-        initialization_updates = [(numerator_acc, 0.0),
-                                  (denominator_acc, 0.0)]
+        conditional_update = ifelse(initialized,
+                                    self.numerator + numerator_acc,
+                                    self.numerator)
+        initialization_updates = [(numerator_acc, tensor.zeros_like(numerator_acc)),
+                                  (denominator_acc, 0.0),
+                                  (initialized, 0.0)]
         accumulation_updates = [(numerator_acc,
-                                 numerator_acc + self.numerator),
+                                 conditional_update),
                                 (denominator_acc,
-                                 denominator_acc + self.denominator)]
+                                 denominator_acc + self.denominator),
+                                (initialized, 1.)]
         aggregator = Aggregator(aggregation_scheme=self,
                                 initialization_updates=initialization_updates,
                                 accumulation_updates=accumulation_updates,
