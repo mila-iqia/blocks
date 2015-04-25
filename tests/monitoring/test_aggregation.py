@@ -63,7 +63,8 @@ def test_param_monitor():
 
 def test_mean_aggregator():
     num_examples = 4
-    num_batches = 2
+    batch_size = 2
+
     features = numpy.array([[0, 3],
                            [2, 9],
                            [2, 4],
@@ -73,8 +74,7 @@ def test_mean_aggregator():
 
     data_stream = DataStream(dataset,
                              iteration_scheme=SequentialScheme(num_examples,
-                                                               num_examples /
-                                                               num_batches))
+                                                               batch_size))
 
     x = tensor.matrix('features')
     y = (x**2).mean(axis=0)
@@ -82,8 +82,8 @@ def test_mean_aggregator():
     z = y.sum()
     z.name = 'z'
 
-    y.tag.aggregation_scheme = Mean(y, 1.0)
-    z.tag.aggregation_scheme = Mean(z, 1.0)
+    y.tag.aggregation_scheme = Mean(y, 1.)
+    z.tag.aggregation_scheme = Mean(z, 1.)
 
     assert_allclose(DatasetEvaluator([y]).evaluate(data_stream)['y'],
                     numpy.array([8.25, 26.75], dtype=theano.config.floatX))

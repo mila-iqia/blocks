@@ -107,17 +107,23 @@ class Mean(AggregationScheme):
         initialized = shared_like(0.)
         numerator_acc = shared_like(self.numerator)
         denominator_acc = shared_like(self.denominator)
-        conditional_update = ifelse(initialized,
-                                    self.numerator + numerator_acc,
-                                    self.numerator)
+
+        conditional_update_num = ifelse(initialized,
+                                        self.numerator + numerator_acc,
+                                        self.numerator)
+        conditional_update_den = ifelse(initialized,
+                                        self.denominator + denominator_acc,
+                                        self.denominator)
+
         initialization_updates = [(numerator_acc,
                                    tensor.zeros_like(numerator_acc)),
-                                  (denominator_acc, 0.0),
-                                  (initialized, 0.0)]
+                                  (denominator_acc,
+                                   tensor.zeros_like(denominator_acc)),
+                                  (initialized, 0.)]
         accumulation_updates = [(numerator_acc,
-                                 conditional_update),
+                                 conditional_update_num),
                                 (denominator_acc,
-                                 denominator_acc + self.denominator),
+                                 conditional_update_den),
                                 (initialized, 1.)]
         aggregator = Aggregator(aggregation_scheme=self,
                                 initialization_updates=initialization_updates,
@@ -127,7 +133,7 @@ class Mean(AggregationScheme):
         return aggregator
 
 
-def mean(numerator, denominator=1.0):
+def mean(numerator, denominator=1.):
     """Mean of quantity (numerator) over a number (denominator) values."""
     variable = numerator / denominator
     variable.tag.aggregation_scheme = Mean(numerator, denominator)
