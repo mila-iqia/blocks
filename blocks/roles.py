@@ -121,6 +121,13 @@ class BiasRole(ParameterRole):
 BIAS = BiasRole()
 
 
+class InitialStateRole(ParameterRole):
+    pass
+
+#: Initial state of a recurrent network
+INITIAL_STATE = InitialStateRole()
+
+
 class FilterRole(WeightRole):
     pass
 

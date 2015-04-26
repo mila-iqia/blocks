@@ -11,7 +11,7 @@ from theano import tensor, Variable
 from blocks.bricks import Initializable, Sigmoid, Tanh
 from blocks.bricks.base import Application, application, Brick, lazy
 from blocks.initialization import NdarrayInitialization
-from blocks.roles import add_role, WEIGHT
+from blocks.roles import add_role, WEIGHT, INITIAL_STATE
 from blocks.utils import (pack, shared_floatx_nans, shared_floatx_zeros,
                           dict_union, dict_subset, is_shared_variable)
 
@@ -31,6 +31,10 @@ class BaseRecurrent(Brick):
     @application
     def initial_state(self, state_name, batch_size, *args, **kwargs):
         r"""Return an initial state for an application call.
+
+        Default implementation returns a zero matrix. All the standard
+        recurrent bricks override it with trainable initial states
+        initialized with zeros.
 
         Parameters
         ----------
@@ -274,6 +278,10 @@ class SimpleRecurrent(BaseRecurrent, Initializable):
 
     def _allocate(self):
         self.params.append(shared_floatx_nans((self.dim, self.dim), name="W"))
+        add_role(self.params[0], WEIGHT)
+        self.params.append(shared_floatx_zeros((self.dim,),
+                                               name="initial_state"))
+        add_role(self.params[1], INITIAL_STATE)
 
     def _initialize(self):
         self.weights_init.initialize(self.W, self.rng)
@@ -301,6 +309,10 @@ class SimpleRecurrent(BaseRecurrent, Initializable):
             next_states = (mask[:, None] * next_states +
                            (1 - mask[:, None]) * states)
         return next_states
+
+    @application
+    def initial_state(self, state_name, batch_size, *args, **kwargs):
+        return tensor.repeat(self.params[1][None, :], batch_size, 0)
 
 
 class LSTM(BaseRecurrent, Initializable):
@@ -367,17 +379,26 @@ class LSTM(BaseRecurrent, Initializable):
                                                    name='W_cell_to_forget')
         self.W_cell_to_out = shared_floatx_nans((self.dim,),
                                                 name='W_cell_to_out')
+        # The underscore is required to prevent collision with
+        # the `initial_state` application method
+        self.initial_state_ = shared_floatx_zeros((self.dim,),
+                                                  name="initial_state")
+        self.initial_cells = shared_floatx_zeros((self.dim,),
+                                                 name="initial_cells")
         add_role(self.W_state, WEIGHT)
         add_role(self.W_cell_to_in, WEIGHT)
         add_role(self.W_cell_to_forget, WEIGHT)
         add_role(self.W_cell_to_out, WEIGHT)
+        add_role(self.initial_state_, INITIAL_STATE)
+        add_role(self.initial_cells, INITIAL_STATE)
 
-        self.params = [self.W_state, self.W_cell_to_in, self.W_cell_to_forget,
-                       self.W_cell_to_out]
+        self.params = [
+            self.W_state, self.W_cell_to_in, self.W_cell_to_forget,
+            self.W_cell_to_out, self.initial_state_, self.initial_cells]
 
     def _initialize(self):
-        for w in self.params:
-            self.weights_init.initialize(w, self.rng)
+        for weights in self.params[:4]:
+            self.weights_init.initialize(weights, self.rng)
 
     @recurrent(sequences=['inputs', 'mask'], states=['states', 'cells'],
                contexts=[], outputs=['states', 'cells'])
@@ -429,6 +450,14 @@ class LSTM(BaseRecurrent, Initializable):
                           (1 - mask[:, None]) * cells)
 
         return next_states, next_cells
+
+    @application
+    def initial_state(self, state_name, batch_size, *args, **kwargs):
+        if state_name == "states":
+            return tensor.repeat(self.initial_state_[None, :], batch_size, 0)
+        elif state_name == "cells":
+            return tensor.repeat(self.initial_cells[None, :], batch_size, 0)
+        raise ValueError("unknown state name " + state_name)
 
 
 class GatedRecurrent(BaseRecurrent, Initializable):
@@ -508,7 +537,12 @@ class GatedRecurrent(BaseRecurrent, Initializable):
                            if self.use_update_gate else None)
         self.params.append(new_param('state_to_reset')
                            if self.use_reset_gate else None)
-        self.params.append(shared_floatx_zeros((self.dim,), name="initial_state"))
+        self.params.append(shared_floatx_zeros((self.dim,),
+                           name="initial_state"))
+        for i in range(3):
+            if self.params[i]:
+                add_role(self.params[i], WEIGHT)
+        add_role(self.params[3], INITIAL_STATE)
 
     def _initialize(self):
         self.weights_init.initialize(self.state_to_state, self.rng)
