@@ -10,6 +10,12 @@ from blocks.utils import dict_union
 
 logger = logging.getLogger(__name__)
 
+name_collision_error_message = """
+
+The '{}' name appears more than once. Make sure that all bricks' children \
+have different names and that user-defined shared variables have unique names.
+"""
+
 
 class Path(object):
     """Encapsulates a path in a hierarchy of bricks.
@@ -179,10 +185,9 @@ class Selector(object):
                     new_path = Path([Path.BrickName(brick.name)]) + path
                     if new_path in result:
                         raise ValueError(
-                            "name collision while retrieving parameters (" +
-                            "'{}' appears more than once). ".format(new_path) +
-                            "Make sure that for all bricks, children of a "
-                            "given brick have different names.")
+                            "Name collision encountered while retrieving " +
+                            "parameters." +
+                            name_collision_error_message.format(new_path))
                     result[new_path] = param
             return result
         result = dict_union(*[recursion(brick)
