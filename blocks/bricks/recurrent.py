@@ -206,7 +206,9 @@ def recurrent(*args, **kwargs):
                 outputs_info=outputs_info,
                 non_sequences=list(contexts_given.values()),
                 n_steps=n_steps,
-                go_backwards=reverse)
+                go_backwards=reverse,
+                name='{}_{}_scan'.format(
+                    brick.name, application.application_name))
             result = pack(result)
             if return_initial_states:
                 # Undo Subtensor
