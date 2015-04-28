@@ -6,10 +6,9 @@ the basic :class:`AbstractModel` interface as well as its implementations
 (currently only :class:`Model`).
 
 """
-import numpy
 import logging
 from abc import ABCMeta, abstractmethod
-from collections import OrderedDict
+from collections import OrderedDict, Counter
 from itertools import chain
 
 from six import add_metaclass
@@ -156,12 +155,12 @@ class Model(AbstractModel, ComputationGraph):
         for brick in bricks:
             if brick not in children and brick not in self.top_bricks:
                 self.top_bricks.append(brick)
-        if len(set(b.name for b in self.top_bricks)) < len(self.top_bricks):
-            # find the first occurences and return it in the error message
-            liste_name = [b.name for b in self.top_bricks]
-            occ = liste_name[numpy.argmax([liste_name.count(liste_name[i])
-                            for i in xrange(len(liste_name))])]
-            raise ValueError("top bricks with the same name : "+occ)
+        # check there is no occurence in top bricks name
+        names = Counter([b.name for b in self.top_bricks])
+        if names.most_common(1)[0][1] > 1:
+            repeated_name = names.most_common(1)[0][0]
+            raise ValueError("top bricks with the "
+                             "same name : %s" % repeated_name)
 
         brick_param_names = {
             v: k for k, v in Selector(self.top_bricks).get_params().items()}
