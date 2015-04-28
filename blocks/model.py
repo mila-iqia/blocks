@@ -159,7 +159,8 @@ class Model(AbstractModel, ComputationGraph):
         repeated_names = [name for name, count in names.items() if count > 1]
         if repeated_names:
             raise ValueError("top bricks with the "
-                             "same name : {}".format(', '.join(repeated_names)))
+                             "same name:"
+                             " {}".format(', '.join(repeated_names)))
 
         brick_param_names = {
             v: k for k, v in Selector(self.top_bricks).get_params().items()}
