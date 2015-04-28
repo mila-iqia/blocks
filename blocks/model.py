@@ -155,7 +155,6 @@ class Model(AbstractModel, ComputationGraph):
         for brick in bricks:
             if brick not in children and brick not in self.top_bricks:
                 self.top_bricks.append(brick)
-        # check there is no occurence in top bricks name
         names = Counter([brick.name for brick in self.top_bricks])
         repeated_names = [name for name, count in names.items() if count > 1]
         if repeated_names:
