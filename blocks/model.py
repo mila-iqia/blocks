@@ -156,11 +156,11 @@ class Model(AbstractModel, ComputationGraph):
             if brick not in children and brick not in self.top_bricks:
                 self.top_bricks.append(brick)
         # check there is no occurence in top bricks name
-        names = Counter([b.name for b in self.top_bricks])
-        if names.most_common(1)[0][1] > 1:
-            repeated_name = names.most_common(1)[0][0]
+        names = Counter([brick.name for brick in self.top_bricks])
+        repeated_names = [name for name, count in names.items() if count > 1]
+        if repeated_names:
             raise ValueError("top bricks with the "
-                             "same name : %s" % repeated_name)
+                             "same name : {}".format(repeated_names))
 
         brick_param_names = {
             v: k for k, v in Selector(self.top_bricks).get_params().items()}
