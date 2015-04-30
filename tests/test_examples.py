@@ -3,7 +3,6 @@ import tempfile
 
 from six.moves import cPickle
 
-import blocks
 from blocks.config import config
 from blocks.extensions.saveload import SAVED_TO
 from examples.sqrt import main as sqrt_test
