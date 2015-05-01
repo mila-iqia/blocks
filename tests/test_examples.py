@@ -3,7 +3,7 @@ import tempfile
 
 from six.moves import cPickle
 
-import blocks
+from blocks.config import config
 from blocks.extensions.saveload import SAVED_TO
 from examples.sqrt import main as sqrt_test
 from examples.mnist import main as mnist_test
@@ -42,12 +42,12 @@ def test_markov_chain():
 @silence_printing
 def test_reverse_words():
     skip_if_not_available(modules=['bokeh'])
-    old_limit = blocks.config.recursion_limit
-    blocks.config.recursion_limit = 100000
+    old_limit = config.recursion_limit
+    config.recursion_limit = 100000
     with tempfile.NamedTemporaryFile() as f_save,\
             tempfile.NamedTemporaryFile() as f_data:
         with open(f_data.name, 'wt') as data:
             for i in range(10):
                 print("A line.", file=data)
         reverse_words_test("train", f_save.name, 1, [f_data.name])
-    blocks.config.recursion_limit = old_limit
+    config.recursion_limit = old_limit

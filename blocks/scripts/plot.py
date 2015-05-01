@@ -8,7 +8,7 @@ from six.moves import cPickle
 from collections import OrderedDict
 from functools import reduce
 
-from blocks import config
+from blocks.config import config
 from blocks.utils import change_recursion_limit
 from blocks.log import TrainingLog
 from blocks.main_loop import MainLoop

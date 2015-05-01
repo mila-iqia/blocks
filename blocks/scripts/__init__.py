@@ -2,7 +2,7 @@ import os.path
 
 from six.moves import cPickle
 
-from blocks import config
+from blocks.config import config
 from blocks.dump import MainLoopDumpManager
 from blocks.utils import change_recursion_limit
 

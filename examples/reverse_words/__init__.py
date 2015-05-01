@@ -19,7 +19,7 @@ from blocks.bricks.attention import SequenceContentAttention
 from blocks.bricks.parallel import Fork
 from blocks.bricks.sequence_generators import (
     SequenceGenerator, Readout, SoftmaxEmitter, LookupFeedback)
-from blocks.config_parser import config
+from blocks.config import config
 from blocks.graph import ComputationGraph
 from fuel.transformers import Mapping, Batch, Padding, Filter
 from fuel.datasets import OneBillionWord, TextFile
