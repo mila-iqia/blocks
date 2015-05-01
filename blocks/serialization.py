@@ -74,7 +74,8 @@ def secure_pickle_dump(object_, path):
 
     """
     try:
-        with tempfile.NamedTemporaryFile(delete=False) as temp:
+        d = os.path.dirname(path)
+        with tempfile.NamedTemporaryFile(delete=False, dir=d) as temp:
             pickle_dump(object_, temp)
         shutil.move(temp.name, path)
     except:
