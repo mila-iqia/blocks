@@ -74,8 +74,11 @@ def secure_pickle_dump(object_, path):
 
     """
     try:
-        d = os.path.dirname(path)
-        with tempfile.NamedTemporaryFile(delete=False, dir=d) as temp:
+        # Use the same destination directory, as /tmp can be too
+        # small.  This also make the move to copy if the destination
+        # wasn't on the same partition.
+        with tempfile.NamedTemporaryFile(delete=False,
+                                         dir=os.path.dirname(path)) as temp:
             pickle_dump(object_, temp)
         shutil.move(temp.name, path)
     except:
