@@ -72,7 +72,9 @@ def test_variable_filter():
     merge = Merge(['input1', 'input2'], [5, 6], 2)
     merged = merge.apply(input1, input2)
     merge_cg = ComputationGraph(merged)
-    assert VariableFilter(roles=[OUTPUT], bricks=[merge])(merge_cg) == [merged]
+    outputs = VariableFilter(roles=[OUTPUT],
+                             bricks=[merge])(merge_cg.variables)
+    assert outputs == [merged]
 
 
 @raises(TypeError)
