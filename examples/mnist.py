@@ -40,8 +40,8 @@ def main(save_to, num_epochs, bokeh=False):
     cost = cost + .00005 * (W1 ** 2).sum() + .00005 * (W2 ** 2).sum()
     cost.name = 'final_cost'
 
-    mnist_train = MNIST("train", flatten=('features'))
-    mnist_test = MNIST("test", flatten=('features'))
+    mnist_train = MNIST("train", flatten=('features',))
+    mnist_test = MNIST("test", flatten=('features',))
 
     algorithm = GradientDescent(
         cost=cost, params=cg.parameters,
