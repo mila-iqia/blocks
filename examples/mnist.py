@@ -29,9 +29,9 @@ def main(save_to, num_epochs, bokeh=False):
               weights_init=IsotropicGaussian(0.01),
               biases_init=Constant(0))
     mlp.initialize()
-    x = tensor.matrix('features')
+    x = tensor.tensor4('features')
     y = tensor.lmatrix('targets')
-    probs = mlp.apply(x)
+    probs = mlp.apply(tensor.flatten(x, outdim=2))
     cost = CategoricalCrossEntropy().apply(y.flatten(), probs)
     error_rate = MisclassificationRate().apply(y.flatten(), probs)
 
