@@ -151,7 +151,7 @@ class Fork(Parallel):
         self.input_dims = None
 
     def _push_allocation_config(self):
-        self.input_dims = [self.input_dim for name in self.output_names]
+        self.input_dims = [self.input_dim for _ in self.output_names]
         super(Fork, self)._push_allocation_config()
 
     @application(inputs=['input_'])
