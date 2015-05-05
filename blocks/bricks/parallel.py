@@ -328,6 +328,10 @@ class Merge(Parallel):
     def apply_inputs(self):
         return self.input_names
 
+    @apply.property('outputs')
+    def apply_outputs(self):
+        return 'output'
+
     def _push_allocation_config(self):
         self.output_dims = [self.output_dim for input_name in self.input_names]
         super(Merge, self)._push_allocation_config()
