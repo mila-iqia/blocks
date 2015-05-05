@@ -74,7 +74,8 @@ def test_variable_filter():
     merge_cg = ComputationGraph(merged)
     outputs = VariableFilter(
         roles=[OUTPUT], bricks=[merge])(merge_cg.variables)
-    assert outputs == [merged]
+    assert merged in outputs
+    assert len(outputs) == 3
 
     outputs_application = VariableFilter(
         roles=[OUTPUT], applications=[merge.apply])(merge_cg.variables)
