@@ -53,9 +53,9 @@ def main(save_to, num_epochs, bokeh=False):
                       [cost, error_rate],
                       Flatten(
                           DataStream.default_stream(
-                          mnist_test,
-                          iteration_scheme=SequentialScheme(
-                              mnist_test.num_examples, 500))
+                              mnist_test,
+                              iteration_scheme=SequentialScheme(
+                                  mnist_test.num_examples, 500)),
                           which_sources=('features',)),
                       prefix="test"),
                   TrainingDataMonitoring(
@@ -78,9 +78,9 @@ def main(save_to, num_epochs, bokeh=False):
         algorithm,
         Flatten(
             DataStream.default_stream(
-            mnist_train,
-            iteration_scheme=SequentialScheme(
-                mnist_train.num_examples, 50))
+                mnist_train,
+                iteration_scheme=SequentialScheme(
+                    mnist_train.num_examples, 50)),
             which_sources=('features',)),
         model=Model(cost),
         extensions=extensions)
