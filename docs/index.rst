@@ -63,6 +63,7 @@ Quickstart
    >>> from blocks.graph import ComputationGraph
    >>> from blocks.initialization import IsotropicGaussian, Constant
    >>> from fuel.streams import DataStream
+   >>> from fuel.transformers import Flatten
    >>> from fuel.datasets import MNIST
    >>> from fuel.schemes import SequentialScheme
    >>> from blocks.extensions import FinishAfter, Printing
@@ -85,14 +86,18 @@ Calculate your loss function.
 
 Load your training data using Fuel.
 
->>> mnist_train = MNIST("train", flatten=('features',))
->>> train_stream = DataStream(
-...     dataset=mnist_train,
-...     iteration_scheme=SequentialScheme(mnist_train.num_examples, 128))
->>> mnist_test = MNIST("test", flatten=('features',))
->>> test_stream = DataStream(
-...     dataset=mnist_test,
-...     iteration_scheme=SequentialScheme(mnist_test.num_examples, 1024))
+>>> mnist_train = MNIST("train")
+>>> train_stream = Flatten(
+...     DataStream.default_stream(
+...         dataset=mnist_train,
+...         iteration_scheme=SequentialScheme(mnist_train.num_examples, 128)),
+...     which_sources=('features',))
+>>> mnist_test = MNIST("test")
+>>> test_stream = Flatten(
+...     DataStream.default_stream(
+...         dataset=mnist_test,
+...         iteration_scheme=SequentialScheme(mnist_test.num_examples, 1024)),
+...     which_sources=('features',))
 
 And train!
 
