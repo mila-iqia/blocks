@@ -191,6 +191,8 @@ class MonitoredQuantity(object):
 
     """
     def __init__(self, requires=None, name=None):
+        if requires is None:
+            requires = []
         self.requires = requires
         self.name = name
 
