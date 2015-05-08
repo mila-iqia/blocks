@@ -10,6 +10,7 @@ from blocks.bricks import MLP, Tanh, Softmax, WEIGHT
 from blocks.bricks.cost import CategoricalCrossEntropy, MisclassificationRate
 from blocks.initialization import IsotropicGaussian, Constant
 from fuel.streams import DataStream
+from fuel.transformers import Flatten
 from fuel.datasets import MNIST
 from fuel.schemes import SequentialScheme
 from blocks.filter import VariableFilter
@@ -40,8 +41,8 @@ def main(save_to, num_epochs, bokeh=False):
     cost = cost + .00005 * (W1 ** 2).sum() + .00005 * (W2 ** 2).sum()
     cost.name = 'final_cost'
 
-    mnist_train = MNIST("train", flatten=('features',))
-    mnist_test = MNIST("test", flatten=('features',))
+    mnist_train = MNIST("train")
+    mnist_test = MNIST("test")
 
     algorithm = GradientDescent(
         cost=cost, params=cg.parameters,
@@ -50,9 +51,12 @@ def main(save_to, num_epochs, bokeh=False):
                   FinishAfter(after_n_epochs=num_epochs),
                   DataStreamMonitoring(
                       [cost, error_rate],
-                      DataStream(mnist_test,
-                                 iteration_scheme=SequentialScheme(
-                                     mnist_test.num_examples, 500)),
+                      Flatten(
+                          DataStream.default_stream(
+                              mnist_test,
+                              iteration_scheme=SequentialScheme(
+                                  mnist_test.num_examples, 500)),
+                          which_sources=('features',)),
                       prefix="test"),
                   TrainingDataMonitoring(
                       [cost, error_rate,
@@ -72,9 +76,12 @@ def main(save_to, num_epochs, bokeh=False):
 
     main_loop = MainLoop(
         algorithm,
-        DataStream(mnist_train,
-                   iteration_scheme=SequentialScheme(
-                       mnist_train.num_examples, 50)),
+        Flatten(
+            DataStream.default_stream(
+                mnist_train,
+                iteration_scheme=SequentialScheme(
+                    mnist_train.num_examples, 50)),
+            which_sources=('features',)),
         model=Model(cost),
         extensions=extensions)
 
