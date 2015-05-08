@@ -1,13 +1,14 @@
 import os
 import shutil
-import sys
 import pickle
+import six
+import struct
 import tempfile
 import zipfile
 from collections import defaultdict
 from contextlib import closing
-from pickle import (HIGHEST_PROTOCOL, struct, TypeType, ClassType,
-                    FunctionType, BuiltinFunctionType)
+from pickle import HIGHEST_PROTOCOL
+from six.moves import copyreg
 try:
     from pickle import DEFAULT_PROTOCOL
 except ImportError:
@@ -95,7 +96,10 @@ class PersistentParameterID(PersistentNdarrayID):
 
 
 class PicklerWithWarning(pickle.Pickler):
-    dispatch = pickle.Pickler.dispatch.copy()
+    if six.PY2:
+        dispatch = pickle.Pickler.dispatch.copy()
+    else:
+        dispatch_table = copyreg.dispatch_table.copy()
 
     def save_global(self, obj, name=None, pack=struct.pack):
         if name is None:
@@ -105,10 +109,15 @@ class PicklerWithWarning(pickle.Pickler):
         if module == '__main__':
             print(MAIN_MODULE_WARNING % name)
         pickle.Pickler.save_global(self, obj, name, pack)
-    dispatch[ClassType] = save_global
-    dispatch[FunctionType] = save_global
-    dispatch[BuiltinFunctionType] = save_global
-    dispatch[TypeType] = save_global
+    if six.PY3:
+        dispatch_table[six.types.FunctionType] = save_global
+        dispatch_table[six.types.BuiltinFunctionType] = save_global
+        dispatch_table[type] = save_global
+    else:
+        dispatch[six.types.ClassType] = save_global
+        dispatch[six.types.FunctionType] = save_global
+        dispatch[six.types.BuiltinFunctionType] = save_global
+        dispatch[six.types.TypeType] = save_global
 
 
 def dump(obj, file_handler, protocol=DEFAULT_PROTOCOL,
