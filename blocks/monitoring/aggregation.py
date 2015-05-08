@@ -191,7 +191,9 @@ class MonitoredQuantity(object):
 
     """
     def __init__(self, requires=None, name=None):
-        self.requires = requires if (requires is not None) else []
+        if requires is None:
+            requires = []
+        self.requires = requires
         self.name = name
 
     @abstractmethod
