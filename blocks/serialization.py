@@ -81,7 +81,7 @@ class PersistentParameterID(PersistentNdarrayID):
         if isinstance(obj, SharedVariable):
             if obj.name:
                 if obj.name == 'pkl':
-                    ValueError("can't pickle shared variable with name `pkl`")
+                    raise ValueError("can't pickle shared variable with name `pkl`")
                 if hasattr(obj.tag, 'annotations'):
                     name = BRICK_DELIMITER.join(
                         [brick.name for brick
