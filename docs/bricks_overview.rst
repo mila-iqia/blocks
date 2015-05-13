@@ -71,7 +71,7 @@ bias vector with values drawn from a particular distribution.
     >>> y = linear.apply(x)
 
 So what happened here? We constructed a brick called :class:`.Linear` with a
-particular configuration: the input dimension (20) and output dimension (5).
+particular configuration: the input dimension (10) and output dimension (5).
 When we called :attr:`.Linear.apply`, the brick automatically constructed
 the `shared Theano variables`_ needed to store its parameters. In the lifecycle
 of a brick we refer to this as *allocation*.
