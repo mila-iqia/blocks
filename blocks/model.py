@@ -8,7 +8,7 @@ the basic :class:`AbstractModel` interface as well as its implementations
 """
 import logging
 from abc import ABCMeta, abstractmethod
-from collections import OrderedDict
+from collections import OrderedDict, Counter
 from itertools import chain
 
 from six import add_metaclass
@@ -36,8 +36,8 @@ class AbstractModel(object):
     The following are traits of every model:
 
     * It has parameters and supports a way to access them. In addition
-    to returning handles to parameter objects it can return their values
-    as numpy arrays and set their values to given numpy arrays.
+      to returning handles to parameter objects it can return their values
+      as numpy arrays and set their values to given numpy arrays.
 
     * It has an optimality objective.
 
@@ -155,8 +155,11 @@ class Model(AbstractModel, ComputationGraph):
         for brick in bricks:
             if brick not in children and brick not in self.top_bricks:
                 self.top_bricks.append(brick)
-        if len(set(b.name for b in self.top_bricks)) < len(self.top_bricks):
-            raise ValueError("top bricks with the same name")
+        names = Counter([brick.name for brick in self.top_bricks])
+        repeated_names = [name for name, count in names.items() if count > 1]
+        if repeated_names:
+            raise ValueError("top bricks with the same name:"
+                             " {}".format(', '.join(repeated_names)))
 
         brick_param_names = {
             v: k for k, v in Selector(self.top_bricks).get_params().items()}

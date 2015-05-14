@@ -10,6 +10,9 @@
 .. image:: https://img.shields.io/scrutinizer/g/bartvm/blocks.svg
    :target: https://scrutinizer-ci.com/g/bartvm/blocks/
 
+.. image:: https://requires.io/github/bartvm/blocks/requirements.svg?branch=master
+   :target: https://requires.io/github/bartvm/blocks/requirements/?branch=master
+
 .. image:: https://img.shields.io/badge/license-MIT-blue.svg
    :target: https://github.com/bartvm/blocks/blob/master/LICENSE
 
@@ -24,7 +27,7 @@ Theano. Currently it supports and provides:
 * Saving and resuming of training
 * Monitoring and analyzing values during training progress (on the training set
   as well as on test sets)
-* Application of graph transformations, such as dropout (*limited support*)
+* Application of graph transformations, such as dropout
 
 In the future we also hope to support:
 

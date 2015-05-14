@@ -11,7 +11,7 @@ from theano import tensor, Variable
 from blocks.bricks import Initializable, Sigmoid, Tanh
 from blocks.bricks.base import Application, application, Brick, lazy
 from blocks.initialization import NdarrayInitialization
-from blocks.roles import add_role, WEIGHT, BIAS
+from blocks.roles import add_role, WEIGHT
 from blocks.utils import (pack, shared_floatx_nans, dict_union, dict_subset,
                           is_shared_variable)
 
@@ -184,7 +184,9 @@ def recurrent(*args, **kwargs):
 
             def scan_function(*args):
                 args = list(args)
-                arg_names = (list(sequences_given) + list(states_given) +
+                arg_names = (list(sequences_given) +
+                             [output for output in application.outputs
+                              if output in application.states] +
                              list(contexts_given))
                 kwargs = dict(equizip(arg_names, args))
                 kwargs.update(rest_kwargs)
@@ -195,15 +197,18 @@ def recurrent(*args, **kwargs):
                 application_call.inner_inputs = args
                 application_call.inner_outputs = pack(outputs)
                 return outputs
-            outputs_info = (list(states_given.values()) +
-                            [None] * (len(application.outputs) -
-                                      len(application.states)))
+            outputs_info = [
+                states_given[name] if name in application.states
+                else None
+                for name in application.outputs]
             result, updates = theano.scan(
                 scan_function, sequences=list(sequences_given.values()),
                 outputs_info=outputs_info,
                 non_sequences=list(contexts_given.values()),
                 n_steps=n_steps,
-                go_backwards=reverse)
+                go_backwards=reverse,
+                name='{}_{}_scan'.format(
+                    brick.name, application.application_name))
             result = pack(result)
             if return_initial_states:
                 # Undo Subtensor
@@ -249,7 +254,7 @@ class SimpleRecurrent(BaseRecurrent, Initializable):
     See :class:`.Initializable` for initialization parameters.
 
     """
-    @lazy
+    @lazy(allocation=['dim'])
     def __init__(self, dim, activation, **kwargs):
         super(SimpleRecurrent, self).__init__(**kwargs)
         self.dim = dim
@@ -335,7 +340,7 @@ class LSTM(BaseRecurrent, Initializable):
     See :class:`.Initializable` for initialization parameters.
 
     """
-    @lazy
+    @lazy(allocation=['dim'])
     def __init__(self, dim, activation=None, **kwargs):
         super(LSTM, self).__init__(**kwargs)
         self.dim = dim
@@ -362,19 +367,16 @@ class LSTM(BaseRecurrent, Initializable):
                                                    name='W_cell_to_forget')
         self.W_cell_to_out = shared_floatx_nans((self.dim,),
                                                 name='W_cell_to_out')
-        self.biases = shared_floatx_nans((4*self.dim,), name='biases')
         add_role(self.W_state, WEIGHT)
         add_role(self.W_cell_to_in, WEIGHT)
         add_role(self.W_cell_to_forget, WEIGHT)
         add_role(self.W_cell_to_out, WEIGHT)
-        add_role(self.biases, BIAS)
 
         self.params = [self.W_state, self.W_cell_to_in, self.W_cell_to_forget,
-                       self.W_cell_to_out, self.biases]
+                       self.W_cell_to_out]
 
     def _initialize(self):
-        self.biases_init.initialize(self.biases, self.rng)
-        for w in self.params[:-1]:
+        for w in self.params:
             self.weights_init.initialize(w, self.rng)
 
     @recurrent(sequences=['inputs', 'mask'], states=['states', 'cells'],
@@ -409,7 +411,7 @@ class LSTM(BaseRecurrent, Initializable):
             return x.T[no*self.dim: (no+1)*self.dim].T
         nonlinearity = self.children[0].apply
 
-        activation = tensor.dot(states, self.W_state) + inputs + self.biases
+        activation = tensor.dot(states, self.W_state) + inputs
         in_gate = tensor.nnet.sigmoid(slice_last(activation, 0) +
                                       cells * self.W_cell_to_in)
         forget_gate = tensor.nnet.sigmoid(slice_last(activation, 1) +
@@ -461,7 +463,7 @@ class GatedRecurrent(BaseRecurrent, Initializable):
         for Statistical Machine Translation*, EMNLP (2014), pp. 1724-1734.
 
     """
-    @lazy
+    @lazy(allocation=['dim'])
     def __init__(self, dim, activation=None, gate_activation=None,
                  use_update_gate=True, use_reset_gate=True, **kwargs):
         super(GatedRecurrent, self).__init__(**kwargs)
@@ -602,7 +604,7 @@ class Bidirectional(Initializable):
     """
     has_bias = False
 
-    @lazy
+    @lazy()
     def __init__(self, prototype, **kwargs):
         super(Bidirectional, self).__init__(**kwargs)
         self.prototype = prototype
@@ -620,3 +622,7 @@ class Bidirectional(Initializable):
                                            *args, **kwargs)]
         return [tensor.concatenate([f, b], axis=2)
                 for f, b in equizip(forward, backward)]
+
+    @apply.delegate
+    def apply_delegate(self):
+        return self.children[0].apply

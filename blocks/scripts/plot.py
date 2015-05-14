@@ -8,9 +8,9 @@ from six.moves import cPickle
 from collections import OrderedDict
 from functools import reduce
 
-from blocks import config
+from blocks.config import config
 from blocks.utils import change_recursion_limit
-from blocks.log import AbstractTrainingLog
+from blocks.log import TrainingLog
 from blocks.main_loop import MainLoop
 
 try:
@@ -21,11 +21,11 @@ except ImportError:
 
 
 def load_log(fname):
-    """Load a :claas:`TrainingLog` object from disk.
+    """Load a :class:`TrainingLog` object from disk.
 
     This function automatically handles various file formats that contain
-    an instance of an :claas:`AbstractTrainingLog`. This includes a pickled
-    Log object, a pickled :claas:`MainLoop` or an experiment dump (TODO).
+    an instance of an :class:`TrainingLog`. This includes a pickled
+    Log object, a pickled :class:`MainLoop` or an experiment dump (TODO).
 
     """
     with change_recursion_limit(config.recursion_limit):
@@ -33,7 +33,7 @@ def load_log(fname):
             from_disk = cPickle.load(f)
         # TODO: Load "dumped" experiments
 
-    if isinstance(from_disk, AbstractTrainingLog):
+    if isinstance(from_disk, TrainingLog):
         log = from_disk
     elif isinstance(from_disk, MainLoop):
         log = from_disk.log

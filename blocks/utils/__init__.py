@@ -292,11 +292,13 @@ def is_shared_variable(variable):
 
     Notes
     -----
-    This function excludes random shared variables.
+    This function excludes shared variables that store the state of Theano
+    random number generators.
 
     """
     return (isinstance(variable, SharedVariable) and
-            not isinstance(variable, RandomStateSharedVariable))
+            not isinstance(variable, RandomStateSharedVariable) and
+            not hasattr(variable.tag, 'is_rng'))
 
 
 def dict_subset(dict_, keys, pop=False, must_have=True):

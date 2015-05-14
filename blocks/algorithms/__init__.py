@@ -12,7 +12,7 @@ from six import add_metaclass
 from theano import tensor
 
 from blocks.graph import ComputationGraph
-from blocks.utils import dict_subset, named_copy, shared_floatx
+from blocks.utils import dict_subset, named_copy, pack, shared_floatx
 from blocks.theano_expressions import l2_norm
 
 logger = logging.getLogger(__name__)
@@ -393,8 +393,7 @@ class Momentum(CompositeRule):
 
     See Also
     --------
-    :class:`SharedVariableModifier` for a parameter decay during the
-    training.
+    :class:`SharedVariableModifier`
 
     """
     def __init__(self, learning_rate=1.0, momentum=0.):
@@ -411,9 +410,9 @@ class AdaDelta(StepRule):
     Parameters
     ----------
     decay_rate : float, optional
-        Decay rate in [0, 1]. Defaults to 0.
+        Decay rate in [0, 1]. Defaults to 0.95.
     epsilon : float, optional
-        Stabilizing constant for RMS. Defaults to 1e-7.
+        Stabilizing constant for RMS. Defaults to 1e-6.
 
     Notes
     -----
@@ -423,7 +422,7 @@ class AdaDelta(StepRule):
        Rate Method*, arXiv:1212.5701.
 
     """
-    def __init__(self, decay_rate=0., epsilon=1e-7):
+    def __init__(self, decay_rate=0.95, epsilon=1e-6):
         if not 0.0 <= decay_rate <= 1.0:
             raise ValueError("decay rate needs to be in [0, 1]")
         self.decay_rate = shared_floatx(decay_rate)
@@ -529,8 +528,7 @@ class RMSProp(CompositeRule):
 
     See Also
     --------
-    :class:`SharedVariableModifier` for a parameter decay during the
-    training.
+    :class:`SharedVariableModifier`
 
     """
     def __init__(self, learning_rate=1.0, decay_rate=0.9, max_scaling=1e5):
@@ -591,10 +589,10 @@ class VariableClipping(StepRule):
     ----------
     threshold : float
         Maximum norm for a given (portion of a) tensor.
-    axes : iterable, optional
-        An iterable collection of integer axes over which to
-        sum in order to calculate the L2 norm. If `None`
-        (the default), the norm is computed over all elements
+    axis : int or iterable, optional
+        An integer single axis, or an iterable collection of integer
+        axes over which to sum in order to calculate the L2 norm. If
+        `None` (the default), the norm is computed over all elements
         of the tensor.
 
     Notes
@@ -624,24 +622,24 @@ class VariableClipping(StepRule):
        feature detectors". arXiv:1207.0580.
 
     """
-    def __init__(self, threshold, axes=None):
-        axes = axes if axes is not None else ()
-        self.axes = set(axes)
+    def __init__(self, threshold, axis=None):
+        axis = pack(axis) if axis is not None else ()
+        self.axis = set(axis)
         self.threshold = shared_floatx(threshold)
-        if len(axes) != len(self.axes):
-            raise ValueError("axes must be unique")
+        if len(axis) != len(self.axis):
+            raise ValueError("axis must be unique")
 
     def compute_step(self, param, previous_step):
-        if any(axis >= previous_step.ndim for axis in self.axes):
-            raise ValueError("Invalid axes {} for {}, ndim={}".format(
-                self.axes, param, previous_step.ndim))
-        if len(self.axes) == 0:
+        if any(ax >= previous_step.ndim for ax in self.axis):
+            raise ValueError("Invalid axis {} for {}, ndim={}".format(
+                self.axis, param, previous_step.ndim))
+        if len(self.axis) == 0:
             norms = l2_norm([param - previous_step])
         else:
             squares = tensor.sqr(param - previous_step)
             norms = tensor.sqrt(
                 reduce(lambda t, a: t.sum(axis=a, keepdims=True),
-                       sorted(self.axes), squares))
+                       sorted(self.axis), squares))
         # We want a step s* that is the same as scaling (param - previous_step)
         # by threshold / norm when threshold < norm.
         shrinking_step = (param -
@@ -663,21 +661,21 @@ class Adam(StepRule):
     learning_rate : float, optional
         Step size.
         Default value is set to 0.0002.
-    beta_1 : float, optional
+    beta1 : float, optional
         Exponential decay rate for the first moment estimates.
         Default value is set to 0.1.
-    beta_2 : float, optional
+    beta2 : float, optional
         Exponential decay rate for the second moment estimates.
         Default value is set to 0.001.
     epsilon : float, optional
         Default value is set to 1e-8.
     decay_factor : float, optional
-        Default value is set to 1e-8.
+        Default value is set to 1 - 1e-8.
 
     """
     def __init__(self, learning_rate=0.002,
                  beta1=0.1, beta2=0.001, epsilon=1e-8,
-                 decay_factor=1e-8):
+                 decay_factor=(1 - 1e-8)):
         self.learning_rate = learning_rate
         self.beta1 = beta1
         self.beta2 = beta2

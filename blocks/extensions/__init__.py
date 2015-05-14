@@ -1,11 +1,9 @@
 from __future__ import print_function
 
-import time
 import logging
-import progressbar
-
 from abc import ABCMeta, abstractmethod
 
+import progressbar
 from six import add_metaclass
 from toolz import first
 
@@ -153,9 +151,9 @@ class Predicate(object):
 
     def __call__(self, log):
         if self.condition.endswith('epochs'):
-            entry = log.status.epochs_done
+            entry = log.status['epochs_done']
         else:
-            entry = log.status.iterations_done
+            entry = log.status['iterations_done']
         if self.condition.startswith('every'):
             return entry % self.num == 0
         else:
@@ -163,7 +161,7 @@ class Predicate(object):
 
 
 def has_done_epochs(log):
-    return log.status.epochs_done == 0
+    return log.status['epochs_done'] == 0
 
 
 def always_true(log):
@@ -188,6 +186,8 @@ class SimpleExtension(TrainingExtension):
         If ``True``, :meth:`do` is invoked before training.
     before_first_epoch : bool
         If ``True``, :meth:`do` is invoked before the first epoch.
+    before_epoch : bool
+        If ``True``, :meth:`do` is invoked before every epoch.
     on_resumption : bool, optional
         If ``True``, :meth:`do` is invoked when training is resumed.
     on_interrupt : bool, optional
@@ -211,9 +211,9 @@ class SimpleExtension(TrainingExtension):
 
     """
     BOOLEAN_TRIGGERS = frozenset(["before_training", "before_first_epoch",
-                                  "on_resumption", "on_interrupt",
-                                  "after_epoch", "after_batch",
-                                  "after_training"])
+                                  "before_epoch", "on_resumption",
+                                  "on_interrupt", "after_epoch",
+                                  "after_batch", "after_training"])
 
     INTEGER_TRIGGERS = frozenset(["after_n_epochs", "after_n_batches",
                                   "every_n_epochs", "every_n_batches"])
@@ -363,7 +363,7 @@ class FinishAfter(SimpleExtension):
         super(FinishAfter, self).__init__(**kwargs)
 
     def do(self, which_callback, *args):
-        self.main_loop.log.current_row.training_finish_requested = True
+        self.main_loop.log.current_row['training_finish_requested'] = True
 
 
 class Printing(SimpleExtension):
@@ -377,7 +377,7 @@ class Printing(SimpleExtension):
         super(Printing, self).__init__(**kwargs)
 
     def _print_attributes(self, attribute_tuples):
-        for attr, value in sorted(attribute_tuples, key=first):
+        for attr, value in sorted(attribute_tuples.items(), key=first):
             if not attr.startswith("_"):
                 print("\t", "{}:".format(attr), value)
 
@@ -387,7 +387,7 @@ class Printing(SimpleExtension):
 
         print()
         print("".join(79 * "-"))
-        if which_callback == "before_epoch" and log.status.epochs_done == 0:
+        if which_callback == "before_epoch" and log.status['epochs_done'] == 0:
             print("BEFORE FIRST EPOCH")
         elif which_callback == "on_resumption":
             print("TRAINING HAS BEEN RESUMED")
@@ -403,7 +403,7 @@ class Printing(SimpleExtension):
             print("Training status:")
             self._print_attributes(log.status)
             print("Log records from the iteration {}:".format(
-                log.status.iterations_done))
+                log.status['iterations_done']))
             self._print_attributes(log.current_row)
         print()
 
@@ -460,7 +460,7 @@ class ProgressBar(TrainingExtension):
 
         """
         iter_per_epoch = self.get_iter_per_epoch()
-        epochs_done = self.main_loop.log._status.epochs_done
+        epochs_done = self.main_loop.log.status['epochs_done']
 
         if iter_per_epoch is None:
             widgets = ["Epoch {}, step ".format(epochs_done),
@@ -497,98 +497,51 @@ class ProgressBar(TrainingExtension):
         self.bar.update(self.iter_count)
 
 
-class Timing(TrainingExtension):
-    """Keeps track of time used.
+class Timing(SimpleExtension):
+    """Add timing information to the log.
 
-    Depending of the `clock_function` parameter this extension
-    can track both CPU or user time.
-
-    It is highly recommended to put this extension first in the extension
-    list. Assuming that this recommendation is respected, the semantics
-    of the records it writes to the log is explained below:
-
-    * `initilialization_took`: number of seconds the initialization took.
-      Includes time spent running `before_training` callbacks.
-
-    * `iteration_took`: number of seconds an iteration took. Includes
-      time spent running `after_batch` callbacks at the previous iteration
-      and `before_batch` callbacks of current iteration
-
-    * `epoch_took`: number of seconds an epoch took. Includes
-      time spent running `after_epoch` callbacks at the previous iteration
-      and `before_epoch` callbacks of current iteration
-
-    * `total_took`: number of seconds running until the current iteration
-      took.
-
-    * `final_total_took`: total number of seconds spent on training
-      including all extension calls except `after_training`.
-
-    Parameters
-    ----------
-    clock_function : callable, optional
-        Return the current time. By default `time.time` is used,
-        which means that user time is tracked.
+    This adds data about the time spent in the algorithm's
+    :meth:`~.Algorithm.process_batch` method as well as the time spent
+    reading data per batch or epoch. It also reports the time spent
+    initializing the algorithm.
 
     Notes
     -----
-    When training is interrupted this extension saves intermediate
-    time measurements to the training status, i.e. it should be robust
-    to any training interruptions.
+    Add this extension *before* the :class:`Printing` extension.
 
+    This extension does *not* enable full profiling information. To see a
+    full profile of the main loop at the end of training, use the
+    ``profile`` configuration (e.g.  by setting ``BLOCKS_PROFILE=true``).
 
     """
-    def __init__(self, clock_function=None, **kwargs):
+    def __init__(self, **kwargs):
+        kwargs.setdefault('before_first_epoch', True)
+        kwargs.setdefault('after_epoch', True)
         super(Timing, self).__init__(**kwargs)
-        if not clock_function:
-            clock_function = time.time
-        self.clock_function = clock_function
+        self.current = {
+            level: {'train': 0, 'read_data': 0}
+            for level in ['batch', 'epoch']
+        }
+        self.previous = {
+            level: {'train': 0, 'read_data': 0}
+            for level in ['batch', 'epoch']
+        }
 
-    @property
-    def log(self):
-        return self.main_loop.log
+    def do(self, which_callback, *args):
+        current_row = self.main_loop.log.current_row
+        profile = self.main_loop.profile.total
 
-    def before_training(self):
-        self.started_at = self.clock_function()
-        self.log.status._epoch_before_interrupted = 0
-        self.log.status._total_before_interrupted = 0
-
-    def before_epoch(self):
-        self.epoch_started_at = self.clock_function()
-        if self.log.status.epochs_done == 0:
-            self.log.current_row.initialization_took = (
-                self.epoch_started_at - self.started_at)
-
-    def before_batch(self, batch):
-        self.batch_started_at = self.clock_function()
-
-    def after_batch(self, batch):
-        self.log.current_row.iteration_took = (
-            self.clock_function() - self.batch_started_at)
-        self.log.current_row.total_took = (
-            self.log.status._total_before_interrupted +
-            self.clock_function() - self.started_at)
-
-    def after_epoch(self):
-        self.log.current_row.epoch_took = (
-            self.log.status._epoch_before_interrupted +
-            self.clock_function() - self.epoch_started_at)
-        self.log.status._epoch_before_interrupted = 0
-
-    def after_training(self):
-        self.log.current_row.final_total_took = (
-            self.log.status._total_before_interrupted +
-            self.clock_function() - self.started_at)
-
-        # Save intermediate results to the log.status
-        self.log.status._total_before_interrupted = (
-            self.log.current_row.final_total_took)
-        if self.log.status._epoch_started:
-            epoch_ends = self.log.status._epoch_ends
-            self.log.status._epoch_before_interrupted = (
-                self.clock_function() -
-                0 if not epoch_ends else self.log[epoch_ends[-1]].total_took)
-
-    def on_resumption(self):
-        self.started_at = self.clock_function()
-        self.epoch_started_at = self.clock_function()
+        if which_callback == 'before_epoch':
+            current_row['time_initialization'] = profile[('initialization',)]
+            return
+        if which_callback == 'after_batch':
+            level = 'batch'
+        elif which_callback == 'after_epoch':
+            level = 'epoch'
+        for action in ['train', 'read_data']:
+            self.previous[level][action] = self.current[level][action]
+            self.current[level][action] = profile['training', 'epoch', action]
+            current_row['time_{}_this_{}'.format(action, level)] = \
+                self.current[level][action] - self.previous[level][action]
+            current_row['time_{}_total'.format(action)] = \
+                self.current[level][action]

@@ -7,6 +7,7 @@ concept of "bricks", which you might have already come across in :ref:`the
 introduction tutorial <model_building>`. 
 
 .. _bricks:
+
 Bricks life-cycle
 -----------------
 
@@ -39,8 +40,8 @@ The life-cycle of a brick is as follows:
 
 .. note::
    If the Theano variables of the brick object have not been allocated when 
-      :meth:`~.Application.apply` is called, Blocks will quietly call 
-         :meth:`.Brick.allocate`.
+   :meth:`~.Application.apply` is called, Blocks will quietly call 
+   :meth:`.Brick.allocate`.
 
 Example
 ^^^^^^^
@@ -70,7 +71,7 @@ bias vector with values drawn from a particular distribution.
     >>> y = linear.apply(x)
 
 So what happened here? We constructed a brick called :class:`.Linear` with a
-particular configuration: the input dimension (20) and output dimension (5).
+particular configuration: the input dimension (10) and output dimension (5).
 When we called :attr:`.Linear.apply`, the brick automatically constructed
 the `shared Theano variables`_ needed to store its parameters. In the lifecycle
 of a brick we refer to this as *allocation*.
@@ -115,15 +116,14 @@ it fully (or at all):
 
     >>> linear2 = Linear(output_dim=10)
     >>> print(linear2.input_dim)
-    None
+    NoneAllocation
 
 Of course, as long as the brick is not configured, we cannot actually apply it!
 
     >>> linear2.apply(x)
     Traceback (most recent call last):
       ...
-    TypeError: Lazy initialization is enabled, so please make sure you have set
-    all the required configuration for this method call.
+    ValueError: allocation config not set: input_dim
 
 We can now easily configure our brick based on other bricks.
 

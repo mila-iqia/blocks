@@ -105,7 +105,7 @@ class AbstractAttention(Brick):
     attended_dim : int
 
     """
-    @lazy
+    @lazy(allocation=['state_names', 'state_dims', 'attended_dim'])
     def __init__(self, state_names, state_dims, attended_dim, **kwargs):
         self.state_names = state_names
         self.state_dims = state_dims
@@ -159,7 +159,7 @@ class AbstractAttention(Brick):
             padded structured output, e.g. when a number of sequences are
             force to be the same length. The mask identifies position of
             the `attended` that actually contain information.
-        **kwargs : dict
+        \*\*kwargs : dict
             Includes the states and the glimpses to be carried over from
             the previous step in the case when the attention mechanism is
             applied sequentially.
@@ -224,10 +224,14 @@ class GenericSequenceAttention(AbstractAttention):
             as `energies`.
 
         """
-        unormalized_weights = tensor.exp(energies)
+        unnormalized_weights = tensor.exp(energies)
         if attended_mask:
-            unormalized_weights *= attended_mask
-        return unormalized_weights / unormalized_weights.sum(axis=0)
+            unnormalized_weights *= attended_mask
+
+        # If mask consists of all zeros use 1 as the normalization coefficient
+        normalization = (unnormalized_weights.sum(axis=0) +
+                         tensor.all(1 - attended_mask, axis=0))
+        return unnormalized_weights / normalization
 
     @application
     def compute_weighted_averages(self, weights, attended):
@@ -303,7 +307,7 @@ class SequenceContentAttention(GenericSequenceAttention, Initializable):
        Machine Translation by Jointly Learning to Align and Translate.
 
     """
-    @lazy
+    @lazy(allocation=['match_dim'])
     def __init__(self, match_dim, state_transformer=None,
                  attended_transformer=None, energy_computer=None, **kwargs):
         super(SequenceContentAttention, self).__init__(**kwargs)
@@ -360,7 +364,7 @@ class SequenceContentAttention(GenericSequenceAttention, Initializable):
         attended_mask : :class:`~tensor.TensorVariable`
             A 0/1 mask specifying available data. 0 means that the
             corresponding sequence element is fake.
-        **states
+        \*\*states
             The states of the network.
 
         Returns
@@ -414,7 +418,7 @@ class SequenceContentAttention(GenericSequenceAttention, Initializable):
 
 class ShallowEnergyComputer(Sequence, Initializable, Feedforward):
     """A simple energy computer: first tanh, then weighted sum."""
-    @lazy
+    @lazy()
     def __init__(self, **kwargs):
         super(ShallowEnergyComputer, self).__init__(
             [Tanh().apply, MLP([Identity()]).apply], **kwargs)

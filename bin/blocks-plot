@@ -46,9 +46,9 @@ def main(args):
     for fname in args.experiments:
         log = plot.load_log(fname)
 
-        rows_to_keep = ([0] + log.status._epoch_ends
+        rows_to_keep = ([0] + log.status['_epoch_ends']
                         if args.every == "epoch"
-                        else range(log.status.iterations_done))
+                        else range(log.status['iterations_done']))
         data_frame = log.to_dataframe()
         data_frame = data_frame.iloc[rows_to_keep]
 

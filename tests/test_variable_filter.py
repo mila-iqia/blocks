@@ -1,7 +1,10 @@
+from nose.tools import raises
+
 from blocks.bricks import Bias, Linear, Sigmoid
+from blocks.bricks.parallel import Merge
 from blocks.filter import VariableFilter
 from blocks.graph import ComputationGraph
-from blocks.roles import BIAS, FILTER, PARAMETER
+from blocks.roles import BIAS, FILTER, PARAMETER, OUTPUT
 
 from theano import tensor
 
@@ -43,11 +46,60 @@ def test_variable_filter():
     brick_filter = VariableFilter(roles=[BIAS], bricks=[brick1])
     assert brick1_bias == brick_filter(cg.variables)
 
+    # Testing filtering by brick instance
+    brick_filter = VariableFilter(roles=[BIAS], bricks=[brick1])
+    assert brick1_bias == brick_filter(cg.variables)
+
     # Testing filtering by name
     name_filter = VariableFilter(name='W_norm')
     assert [cg.variables[2]] == name_filter(cg.variables)
 
+    # Testing filtering by name regex
+    name_filter_regex = VariableFilter(name_regex='W_no.?m')
+    assert [cg.variables[2]] == name_filter_regex(cg.variables)
+
     # Testing filtering by application
-    appli_filter = VariableFilter(application=brick1.apply)
+    appli_filter = VariableFilter(applications=[brick1.apply])
     variables = [cg.variables[1], cg.variables[8]]
     assert variables == appli_filter(cg.variables)
+
+    # Testing filtering by application
+    appli_filter_list = VariableFilter(applications=[brick1.apply])
+    assert variables == appli_filter_list(cg.variables)
+
+    input1 = tensor.matrix('input1')
+    input2 = tensor.matrix('input2')
+    merge = Merge(['input1', 'input2'], [5, 6], 2)
+    merged = merge.apply(input1, input2)
+    merge_cg = ComputationGraph(merged)
+    outputs = VariableFilter(
+        roles=[OUTPUT], bricks=[merge])(merge_cg.variables)
+    assert merged in outputs
+    assert len(outputs) == 3
+
+    outputs_application = VariableFilter(
+        roles=[OUTPUT], applications=[merge.apply])(merge_cg.variables)
+    assert outputs_application == [merged]
+
+
+@raises(TypeError)
+def test_variable_filter_roles_error():
+    # Creating computation graph
+    brick1 = Linear(input_dim=2, output_dim=2, name='linear1')
+
+    x = tensor.vector()
+    h1 = brick1.apply(x)
+    cg = ComputationGraph(h1)
+    # testing role error
+    VariableFilter(roles=PARAMETER)(cg.variables)
+
+
+@raises(TypeError)
+def test_variable_filter_applications_error():
+    # Creating computation graph
+    brick1 = Linear(input_dim=2, output_dim=2, name='linear1')
+
+    x = tensor.vector()
+    h1 = brick1.apply(x)
+    cg = ComputationGraph(h1)
+    VariableFilter(applications=brick1.apply)(cg.variables)

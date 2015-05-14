@@ -58,6 +58,25 @@ class Checkpoint(SimpleExtension):
         if not self.save_separately:
             self.save_separately = []
 
+    def save_separately_filenames(self, path):
+        """Compute paths for separately saved attributes.
+
+        Parameters
+        ----------
+        path : str
+            Path to which the main checkpoint file is being saved.
+
+        Returns
+        -------
+        paths : dict
+            A dictionary mapping attribute names to derived paths
+            based on the `path` passed in as an argument.
+
+        """
+        root, ext = os.path.splitext(path)
+        return {attribute: root + "_" + attribute + ext
+                for attribute in self.save_separately}
+
     def do(self, callback_name, *args):
         """Pickle the main loop object to the disk.
 
@@ -69,18 +88,16 @@ class Checkpoint(SimpleExtension):
         from_main_loop, from_user = self.parse_args(callback_name, args)
         try:
             path = self.path
-            if len(from_user):
+            if from_user:
                 path, = from_user
-            already_saved_to = self.main_loop.log.current_row[SAVED_TO]
-            if not already_saved_to:
-                already_saved_to = ()
+            already_saved_to = self.main_loop.log.current_row.get(SAVED_TO, ())
             self.main_loop.log.current_row[SAVED_TO] = (
                 already_saved_to + (path,))
             secure_pickle_dump(self.main_loop, path)
+            filenames = self.save_separately_filenames(path)
             for attribute in self.save_separately:
-                root, ext = os.path.splitext(path)
-                path = root + "_" + attribute + ext
-                secure_pickle_dump(getattr(self.main_loop, attribute), path)
+                secure_pickle_dump(getattr(self.main_loop, attribute),
+                                   filenames[attribute])
         except Exception:
             self.main_loop.log.current_row[SAVED_TO] = None
             raise

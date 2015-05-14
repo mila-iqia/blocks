@@ -6,6 +6,10 @@ ensure the codebase is of high quality, we ask all new developers to have a
 quick read through these rules to make sure that any code you contribute will be
 easy to merge!
 
+
+.. image:: /_static/code_quality.png
+   :width: 100%
+
 Formatting guidelines
 ---------------------
 Blocks follows the `PEP8 style guide`_ closely, so please make sure you are
@@ -145,6 +149,7 @@ order to do so it takes a radical approach, serializing the entire training
 state using pickle_. Some things cannot be pickled, so their use should be
 avoided when the object will be pickled as part of the main loop:
 
+* Lambda functions
 * Iterators and generators (use picklable_itertools_)
 * References to methods as attributes
 * Any variable that lies outside of the global namespace e.g. nested functions

@@ -11,7 +11,7 @@ Theano variable, in two ways:
   were the in- and outputs of your bricks, and more.
 * It constructs *auxiliary variables*. These are variables which are not
   outputs of your brick, but might still be of interest. For example, if you are
-  training a neural network, you might be interested to now the norm of your
+  training a neural network, you might be interested to know the norm of your
   weight matrices, so Blocks attaches these as auxiliary variables to the graph.
 
 Using annotations
