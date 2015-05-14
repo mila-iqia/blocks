@@ -34,6 +34,33 @@ def test_convolutional():
     assert conv.get_dim('output') == (num_filters, 15, 11)
 
 
+def test_tied_biases():
+    x = tensor.tensor4('x')
+    num_channels = 4
+    num_filters = 3
+    batch_size = 5
+    filter_size = (3, 3)
+    conv = Convolutional(filter_size, num_filters, num_channels,
+                         weights_init=Constant(1.), biases_init=Constant(2.),
+                         tied_biases=True)
+    conv.initialize()
+    y = conv.apply(x)
+    func = function([x], y)
+
+    # Tied biases allows to pass images of different sizes
+    x_val_1 = numpy.ones((batch_size, num_channels, 10,
+                          12), dtype=theano.config.floatX)
+    x_val_2 = numpy.ones((batch_size, num_channels, 23,
+                          19), dtype=theano.config.floatX)
+
+    assert_allclose(func(x_val_1),
+                    numpy.prod(filter_size) * num_channels *
+                    numpy.ones((batch_size, num_filters, 8, 10)) + 2)
+    assert_allclose(func(x_val_2),
+                    numpy.prod(filter_size) * num_channels *
+                    numpy.ones((batch_size, num_filters, 21, 17)) + 2)
+
+
 def test_max_pooling():
     x = tensor.tensor4('x')
     num_channels = 4
