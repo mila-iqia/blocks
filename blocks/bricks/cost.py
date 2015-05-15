@@ -65,5 +65,8 @@ class CategoricalCrossEntropy(Cost):
 class MisclassificationRate(Cost):
     @application(outputs=["error_rate"])
     def apply(self, y, y_hat):
-        return (tensor.sum(tensor.neq(y, y_hat.argmax(axis=1))) /
-                y.shape[0].astype(floatX))
+        # Here we have to cast both operands to floatX explicitly.
+        # Because int64 / float32 = float64 in Theano, unfortunately.
+        return (
+            tensor.sum(tensor.neq(y, y_hat.argmax(axis=1))).astype(floatX) /
+            y.shape[0].astype(floatX))
