@@ -53,7 +53,7 @@ Blocks:
            self.baz = baz
 
 .. _PEP8 style guide: https://www.python.org/dev/peps/pep-0008/
-.. _Travis CI buildbot: https://travis-ci.org/bartvm/blocks
+.. _Travis CI buildbot: https://travis-ci.org/mila-udem/blocks
 .. _flake8: https://pypi.python.org/pypi/flake8
 .. _pep8: https://pypi.python.org/pypi/pep8
 .. _pyflakes: https://pypi.python.org/pypi/pyflakes
@@ -228,8 +228,8 @@ The test suite can be executed locally using nose2_ [#]_.
 
 .. [#] For all tests but the doctests, nose_ can also be used.
 
-.. _Travis CI: https://travis-ci.org/bartvm/blocks
-.. _coveralls: https://coveralls.io/r/bartvm/blocks
+.. _Travis CI: https://travis-ci.org/mila-udem/blocks
+.. _coveralls: https://coveralls.io/r/mila-udem/blocks
 .. _nose2: https://readthedocs.org/projects/nose2/
 .. _nose: http://nose.readthedocs.org/en/latest/
 

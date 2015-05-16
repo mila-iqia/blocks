@@ -251,4 +251,4 @@ Log records from the iteration 235:
 .. _doctest mode: http://ipython.org/ipython-doc/dev/interactive/tips.html#run-doctests
 .. _download the MNIST files: http://yann.lecun.com/exdb/mnist/
 .. _Fuel: http://fuel.readthedocs.org/en/latest/
-.. _this tutorial: https://github.com/bartvm/fuel/blob/master/docs/built_in_datasets.rst
+.. _this tutorial: https://github.com/mila-udem/fuel/blob/master/docs/built_in_datasets.rst

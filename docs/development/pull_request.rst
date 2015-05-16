@@ -26,7 +26,7 @@ Fork the Blocks repository
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 Once you've set up your account and logged in, you should fork the Blocks
 repository to your account by clicking the "Fork" button on the
-`official repository's web page <https://github.com/bartvm/blocks>`_.
+`official repository's web page <https://github.com/mila-udem/blocks>`_.
 More information on forking is available in `the GitHub documentation`_.
 
 .. _the GitHub documentation: https://help.github.com/articles/fork-a-repo/
@@ -53,7 +53,7 @@ Git of its existence and location by running
 
 .. code-block:: bash
 
-    $ git remote add upstream https://github.com/bartvm/blocks.git
+    $ git remote add upstream https://github.com/mila-udem/blocks.git
 
 You only need to do this once.
 
