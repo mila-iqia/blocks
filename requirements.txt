@@ -15,4 +15,4 @@ git+https://github.com/Theano/Theano.git#egg=theano
 
 --allow-external fuel
 --allow-unverified fuel
-git+https://github.com/bartvm/fuel#egg=fuel
+git+https://github.com/mila-udem/fuel#egg=fuel
