@@ -11,8 +11,8 @@ git+https://github.com/dwf/picklable_itertools.git#egg=picklable-itertools
 
 --allow-external theano
 --allow-unverified theano
-git+https://github.com/Theano/Theano.git#egg=theano
+git+https://github.com/Theano/Theano.git@c6d2ab3929182cdf7cf12e4b1f191a6ff99d07cc#egg=theano
 
 --allow-external fuel
 --allow-unverified fuel
-git+https://github.com/mila-udem/fuel#egg=fuel
+git+https://github.com/mila-udem/fuel@stable#egg=fuel
