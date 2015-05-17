@@ -10,6 +10,14 @@ directly from GitHub.
    $ pip install git+git://github.com/mila-udem/blocks.git \
      -r https://raw.githubusercontent.com/mila-udem/blocks/master/requirements.txt
 
+This will give you the cutting-edge development version. The latest stable
+release is in the ``stable`` branch and can be installed as follows.
+
+.. code-block:: bash
+
+   $ pip install git+git://github.com/mila-udem/blocks.git@stable \
+     -r https://raw.githubusercontent.com/mila-udem/blocks/stable/requirements.txt
+
 .. note::
 
    Blocks relies on several packages, such as Theano_ and picklable_itertools_,
