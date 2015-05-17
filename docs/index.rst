@@ -12,7 +12,7 @@ Blocks is developed in parallel with Fuel_, a dataset processing framework.
 .. warning::
    Blocks is a new project which is still under development. As such, certain
    (all) parts of the framework are subject to change. The last stable (and
-   thus likely an outdated version) can be found in the "stable" branch).
+   thus likely an outdated) version can be found in the ``stable`` branch.
 
 .. tip::
 
