@@ -12,7 +12,7 @@ from blocks.bricks.recurrent import SimpleRecurrent, Bidirectional
 from blocks.bricks.sequence_generators import (
     SequenceGenerator, Readout, SoftmaxEmitter, LookupFeedback)
 from blocks.graph import ComputationGraph
-from blocks.initialization import Constant, IsotropicGaussian
+from blocks.initialization import IsotropicGaussian
 from blocks.filter import VariableFilter
 from blocks.search import BeamSearch
 from blocks.utils import dict_union
@@ -34,7 +34,7 @@ class SimpleGenerator(Initializable):
         fork = Fork([name for name in encoder.prototype.apply.sequences
                      if name != 'mask'])
         fork.input_dim = dimension
-        fork.output_dims = [dimension for name in fork.input_names]
+        fork.output_dims = [dimension for _ in fork.input_names]
         lookup = LookupTable(alphabet_size, dimension)
         transition = SimpleRecurrent(
             activation=Tanh(),
@@ -87,7 +87,7 @@ def test_beam_search_smallest():
 
 
 def test_beam_search():
-    """Test beam search using the model from the reverse_words demo.
+    """Test beam search using the model similar to the reverse_words demo.
 
     Ideally this test should be done with a trained model, but so far
     only with a randomly initialized one. So it does not really test
@@ -116,7 +116,7 @@ def test_beam_search():
     search = BeamSearch(10, samples)
     results, mask, costs = search.search(
         {inputs: input_vals}, 0, 3 * length, as_arrays=True)
-    print results.sum()
+    # Just check sum
     assert results.sum() == 5084
 
     true_costs = simple_generator.cost(
