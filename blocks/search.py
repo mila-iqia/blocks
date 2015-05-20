@@ -6,7 +6,7 @@ import numpy
 from picklable_itertools.extras import equizip
 from theano import config, function, tensor
 
-from blocks.bricks.sequence_generators import SequenceGenerator
+from blocks.bricks.sequence_generators import BaseSequenceGenerator
 from blocks.filter import VariableFilter, get_application_call, get_brick
 from blocks.graph import ComputationGraph
 from blocks.roles import INPUT, OUTPUT
@@ -60,7 +60,7 @@ class BeamSearch(object):
         cg = ComputationGraph(samples)
         self.inputs = cg.inputs
         self.generator = get_brick(samples)
-        if not isinstance(self.generator, SequenceGenerator):
+        if not isinstance(self.generator, BaseSequenceGenerator):
             raise ValueError
         self.generate_call = get_application_call(samples)
         if (not self.generate_call.application ==
