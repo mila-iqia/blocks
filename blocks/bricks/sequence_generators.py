@@ -87,9 +87,9 @@ class BaseSequenceGenerator(Initializable):
            s_0, g_0 = transition.initial\_states(contexts)\\
            i = 1\\
 
-       By default all standard recurrent bricks have trainable initial
-       states initialized with zeros. Subclass them or
-       :class:`~blocks.bricks.recurrent.BaseRecurrent` directly to get
+       By default all recurrent bricks from :mod:`~blocks.bricks.recurrent`
+       have trainable initial states initialized with zeros. Subclass them
+       or :class:`~blocks.bricks.recurrent.BaseRecurrent` directly to get
        custom initial states.
 
     2. New glimpses are computed:

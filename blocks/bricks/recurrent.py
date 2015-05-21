@@ -37,7 +37,6 @@ class BaseRecurrent(Brick):
         :class:`GatedRecurrent` override it with trainable initial
         states initialized with zeros.
 
-
         Parameters
         ----------
         state_name : str
