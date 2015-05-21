@@ -421,7 +421,7 @@ class ShallowEnergyComputer(Sequence, Initializable, Feedforward):
     @lazy()
     def __init__(self, **kwargs):
         super(ShallowEnergyComputer, self).__init__(
-            [Tanh().apply, MLP([Identity()]).apply], **kwargs)
+            [Tanh().apply, Linear(use_bias=False).apply], **kwargs)
 
     @property
     def input_dim(self):
