@@ -6,7 +6,6 @@ import numpy
 import os
 import operator
 
-import theano
 from six.moves import input
 from picklable_itertools.extras import equizip
 from theano import tensor
@@ -41,7 +40,6 @@ from blocks.utils import named_copy, dict_union
 from blocks.search import BeamSearch
 
 config.recursion_limit = 100000
-floatX = theano.config.floatX
 logger = logging.getLogger(__name__)
 
 # Dictionaries

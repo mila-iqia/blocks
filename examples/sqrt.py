@@ -28,15 +28,13 @@ from blocks.extensions.monitoring import (TrainingDataMonitoring,
                                           DataStreamMonitoring)
 from blocks.main_loop import MainLoop
 
-floatX = theano.config.floatX
-
 
 def _data_sqrt(data):
     return (math.sqrt(data[0]),)
 
 
 def _array_tuple(data):
-    return tuple((numpy.asarray(d, dtype=floatX) for d in data))
+    return tuple((numpy.asarray(d, dtype=theano.config.floatX) for d in data))
 
 
 def get_data_stream(iterable):

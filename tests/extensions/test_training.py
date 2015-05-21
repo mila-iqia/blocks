@@ -18,12 +18,10 @@ from blocks.main_loop import MainLoop
 from blocks.utils import shared_floatx
 from tests import MockMainLoop
 
-floatX = theano.config.floatX
-
 
 def test_shared_variable_modifier():
-    weights = numpy.array([-1, 1], dtype=floatX)
-    features = [numpy.array(f, dtype=floatX)
+    weights = numpy.array([-1, 1], dtype=theano.config.floatX)
+    features = [numpy.array(f, dtype=theano.config.floatX)
                 for f in [[1, 2], [3, 4], [5, 6]]]
     targets = [(weights * f).sum() for f in features]
     n_batches = 3
@@ -43,19 +41,20 @@ def test_shared_variable_modifier():
         algorithm=sgd,
         extensions=[
             FinishAfter(after_n_epochs=1),
-            SharedVariableModifier(step_rule.learning_rate,
-                                   lambda n: numpy.cast[floatX](10. / n))
-            ])
+            SharedVariableModifier(
+                step_rule.learning_rate,
+                lambda n: numpy.cast[theano.config.floatX](10. / n)
+            )])
 
     main_loop.run()
 
     assert_allclose(step_rule.learning_rate.get_value(),
-                    numpy.cast[floatX](10. / n_batches))
+                    numpy.cast[theano.config.floatX](10. / n_batches))
 
 
 def test_shared_variable_modifier_two_params():
-    weights = numpy.array([-1, 1], dtype=floatX)
-    features = [numpy.array(f, dtype=floatX)
+    weights = numpy.array([-1, 1], dtype=theano.config.floatX)
+    features = [numpy.array(f, dtype=theano.config.floatX)
                 for f in [[1, 2], [3, 4], [5, 6]]]
     targets = [(weights * f).sum() for f in features]
     n_batches = 3
@@ -72,7 +71,7 @@ def test_shared_variable_modifier_two_params():
                           step_rule=step_rule)
     modifier = SharedVariableModifier(
         step_rule.learning_rate,
-        lambda _, val: numpy.cast[floatX](val * 0.2))
+        lambda _, val: numpy.cast[theano.config.floatX](val * 0.2))
     main_loop = MainLoop(
         model=None, data_stream=dataset.get_example_stream(),
         algorithm=sgd,

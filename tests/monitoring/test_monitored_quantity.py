@@ -6,8 +6,6 @@ from blocks.monitoring.evaluators import DatasetEvaluator
 from blocks.monitoring.aggregation import MonitoredQuantity
 from blocks.bricks.cost import CategoricalCrossEntropy
 
-floatX = theano.config.floatX
-
 
 class CrossEntropy(MonitoredQuantity):
     def __init__(self, **kwargs):
@@ -30,8 +28,8 @@ def test_dataset_evaluators():
     X = theano.tensor.vector('X')
     Y = theano.tensor.vector('Y')
 
-    data = [numpy.arange(1, 7, dtype=floatX).reshape(3, 2),
-            numpy.arange(11, 17, dtype=floatX).reshape(3, 2)]
+    data = [numpy.arange(1, 7, dtype=theano.config.floatX).reshape(3, 2),
+            numpy.arange(11, 17, dtype=theano.config.floatX).reshape(3, 2)]
     data_stream = IterableDataset(dict(X=data[0],
                                        Y=data[1])).get_example_stream()
 

@@ -1,7 +1,6 @@
 import tempfile
 
 import numpy
-import theano
 from picklable_itertools.extras import equizip
 
 from blocks.dump import (
@@ -9,8 +8,6 @@ from blocks.dump import (
     MainLoopDumpManager)
 from examples.sqrt import main as sqrt_example
 from tests import silence_printing
-
-floatX = theano.config.floatX
 
 
 def test_save_load_parameter_values():

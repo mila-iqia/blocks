@@ -16,8 +16,6 @@ from blocks.graph import ComputationGraph
 from blocks.initialization import Orthogonal, IsotropicGaussian, Constant
 from blocks.roles import AUXILIARY
 
-floatX = theano.config.floatX
-
 
 class TestEmitter(TrivialEmitter):
     @application
@@ -32,6 +30,7 @@ def test_sequence_generator():
     Such sequence generators can be used to model e.g. dynamical systems.
 
     """
+    floatX = theano.config.floatX
     rng = numpy.random.RandomState(1234)
 
     output_dim = 1
@@ -100,6 +99,7 @@ def test_integer_sequence_generator():
     Such sequence generators can be used to e.g. model language.
 
     """
+    floatX = theano.config.floatX
     rng = numpy.random.RandomState(1234)
 
     readout_dim = 5
@@ -207,11 +207,11 @@ def test_with_attention():
 
     # For values
     def rand(size):
-        return rng.uniform(size=size).astype(floatX)
+        return rng.uniform(size=size).astype(theano.config.floatX)
 
     # For masks
     def generate_mask(length, batch_size):
-        mask = numpy.ones((length, batch_size), dtype=floatX)
+        mask = numpy.ones((length, batch_size), dtype=theano.config.floatX)
         # To make it look like read data
         for i in range(batch_size):
             mask[1 + rng.randint(0, length - 1):, i] = 0.0

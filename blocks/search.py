@@ -11,8 +11,6 @@ from blocks.filter import VariableFilter, get_application_call, get_brick
 from blocks.graph import ComputationGraph
 from blocks.roles import INPUT, OUTPUT
 
-floatX = config.floatX
-
 
 class BeamSearch(object):
     """Approximate search for the most likely sequence.
@@ -288,8 +286,8 @@ class BeamSearch(object):
         # This array will store all generated outputs, including those from
         # previous step and those from already finished sequences.
         all_outputs = states['outputs'][None, :]
-        all_masks = numpy.ones_like(all_outputs, dtype=floatX)
-        all_costs = numpy.zeros_like(all_outputs, dtype=floatX)
+        all_masks = numpy.ones_like(all_outputs, dtype=config.floatX)
+        all_costs = numpy.zeros_like(all_outputs, dtype=config.floatX)
 
         for i in range(max_length):
             if all_masks[-1].sum() == 0:
