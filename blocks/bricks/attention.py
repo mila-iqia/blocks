@@ -47,7 +47,7 @@ from abc import ABCMeta, abstractmethod
 from theano import tensor
 from six import add_metaclass
 
-from blocks.bricks import (MLP, Identity, Brick, Initializable, Sequence,
+from blocks.bricks import (Brick, Initializable, Sequence,
                            Feedforward, Linear, Tanh)
 from blocks.bricks.base import lazy, application
 from blocks.bricks.parallel import Parallel, Distribute
