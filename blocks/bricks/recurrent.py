@@ -32,9 +32,11 @@ class BaseRecurrent(Brick):
     def initial_state(self, state_name, batch_size, *args, **kwargs):
         r"""Return an initial state for an application call.
 
-        Default implementation returns a zero matrix. All the standard
-        recurrent bricks override it with trainable initial states
-        initialized with zeros.
+        Default implementation returns a zero matrix.
+        :class:`SimpleRecurrent`, :class:`LSTM` and
+        :class:`GatedRecurrent` override it with trainable initial
+        states initialized with zeros.
+
 
         Parameters
         ----------
