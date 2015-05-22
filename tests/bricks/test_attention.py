@@ -12,8 +12,6 @@ from blocks.initialization import IsotropicGaussian, Constant
 from blocks.graph import ComputationGraph
 from blocks.select import Selector
 
-floatX = theano.config.floatX
-
 
 def test_sequence_content_attention():
     # Disclaimer: only check dimensions, not values
@@ -40,9 +38,12 @@ def test_sequence_content_attention():
     assert glimpses.ndim == 2
     assert weights.ndim == 2
 
-    seq_values = numpy.zeros((seq_len, batch_size, attended_dim), dtype=floatX)
-    states_values = numpy.zeros((batch_size, state_dim), dtype=floatX)
-    mask_values = numpy.zeros((seq_len, batch_size), dtype=floatX)
+    seq_values = numpy.zeros((seq_len, batch_size, attended_dim),
+                             dtype=theano.config.floatX)
+    states_values = numpy.zeros((batch_size, state_dim),
+                                dtype=theano.config.floatX)
+    mask_values = numpy.zeros((seq_len, batch_size),
+                              dtype=theano.config.floatX)
     # randomly generate a sensible mask
     for sed_idx in range(batch_size):
         mask_values[:rng.randint(1, seq_len), sed_idx] = 1
@@ -90,11 +91,11 @@ def test_attention_recurrent():
 
     # For values.
     def rand(size):
-        return rng.uniform(size=size).astype(floatX)
+        return rng.uniform(size=size).astype(theano.config.floatX)
 
     # For masks.
     def generate_mask(length, batch_size):
-        mask = numpy.ones((length, batch_size), dtype=floatX)
+        mask = numpy.ones((length, batch_size), dtype=theano.config.floatX)
         # To make it look like read data
         for i in range(batch_size):
             mask[1 + rng.randint(0, length - 1):, i] = 0.0

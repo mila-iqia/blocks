@@ -15,8 +15,6 @@ from blocks.initialization import IsotropicGaussian
 from blocks.filter import VariableFilter
 from blocks.search import BeamSearch
 
-floatX = theano.config.floatX
-
 
 class SimpleGenerator(Initializable):
     """The top brick.
@@ -105,7 +103,8 @@ def test_beam_search():
     assert results.sum() == 3160
 
     true_costs = simple_generator.cost(
-        input_vals, numpy.ones((length, beam_size), dtype=floatX),
+        input_vals, numpy.ones((length, beam_size),
+                               dtype=theano.config.floatX),
         results, mask).eval()
     true_costs = (true_costs * mask).sum(axis=0)
     assert_allclose(costs.sum(axis=0), true_costs, rtol=1e-5)

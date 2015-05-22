@@ -17,9 +17,6 @@ from blocks.filter import get_application_call, VariableFilter
 from blocks.graph import ComputationGraph
 
 
-floatX = theano.config.floatX
-
-
 class RecurrentWrapperTestClass(BaseRecurrent):
     def __init__(self, dim, ** kwargs):
         super(RecurrentWrapperTestClass, self).__init__(self, ** kwargs)
@@ -55,7 +52,7 @@ class TestRecurrentWrapper(unittest.TestCase):
         out, H2, out_2, H = self.recurrent_example.apply(
             inputs=X, mask=None)
 
-        x_val = numpy.ones((5, 1, 1), dtype=floatX)
+        x_val = numpy.ones((5, 1, 1), dtype=theano.config.floatX)
 
         h = H.eval({X: x_val})
         h2 = H2.eval({X: x_val})
@@ -83,10 +80,10 @@ class TestRecurrent(unittest.TestCase):
         next_h = theano.function(inputs=[h0, x, mask], outputs=[h1])
 
         h0_val = 0.1 * numpy.array([[1, 1, 0], [0, 1, 1]],
-                                   dtype=floatX)
+                                   dtype=theano.config.floatX)
         x_val = 0.1 * numpy.array([[1, 2, 3], [4, 5, 6]],
-                                  dtype=floatX)
-        mask_val = numpy.array([1, 0]).astype(floatX)
+                                  dtype=theano.config.floatX)
+        mask_val = numpy.array([1, 0]).astype(theano.config.floatX)
         h1_val = numpy.tanh(h0_val.dot(2 * numpy.ones((3, 3))) + x_val)
         h1_val = mask_val[:, None] * h1_val + (1 - mask_val[:, None]) * h0_val
         assert_allclose(h1_val, next_h(h0_val, x_val, mask_val)[0])
@@ -98,12 +95,12 @@ class TestRecurrent(unittest.TestCase):
         calc_h = theano.function(inputs=[x, mask], outputs=[h])
 
         x_val = 0.1 * numpy.asarray(list(itertools.permutations(range(4))),
-                                    dtype=floatX)
+                                    dtype=theano.config.floatX)
         x_val = numpy.ones((24, 4, 3),
-                           dtype=floatX) * x_val[..., None]
-        mask_val = numpy.ones((24, 4), dtype=floatX)
+                           dtype=theano.config.floatX) * x_val[..., None]
+        mask_val = numpy.ones((24, 4), dtype=theano.config.floatX)
         mask_val[12:24, 3] = 0
-        h_val = numpy.zeros((25, 4, 3), dtype=floatX)
+        h_val = numpy.zeros((25, 4, 3), dtype=theano.config.floatX)
         for i in range(1, 25):
             h_val[i] = numpy.tanh(h_val[i - 1].dot(
                 2 * numpy.ones((3, 3))) + x_val[i - 1])
@@ -127,15 +124,15 @@ class TestLSTM(unittest.TestCase):
         next_h = theano.function(inputs=[x, h0, c0], outputs=[h1])
 
         h0_val = 0.1 * numpy.array([[1, 1, 0], [0, 1, 1]],
-                                   dtype=floatX)
+                                   dtype=theano.config.floatX)
         c0_val = 0.1 * numpy.array([[1, 1, 0], [0, 1, 1]],
-                                   dtype=floatX)
+                                   dtype=theano.config.floatX)
         x_val = 0.1 * numpy.array([range(12), range(12, 24)],
-                                  dtype=floatX)
-        W_state_val = 2 * numpy.ones((3, 12), dtype=floatX)
-        W_cell_to_in = 2 * numpy.ones((3,), dtype=floatX)
-        W_cell_to_out = 2 * numpy.ones((3,), dtype=floatX)
-        W_cell_to_forget = 2 * numpy.ones((3,), dtype=floatX)
+                                  dtype=theano.config.floatX)
+        W_state_val = 2 * numpy.ones((3, 12), dtype=theano.config.floatX)
+        W_cell_to_in = 2 * numpy.ones((3,), dtype=theano.config.floatX)
+        W_cell_to_out = 2 * numpy.ones((3,), dtype=theano.config.floatX)
+        W_cell_to_forget = 2 * numpy.ones((3,), dtype=theano.config.floatX)
 
         # omitting biases because they are zero
         activation = numpy.dot(h0_val, W_state_val) + x_val
@@ -160,17 +157,17 @@ class TestLSTM(unittest.TestCase):
 
         x_val = (0.1 * numpy.asarray(
             list(itertools.islice(itertools.permutations(range(12)), 0, 24)),
-            dtype=floatX))
+            dtype=theano.config.floatX))
         x_val = numpy.ones((24, 4, 12),
-                           dtype=floatX) * x_val[:, None, :]
-        mask_val = numpy.ones((24, 4), dtype=floatX)
+                           dtype=theano.config.floatX) * x_val[:, None, :]
+        mask_val = numpy.ones((24, 4), dtype=theano.config.floatX)
         mask_val[12:24, 3] = 0
-        h_val = numpy.zeros((25, 4, 3), dtype=floatX)
-        c_val = numpy.zeros((25, 4, 3), dtype=floatX)
-        W_state_val = 2 * numpy.ones((3, 12), dtype=floatX)
-        W_cell_to_in = 2 * numpy.ones((3,), dtype=floatX)
-        W_cell_to_out = 2 * numpy.ones((3,), dtype=floatX)
-        W_cell_to_forget = 2 * numpy.ones((3,), dtype=floatX)
+        h_val = numpy.zeros((25, 4, 3), dtype=theano.config.floatX)
+        c_val = numpy.zeros((25, 4, 3), dtype=theano.config.floatX)
+        W_state_val = 2 * numpy.ones((3, 12), dtype=theano.config.floatX)
+        W_cell_to_in = 2 * numpy.ones((3,), dtype=theano.config.floatX)
+        W_cell_to_out = 2 * numpy.ones((3,), dtype=theano.config.floatX)
+        W_cell_to_forget = 2 * numpy.ones((3,), dtype=theano.config.floatX)
 
         def sigmoid(x):
             return 1. / (1. + numpy.exp(-x))
@@ -213,12 +210,12 @@ class TestGatedRecurrent(unittest.TestCase):
         next_h = theano.function(inputs=[h0, x, z, r], outputs=[h1])
 
         h0_val = 0.1 * numpy.array([[1, 1, 0], [0, 1, 1]],
-                                   dtype=floatX)
+                                   dtype=theano.config.floatX)
         x_val = 0.1 * numpy.array([[1, 2, 3], [4, 5, 6]],
-                                  dtype=floatX)
+                                  dtype=theano.config.floatX)
         zi_val = (h0_val + x_val) / 2
         ri_val = -x_val
-        W_val = 2 * numpy.ones((3, 3), dtype=floatX)
+        W_val = 2 * numpy.ones((3, 3), dtype=theano.config.floatX)
 
         z_val = numpy.tanh(h0_val.dot(W_val) + zi_val)
         r_val = numpy.tanh(h0_val.dot(W_val) + ri_val)
@@ -235,12 +232,13 @@ class TestGatedRecurrent(unittest.TestCase):
         calc_h = theano.function(inputs=[x, ri, mask], outputs=[h])
 
         x_val = 0.1 * numpy.asarray(list(itertools.permutations(range(4))),
-                                    dtype=floatX)
-        x_val = numpy.ones((24, 4, 3), dtype=floatX) * x_val[..., None]
+                                    dtype=theano.config.floatX)
+        x_val = numpy.ones((24, 4, 3),
+                           dtype=theano.config.floatX) * x_val[..., None]
         ri_val = 0.3 - x_val
-        mask_val = numpy.ones((24, 4), dtype=floatX)
+        mask_val = numpy.ones((24, 4), dtype=theano.config.floatX)
         mask_val[12:24, 3] = 0
-        h_val = numpy.zeros((25, 4, 3), dtype=floatX)
+        h_val = numpy.zeros((25, 4, 3), dtype=theano.config.floatX)
         W = self.reset_only.state_to_state.get_value()
         U = self.reset_only.state_to_reset.get_value()
 
@@ -270,10 +268,10 @@ class TestBidirectional(unittest.TestCase):
             self.simple.params[0].get_value())
         self.x_val = 0.1 * numpy.asarray(
             list(itertools.permutations(range(4))),
-            dtype=floatX)
-        self.x_val = (numpy.ones((24, 4, 3), dtype=floatX) *
+            dtype=theano.config.floatX)
+        self.x_val = (numpy.ones((24, 4, 3), dtype=theano.config.floatX) *
                       self.x_val[..., None])
-        self.mask_val = numpy.ones((24, 4), dtype=floatX)
+        self.mask_val = numpy.ones((24, 4), dtype=theano.config.floatX)
         self.mask_val[12:24, 3] = 0
 
     def test(self):

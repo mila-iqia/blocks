@@ -8,8 +8,6 @@ from blocks.extensions import FinishAfter, ProgressBar, Printing
 from blocks.main_loop import MainLoop
 from blocks.utils import shared_floatx
 
-floatX = theano.config.floatX
-
 
 def setup_mainloop(extension):
     """Set up a simple main loop for progress bar tests.
@@ -18,7 +16,7 @@ def setup_mainloop(extension):
     DataStream and a minimal model/cost to optimize.
 
     """
-    features = [numpy.array(f, dtype=floatX)
+    features = [numpy.array(f, dtype=theano.config.floatX)
                 for f in [[1, 2], [3, 4], [5, 6]]]
     dataset = IterableDataset(dict(features=features))
 
