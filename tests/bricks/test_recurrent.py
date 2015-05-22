@@ -213,17 +213,16 @@ class TestGatedRecurrent(unittest.TestCase):
         self.gated.initialize()
         self.reset_only = GatedRecurrent(
             dim=3, activation=Tanh(),
-            gate_activation=Tanh(), use_update_gate=False,
+            gate_activation=Tanh(),
             weights_init=IsotropicGaussian(), seed=1)
         self.reset_only.initialize()
 
     def test_one_step(self):
         h0 = tensor.matrix('h0')
         x = tensor.matrix('x')
-        z = tensor.matrix('z')
-        r = tensor.matrix('r')
-        h1 = self.gated.apply(x, z, r, h0, iterate=False)
-        next_h = theano.function(inputs=[h0, x, z, r], outputs=[h1])
+        gi = tensor.matrix('gi')
+        h1 = self.gated.apply(x, gi, h0, iterate=False)
+        next_h = theano.function(inputs=[h0, x, gi], outputs=[h1])
 
         h0_val = 0.1 * numpy.array([[1, 1, 0], [0, 1, 1]],
                                    dtype=theano.config.floatX)
@@ -237,36 +236,45 @@ class TestGatedRecurrent(unittest.TestCase):
         r_val = numpy.tanh(h0_val.dot(W_val) + ri_val)
         h1_val = (z_val * numpy.tanh((r_val * h0_val).dot(W_val) + x_val) +
                   (1 - z_val) * h0_val)
-        assert_allclose(h1_val, next_h(h0_val, x_val, zi_val, ri_val)[0],
-                        rtol=1e-6)
+        assert_allclose(
+            h1_val, next_h(h0_val, x_val, numpy.hstack([zi_val, ri_val]))[0],
+            rtol=1e-6)
 
-    def test_reset_only_many_steps(self):
+    def test_many_steps(self):
         x = tensor.tensor3('x')
-        ri = tensor.tensor3('ri')
+        gi = tensor.tensor3('gi')
         mask = tensor.matrix('mask')
-        h = self.reset_only.apply(x, reset_inputs=ri, mask=mask)
-        calc_h = theano.function(inputs=[x, ri, mask], outputs=[h])
+        h = self.reset_only.apply(x, gi, mask=mask)
+        calc_h = theano.function(inputs=[x, gi, mask], outputs=[h])
 
         x_val = 0.1 * numpy.asarray(list(itertools.permutations(range(4))),
                                     dtype=theano.config.floatX)
         x_val = numpy.ones((24, 4, 3),
                            dtype=theano.config.floatX) * x_val[..., None]
         ri_val = 0.3 - x_val
+        zi_val = 2 * ri_val
         mask_val = numpy.ones((24, 4), dtype=theano.config.floatX)
         mask_val[12:24, 3] = 0
         h_val = numpy.zeros((25, 4, 3), dtype=theano.config.floatX)
         W = self.reset_only.state_to_state.get_value()
-        U = self.reset_only.state_to_reset.get_value()
+        Wz = self.reset_only.state_to_gates.get_value()[:, :3]
+        Wr = self.reset_only.state_to_gates.get_value()[:, 3:]
 
         for i in range(1, 25):
-            r_val = numpy.tanh(h_val[i - 1].dot(U) + ri_val[i - 1])
+            z_val = numpy.tanh(h_val[i - 1].dot(Wz) + zi_val[i - 1])
+            r_val = numpy.tanh(h_val[i - 1].dot(Wr) + ri_val[i - 1])
             h_val[i] = numpy.tanh((r_val * h_val[i - 1]).dot(W) +
                                   x_val[i - 1])
+            h_val[i] = z_val * h_val[i] + (1 - z_val) * h_val[i - 1]
             h_val[i] = (mask_val[i - 1, :, None] * h_val[i] +
                         (1 - mask_val[i - 1, :, None]) * h_val[i - 1])
         h_val = h_val[1:]
         # TODO Figure out why this tolerance needs to be so big
-        assert_allclose(h_val, calc_h(x_val, ri_val,  mask_val)[0], 1e-03)
+        assert_allclose(
+            h_val,
+            calc_h(x_val, numpy.concatenate(
+                [zi_val, ri_val], axis=2), mask_val)[0],
+            1e-05)
 
         # Also test that initial state is a parameter
         initial_state, = VariableFilter(roles=[INITIAL_STATE])(

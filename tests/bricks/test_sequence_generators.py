@@ -160,9 +160,9 @@ def test_integer_sequence_generator():
     assert outputs_val.shape == (n_steps, batch_size)
     assert outputs_val.dtype == 'int64'
     assert costs_val.shape == (n_steps, batch_size)
-    assert_allclose(states_val.sum(), -17.91811, rtol=1e-5)
-    assert_allclose(costs_val.sum(), 482.863, rtol=1e-5)
-    assert outputs_val.sum() == 630
+    assert_allclose(states_val.sum(), -17.854, rtol=1e-5)
+    assert_allclose(costs_val.sum(), 482.868, rtol=1e-5)
+    assert outputs_val.sum() == 629
 
     # Test masks agnostic results of cost
     cost1 = costs_fun([[1], [2]], [[1], [1]])[0]
