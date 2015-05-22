@@ -710,29 +710,32 @@ class RemoveNotFinite(StepRule):
 
     Replaces a step (the parameter update of a single shared variable)
     which contains non-finite elements (such as ``inf`` or ``NaN``) with a
-    scaled version of the parameters being updated instead.
+    step rescaling the parameters.
 
     Parameters
     ----------
     scaler : float, optional
         The scaling applied to the parameter in case the step contains
-        non-finite elements. Defaults to 0.1.
+        non-finite elements. Defaults to 1, which means that parameters
+        will not be changed.
 
     Notes
     -----
+    This rule should be applied last!
+
     This trick was originally used in the GroundHog_ framework.
 
     .. _GroundHog: https://github.com/lisa-groundhog/GroundHog
 
     """
-    def __init__(self, scaler=0.1):
+    def __init__(self, scaler=1):
         self.scaler = scaler
 
     def compute_step(self, param, previous_step):
         not_finite = tensor.any(tensor.or_(
             tensor.isnan(previous_step), tensor.isinf(previous_step)))
-        step = tensor.switch(not_finite, self.scaler * param, previous_step)
-
+        step = tensor.switch(
+            not_finite, (1 - self.scaler) * param, previous_step)
         return step, []
 
 
