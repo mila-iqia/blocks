@@ -430,7 +430,6 @@ class LSTM(BaseRecurrent, Initializable):
             Next cell activations of the network.
 
         """
-
         def slice_last(x, no):
             return x[:, no*self.dim: (no+1)*self.dim]
 
