@@ -430,8 +430,10 @@ class LSTM(BaseRecurrent, Initializable):
             Next cell activations of the network.
 
         """
+
         def slice_last(x, no):
-            return x.T[no*self.dim: (no+1)*self.dim].T
+            return x[:, no*self.dim: (no+1)*self.dim]
+
         nonlinearity = self.children[0].apply
 
         activation = tensor.dot(states, self.W_state) + inputs
