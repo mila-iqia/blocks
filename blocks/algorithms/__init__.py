@@ -732,8 +732,8 @@ class RemoveNotFinite(StepRule):
         self.scaler = scaler
 
     def compute_step(self, param, previous_step):
-        not_finite = tensor.or_(
-            tensor.isnan(previous_step), tensor.isinf(previous_step)).sum()
+        not_finite = (tensor.isnan(previous_step).sum() +
+                      tensor.isinf(previous_step).sum())
         step = tensor.switch(
             not_finite > 0, (1 - self.scaler) * param, previous_step)
         return step, []
