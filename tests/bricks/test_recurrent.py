@@ -237,8 +237,7 @@ class TestGatedRecurrent(unittest.TestCase):
         h1_val = (z_val * numpy.tanh((r_val * h0_val).dot(W_val) + x_val) +
                   (1 - z_val) * h0_val)
         assert_allclose(
-            h1_val,
-            next_h(h0_val, x_val, numpy.hstack([zi_val, ri_val]))[0],
+            h1_val, next_h(h0_val, x_val, numpy.hstack([zi_val, ri_val]))[0],
             rtol=1e-6)
 
     def test_many_steps(self):
