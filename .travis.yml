@@ -11,8 +11,10 @@ python:
   - "2.7"
   - "3.4"
 env:
-  - TESTS=float32
-  - TESTS=float64
+  - TESTS=blocks FLOATX=float32
+  - TESTS=blocks FLOATX=float64
+  - TESTS=blocks-examples FLOATX=float32
+  - TESTS=blocks-examples FLOATX=float64
 before_install:
   - # Setup Python environment with BLAS libraries
   - wget -q http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
@@ -27,22 +29,28 @@ install:
   - pip install -q -r req-travis-pip.txt
 script:
   - pip install . -r requirements.txt # Tests setup.py
-  - |
-      if [ ! -f $FUEL_DATA_PATH/mnist.hdf5 ]; then
-        cd $FUEL_DATA_PATH
-        fuel-download mnist
-        fuel-convert mnist
-        fuel-download --clear mnist
-        cd -
-      fi
+  - curl -O https://raw.githubusercontent.com/bartvm/fuel/master/.travis-data.sh | bash -s -- mnist
   - # Must export environment variable so that the subprocess is aware of it
-  - export THEANO_FLAGS=floatX=$TESTS,optimizer=fast_compile
-  - export FUEL_FLOATX=$TESTS
+  - export THEANO_FLAGS=floatX=$FLOATX,optimizer=fast_compile
+  - export FUEL_FLOATX=$FLOATX
   - export BLOCKS_PROFILE=true
   - # Running nose2 within coverage makes imports count towards coverage
   - bokeh-server &> /dev/null &
-  - coverage run -p --source=blocks -m nose2.__main__ -v doctests
-  - coverage run -p --source=blocks -m nose2.__main__ -v tests
+  - |
+      if [[ $TESTS == 'blocks' ]]; then
+        coverage run -p --source=blocks -m nose2.__main__ -v doctests
+        coverage run -p --source=blocks -m nose2.__main__ -v tests
+      fi
+  - |
+      if [[ $TESTS == 'blocks-examples' ]]; then
+        cd $TRAVIS_BUILD_DIR
+        git clone git@github.com:mila-udem/blocks-examples.git
+        cd blocks-examples
+        nose2 tests
+      fi
 after_script:
-  - coverage combine
-  - coveralls
+  - |
+      if [[ $TESTS == 'blocks' ]]; then
+        coverage combine
+        coveralls
+      fi
