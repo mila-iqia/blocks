@@ -226,10 +226,12 @@ def test_remove_not_finite():
     rule1 = RemoveNotFinite(0.1)
     rule2 = RemoveNotFinite()
 
-    gradients = {1: shared_floatx(numpy.nan), 2: shared_floatx(numpy.inf)}
+    gradients = {1: shared_floatx(numpy.nan), 2: shared_floatx(numpy.inf),
+                 3: 0.123}
     rval1, _ = rule1.compute_steps(gradients)
     assert_allclose(rval1[1].eval(), 0.9)
     assert_allclose(rval1[2].eval(), 1.8)
+    assert_allclose(rval1[3].eval(), 0.123)
     rval2, _ = rule2.compute_steps(gradients)
     assert_allclose(rval2[1].eval(), 0.0)
     assert_allclose(rval2[2].eval(), 0.0)
