@@ -7,6 +7,7 @@ from numpy.testing import assert_allclose
 from theano import tensor
 from theano.gof.graph import is_same_graph
 
+from blocks.utils import is_shared_variable
 from blocks.bricks.base import application
 from blocks.bricks import Tanh
 from blocks.bricks.recurrent import (
@@ -15,6 +16,7 @@ from blocks.bricks.recurrent import (
 from blocks.initialization import Constant, IsotropicGaussian, Orthogonal
 from blocks.filter import get_application_call, VariableFilter
 from blocks.graph import ComputationGraph
+from blocks.roles import INITIAL_STATE
 
 
 class RecurrentWrapperTestClass(BaseRecurrent):
@@ -66,7 +68,7 @@ class TestRecurrentWrapper(unittest.TestCase):
         assert_allclose(h2 * 10, out_2_eval)
 
 
-class TestRecurrent(unittest.TestCase):
+class TestSimpleRecurrent(unittest.TestCase):
     def setUp(self):
         self.simple = SimpleRecurrent(dim=3, weights_init=Constant(2),
                                       activation=Tanh())
@@ -108,6 +110,12 @@ class TestRecurrent(unittest.TestCase):
                         (1 - mask_val[i - 1, :, None]) * h_val[i - 1])
         h_val = h_val[1:]
         assert_allclose(h_val, calc_h(x_val, mask_val)[0], rtol=1e-04)
+
+        # Also test that initial state is a parameter
+        initial_state, = VariableFilter(roles=[INITIAL_STATE])(
+            ComputationGraph(h))
+        assert is_shared_variable(initial_state)
+        assert initial_state.name == 'initial_state'
 
 
 class TestLSTM(unittest.TestCase):
@@ -188,6 +196,14 @@ class TestLSTM(unittest.TestCase):
         h_val = h_val[1:]
         assert_allclose(h_val, calc_h(x_val, mask_val)[0], rtol=1e-04)
 
+        # Also test that initial state is a parameter
+        initial1, initial2 = VariableFilter(roles=[INITIAL_STATE])(
+            ComputationGraph(h))
+        assert is_shared_variable(initial1)
+        assert is_shared_variable(initial2)
+        assert {initial1.name, initial2.name} == {
+            'initial_state', 'initial_cells'}
+
 
 class TestGatedRecurrent(unittest.TestCase):
     def setUp(self):
@@ -251,6 +267,12 @@ class TestGatedRecurrent(unittest.TestCase):
         h_val = h_val[1:]
         # TODO Figure out why this tolerance needs to be so big
         assert_allclose(h_val, calc_h(x_val, ri_val,  mask_val)[0], 1e-03)
+
+        # Also test that initial state is a parameter
+        initial_state, = VariableFilter(roles=[INITIAL_STATE])(
+            ComputationGraph(h))
+        assert is_shared_variable(initial_state)
+        assert initial_state.name == 'initial_state'
 
 
 class TestBidirectional(unittest.TestCase):
