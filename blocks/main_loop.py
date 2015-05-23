@@ -139,6 +139,10 @@ class MainLoop(object):
         # logging, and will it least enable error messages otherwise.
         logging.basicConfig()
 
+        # If this is resumption from a checkpoint, it is crucial to
+        # reset `profile.current`. Otherwise, it simply does not hurt.
+        self.profile.current = []
+
         if self._model and isinstance(self.algorithm,
                                       DifferentiableCostMinimizer):
             # Sanity check: model and algorithm should be configured
