@@ -46,7 +46,7 @@ script:
   - |
       if [[ $TESTS == 'blocks-examples' ]]; then
         cd $TRAVIS_BUILD_DIR
-        git clone git@github.com:mila-udem/blocks-examples.git
+        git clone https://github.com/mila-udem/blocks-examples.git
         cd blocks-examples
         nose2 tests
       fi
