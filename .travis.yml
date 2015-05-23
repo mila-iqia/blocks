@@ -41,6 +41,7 @@ script:
   - |
       if [[ $TESTS == 'blocks' ]]; then
         coverage run -p --source=blocks -m nose2.__main__ -v doctests
+        export THEANO_FLAGS=$THEANO_FLAGS,cxx=
         coverage run -p --source=blocks -m nose2.__main__ -v tests
       fi
   - |
