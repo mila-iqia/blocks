@@ -665,9 +665,10 @@ class AdaGrad(StepRule):
     -----
     For more information, see [ADAGRAD]_.
 
-    .. [ADADGRAD] "Adaptive subgradient methods for online learning and
-     stochastic optimization", Duchi J, Hazan E, Singer Y.
-     http://www.jmlr.org/papers/volume12/duchi11a/duchi11a.pdf
+    .. [ADADGRAD] Duchi J, Hazan E, Singer Y.,
+       *Adaptive subgradient methods for online learning and
+        stochastic optimization*,
+       http://www.jmlr.org/papers/volume12/duchi11a/duchi11a.pdf
 
     """
     def __init__(self, learning_rate=0.002, epsilon=1e-6):
