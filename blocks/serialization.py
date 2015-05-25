@@ -75,7 +75,6 @@ class PersistentParameterID(PersistentNdarrayID):
                 name = '{0}_{1}'.format(name, count + 1)
             self.name_counter[name] += 1
             return name
-        return super(PersistentParameterID, self)._resolve_name(obj)
 
     def __call__(self, obj):
         if isinstance(obj, SharedVariable):
@@ -93,7 +92,6 @@ class PersistentParameterID(PersistentNdarrayID):
                 self.ndarray_names[id(obj.container.storage[0])] = name
             elif not self.allow_unnamed:
                 raise ValueError("unnamed shared variable, {}".format(obj))
-        return super(PersistentParameterID, self).__call__(obj)
 
 
 class PicklerWithWarning(pickle.Pickler):
