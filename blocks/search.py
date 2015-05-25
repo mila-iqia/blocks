@@ -6,12 +6,10 @@ import numpy
 from picklable_itertools.extras import equizip
 from theano import config, function, tensor
 
-from blocks.bricks.sequence_generators import SequenceGenerator
+from blocks.bricks.sequence_generators import BaseSequenceGenerator
 from blocks.filter import VariableFilter, get_application_call, get_brick
 from blocks.graph import ComputationGraph
 from blocks.roles import INPUT, OUTPUT
-
-floatX = config.floatX
 
 
 class BeamSearch(object):
@@ -60,7 +58,7 @@ class BeamSearch(object):
         cg = ComputationGraph(samples)
         self.inputs = cg.inputs
         self.generator = get_brick(samples)
-        if not isinstance(self.generator, SequenceGenerator):
+        if not isinstance(self.generator, BaseSequenceGenerator):
             raise ValueError
         self.generate_call = get_application_call(samples)
         if (not self.generate_call.application ==
@@ -288,8 +286,8 @@ class BeamSearch(object):
         # This array will store all generated outputs, including those from
         # previous step and those from already finished sequences.
         all_outputs = states['outputs'][None, :]
-        all_masks = numpy.ones_like(all_outputs, dtype=floatX)
-        all_costs = numpy.zeros_like(all_outputs, dtype=floatX)
+        all_masks = numpy.ones_like(all_outputs, dtype=config.floatX)
+        all_costs = numpy.zeros_like(all_outputs, dtype=config.floatX)
 
         for i in range(max_length):
             if all_masks[-1].sum() == 0:

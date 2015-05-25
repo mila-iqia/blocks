@@ -7,8 +7,16 @@ directly from GitHub.
 
 .. code-block:: bash
 
-   $ pip install git+git://github.com/bartvm/blocks.git \
-     -r https://raw.githubusercontent.com/bartvm/blocks/master/requirements.txt
+   $ pip install git+git://github.com/mila-udem/blocks.git \
+     -r https://raw.githubusercontent.com/mila-udem/blocks/master/requirements.txt
+
+This will give you the cutting-edge development version. The latest stable
+release is in the ``stable`` branch and can be installed as follows.
+
+.. code-block:: bash
+
+   $ pip install git+git://github.com/mila-udem/blocks.git@stable \
+     -r https://raw.githubusercontent.com/mila-udem/blocks/stable/requirements.txt
 
 .. note::
 
@@ -25,7 +33,7 @@ run this command after installing the main framework.
 
 .. code-block:: bash
 
-   $ pip install git+git://github.com/bartvm/blocks.git#egg=blocks[plot]
+   $ pip install git+git://github.com/mila-udem/blocks.git#egg=blocks[plot]
 
 If you don't have administrative rights, add the ``--user`` switch to the
 install commands to install the packages in your home folder. If you want to
@@ -83,7 +91,7 @@ with your own GitHub user name:
 .. code-block:: bash
 
    $ pip install -e git+git@github.com:USER/blocks.git#egg=blocks[test,plot,docs] --src=$HOME \
-     -r https://raw.githubusercontent.com/bartvm/blocks/master/requirements.txt
+     -r https://raw.githubusercontent.com/mila-udem/blocks/master/requirements.txt
 
 As with the usual installation, you can use ``--user`` or ``--no-deps`` if you
 need to. You can now make changes in the ``blocks`` directory created by pip,
@@ -96,7 +104,7 @@ command from the folder you cloned Blocks to:
 
    $ pip install -e file:.#egg=blocks[test,plot,docs] -r requirements.txt
 
-.. _fork Blocks on GitHub: https://github.com/bartvm/blocks/fork
+.. _fork Blocks on GitHub: https://github.com/mila-udem/blocks/fork
 
 Documentation
 ~~~~~~~~~~~~~

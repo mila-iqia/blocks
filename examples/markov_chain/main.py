@@ -31,7 +31,6 @@ from blocks.select import Selector
 from examples.markov_chain.dataset import MarkovChainDataset
 
 sys.setrecursionlimit(10000)
-floatX = theano.config.floatX
 logger = logging.getLogger(__name__)
 
 
@@ -108,12 +107,13 @@ def main(mode, save_path, steps, num_batches):
         numpy.set_printoptions(precision=3, suppress=True)
         print("Generation cost:\n{}".format(costs.sum()))
 
-        freqs = numpy.bincount(outputs).astype(floatX)
+        freqs = numpy.bincount(outputs).astype(theano.config.floatX)
         freqs /= freqs.sum()
         print("Frequencies:\n {} vs {}".format(freqs,
                                                MarkovChainDataset.equilibrium))
 
-        trans_freqs = numpy.zeros((num_states, num_states), dtype=floatX)
+        trans_freqs = numpy.zeros((num_states, num_states),
+                                  dtype=theano.config.floatX)
         for a, b in zip(outputs, outputs[1:]):
             trans_freqs[a, b] += 1
         trans_freqs /= trans_freqs.sum(axis=1)[:, None]

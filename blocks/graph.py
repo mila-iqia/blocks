@@ -17,7 +17,6 @@ from blocks.utils import (is_graph_input, is_shared_variable, dict_union,
                           shared_like)
 
 logger = logging.getLogger(__name__)
-floatX = theano.config.floatX
 
 
 class ComputationGraph(object):
@@ -520,8 +519,10 @@ def apply_dropout(computation_graph, variables, drop_prob, rng=None,
     if not rng:
         rng = MRG_RandomStreams(seed)
 
-    replacements = [(var, var * rng.binomial(var.shape, p=1 - drop_prob,
-                                             dtype=floatX) / (1 - drop_prob))
+    replacements = [(var, var *
+                     rng.binomial(var.shape, p=1 - drop_prob,
+                                  dtype=theano.config.floatX) /
+                     (1 - drop_prob))
                     for var in variables]
     for variable, replacement in replacements:
         add_role(replacement, DROPOUT)

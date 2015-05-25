@@ -6,8 +6,6 @@ from numpy.testing import assert_allclose, assert_raises
 from blocks.bricks import MLP, Tanh
 from blocks.model import Model
 
-floatX = theano.config.floatX
-
 
 def test_model():
     x = tensor.matrix('x')
@@ -33,8 +31,9 @@ def test_model():
     mlp3.allocate()
     model3 = Model(mlp3.apply(x))
     param_values = {
-        '/mlp/linear_0.W': 2 * numpy.ones((10, 10), dtype=floatX),
-        '/mlp/linear_0.b': 3 * numpy.ones(10, dtype=floatX)}
+        '/mlp/linear_0.W': 2 * numpy.ones((10, 10),
+                                          dtype=theano.config.floatX),
+        '/mlp/linear_0.b': 3 * numpy.ones(10, dtype=theano.config.floatX)}
     model3.set_param_values(param_values)
     assert numpy.all(mlp3.linear_transformations[0].params[0].get_value() == 2)
     assert numpy.all(mlp3.linear_transformations[0].params[1].get_value() == 3)

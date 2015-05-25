@@ -156,22 +156,9 @@ interface to datasets, and a training loop that allows you to monitor and
 control the training process.
 
 We want to train our model on the training set of MNIST. We load the data using
-the Fuel_ framework. You'll need to configure Fuel's data path so that it knows
-where to find the MNIST files. You can do this by creating a configuration file:
+the Fuel_ framework. Have a look at `this tutorial`_ to get started.
 
-.. code-block:: bash
-
-   echo "data_path: /home/user/datasets" >> ~/.fuelrc
-
-You can also do it by setting an environment variable in your bash shell:
-
-.. code-block:: bash
-
-   export FUEL_DATA_PATH=/home/user/datasets
-
-After having configured Fuel, `download the MNIST files`_ to a folder called
-``mnist`` in your data path (e.g. to ``/home/user/datasets/mnist``) and load
-the dataset.
+After having configured Fuel, you can load the dataset.
 
 >>> from fuel.datasets import MNIST
 >>> mnist = MNIST("train")
@@ -184,8 +171,10 @@ of size 256.
 
 >>> from fuel.streams import DataStream
 >>> from fuel.schemes import SequentialScheme
->>> data_stream = DataStream(mnist, iteration_scheme=SequentialScheme(
-...     mnist.num_examples, batch_size=256))
+>>> from fuel.transformers import Flatten
+>>> data_stream = Flatten(DataStream.default_stream(
+...     mnist,
+...     iteration_scheme=SequentialScheme(mnist.num_examples, batch_size=256)))
 
 The training algorithm we will use is straightforward SGD with a fixed
 learning rate.
@@ -198,8 +187,10 @@ During training we will want to monitor the performance of our model on
 a separate set of examples. Let's create a new data stream for that.
 
 >>> mnist_test = MNIST("test")
->>> data_stream_test = DataStream(mnist_test, iteration_scheme=SequentialScheme(
-...     mnist_test.num_examples, batch_size=1024))
+>>> data_stream_test = Flatten(DataStream.default_stream(
+...     mnist_test,
+...     iteration_scheme=SequentialScheme(
+...         mnist_test.num_examples, batch_size=1024)))
 
 In order to monitor our performance on this data stream during training, we need
 to use one of Blocks' extensions, namely the :class:`.DataStreamMonitoring`
@@ -260,3 +251,4 @@ Log records from the iteration 235:
 .. _doctest mode: http://ipython.org/ipython-doc/dev/interactive/tips.html#run-doctests
 .. _download the MNIST files: http://yann.lecun.com/exdb/mnist/
 .. _Fuel: http://fuel.readthedocs.org/en/latest/
+.. _this tutorial: https://github.com/mila-udem/fuel/blob/master/docs/built_in_datasets.rst

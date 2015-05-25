@@ -1,12 +1,9 @@
 import tempfile
 
 import numpy
-import theano
 from picklable_itertools.extras import equizip
 
 from blocks.dump import load_parameter_values, save_parameter_values
-
-floatX = theano.config.floatX
 
 
 def test_save_load_parameter_values():

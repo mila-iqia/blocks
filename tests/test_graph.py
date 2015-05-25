@@ -9,8 +9,6 @@ from blocks.graph import apply_noise, ComputationGraph
 from blocks.initialization import Constant
 from tests.bricks.test_bricks import TestBrick
 
-floatX = theano.config.floatX
-
 
 def test_application_graph_auxiliary_vars():
     X = tensor.matrix('X')
@@ -47,7 +45,8 @@ def test_computation_graph():
     assert set(cg2.inputs) == {r}
     assert set([v.name for v in cg2.outputs]) == {'a', 'b'}
 
-    W = theano.shared(numpy.zeros((3, 3), dtype=floatX))
+    W = theano.shared(numpy.zeros((3, 3),
+                                  dtype=theano.config.floatX))
     cg3 = ComputationGraph([z + W])
     assert set(cg3.shared_variables) == {W}
 
@@ -120,5 +119,6 @@ def test_snapshot():
     linear.initialize()
     y = linear.apply(x)
     cg = ComputationGraph(y)
-    snapshot = cg.get_snapshot(dict(x=numpy.zeros((1, 10), dtype=floatX)))
+    snapshot = cg.get_snapshot(dict(x=numpy.zeros((1, 10),
+                                                  dtype=theano.config.floatX)))
     assert len(snapshot) == 14

@@ -3,11 +3,8 @@ six==1.9.0
 pandas==0.16.1
 progressbar2==2.7.3
 PyYaml==3.11
-toolz==0.7.1
-
---allow-external picklable-itertools
---allow-unverified picklable-itertools
-git+https://github.com/dwf/picklable_itertools.git#egg=picklable-itertools
+toolz==0.7.2
+picklable-itertools==0.1.0
 
 --allow-external theano
 --allow-unverified theano
@@ -15,4 +12,4 @@ git+https://github.com/Theano/Theano.git#egg=theano
 
 --allow-external fuel
 --allow-unverified fuel
-git+https://github.com/bartvm/fuel#egg=fuel
+git+https://github.com/mila-udem/fuel#egg=fuel
