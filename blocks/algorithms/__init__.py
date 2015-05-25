@@ -676,8 +676,11 @@ class AdaGrad(StepRule):
         self.epsilon = epsilon
 
     def compute_step(self, param, previous_step):
+        name = 'adagrad_sqs'
+        if param.name:
+            name += '_' + param.name
         ssq = shared_floatx(param.get_value() * 0.,
-                            name='ssq_' + param.name)
+                            name=name)
 
         ssq_t = (tensor.sqr(previous_step) + ssq)
         step = (self.learning_rate * previous_step /

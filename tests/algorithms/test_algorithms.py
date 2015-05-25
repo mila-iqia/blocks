@@ -8,7 +8,7 @@ from theano import tensor
 from blocks.algorithms import (GradientDescent, StepClipping, VariableClipping,
                                CompositeRule, Scale, StepRule, BasicMomentum,
                                Momentum, AdaDelta, BasicRMSProp, RMSProp, Adam,
-                               RemoveNotFinite, Restrict)
+                               AdaGrad, RemoveNotFinite, Restrict)
 from blocks.utils import shared_floatx
 
 
@@ -220,6 +220,21 @@ def test_adam():
     assert_allclose(f()[0], [0.0019407, 0.00196515], rtol=rtol)
     a.set_value([1, 1.5])
     assert_allclose(f()[0], [0.00178724, 0.0018223], rtol=rtol)
+
+
+def test_adagrad():
+    a = shared_floatx([3, 4])
+    cost = (a ** 2).sum()
+    steps, updates = AdaGrad().compute_steps(
+        OrderedDict([(a, tensor.grad(cost, a))]))
+    f = theano.function([], [steps[a]], updates=updates)
+
+    rtol = 1e-4
+    assert_allclose(f()[0], [0.002,  0.002], rtol=rtol)
+    a.set_value([2, 3])
+    assert_allclose(f()[0], [0.0011094,  0.0012], rtol=rtol)
+    a.set_value([1, 1.5])
+    assert_allclose(f()[0], [0.00053452,  0.0005747], rtol=rtol)
 
 
 def test_remove_not_finite():
