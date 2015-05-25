@@ -127,7 +127,7 @@ def test_attention_recurrent():
     for i in range(batch_size):
         last = int(input_mask_vals[:, i].sum())
         for j in range(last, input_length):
-            assert_allclose(weight_vals[last, i], weight_vals[j, i])
+            assert_allclose(weight_vals[last, i], weight_vals[j, i], 1e-5)
 
     # freeze sums
     assert_allclose(weight_vals.sum(), input_length * batch_size, 1e-5)
