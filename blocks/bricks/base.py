@@ -290,8 +290,9 @@ class Application(object):
                 kwargs[name] = copy_and_tag(input_, INPUT, name)
 
         # Run the application method on the annotated variables
-        if self.call_stack and brick is not self.call_stack[-1] and \
-                brick not in self.call_stack[-1].children:
+        last_brick = self.call_stack[-1] if self.call_stack else None
+        if (last_brick and brick is not last_brick and
+                brick not in last_brick.children):
             raise ValueError('Brick ' + str(self.call_stack[-1]) + ' tries '
                              'to call brick ' + str(self.brick) + ' which '
                              'is not in the list of its children.')
