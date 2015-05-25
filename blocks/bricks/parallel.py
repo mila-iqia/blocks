@@ -265,6 +265,8 @@ class Distribute(Fork):
 class Merge(Parallel):
     """Merges several variables by applying a transformation and summing.
 
+    Parameters
+    ----------
     input_names : list
         The input names.
     input_dims : list
