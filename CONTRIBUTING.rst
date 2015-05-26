@@ -34,6 +34,11 @@ Formatting guidelines
 Code guidelines
   If you're going to write a lot of code, have a read through our `coding
   guidelines`_.
+  
+License
+  Blocks is licensed under the `MIT license`_, with portions licensed under
+  the 3-clause BSD license. By contributing you agree to license your
+  contributions under the MIT license.
 
 Questions about using Blocks?
 =============================
@@ -50,3 +55,4 @@ already.
 .. _PEP 8: https://www.python.org/dev/peps/pep-0008/
 .. _NumPy docstring standard: https://github.com/numpy/numpy/blob/master/doc/HOWTO_DOCUMENT.rst.txt
 .. _reStructuredText: http://docutils.sourceforge.net/docs/user/rst/quickref.html
+.. _MIT license: https://raw.githubusercontent.com/mila-udem/blocks/master/LICENSE
