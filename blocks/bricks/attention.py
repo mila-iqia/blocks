@@ -47,7 +47,7 @@ from abc import ABCMeta, abstractmethod
 from theano import tensor
 from six import add_metaclass
 
-from blocks.bricks import (MLP, Identity, Brick, Initializable, Sequence,
+from blocks.bricks import (Brick, Initializable, Sequence,
                            Feedforward, Linear, Tanh)
 from blocks.bricks.base import lazy, application
 from blocks.bricks.parallel import Parallel, Distribute
@@ -421,7 +421,7 @@ class ShallowEnergyComputer(Sequence, Initializable, Feedforward):
     @lazy()
     def __init__(self, **kwargs):
         super(ShallowEnergyComputer, self).__init__(
-            [Tanh().apply, MLP([Identity()]).apply], **kwargs)
+            [Tanh().apply, Linear(use_bias=False).apply], **kwargs)
 
     @property
     def input_dim(self):
