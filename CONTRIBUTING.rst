@@ -18,7 +18,7 @@ few steps to help you get started:
 
 GitHub crash course
   If you're new to GitHub, be sure to check out our `quick reference`_ to the
-  pull-request worklow, which will show you how to fork Blocks, create a new
+  pull-request workflow, which will show you how to fork Blocks, create a new
   branch, and make a pull-request of your changes.
 
 Writing documentation
