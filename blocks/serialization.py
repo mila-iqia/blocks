@@ -5,15 +5,15 @@ import six
 import tempfile
 import warnings
 import zipfile
-from collections import defaultdict
 from contextlib import closing
 from pickle import HIGHEST_PROTOCOL
-from six.moves import copyreg, cPickle
 try:
     from pickle import DEFAULT_PROTOCOL
 except ImportError:
     DEFAULT_PROTOCOL = HIGHEST_PROTOCOL
 
+import numpy
+from six.moves import copyreg, cPickle
 from theano.compile.sharedvalue import SharedVariable
 from theano.misc import pkl_utils
 from theano.misc.pkl_utils import (PersistentCudaNdarrayID,
@@ -214,3 +214,45 @@ def continue_training(path):
         with open(path, "rb") as f:
             main_loop = load(f)
     main_loop.run()
+
+
+def save_parameter_values(param_values, path):
+    """Compactly save parameter values.
+
+    This is a thin wrapper over `numpy.savez`. It deals with
+    `numpy`'s vulnerability to slashes in file names.
+
+    Parameters
+    ----------
+    param_values : dict of (parameter name, numpy array)
+        The parameter values.
+    path : str of file
+        The destination for saving.
+
+    """
+    param_values = {name.replace("/", "-"): param
+                    for name, param in param_values.items()}
+    numpy.savez(path, **param_values)
+
+
+def load_parameter_values(path):
+    """Load parameter values saved by :func:`save_parameters`.
+
+    This is a thin wrapper over `numpy.load`. It deals with
+    `numpy`'s vulnerability to slashes in file names.
+
+    Parameters
+    ----------
+    path : str or file
+        The source for loading from.
+
+    Returns
+    -------
+    A dictionary of (parameter name, numpy array) pairs.
+
+    """
+    source = numpy.load(path)
+    param_values = {name.replace("-", "/"): value
+                    for name, value in source.items()}
+    source.close()
+    return param_values

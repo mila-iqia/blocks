@@ -3,7 +3,7 @@ import tempfile
 import numpy
 from picklable_itertools.extras import equizip
 
-from blocks.dump import load_parameter_values, save_parameter_values
+from blocks.serialization import load_parameter_values, save_parameter_values
 
 
 def test_save_load_parameter_values():
