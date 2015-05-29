@@ -219,10 +219,10 @@ def continue_training(path):
 
 
 def load_parameter_values(path):
-    """Load parameter values saved by :func:`save_parameters`.
+    """Load parameter values saved by :func:`dump`.
 
-    This is a thin wrapper over `numpy.load`. It deals with
-    `numpy`'s vulnerability to slashes in file names.
+    This is a thin wrapper over :func:`numpy.load`. It changes the names of
+    the arrays to ones compatible with :meth:`.Model.set_param_values`.
 
     Parameters
     ----------
