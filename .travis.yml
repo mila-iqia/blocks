@@ -38,11 +38,13 @@ script:
   - export BLOCKS_PROFILE=true
   - # Running nose2 within coverage makes imports count towards coverage
   - bokeh-server &> /dev/null &
+  - function fail { export FAILED=1; }
   - |
       if [[ $TESTS == 'blocks' ]]; then
-        coverage run -p --source=blocks -m nose2.__main__ -v doctests
+        coverage run -p --source=blocks -m nose2.__main__ -v doctests || fail
         export THEANO_FLAGS=$THEANO_FLAGS,cxx=
-        coverage run -p --source=blocks -m nose2.__main__ -v tests
+        coverage run -p --source=blocks -m nose2.__main__ -v tests || fail
+        return $FAILED
       fi
   - |
       if [[ $TESTS == 'blocks-examples' ]]; then
