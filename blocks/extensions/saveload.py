@@ -48,16 +48,13 @@ class Checkpoint(SimpleExtension):
 
     """
     def __init__(self, path, save_separately=None, **kwargs):
-        if save_separately is None:
-            save_separately = ['log']
         kwargs.setdefault("after_training", True)
         super(Checkpoint, self).__init__(**kwargs)
-
+        if not save_separately:
+            save_separately = []
         self.path = path
         self.save_separately = save_separately
 
-        if not self.save_separately:
-            self.save_separately = []
 
     def save_separately_filenames(self, path):
         """Compute paths for separately saved attributes.
