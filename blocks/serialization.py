@@ -65,7 +65,7 @@ class PersistentParameterID(PersistentSharedVariableID):
                 name = '{}.{}'.format(
                     BRICK_DELIMITER.join([brick.name for brick in
                                           get_brick(obj).get_unique_path()]),
-                    [obj.name]
+                    obj.name
                 )
             else:
                 name = obj.name

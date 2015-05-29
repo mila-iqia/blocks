@@ -4,7 +4,8 @@ import logging
 
 from blocks.extensions import SimpleExtension, TrainingExtension
 from blocks.utils import reraise_as
-from blocks.serialization import secure_pickle_dump, load
+from blocks.serialization import (secure_pickle_dump, load,
+                                  load_parameter_values)
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +56,6 @@ class Checkpoint(SimpleExtension):
         self.path = path
         self.save_separately = save_separately
 
-
     def save_separately_filenames(self, path):
         """Compute paths for separately saved attributes.
 
@@ -83,22 +83,23 @@ class Checkpoint(SimpleExtension):
         construction stage.
 
         """
-        from_main_loop, from_user = self.parse_args(callback_name, args)
+        _, from_user = self.parse_args(callback_name, args)
         try:
             path = self.path
             if from_user:
                 path, = from_user
-            already_saved_to = self.main_loop.log.current_row.get(SAVED_TO, ())
-            self.main_loop.log.current_row[SAVED_TO] = (
-                already_saved_to + (path,))
             secure_pickle_dump(self.main_loop, path)
             filenames = self.save_separately_filenames(path)
             for attribute in self.save_separately:
                 secure_pickle_dump(getattr(self.main_loop, attribute),
                                    filenames[attribute])
         except Exception:
-            self.main_loop.log.current_row[SAVED_TO] = None
+            path = None
             raise
+        finally:
+            already_saved_to = self.main_loop.log.current_row.get(SAVED_TO, ())
+            self.main_loop.log.current_row[SAVED_TO] = (already_saved_to +
+                                                        (path,))
 
 
 class Load(TrainingExtension):
@@ -108,37 +109,52 @@ class Load(TrainingExtension):
 
     Parameters
     ----------
-    state_path : str
+    path : str
         The path to the folder with dump.
+    load_iteration_state : bool
+        If `True`, load the iteration state. This can be useful when your
+        model has very long epochs, and you want to resume when you were in
+        the middle of one. Defaults to `False`.
+    load_log : bool
+        If `True`, load the old log and continue logging from there.
+        Convenient because you end up with a single log of the entire
+        training history. Defaults to `False`.
 
     Notes
     -----
-    Requires the model to be a Brick or a list of Bricks.
+    Requires the model to be created entirely using bricks, with a unique
+    path/name for each brick, so that the parameters can be matched to
+    their values.
+
+    In order to load the iteration state and the log, the saved model needs
+    to be unpickled. Note that resuming training this way is still not
+    entirely seamless because e.g. extensions will not be reloaded.
 
     """
-    def __init__(self, state_path, **kwargs):
+    def __init__(self, path, load_iteration_state=False, load_log=False,
+                 **kwargs):
         super(Load, self).__init__(**kwargs)
-        self.state_path = state_path
-
-    def load(self):
-        with open(self.state_path, "rb") as source:
-            return load(source)
+        self.path = path
+        self.load_iteration_state = load_iteration_state
+        self.load_log = load_log
 
     def load_to(self, main_loop):
-        loaded_main_loop = self.load()
-        main_loop.model.set_param_values(
-            loaded_main_loop.model.get_param_values())
-        main_loop.iteration_state = loaded_main_loop.iteration_state
-        main_loop.log = loaded_main_loop.log
+        main_loop.model.set_param_values(load_parameter_values(self.path))
+        if self.load_iteration_state or self.load_log:
+            with open(self.path, "rb") as source:
+                loaded_main_loop = load(source)
+            if self.load_log:
+                main_loop.log = loaded_main_loop.log
+            if self.load_iteration_state:
+                main_loop.iteration_state = loaded_main_loop.iteration_state
 
     def before_training(self):
-        if not os.path.exists(self.state_path):
-            logger.info("No dump found")
+        if not os.path.exists(self.path):
+            logger.warning("No dump found")
             return
-        logger.info("Loading the state from {} into the main loop"
-                    .format(self.state_path))
+        logger.info("loading model from {}".format(self.path))
         try:
             self.load_to(self.main_loop)
-            self.main_loop.log.current_row[LOADED_FROM] = self.state_path
+            self.main_loop.log.current_row[LOADED_FROM] = self.path
         except Exception:
             reraise_as("Failed to load the state")
