@@ -62,9 +62,11 @@ class PersistentParameterID(PersistentSharedVariableID):
         if isinstance(obj, SharedVariable):
             super(PersistentParameterID, self).__call__(obj)
             if hasattr(obj.tag, 'annotations'):
-                name = BRICK_DELIMITER.join(
-                    [brick.name for brick
-                     in get_brick(obj).get_unique_path()] + [obj.name])
+                name = '{}.{}'.format(
+                    BRICK_DELIMITER.join([brick.name for brick in
+                                          get_brick(obj).get_unique_path()]),
+                    [obj.name]
+                )
             else:
                 name = obj.name
             self.ndarray_names[id(obj.container.storage[0])] = name
@@ -134,11 +136,11 @@ def dump(obj, file_handler, protocol=DEFAULT_PROTOCOL,
     >>> mlp.initialize()
     >>> with open('model.zip', 'wb') as f:
     ...     dump(mlp, f)
-    >>> 'mlp/linear_0/W' in numpy.load('model.zip').keys()
+    >>> 'mlp-linear_0.W' in numpy.load('model.zip').keys()
     True
-    >>> 'mlp/linear_0/b' in numpy.load('model.zip').keys()
+    >>> 'mlp-linear_0.b' in numpy.load('model.zip').keys()
     True
-    >>> numpy.load('model.zip')['mlp/linear_0/W'].shape
+    >>> numpy.load('model.zip')['mlp-linear_0.W'].shape
     (10, 10)
     >>> with open('model.zip', 'rb') as f:
     ...     mlp2 = load(f)
@@ -216,25 +218,6 @@ def continue_training(path):
     main_loop.run()
 
 
-def save_parameter_values(param_values, path):
-    """Compactly save parameter values.
-
-    This is a thin wrapper over `numpy.savez`. It deals with
-    `numpy`'s vulnerability to slashes in file names.
-
-    Parameters
-    ----------
-    param_values : dict of (parameter name, numpy array)
-        The parameter values.
-    path : str of file
-        The destination for saving.
-
-    """
-    param_values = {name.replace("/", "-"): param
-                    for name, param in param_values.items()}
-    numpy.savez(path, **param_values)
-
-
 def load_parameter_values(path):
     """Load parameter values saved by :func:`save_parameters`.
 
@@ -252,7 +235,7 @@ def load_parameter_values(path):
 
     """
     source = numpy.load(path)
-    param_values = {name.replace("-", "/"): value
+    param_values = {'/' + name.replace(BRICK_DELIMITER, '/'): value
                     for name, value in source.items()}
     source.close()
     return param_values
