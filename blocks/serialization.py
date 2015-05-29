@@ -8,7 +8,7 @@ import zipfile
 from collections import defaultdict
 from contextlib import closing
 from pickle import HIGHEST_PROTOCOL
-from six.moves import copyreg
+from six.moves import copyreg, cPickle
 try:
     from pickle import DEFAULT_PROTOCOL
 except ImportError:
@@ -16,13 +16,15 @@ except ImportError:
 
 from theano.compile.sharedvalue import SharedVariable
 from theano.misc import pkl_utils
-from theano.misc.pkl_utils import PersistentNdarrayID
+from theano.misc.pkl_utils import (PersistentCudaNdarrayID,
+                                   PersistentSharedVariableID)
 
 from blocks.config import config
+from blocks.filter import get_brick
 from blocks.utils import change_recursion_limit
 
 
-BRICK_DELIMITER = '/'
+BRICK_DELIMITER = '-'
 MAIN_MODULE_WARNING = """WARNING: Main loop depends on the function `{}` in \
 `__main__` namespace.
 
@@ -31,13 +33,12 @@ resume your model outside of a namespace containing this function. In other \
 words, you can only call `continue_training` from within this script."""
 
 
-class PersistentParameterID(PersistentNdarrayID):
+class PersistentParameterID(PersistentSharedVariableID):
     """Persist the names of parameter arrays in the zip file.
 
-    If a shared variable has a name, this name is used as the name of the
-    NPY file inside of the zip file. NumPy arrays that aren't matched to a
-    shared variable are persisted as usual (i.e. `array_0`, `array_1`,
-    etc.)
+    Only Theano shared variables are persisted to the zip file using this
+    method. Names are determined using the brick hierarchy, or the shared
+    variable name.
 
     Parameters
     ----------
@@ -57,41 +58,18 @@ class PersistentParameterID(PersistentNdarrayID):
         `allow_duplicates` is ``False``.
 
     """
-    def __init__(self, zip_file, allow_unnamed=True, allow_duplicates=True):
-        super(PersistentParameterID, self).__init__(zip_file)
-        self.name_counter = defaultdict(int)
-        self.ndarray_names = {}
-        self.allow_unnamed = allow_unnamed
-        self.allow_duplicates = allow_duplicates
-
-    def _resolve_name(self, obj):
-        if id(obj) in self.ndarray_names:
-            name = self.ndarray_names[id(obj)]
-            count = self.name_counter[name]
-            if count:
-                if not self.allow_duplicates:
-                    raise ValueError("multiple shared variables with the name "
-                                     "`{0}` found".format(name))
-                name = '{0}_{1}'.format(name, count + 1)
-            self.name_counter[name] += 1
-            return name
-
     def __call__(self, obj):
         if isinstance(obj, SharedVariable):
-            if obj.name:
-                if obj.name == 'pkl':
-                    raise ValueError(
-                        "can't pickle shared variable with name `pkl`")
-                if hasattr(obj.tag, 'annotations'):
-                    name = BRICK_DELIMITER.join(
-                        [brick.name for brick
-                         in obj.tag.annotations[0].get_unique_path()] +
-                        [obj.name])
-                else:
-                    name = obj.name
-                self.ndarray_names[id(obj.container.storage[0])] = name
-            elif not self.allow_unnamed:
-                raise ValueError("unnamed shared variable, {}".format(obj))
+            super(PersistentParameterID, self).__call__(obj)
+            if hasattr(obj.tag, 'annotations'):
+                name = BRICK_DELIMITER.join(
+                    [brick.name for brick
+                     in get_brick(obj).get_unique_path()] + [obj.name])
+            else:
+                name = obj.name
+            self.ndarray_names[id(obj.container.storage[0])] = name
+        if id(obj) in self.ndarray_names:
+            PersistentCudaNdarrayID.__call__(self, obj)
 
 
 class PicklerWithWarning(pickle.Pickler):
@@ -101,12 +79,13 @@ class PicklerWithWarning(pickle.Pickler):
         dispatch_table = copyreg.dispatch_table.copy()
 
     def save_global(self, obj, **kwargs):
-        module = getattr(obj, "__module__", None)
+        module = getattr(obj, '__module__', None)
         if module == '__main__':
             warnings.warn(
                 MAIN_MODULE_WARNING.format(kwargs.get('name', obj.__name__))
             )
         pickle.Pickler.save_global(self, obj, **kwargs)
+
     if six.PY3:
         dispatch_table[six.types.FunctionType] = save_global
     else:
@@ -117,7 +96,7 @@ class PicklerWithWarning(pickle.Pickler):
 
 
 def dump(obj, file_handler, protocol=DEFAULT_PROTOCOL,
-         persistent_id=PersistentParameterID):
+         persistent_id=PersistentParameterID, use_cpickle=False):
     """Pickles an object to a zip file using external persistence.
 
     Parameters
@@ -135,6 +114,10 @@ def dump(obj, file_handler, protocol=DEFAULT_PROTOCOL,
         to separate files inside of the zip file. For example,
         :class:`PersistentNdarrayID` saves any :class:`numpy.ndarray` to a
         separate NPY file inside of the zip file.
+    use_cpickle : bool
+        On Python 2, this enables the use of `cPickle` instead of `pickle`.
+        Note that this disables warnings about trying to pickle objects in
+        the ``__main__`` namespace.
 
     Notes
     -----
@@ -166,7 +149,10 @@ def dump(obj, file_handler, protocol=DEFAULT_PROTOCOL,
     with closing(zipfile.ZipFile(file_handler, 'w', zipfile.ZIP_DEFLATED,
                                  allowZip64=True)) as zip_file:
         def func(f):
-            p = PicklerWithWarning(f, protocol=protocol)
+            if use_cpickle:
+                p = cPickle.Pickler(f, protocol=protocol)
+            else:
+                p = PicklerWithWarning(f, protocol=protocol)
             p.persistent_id = persistent_id(zip_file)
             p.dump(obj)
         pkl_utils.zipadd(func, zip_file, 'pkl')
