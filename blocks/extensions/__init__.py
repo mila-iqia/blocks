@@ -309,6 +309,11 @@ class SimpleExtension(TrainingExtension):
         \*args : tuple
             The arguments from the main loop concatenated with additional
             arguments from user.
+            
+        Notes
+        -----
+        Subclasses *must* accept additional positional arguments in their
+        call signature for this method, even if they are unused.
 
         """
         pass
