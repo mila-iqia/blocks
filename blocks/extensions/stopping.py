@@ -37,6 +37,9 @@ class FinishIfNoImprovementAfter(FinishAfter):
 
     def do(self, which_callback, *args):
         self.update_best()
+        # If we haven't encountered a best yet, then we should just bail.
+        if self.last_best is None:
+            return
         iters_since = (self.main_loop.log.status['iterations_done'] -
                        self.last_best)
         patience = self.iterations - iters_since

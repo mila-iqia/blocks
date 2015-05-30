@@ -25,6 +25,9 @@ def test_finish_if_no_improvement_after():
 
     ext = FinishIfNoImprovementAfter(3, 'bananas')
     ext.main_loop = main_loop
+    # This should silently pass, since there has been no new best set,
+    # and 'bananas' is not in the log's current row.
+    ext.do('after_batch')
     # First is a new best.
     main_loop.log.current_row['bananas'] = True
     main_loop.log.status['iterations_done'] += 1
