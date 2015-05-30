@@ -19,7 +19,7 @@ class TrainingExtension(object):
     """The base class for training extensions.
 
     An extension is a set of callbacks sharing a joint context that are
-    invoked at certain stages of the training procedure. This callbacks
+    invoked at certain stages of the training procedure. These callbacks
     typically add a certain functionality to the training procedure,
     e.g. running validation on auxiliary datasets or early stopping.
 
@@ -309,6 +309,11 @@ class SimpleExtension(TrainingExtension):
         \*args : tuple
             The arguments from the main loop concatenated with additional
             arguments from user.
+
+        Notes
+        -----
+        Subclasses *must* accept additional positional arguments in their
+        call signature for this method, even if they are unused.
 
         """
         pass
