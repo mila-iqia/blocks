@@ -6,6 +6,7 @@ from numpy.testing import assert_allclose
 
 import theano
 from fuel.datasets import IterableDataset
+from six.moves import cPickle
 from theano import tensor
 from theano.misc.pkl_utils import load
 
@@ -150,4 +151,4 @@ def test_save_the_best():
         root, ext = os.path.splitext(dst_best.name)
         log_path = root + "_log" + ext
         with open(log_path, 'rb') as src:
-            assert load(src).status['iterations_done'] == 5
+            assert cPickle.load(src).status['iterations_done'] == 5
