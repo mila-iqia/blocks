@@ -38,23 +38,25 @@ class FinishIfNoImprovementAfterTester(unittest.TestCase):
     def setUp(self):
         self.main_loop = FakeMainLoop()
 
-    def check_finish_if_no_improvement_after(self, ext, epochs=False):
+    def check_finish_if_no_improvement_after(self, ext, notification_name,
+                                             log_entry=None, epochs=False):
         # ext = FinishIfNoImprovementAfter('bananas', iterations=3)
         ext.main_loop = self.main_loop
         # This should silently pass, since there has been no new best set,
         # and 'bananas' is not in the log's current row.
         which_callback = 'after_batch' if not epochs else 'after_epoch'
-        log_entry = 'bananas_patience_' + (
-            'iterations' if not epochs else 'epochs')
+        if log_entry is None:
+            log_entry = notification_name + '_patience_' + (
+                'iterations' if not epochs else 'epochs')
         ext.do(which_callback)
         # First is a new best.
-        self.main_loop.log.current_row['bananas'] = True
+        self.main_loop.log.current_row[notification_name] = True
         self.main_loop.log.advance(epochs)
         ext.do(which_callback)
         self.check_log(log_entry, 3)
         self.check_not_stopping()
-        # No best found for another  2 iterations.
-        del self.main_loop.log.current_row['bananas']
+        # No best found for another 2 iterations.
+        del self.main_loop.log.current_row[notification_name]
         self.main_loop.log.advance(epochs)
         ext.do(which_callback)
         self.check_log(log_entry, 2)
@@ -65,13 +67,13 @@ class FinishIfNoImprovementAfterTester(unittest.TestCase):
         self.check_log(log_entry, 1)
         self.check_not_stopping()
         # Oh look, a new best!
-        self.main_loop.log.current_row['bananas'] = True
+        self.main_loop.log.current_row[notification_name] = True
         self.main_loop.log.advance(epochs)
         ext.do(which_callback)
         self.check_log(log_entry, 3)
         self.check_not_stopping()
         # Now, run out our patience. 3 iterations with no best.
-        del self.main_loop.log.current_row['bananas']
+        del self.main_loop.log.current_row[notification_name]
         self.main_loop.log.advance(epochs)
         ext.do(which_callback)
         self.check_log(log_entry, 2)
@@ -87,11 +89,17 @@ class FinishIfNoImprovementAfterTester(unittest.TestCase):
 
     def test_finish_if_no_improvement_after_iterations(self):
         ext = FinishIfNoImprovementAfter('bananas', iterations=3)
-        self.check_finish_if_no_improvement_after(ext, epochs=False)
+        self.check_finish_if_no_improvement_after(ext, 'bananas')
 
     def test_finish_if_no_improvement_after_epochs(self):
-        ext = FinishIfNoImprovementAfter('bananas', epochs=3)
-        self.check_finish_if_no_improvement_after(ext, epochs=True)
+        ext = FinishIfNoImprovementAfter('mangos', epochs=3)
+        self.check_finish_if_no_improvement_after(ext, 'mangos', epochs=True)
+
+    def test_finish_if_no_improvement_after_epochs_log_record_specified(self):
+        ext = FinishIfNoImprovementAfter('melons',
+                                         patience_log_record='blueberries',
+                                         iterations=3)
+        self.check_finish_if_no_improvement_after(ext, 'melons', 'blueberries')
 
     def test_finish_if_no_improvement_after_specify_both(self):
         self.assertRaises(ValueError, FinishIfNoImprovementAfter, 'boo',
