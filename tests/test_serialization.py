@@ -10,7 +10,6 @@ from blocks.bricks import MLP
 from blocks.initialization import Constant
 from blocks.serialization import load, dump, secure_dump, load_parameter_values
 
-
 def foo():
     pass
 
@@ -77,5 +76,5 @@ def test_secure_dump():
     with NamedTemporaryFile(delete=False) as f:
         secure_dump(foo, f.name)
     assert_raises(PicklingError, secure_dump, bar, f.name)
-    with open(f.name) as f:
+    with open(f.name, 'rb') as f:
         assert type(load(f)) is object

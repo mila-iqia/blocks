@@ -1,6 +1,5 @@
 import os
 import shutil
-import pickle
 import six
 import tempfile
 import warnings
@@ -9,11 +8,13 @@ from contextlib import closing
 from pickle import HIGHEST_PROTOCOL
 try:
     from pickle import DEFAULT_PROTOCOL
+    from pickle import _Pickler
 except ImportError:
     DEFAULT_PROTOCOL = HIGHEST_PROTOCOL
+    from pickle import Pickler as _Pickler
 
 import numpy
-from six.moves import copyreg, cPickle
+from six.moves import cPickle
 from theano.compile.sharedvalue import SharedVariable
 from theano.misc import pkl_utils
 from theano.misc.pkl_utils import (PersistentCudaNdarrayID,
@@ -74,25 +75,20 @@ class PersistentParameterID(PersistentSharedVariableID):
             PersistentCudaNdarrayID.__call__(self, obj)
 
 
-class PicklerWithWarning(pickle.Pickler):
-    if six.PY2:
-        dispatch = pickle.Pickler.dispatch.copy()
-    else:
-        dispatch_table = copyreg.dispatch_table.copy()
+class PicklerWithWarning(_Pickler):
+    dispatch = _Pickler.dispatch.copy()
 
-    def save_global(self, obj, **kwargs):
+    def save_global(self, obj, name=None, **kwargs):
         module = getattr(obj, '__module__', None)
         if module == '__main__':
             warnings.warn(
                 MAIN_MODULE_WARNING.format(kwargs.get('name', obj.__name__))
             )
-        pickle.Pickler.save_global(self, obj, **kwargs)
+        _Pickler.save_global(self, obj, name=name, **kwargs)
 
-    if six.PY3:
-        dispatch_table[six.types.FunctionType] = save_global
-    else:
+    dispatch[six.types.FunctionType] = save_global
+    if six.PY2:
         dispatch[six.types.ClassType] = save_global
-        dispatch[six.types.FunctionType] = save_global
         dispatch[six.types.BuiltinFunctionType] = save_global
         dispatch[six.types.TypeType] = save_global
 
@@ -117,9 +113,9 @@ def dump(obj, file_handler, protocol=DEFAULT_PROTOCOL,
         :class:`PersistentNdarrayID` saves any :class:`numpy.ndarray` to a
         separate NPY file inside of the zip file.
     use_cpickle : bool
-        On Python 2, this enables the use of `cPickle` instead of `pickle`.
-        Note that this disables warnings about trying to pickle objects in
-        the ``__main__`` namespace.
+        This enables the use of C-version of `pickle` (known as ``cPickle``
+        in Python 2). Note that this disables warnings about trying to
+        pickle objects in the ``__main__`` namespace.
 
     Notes
     -----
