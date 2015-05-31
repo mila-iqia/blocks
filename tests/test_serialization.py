@@ -73,7 +73,7 @@ def test_serialization():
 
 def test_secure_dump():
     foo = object()
-    bar = lambda: None
+    bar = lambda: None  # flake8: noqa
     with NamedTemporaryFile(delete=False) as f:
         secure_dump(foo, f.name)
     assert_raises(PicklingError, secure_dump, bar, f.name)
