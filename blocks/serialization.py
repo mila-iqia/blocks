@@ -164,7 +164,7 @@ def dump(obj, file_handler, protocol=DEFAULT_PROTOCOL,
 load = pkl_utils.load
 
 
-def secure_pickle_dump(object_, path):
+def secure_dump(object_, path):
     """Robust serialization - does not corrupt your files when failed.
 
     Parameters
@@ -236,6 +236,6 @@ def load_parameter_values(path):
     """
     source = numpy.load(path)
     param_values = {'/' + name.replace(BRICK_DELIMITER, '/'): value
-                    for name, value in source.items()}
+                    for name, value in source.items() if name != 'pkl'}
     source.close()
     return param_values
