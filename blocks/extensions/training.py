@@ -68,7 +68,7 @@ class TrackTheBest(SimpleExtension):
     notification_name : str
         The name of the record written to the log when the current
         value of the tracked quantity is the best so far.
-    
+
     Notes
     -----
     In the likely case that you are relying on another extension to
