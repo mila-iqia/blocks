@@ -85,7 +85,7 @@ class TrackTheBest(SimpleExtension):
         self.notification_name = notification_name
         self.best_name = "best_" + record_name
         self.choose_best = choose_best
-        kwargs.setdefault("after_batch", True)
+        kwargs.setdefault("after_epoch", True)
         super(TrackTheBest, self).__init__(**kwargs)
 
     def do(self, which_callback, *args):

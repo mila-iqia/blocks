@@ -90,27 +90,31 @@ def test_track_the_best():
     extension = TrackTheBest("cost")
     extension.main_loop = main_loop
 
-    main_loop.status['iterations_done'] += 1
+    main_loop.status['epochs_done'] += 1
+    main_loop.status['iterations_done'] += 10
     main_loop.log.current_row['cost'] = 5
-    extension.dispatch('after_batch')
+    extension.dispatch('after_epoch')
     assert main_loop.status['best_cost'] == 5
     assert main_loop.log.current_row['cost_best_so_far']
 
-    main_loop.status['iterations_done'] += 1
+    main_loop.status['epochs_done'] += 1
+    main_loop.status['iterations_done'] += 10
     main_loop.log.current_row['cost'] = 6
-    extension.dispatch('after_batch')
+    extension.dispatch('after_epoch')
     assert main_loop.status['best_cost'] == 5
     assert main_loop.log.current_row.get('cost_best_so_far', None) is None
 
-    main_loop.status['iterations_done'] += 1
+    main_loop.status['epochs_done'] += 1
+    main_loop.status['iterations_done'] += 10
     main_loop.log.current_row['cost'] = 5
-    extension.dispatch('after_batch')
+    extension.dispatch('after_epoch')
     assert main_loop.status['best_cost'] == 5
     assert main_loop.log.current_row.get('cost_best_so_far', None) is None
 
-    main_loop.status['iterations_done'] += 1
+    main_loop.status['epochs_done'] += 1
+    main_loop.status['iterations_done'] += 10
     main_loop.log.current_row['cost'] = 4
-    extension.dispatch('after_batch')
+    extension.dispatch('after_epoch')
     assert main_loop.status['best_cost'] == 4
     assert main_loop.log.current_row['cost_best_so_far']
 
@@ -125,7 +129,7 @@ class WriteCostExtension(TrainingExtension):
 def test_save_the_best():
     with NamedTemporaryFile() as dst,\
             NamedTemporaryFile() as dst_best:
-        track_cost = TrackTheBest("cost")
+        track_cost = TrackTheBest("cost", after_epoch=False, after_batch=True)
         main_loop = MockMainLoop(
             extensions=[FinishAfter(after_n_epochs=1),
                         WriteCostExtension(),
