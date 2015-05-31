@@ -160,7 +160,7 @@ def dump(obj, file_handler, protocol=DEFAULT_PROTOCOL,
 load = pkl_utils.load
 
 
-def secure_dump(object_, path):
+def secure_dump(object_, path, dump_function=dump):
     """Robust serialization - does not corrupt your files when failed.
 
     Parameters
@@ -169,11 +169,15 @@ def secure_dump(object_, path):
         The object to be saved to the disk.
     path : str
         The destination path.
+    dump_function : function
+        The function that is used to perform the serialization. Must take
+        an object and file object as arguments. By default, :func:`dump` is
+        used. An alternative would be :func:`pickle.dump`.
 
     """
     try:
         with tempfile.NamedTemporaryFile(delete=False) as temp:
-            dump(object_, temp)
+            dump_function(object_, temp)
         shutil.move(temp.name, path)
     except:
         if "temp" in locals():

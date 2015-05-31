@@ -2,6 +2,8 @@
 import os.path
 import logging
 
+from six.moves import cPickle
+
 from blocks.extensions import SimpleExtension, TrainingExtension
 from blocks.utils import reraise_as
 from blocks.serialization import secure_dump, load, load_parameter_values
@@ -91,7 +93,7 @@ class Checkpoint(SimpleExtension):
             filenames = self.save_separately_filenames(path)
             for attribute in self.save_separately:
                 secure_dump(getattr(self.main_loop, attribute),
-                            filenames[attribute])
+                            filenames[attribute], cPickle.dump)
         except Exception:
             path = None
             raise
