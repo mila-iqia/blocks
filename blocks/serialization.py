@@ -105,7 +105,7 @@ def dump(obj, file_handler, protocol=DEFAULT_PROTOCOL,
         The file handle to save the object to.
     protocol : int, optional
         The pickling protocol to use. Unlike Python's built-in pickle, the
-        default is set to `2` insstead of 0 for Python 2. The Python 3
+        default is set to `2` instead of 0 for Python 2. The Python 3
         default (level 3) is maintained.
     persistent_id : callable
         The callable that persists certain objects in the object hierarchy
