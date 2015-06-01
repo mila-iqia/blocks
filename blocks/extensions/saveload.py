@@ -36,6 +36,8 @@ class Checkpoint(SimpleExtension):
         the attribute name preceded by an underscore before the
         `path` extension. The whole main loop will still be pickled
         as usual.
+    use_cpickle : bool
+        See documentation of :func:`~blocks.serialization.dump`.
 
     Notes
     -----
@@ -49,13 +51,15 @@ class Checkpoint(SimpleExtension):
 
 
     """
-    def __init__(self, path, save_separately=None, **kwargs):
+    def __init__(self, path, save_separately=None, use_cpickle=False,
+                 **kwargs):
         kwargs.setdefault("after_training", True)
         super(Checkpoint, self).__init__(**kwargs)
         if not save_separately:
             save_separately = []
         self.path = path
         self.save_separately = save_separately
+        self.use_cpickle = use_cpickle
 
     def save_separately_filenames(self, path):
         """Compute paths for separately saved attributes.
@@ -89,7 +93,7 @@ class Checkpoint(SimpleExtension):
             path = self.path
             if from_user:
                 path, = from_user
-            secure_dump(self.main_loop, path)
+            secure_dump(self.main_loop, path, use_cpickle=self.use_cpickle)
             filenames = self.save_separately_filenames(path)
             for attribute in self.save_separately:
                 secure_dump(getattr(self.main_loop, attribute),
