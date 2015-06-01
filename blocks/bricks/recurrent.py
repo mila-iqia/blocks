@@ -9,7 +9,7 @@ import numpy
 import theano
 from theano import tensor, Variable
 
-from blocks.bricks import Initializable, Sigmoid, Tanh
+from blocks.bricks import Initializable, Logistic, Tanh
 from blocks.bricks.base import Application, application, Brick, lazy
 from blocks.initialization import NdarrayInitialization
 from blocks.roles import add_role, WEIGHT, INITIAL_STATE
@@ -479,7 +479,7 @@ class GatedRecurrent(BaseRecurrent, Initializable):
         :class:`.Tanh` brick is used.
     gate_activation : :class:`.Brick` or None
         The brick to apply as activation for gates. If ``None`` a
-        :class:`.Sigmoid` brick is used.
+        :class:`.Logistic` brick is used.
 
     Notes
     -----
@@ -500,7 +500,7 @@ class GatedRecurrent(BaseRecurrent, Initializable):
         if not activation:
             activation = Tanh()
         if not gate_activation:
-            gate_activation = Sigmoid()
+            gate_activation = Logistic()
         self.activation = activation
         self.gate_activation = gate_activation
 

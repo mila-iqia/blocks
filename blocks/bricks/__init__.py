@@ -482,7 +482,7 @@ class Tanh(Activation):
         return tensor.tanh(input_)
 
 
-class Sigmoid(Activation):
+class Logistic(Activation):
     @application(inputs=['input_'], outputs=['output'])
     def apply(self, input_):
         return tensor.nnet.sigmoid(input_)
