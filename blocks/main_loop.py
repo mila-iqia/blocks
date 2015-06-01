@@ -81,9 +81,6 @@ class MainLoop(object):
     extensions : list of :class:`.TrainingExtension` instances
         The training extensions. Will be called in the same order as given
         here.
-    profile : :class:`.Profile`
-        Keeps track of the times spent in differen segments of the training
-        loop.
 
     """
     def __init__(self, algorithm, data_stream,
