@@ -236,8 +236,7 @@ def load_parameter_values(path):
     A dictionary of (parameter name, numpy array) pairs.
 
     """
-    source = numpy.load(path)
-    param_values = {'/' + name.replace(BRICK_DELIMITER, '/'): value
-                    for name, value in source.items() if name != 'pkl'}
-    source.close()
+    with closing(numpy.load(path)) as source:
+        param_values = {'/' + name.replace(BRICK_DELIMITER, '/'): value
+                        for name, value in source.items() if name != 'pkl'}
     return param_values
