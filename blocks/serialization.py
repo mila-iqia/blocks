@@ -161,7 +161,7 @@ load = pkl_utils.load
 
 
 def secure_dump(object_, path, dump_function=dump, **kwargs):
-    """Robust serialization - does not corrupt your files when failed.
+    r"""Robust serialization - does not corrupt your files when failed.
 
     Parameters
     ----------
