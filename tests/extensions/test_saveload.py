@@ -49,15 +49,27 @@ def test_load():
     )
     main_loop.run()
 
-    # Load the parameters only
+    # Load the parameters, log and iteration state
     old_value = W.get_value()
     W.set_value(old_value * 2)
     main_loop = MainLoop(
         model=Model(cost),
         data_stream=data_stream,
         algorithm=GradientDescent(cost=cost, params=[W]),
-        extensions=[Load('myweirdmodel.picklebarrel')]
+        extensions=[Load('myweirdmodel.picklebarrel',
+                         load_iteration_state=True, load_log=True)]
     )
     main_loop.extensions[0].main_loop = main_loop
     main_loop._run_extensions('before_training')
     assert_allclose(W.get_value(), old_value)
+
+    # Make sure things work too if the model was never saved before
+    main_loop = MainLoop(
+        model=Model(cost),
+        data_stream=data_stream,
+        algorithm=GradientDescent(cost=cost, params=[W]),
+        extensions=[Load('mynonexisting.picklebarrel',
+                         load_iteration_state=True, load_log=True)]
+    )
+    main_loop.extensions[0].main_loop = main_loop
+    main_loop._run_extensions('before_training')
