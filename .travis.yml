@@ -37,7 +37,6 @@ script:
   - export FUEL_FLOATX=$FLOATX
   - export BLOCKS_PROFILE=true
   - # Running nose2 within coverage makes imports count towards coverage
-  - bokeh-server &> /dev/null &
   - function fail { export FAILED=1; }
   - |
       if [[ $TESTS == 'blocks' ]]; then
