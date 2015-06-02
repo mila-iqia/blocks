@@ -14,11 +14,6 @@ Monitoring extensions
     :undoc-members:
     :show-inheritance:
 
-.. automodule:: blocks.extensions.plot
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 Training
 --------
 

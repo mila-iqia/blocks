@@ -32,14 +32,13 @@ setup(
     ],
     keywords='theano machine learning neural networks deep learning',
     packages=find_packages(exclude=['examples', 'docs', 'doctests', 'tests']),
-    scripts=['bin/blocks-continue', 'bin/blocks-dump', 'bin/blocks-plot'],
+    scripts=['bin/blocks-continue', 'bin/blocks-dump'],
     setup_requires=['numpy'],
     install_requires=['numpy', 'six', 'pyyaml', 'pandas', 'toolz',
                       'theano', 'picklable-itertools', 'progressbar2',
                       'fuel'],
     extras_require={
         'test': ['nose', 'nose2'],
-        'plot': ['bokeh'],
         'docs': ['sphinx', 'sphinxcontrib-napoleon', 'sphinx-rtd-theme']
     },
     zip_safe=False)
