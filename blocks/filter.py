@@ -78,8 +78,8 @@ class VariableFilter(object):
 
     Examples
     --------
-    >>> from blocks.bricks import MLP, Linear, Sigmoid, Identity, BIAS
-    >>> mlp = MLP(activations=[Identity(), Sigmoid()], dims=[20, 10, 20])
+    >>> from blocks.bricks import MLP, Linear, Logistic, Identity, BIAS
+    >>> mlp = MLP(activations=[Identity(), Logistic()], dims=[20, 10, 20])
     >>> from theano import tensor
     >>> x = tensor.matrix()
     >>> y_hat = mlp.apply(x)

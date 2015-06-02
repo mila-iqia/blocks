@@ -1,6 +1,6 @@
 from nose.tools import raises
 
-from blocks.bricks import Bias, Linear, Sigmoid
+from blocks.bricks import Bias, Linear, Logistic
 from blocks.bricks.parallel import Merge
 from blocks.filter import VariableFilter
 from blocks.graph import ComputationGraph
@@ -13,7 +13,7 @@ def test_variable_filter():
     # Creating computation graph
     brick1 = Linear(input_dim=2, output_dim=2, name='linear1')
     brick2 = Bias(2, name='bias1')
-    activation = Sigmoid(name='sigm')
+    activation = Logistic(name='sigm')
 
     x = tensor.vector()
     h1 = brick1.apply(x)

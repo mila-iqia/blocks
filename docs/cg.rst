@@ -23,9 +23,9 @@ on some of the layers.
 
     >>> from theano import tensor
     >>> x = tensor.matrix('features')
-    >>> from blocks.bricks import MLP, Sigmoid, Rectifier
+    >>> from blocks.bricks import MLP, Logistic, Rectifier
     >>> from blocks.initialization import IsotropicGaussian, Constant
-    >>> mlp = MLP(activations=[Rectifier()] * 2 + [Sigmoid()],
+    >>> mlp = MLP(activations=[Rectifier()] * 2 + [Logistic()],
     ...           dims=[784, 256, 128, 784],
     ...           weights_init=IsotropicGaussian(), biases_init=Constant(0.01))
     >>> y_hat = mlp.apply(x)

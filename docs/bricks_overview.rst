@@ -156,9 +156,9 @@ As such, bricks can have *children*. Parent bricks are able to configure their
 children, to e.g. make sure their configurations are compatible, or have
 sensible defaults for a particular use case.
 
-    >>> from blocks.bricks import MLP, Sigmoid
-    >>> mlp = MLP(activations=[Sigmoid(name='sigmoid_0'),
-    ...           Sigmoid(name='sigmoid_1')], dims=[16, 8, 4],
+    >>> from blocks.bricks import MLP, Logistic
+    >>> mlp = MLP(activations=[Logistic(name='sigmoid_0'),
+    ...           Logistic(name='sigmoid_1')], dims=[16, 8, 4],
     ...           weights_init=IsotropicGaussian(), biases_init=Constant(0.01))
     >>> [child.name for child in mlp.children]
     ['linear_0', 'sigmoid_0', 'linear_1', 'sigmoid_1']
@@ -199,8 +199,8 @@ children. If you want to override the child configuration, you will need to
 call these methods manually, after which you can override the child bricks'
 configuration.
 
-    >>> mlp = MLP(activations=[Sigmoid(name='sigmoid_0'),
-    ...           Sigmoid(name='sigmoid_1')], dims=[16, 8, 4],
+    >>> mlp = MLP(activations=[Logistic(name='sigmoid_0'),
+    ...           Logistic(name='sigmoid_1')], dims=[16, 8, 4],
     ...           weights_init=IsotropicGaussian(), biases_init=Constant(0.01))
     >>> y = mlp.apply(x)
     >>> mlp.push_initialization_config()
