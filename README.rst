@@ -33,9 +33,17 @@ In the future we also hope to support:
 
 * Dimension, type and axes-checking
 
-Please see the documentation_ for more information.
-
-If you want to contribute, please make sure to read the `developer guidelines`_.
+Citing Blocks
+   If you use Blocks or Fuel in your work, we'd really appreciate it if you could cite the following paper:
+   
+   Bart van Merriënboer, Dzmitry Bahdanau, Vincent Dumoulin, Dmitriy Serdyuk, David Warde-Farley, Jan Chorowski, and Yoshua Bengio, "`Blocks and Fuel: Frameworks for deep learning`_," *arXiv preprint arXiv:1506.00619 [cs.LG]*, 2015.
+    
+Documentation
+   Please see the documentation_ for more information.
+   
+Contributing
+   If you want to contribute, please make sure to read the `developer guidelines`_.
 
 .. _documentation: http://blocks.readthedocs.org
 .. _developer guidelines: http://blocks.readthedocs.org/en/latest/development/index.html
+.. _Blocks and Fuel\: Frameworks for deep learning: http://arxiv.org/abs/1506.00619
