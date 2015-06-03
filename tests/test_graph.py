@@ -4,7 +4,7 @@ from numpy.testing import assert_allclose
 from theano import tensor
 from theano.sandbox.rng_mrg import MRG_RandomStreams
 
-from blocks.bricks import MLP, Identity, Sigmoid
+from blocks.bricks import MLP, Identity, Logistic
 from blocks.bricks.cost import SquaredError
 from blocks.filter import VariableFilter
 from blocks.graph import apply_noise, collect_parameters, ComputationGraph
@@ -129,7 +129,7 @@ def test_snapshot():
 
 def test_collect():
     x = tensor.matrix()
-    mlp = MLP(activations=[Sigmoid(), Sigmoid()], dims=[784, 100, 784],
+    mlp = MLP(activations=[Logistic(), Logistic()], dims=[784, 100, 784],
               use_bias=False)
     cost = SquaredError().apply(x, mlp.apply(x))
     cg = ComputationGraph(cost)

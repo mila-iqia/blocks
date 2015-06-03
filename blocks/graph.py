@@ -466,11 +466,12 @@ def collect_parameters(computation_graph, params):
 
     Examples
     --------
-    >>> from blocks.bricks import MLP, Sigmoid
+    >>> from blocks.bricks import MLP, Logistic
     >>> from blocks.bricks.cost import SquaredError
     >>> from theano import tensor
     >>> x = tensor.matrix()
-    >>> mlp = MLP(activations=[Sigmoid(), Sigmoid()], dims=[784, 100, 784])
+    >>> mlp = MLP(activations=[Logistic(), Logistic()],
+    ...           dims=[784, 100, 784])
     >>> cost = SquaredError().apply(x, mlp.apply(x))
     >>> cg = ComputationGraph(cost)
     >>> new_cg = collect_parameters(cg, cg.shared_variables)
