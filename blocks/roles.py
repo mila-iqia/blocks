@@ -140,3 +140,17 @@ class DropoutRole(VariableRole):
 
 #: Inputs with applied dropout
 DROPOUT = DropoutRole()
+
+
+class CollectedRole(VariableRole):
+    pass
+
+#: The replacement of a variable collected into a single shared variable
+COLLECTED = CollectedRole()
+
+
+class CollectorRole(ParameterRole):
+    pass
+
+#: A collection of parameters combined into a single shared variable
+COLLECTOR = CollectorRole()

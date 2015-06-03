@@ -4,9 +4,12 @@ from numpy.testing import assert_allclose
 from theano import tensor
 from theano.sandbox.rng_mrg import MRG_RandomStreams
 
-from blocks.bricks import MLP, Identity
-from blocks.graph import apply_noise, ComputationGraph
+from blocks.bricks import MLP, Identity, Logistic
+from blocks.bricks.cost import SquaredError
+from blocks.filter import VariableFilter
+from blocks.graph import apply_noise, collect_parameters, ComputationGraph
 from blocks.initialization import Constant
+from blocks.roles import COLLECTED, PARAMETER
 from tests.bricks.test_bricks import TestBrick
 
 
@@ -122,3 +125,25 @@ def test_snapshot():
     snapshot = cg.get_snapshot(dict(x=numpy.zeros((1, 10),
                                                   dtype=theano.config.floatX)))
     assert len(snapshot) == 14
+
+
+def test_collect():
+    x = tensor.matrix()
+    mlp = MLP(activations=[Logistic(), Logistic()], dims=[784, 100, 784],
+              use_bias=False)
+    cost = SquaredError().apply(x, mlp.apply(x))
+    cg = ComputationGraph(cost)
+    var_filter = VariableFilter(roles=[PARAMETER])
+    W1, W2 = var_filter(cg.variables)
+    for i, W in enumerate([W1, W2]):
+        W.set_value(numpy.ones_like(W.get_value()) * (i + 1))
+    new_cg = collect_parameters(cg, cg.shared_variables)
+    collected_params, = new_cg.shared_variables
+    assert numpy.all(collected_params.get_value()[:784 * 100] == 1.)
+    assert numpy.all(collected_params.get_value()[784 * 100:] == 2.)
+    assert collected_params.ndim == 1
+    W1, W2 = VariableFilter(roles=[COLLECTED])(new_cg.variables)
+    assert W1.eval().shape == (784, 100)
+    assert numpy.all(W1.eval() == 1.)
+    assert W2.eval().shape == (100, 784)
+    assert numpy.all(W2.eval() == 2.)
