@@ -149,7 +149,7 @@ class CollectedRole(VariableRole):
 COLLECTED = CollectedRole()
 
 
-class CollectorRole(VariableRole):
+class CollectorRole(ParameterRole):
     pass
 
 #: A collection of parameters combined into a single shared variable
