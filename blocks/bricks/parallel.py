@@ -56,7 +56,7 @@ class Parallel(Initializable):
     See :class:`.Initializable` for initialization parameters.
 
     """
-    @lazy(allocation=['input_dims', 'input_dims', 'output_dims'])
+    @lazy(allocation=['input_names', 'input_dims', 'output_dims'])
     def __init__(self, input_names, input_dims, output_dims,
                  prototype=None, child_prefix=None, **kwargs):
         super(Parallel, self).__init__(**kwargs)
