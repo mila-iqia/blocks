@@ -59,27 +59,24 @@ class BaseRecurrent(Brick):
 def recurrent(*args, **kwargs):
     """Wraps an apply method to allow its iterative application.
 
-    This decorator allows you to use implementation of an RNN
-    transition to process sequences without writing the
-    iteration-related code again and again. In the most general form
-    information flow of a recurrent network can be described as
-    follows: depending on the context variables and driven by input
-    sequences the RNN updates its states and produces output sequences.
-    Thus the input variables of your transition function play one of
-    three roles: a sequence, a context or a state. These roles should be
-    specified in the method's signature to make iteration possible.
+    This decorator allows you to use implementation of an RNN transition to
+    process sequences without writing the iteration-related code again and
+    again. In the most general form information flow of a recurrent network
+    can be described as follows: depending on the context variables and
+    driven by input sequences the RNN updates its states and produces
+    output sequences.  Thus the input variables of your transition function
+    play one of three roles: an element of an input sequence, a context or
+    a state.  These roles should be specified in the method's signature to
+    make iteration possible.
 
     Parameters
     ----------
-    sequence : list of strs
-        Names of the arguments of the apply method that play sequence
-        roles.
+    sequences : list of strs
+        Specifies which of the arguments are elements of input sequences.
     states : list of strs
-        Names of the arguments of the apply method that play state
-        roles.
+        Specifies which of the arguments that are states.
     contexts : list of strs
-        Names of the arguments of the apply method that play context
-        roles.
+        Specifies the arguments that are contexts.
     outputs : list of strs
         Names of the outputs.
 
