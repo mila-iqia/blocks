@@ -66,13 +66,13 @@ def recurrent(*args, **kwargs):
     follows: depending on the context variables and driven by input
     sequences the RNN updates its states and produces output sequences.
     Thus the input variables of your transition function play one of
-    three roles: an input, a context or a state. These roles should be
+    three roles: a sequence, a context or a state. These roles should be
     specified in the method's signature to make iteration possible.
 
     Parameters
     ----------
-    inputs : list of strs
-        Names of the arguments of the apply method that play input
+    sequence : list of strs
+        Names of the arguments of the apply method that play sequence
         roles.
     states : list of strs
         Names of the arguments of the apply method that play state
