@@ -1,4 +1,5 @@
 from fuel.datasets import IterableDataset
+from numpy.testing import assert_raises
 from six.moves import cPickle
 
 from blocks.main_loop import MainLoop
@@ -40,6 +41,7 @@ def test_main_loop():
                          extensions=[WriteBatchExtension(),
                                      finish_extension])
     main_loop.run()
+    assert_raises(AttributeError, getattr, main_loop, 'model')
 
     assert main_loop.log.status['iterations_done'] == 5
     assert main_loop.log.status['_epoch_ends'] == [3, 5]
