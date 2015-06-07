@@ -1,3 +1,7 @@
+from operator import getitem
+
+from numpy.testing import assert_raises
+
 from blocks.log import TrainingLog
 
 
@@ -12,6 +16,8 @@ def test_training_log():
     log.status['iterations_done'] += 1
     assert log.status['iterations_done'] == 1
     assert log.previous_row['field'] == 45
+
+    assert_raises(ValueError, getitem, log, -1)
 
     # test iteration
     assert len(list(log)) == 2
