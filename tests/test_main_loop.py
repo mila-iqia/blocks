@@ -1,11 +1,17 @@
+import os
+import signal
+import time
+from itertools import count
+from multiprocessing import Process
+
 from fuel.datasets import IterableDataset
 from numpy.testing import assert_raises
 from six.moves import cPickle
 
 from blocks.main_loop import MainLoop
-from blocks.extensions import TrainingExtension, FinishAfter
+from blocks.extensions import TrainingExtension, FinishAfter, Printing
 from blocks.utils import unpack
-from tests import MockAlgorithm
+from tests import MockAlgorithm, MockMainLoop
 
 
 class WriteBatchExtension(TrainingExtension):
@@ -77,3 +83,32 @@ def test_training_resumption():
 
     do_test(False)
     do_test(True)
+
+
+def test_training_interrupt():
+    def process_batch(self, batch):
+        time.sleep(0.1)
+
+    MockAlgorithm.process_batch = process_batch
+    algorithm = MockAlgorithm()
+
+    main_loop = MockMainLoop(
+        algorithm=algorithm,
+        data_stream=IterableDataset(count()).get_example_stream(),
+        extensions=[Printing()]
+    )
+
+    p = Process(target=main_loop.run)
+    p.start()
+    time.sleep(0.1)
+    os.kill(p.pid, signal.SIGINT)
+    time.sleep(0.1)
+    assert p.is_alive()
+    os.kill(p.pid, signal.SIGINT)
+    time.sleep(0.2)
+    assert not p.is_alive()
+    p.join()
+
+
+if __name__ == "__main__":
+    test_training_interrupt()
