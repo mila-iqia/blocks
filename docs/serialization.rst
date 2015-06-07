@@ -25,7 +25,7 @@ Pickling the training loop
 
 When checkpointing, Blocks pickles the entire :class:`main loop <.MainLoop>`,
 effectively serializing the exact state of the model as well as the training
-state (iteration state, extensions, etc.). Techncially there are some
+state (iteration state, extensions, etc.). Technically there are some
 difficulties with this approach:
 
 * Some Python objects cannot be pickled e.g. file handles, generators,
