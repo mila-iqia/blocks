@@ -1,4 +1,4 @@
-from abc import ABCMeta, abstractmethod
+from abc import ABCMeta
 from collections import MutableSequence
 
 from six import add_metaclass
@@ -33,7 +33,6 @@ class AnnotatingList(MutableSequence):
     def __getitem__(self, key):
         return self._items[key]
 
-    @abstractmethod
     def _setitem(self, key, value):
         """The operation to perform when an item is inserted/appended."""
         pass
