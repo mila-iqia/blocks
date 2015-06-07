@@ -2,7 +2,6 @@ coverage==3.7.1
 cython==0.22
 h5py==2.5.0
 numpy==1.9.2
-pandas==0.16.1
 pytables=3.1.1
 six==1.9.0
 toolz==0.7.2
