@@ -22,6 +22,17 @@ class TrainingLog(defaultdict):
         By default it contains ``iterations_done``, ``epochs_done`` and
         ``_epoch_ends`` (a list of time stamps when epochs ended).
 
+    Notes
+    -----
+    For analysis of the logs, it can be useful to convert the log to a
+    Pandas_ data frame:
+
+    .. code:: python
+
+       df = DataFrame.from_dict(log, orient='index')
+
+    .. _Pandas: http://pandas.pydata.org
+
     """
     def __init__(self):
         super(TrainingLog, self).__init__(dict)
