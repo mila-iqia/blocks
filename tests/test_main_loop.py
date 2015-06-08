@@ -5,6 +5,7 @@ from itertools import count
 from multiprocessing import Process
 
 from fuel.datasets import IterableDataset
+from mock import MagicMock
 from numpy.testing import assert_raises
 from six.moves import cPickle
 
@@ -110,5 +111,14 @@ def test_training_interrupt():
     p.join()
 
 
-if __name__ == "__main__":
-    test_training_interrupt()
+def test_error():
+    ext = TrainingExtension()
+    ext.after_batch = MagicMock(side_effect=KeyError)
+    ext.on_error = MagicMock()
+    main_loop = MockMainLoop(extensions=[ext, FinishAfter(after_epoch=True)])
+    assert_raises(KeyError, main_loop.run)
+    ext.on_error.assert_called_once_with()
+
+    ext.on_error = MagicMock(side_effect=AttributeError)
+    main_loop = MockMainLoop(extensions=[ext, FinishAfter(after_epoch=True)])
+    assert_raises(KeyError, main_loop.run)
