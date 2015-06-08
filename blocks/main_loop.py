@@ -178,12 +178,12 @@ class MainLoop(object):
                 self.log.current_row['training_finished'] = True
             except Exception as e:
                 self._restore_signal_handlers()
-                self.log.current_row['got_exception'] = traceback.format_exc(e)
+                self.log.current_row['got_exception'] = traceback.format_exc()
                 logger.error("Error occured during training." + error_message)
                 try:
                     self._run_extensions('on_error')
-                except Exception as inner_e:
-                    logger.error(traceback.format_exc(inner_e))
+                except Exception:
+                    logger.error(traceback.format_exc())
                     logger.error("Error occured when running extensions." +
                                  error_in_error_handling_message)
                 reraise_as(e)
