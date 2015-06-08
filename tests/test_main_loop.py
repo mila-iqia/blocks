@@ -98,7 +98,10 @@ def test_error():
     main_loop = MockMainLoop(extensions=[ext, FinishAfter(after_epoch=True)])
     assert_raises(KeyError, main_loop.run)
     ext.on_error.assert_called_once_with()
+    assert 'got_exception' in main_loop.log.current_row
 
     ext.on_error = MagicMock(side_effect=AttributeError)
     main_loop = MockMainLoop(extensions=[ext, FinishAfter(after_epoch=True)])
     assert_raises(KeyError, main_loop.run)
+    ext.on_error.assert_called_once_with()
+    assert 'got_exception' in main_loop.log.current_row
