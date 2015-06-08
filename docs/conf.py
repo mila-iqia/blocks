@@ -56,8 +56,7 @@ intersphinx_mapping = {
     'theano': ('http://theano.readthedocs.org/en/latest/', None),
     'numpy': ('http://docs.scipy.org/doc/numpy/', None),
     'scipy': ('http://docs.scipy.org/doc/scipy/reference/', None),
-    'python': ('http://docs.python.org/3.4', None),
-    'pandas': ('http://pandas.pydata.org/pandas-docs/stable/', None)
+    'python': ('http://docs.python.org/3.4', None)
 }
 
 

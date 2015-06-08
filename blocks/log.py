@@ -2,12 +2,6 @@
 from collections import defaultdict
 from numbers import Integral
 
-try:
-    from pandas import DataFrame
-    PANDAS_AVAILABLE = True
-except ImportError:
-    PANDAS_AVAILABLE = False
-
 
 class TrainingLog(defaultdict):
     """Base class for training logs.
@@ -27,6 +21,17 @@ class TrainingLog(defaultdict):
         A dictionary with data representing the current state of training.
         By default it contains ``iterations_done``, ``epochs_done`` and
         ``_epoch_ends`` (a list of time stamps when epochs ended).
+
+    Notes
+    -----
+    For analysis of the logs, it can be useful to convert the log to a
+    Pandas_ data frame:
+
+    .. code:: python
+
+       df = DataFrame.from_dict(log, orient='index')
+
+    .. _Pandas: http://pandas.pydata.org
 
     """
     def __init__(self):
@@ -64,10 +69,3 @@ class TrainingLog(defaultdict):
     @property
     def last_epoch_row(self):
         return self[self.status['_epoch_ends'][-1]]
-
-    def to_dataframe(self):
-        """Convert a log into a :class:`.DataFrame`."""
-        if not PANDAS_AVAILABLE:
-            raise ImportError("The pandas library is not found. You can"
-                              " install it with pip.")
-        return DataFrame.from_dict(self, orient='index')

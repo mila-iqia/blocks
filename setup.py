@@ -34,9 +34,8 @@ setup(
     packages=find_packages(exclude=['examples', 'docs', 'doctests', 'tests']),
     scripts=['bin/blocks-continue'],
     setup_requires=['numpy'],
-    install_requires=['numpy', 'six', 'pyyaml', 'pandas', 'toolz',
-                      'theano', 'picklable-itertools', 'progressbar2',
-                      'fuel'],
+    install_requires=['numpy', 'six', 'pyyaml', 'toolz', 'theano',
+                      'picklable-itertools', 'progressbar2', 'fuel'],
     extras_require={
         'test': ['nose', 'nose2'],
         'docs': ['sphinx', 'sphinxcontrib-napoleon', 'sphinx-rtd-theme']
