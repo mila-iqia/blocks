@@ -303,7 +303,7 @@ class Bias(Feedforward, Initializable):
     def get_dim(self, name):
         if name in ['input_', 'output']:
             return self.dim
-        super(Linear, self).get_dim(name)
+        super(Bias, self).get_dim(name)
 
     def _get_dim(self):
         return self.dim
