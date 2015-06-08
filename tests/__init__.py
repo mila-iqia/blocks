@@ -8,6 +8,7 @@ from unittest.case import SkipTest
 from six import StringIO
 
 import blocks
+from blocks.algorithms import TrainingAlgorithm
 from blocks.config import config
 from blocks.main_loop import MainLoop
 from fuel.datasets import IterableDataset
@@ -75,7 +76,7 @@ def skip_if_not_available(modules=None, datasets=None, configurations=None):
             raise SkipTest
 
 
-class MockAlgorithm(object):
+class MockAlgorithm(TrainingAlgorithm):
     """An algorithm that only saves data.
 
     Also checks that the initialization routine is only called once.
@@ -93,8 +94,14 @@ class MockAlgorithm(object):
 
 
 class MockMainLoop(MainLoop):
+    """Mock main loop with mock algorithm and simple data stream.
 
+    Can be used with `main_loop = MagicMock(wraps=MockMainLoop())` to check
+    which calls were made.
+
+    """
     def __init__(self, **kwargs):
-        stream = IterableDataset(range(10)).get_example_stream()
-        super(MockMainLoop, self).__init__(
-            data_stream=stream, algorithm=MockAlgorithm(), **kwargs)
+        kwargs.setdefault('data_stream',
+                          IterableDataset(range(10)).get_example_stream())
+        kwargs.setdefault('algorithm', MockAlgorithm())
+        super(MockMainLoop, self).__init__(**kwargs)

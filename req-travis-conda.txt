@@ -1,6 +1,7 @@
 coverage==3.7.1
 cython==0.22
 h5py==2.5.0
+mock==1.0.1
 numpy==1.9.2
 pillow=2.8.1
 pytables=3.1.1
