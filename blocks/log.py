@@ -8,6 +8,7 @@ from numbers import Integral
 from operator import itemgetter
 from uuid import uuid4, UUID
 
+import numpy
 import six
 from six.moves import cPickle, map
 
@@ -139,9 +140,10 @@ class SQLiteStatus(MutableMapping):
             return value
 
     def __setitem__(self, key, value):
-        if (not isinstance(value, (type(None), int, float, str, bytes)) and
+        if (not isinstance(value, (type(None), int, float,
+                                   str, bytes, numpy.ndarray)) and
                 key != 'resumed_from'):
-            sqlite3.register_adapter(type(value), get_object_blob)
+            sqlite3.register_adapter(type(value), adapt_obj)
         with self.conn:
             self.conn.execute(
                 "INSERT OR REPLACE INTO status VALUES (?, ?, ?)",
@@ -202,8 +204,9 @@ class SQLiteEntry(MutableMapping):
         raise KeyError(key)
 
     def __setitem__(self, key, value):
-        if not isinstance(value, (type(None), int, float, str, bytes)):
-            sqlite3.register_adapter(type(value), get_object_blob)
+        if not isinstance(value, (type(None), int, float,
+                                  str, bytes, numpy.ndarray)):
+            sqlite3.register_adapter(type(value), adapt_obj)
         with self.conn:
             self.conn.execute(
                 "INSERT OR REPLACE INTO entries VALUES (?, ?, ?, ?)",
@@ -233,18 +236,25 @@ class SQLiteEntry(MutableMapping):
 
 LARGE_BLOB_WARNING = """
 
-An object of {} bytes was stored in the SQLite database. SQLite natively only \
-supports numbers and text. Other objects will be pickled before being \
+A {} object of {} bytes was stored in the SQLite database. SQLite natively \
+only supports numbers and text. Other objects will be pickled before being \
 saved. For large objects, this can be slow and degrade performance of the \
 database."""
 
 
-def get_object_blob(obj):
+def adapt_obj(obj):
     blob = sqlite3.Binary(cPickle.dumps(obj))
     if len(blob) > 1024 * 4:
         warnings.warn('large objects stored in SQLite' +
-                      LARGE_BLOB_WARNING.format(len(blob)))
+                      LARGE_BLOB_WARNING.format(type(obj), len(blob)))
     return blob
+
+
+def adapt_ndarray(obj):
+    if obj.ndim == 0:
+        return float(obj)
+    else:
+        return adapt_obj(obj)
 
 
 class SQLiteLog(_TrainingLog, Mapping):
@@ -271,6 +281,7 @@ class SQLiteLog(_TrainingLog, Mapping):
             database = config.sqlite_database
         self.database = database
         self.conn = sqlite3.connect(database)
+        sqlite3.register_adapter(numpy.ndarray, adapt_ndarray)
         with self.conn:
             self.conn.execute("""CREATE TABLE IF NOT EXISTS entries (
                                    uuid BLOB NOT NULL,
