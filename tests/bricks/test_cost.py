@@ -56,7 +56,7 @@ def test_softmax_matrix():
     softmax_cost = softmax_cost_func(x_val, y_val)
     softmax_cost_stable = softmax_cost_stable_func(x_val, y_val)
 
-    assert_allclose(softmax_cost, softmax_cost_stable)
+    assert_allclose(softmax_cost, softmax_cost_stable, rtol=1e-5)
 
 
 def test_misclassification_rate():
