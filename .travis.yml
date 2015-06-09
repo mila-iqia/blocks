@@ -11,10 +11,14 @@ matrix:
   include:
     - python: 2.7
       env: TESTS=blocks FLOATX=float32
+    - python: 2.7
+      env: TESTS=blocks FLOATX=float32 DB=sqlite
     - python: 3.4
       env: TESTS=blocks FLOATX=float64
     - python: 2.7
       env: TESTS=blocks-examples FLOATX=float32
+    - python: 2.7
+      env: TESTS=blocks-examples FLOATX=float32 DB=sqlite
     - python: 3.4
       env: TESTS=blocks-examples FLOATX=float64
 before_install:
@@ -36,6 +40,7 @@ script:
   - export THEANO_FLAGS=floatX=$FLOATX,optimizer=fast_compile
   - export FUEL_FLOATX=$FLOATX
   - export BLOCKS_PROFILE=true
+  - "if [[ $DB == 'sqlite' ]]; then echo 'log_backend: sqlite' > ~/.blocksrc; fi"
   - # Running nose2 within coverage makes imports count towards coverage
   - function fail { export FAILED=1; }
   - |
