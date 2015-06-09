@@ -6,7 +6,7 @@ from collections import defaultdict, MutableMapping, Mapping
 from itertools import repeat
 from numbers import Integral
 from operator import itemgetter
-from uuid import uuid4, UUID
+from uuid import uuid4
 
 import numpy
 import six
@@ -329,18 +329,17 @@ class SQLiteLog(_TrainingLog, Mapping):
         these cannot be pickled.
 
         """
-        if self.b_uuid not in getattr(self, '_ancestors', []):
-            ancestors = [self.b_uuid]
-            while True:
-                parent = self.conn.execute(
-                    "SELECT value FROM status WHERE uuid = ? AND "
-                    "key = 'resumed_from'", (ancestors[-1],)
-                ).fetchone()
-                if parent is None or parent[0] is None:
-                    break
-                ancestors.append(parent[0])
-            self._ancestors = [UUID(bytes=bytes(a)) for a in ancestors]
-        return [sqlite3.Binary(a.bytes) for a in self._ancestors]
+        return [ancestor for ancestor, in self.conn.execute(
+            """WITH parents (parent, child) AS (
+                   SELECT uuid, value FROM status
+                   WHERE key = 'resumed_from' AND uuid = ?
+                   UNION ALL
+                   SELECT uuid, value FROM status
+                   INNER JOIN parents ON status.uuid = parents.child
+                   WHERE key = 'resumed_from'
+               )
+               SELECT parent FROM parents""", (self.b_uuid,)
+        ).fetchall()]
 
     def __getitem__(self, time):
         self._check_time(time)
