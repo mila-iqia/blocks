@@ -274,7 +274,7 @@ class TestGatedRecurrent(unittest.TestCase):
             h_val,
             calc_h(x_val, numpy.concatenate(
                 [zi_val, ri_val], axis=2), mask_val)[0],
-            1e-05)
+            1e-04)
 
         # Also test that initial state is a parameter
         initial_state, = VariableFilter(roles=[INITIAL_STATE])(
