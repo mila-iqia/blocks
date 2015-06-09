@@ -195,11 +195,11 @@ class MainLoop(object):
                                  error_in_error_handling_message)
                 reraise_as(e)
             finally:
+                self._restore_signal_handlers()
                 if self.log.current_row.get('training_finished', False):
                     self._run_extensions('after_training')
                 if config.profile:
                     self.profile.report()
-                self._restore_signal_handlers()
 
     def find_extension(self, name):
         """Find an extension with a given name.
