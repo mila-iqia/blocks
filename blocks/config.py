@@ -50,6 +50,7 @@ The following configurations are supported:
    https://en.wikipedia.org/wiki/Environment_variable
 
 """
+import difflib
 import logging
 import os
 from warnings import warn
@@ -82,7 +83,13 @@ class Configuration(object):
                     if key in self.config:
                         self.config[key]['yaml'] = value
                     else:
-                        warn('unknown setting in .blocksrc: {}'.format(key))
+                        close_matches = difflib.get_close_matches(
+                            key, self.config.keys(), 1
+                        )
+                        if close_matches:
+                            close_match, = close_matches
+                            warn("Unknown configuration in .blocksrc: '{}'. "
+                                 "Did you mean '{}'?".format(key, close_match))
 
     def __getattr__(self, key):
         if key == 'config' or key not in self.config:
