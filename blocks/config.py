@@ -55,6 +55,11 @@ The following configurations are supported:
 
    The SQLite database file to use.
 
+.. option:: max_blob_size
+
+   The maximum size of an object to store in an SQLite database in bytes.
+   Objects beyond this size will trigger a warning. Defaults to 4 kilobyte.
+
 .. _YAML: http://yaml.org/
 .. _environment variables:
    https://en.wikipedia.org/wiki/Environment_variable
@@ -164,4 +169,5 @@ config.add_config('log_backend', type_=str, default='python')
 config.add_config('sqlite_database', type_=str,
                   default=os.path.expanduser('~/blocks_log.sqlite'),
                   env_var='BLOCKS_SQLITEDB')
+config.add_config('max_blob_size', type_=int, default=4096)
 config.load_yaml()

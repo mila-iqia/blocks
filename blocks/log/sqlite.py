@@ -33,8 +33,22 @@ database."""
 
 
 def adapt_obj(obj):
+    """Binarize objects to be stored in an SQLite database.
+
+    Parameters
+    ----------
+    obj : object
+        Any picklable object.
+
+    Returns
+    -------
+    blob : memoryview
+        A buffer (Python 2) or memoryview (Python 3) of the pickled object
+        that can be stored as a BLOB in an SQLite database.
+
+    """
     blob = sqlite3.Binary(cPickle.dumps(obj))
-    if len(blob) > 1024 * 4:
+    if len(blob) > config.max_blob_size:
         warnings.warn('large objects stored in SQLite' +
                       LARGE_BLOB_WARNING.format(type(obj), len(blob)))
         # Prevent the warning with variable message from repeating
@@ -43,6 +57,22 @@ def adapt_obj(obj):
 
 
 def adapt_ndarray(obj):
+    """Convert NumPy scalars to floats before storing in SQLite.
+
+    This makes it easier to inspect the database, and speeds things up.
+
+    Parameters
+    ----------
+    obj : ndarray
+        A NumPy array.
+
+    Returns
+    -------
+    float or memoryview
+        If the array was a scalar, it returns a floating point number.
+        Otherwise it binarizes the NumPy array using :func:`adapt_obj`
+
+    """
     if obj.ndim == 0:
         return float(obj)
     else:
