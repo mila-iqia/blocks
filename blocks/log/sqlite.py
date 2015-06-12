@@ -155,7 +155,8 @@ class SQLiteLog(TrainingLogBase, Mapping):
 
         """
         state = self.__dict__.copy()
-        del state['conn']
+        if '_conn' in state:
+            del state['_conn']
         self.resume()
         return state
 
