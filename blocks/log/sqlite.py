@@ -112,12 +112,6 @@ class SQLiteLog(TrainingLogBase, Mapping):
     \*\*kwargs
         Arguments to pass to :class:`TrainingLogBase`
 
-    Notes
-    -----
-    .. todo::
-
-       Currently this log ignores previous logs in case of resumption.
-
     """
     def __init__(self, database=None, **kwargs):
         if database is None:
@@ -225,8 +219,8 @@ class SQLiteEntry(MutableMapping):
 
     Each entry is a row with the columns `uuid`, `time` (iterations done),
     `key` and `value`. Note that SQLite only supports numeric values,
-    strings, and bytes (e.g. the `uuid` column). This means there is no
-    support for tuples, dictionaries, NumPy arrays, etc.
+    strings, and bytes (e.g. the `uuid` column), all other objects will be
+    pickled before being stored.
 
     Entries are automatically retrieved from ancestral logs (i.e. logs that
     were resumed from).
@@ -257,7 +251,7 @@ class SQLiteEntry(MutableMapping):
     def __delitem__(self, key):
         with self.log.conn:
             self.log.conn.execute(
-                "DELETE FROM entries WHERE uuid = ? AND time =? AND key = ?",
+                "DELETE FROM entries WHERE uuid = ? AND time = ? AND key = ?",
                 (self.log.b_uuid, self.time, key)
             )
 

@@ -232,6 +232,7 @@ class MainLoop(object):
                 pass
         self.status['epoch_started'] = False
         self.status['epochs_done'] += 1
+        # Log might not allow mutating objects, so use += instead of append
         self.status['_epoch_ends'] += [self.status['iterations_done']]
         self._run_extensions('after_epoch')
         self._check_finish_training('epoch')
