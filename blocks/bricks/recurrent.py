@@ -93,7 +93,6 @@ def recurrent(*args, **kwargs):
     --------
     :doc:`The tutorial on RNNs </rnn>`
 
-
     """
     def recurrent_wrapper(application_function):
         arg_spec = inspect.getargspec(application_function)
