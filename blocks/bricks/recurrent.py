@@ -59,29 +59,39 @@ class BaseRecurrent(Brick):
 def recurrent(*args, **kwargs):
     """Wraps an apply method to allow its iterative application.
 
-    This decorator allows you to use implementation of an RNN
-    transition to process sequences without writing the
-    iteration-related code again and again. In the most general form
-    information flow of a recurrent network can be described as
-    follows: depending on the context variables and driven by input
-    sequences the RNN updates its states and produces output sequences.
-    Thus the input variables of your transition function play one of
-    three roles: an input, a context or a state. These roles should be
-    specified in the method's signature to make iteration possible.
+    This decorator allows you to implement only one step of a recurrent
+    network and enjoy applying it to sequences for free. The idea behind is
+    that its most general form information flow of an RNN can be described
+    as follows: depending on the context and driven by input sequences the
+    RNN updates its states and produces output sequences.
+
+    Given a method describing one step of an RNN and a specification
+    which of its inputs are the elements of the input sequence,
+    which are the states and which are the contexts, this decorator
+    returns an application method which implements the whole RNN loop.
+    The returned application method also has additional parameters,
+    see documentation of the `recurrent_apply` inner function below.
 
     Parameters
     ----------
-    inputs : list of strs
-        Names of the arguments of the apply method that play input
-        roles.
+    sequences : list of strs
+        Specifies which of the arguments are elements of input sequences.
     states : list of strs
-        Names of the arguments of the apply method that play state
-        roles.
+        Specifies which of the arguments are the states.
     contexts : list of strs
-        Names of the arguments of the apply method that play context
-        roles.
+        Specifies which of the arguments are the contexts.
     outputs : list of strs
-        Names of the outputs.
+        Names of the outputs. The outputs whose names match with those
+        in the `state` parameter are interpreted as next step states.
+
+    Returns
+    -------
+    recurrent_apply : :class:`~blocks.bricks.base.Application`
+        The new application method that applies the RNN to sequences.
+
+    See Also
+    --------
+    :doc:`The tutorial on RNNs </rnn>`
 
     """
     def recurrent_wrapper(application_function):
@@ -103,13 +113,6 @@ def recurrent(*args, **kwargs):
             return_initial_states : bool
                 If ``True``, initial states are included in the returned
                 state tensors. ``False`` by default.
-
-            .. todo::
-
-                * Handle `updates` returned by the :func:`theano.scan`
-                    routine.
-                * ``kwargs`` has a random order; check if this is a
-                    problem.
 
             """
             # Extract arguments related to iteration and immediately relay the
