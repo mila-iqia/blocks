@@ -9,7 +9,7 @@ import six
 from six.moves import cPickle, map
 
 from blocks.config import config
-from .log import _TrainingLog
+from .log import TrainingLogBase
 
 
 ANCESTORS_QUERY = """
@@ -70,7 +70,7 @@ def _register_adapter(value, key):
         sqlite3.register_adapter(type(value), adapt_obj)
 
 
-class SQLiteLog(_TrainingLog, Mapping):
+class SQLiteLog(TrainingLogBase, Mapping):
     r"""Training log using SQLite as a backend.
 
     Parameters
@@ -80,7 +80,7 @@ class SQLiteLog(_TrainingLog, Mapping):
         :func:`sqlite3.connect` for details. Uses `config.sqlite_database`
         by default.
     \*\*kwargs
-        Arguments to pass to :class:`_TrainingLog`
+        Arguments to pass to :class:`TrainingLogBase`
 
     Notes
     -----

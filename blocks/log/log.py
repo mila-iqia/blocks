@@ -9,7 +9,7 @@ import six
 
 
 @six.add_metaclass(ABCMeta)
-class _TrainingLog(object):
+class TrainingLogBase(object):
     """Base class for training log.
 
     A training log stores the training timeline, statistics and other
@@ -103,7 +103,7 @@ class _TrainingLog(object):
         return self[self.status['_epoch_ends'][-1]]
 
 
-class TrainingLog(defaultdict, _TrainingLog):
+class TrainingLog(defaultdict, TrainingLogBase):
     """Training log using a `defaultdict` as backend.
 
     Notes
@@ -121,7 +121,7 @@ class TrainingLog(defaultdict, _TrainingLog):
     def __init__(self):
         defaultdict.__init__(self, dict)
         self.status = {}
-        _TrainingLog.__init__(self)
+        TrainingLogBase.__init__(self)
 
     def __reduce__(self):
         constructor, args, _, _, items = super(TrainingLog, self).__reduce__()
