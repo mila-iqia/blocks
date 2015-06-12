@@ -142,6 +142,16 @@ class SQLiteLog(TrainingLogBase, Mapping):
         self.status = SQLiteStatus(self)
         super(SQLiteLog, self).__init__(**kwargs)
 
+    @property
+    def conn(self):
+        if not hasattr(self, '_conn'):
+            self._conn = sqlite3.connect(self.database)
+        return self._conn
+
+    @conn.setter
+    def conn(self, value):
+        self._conn = value
+
     def __getstate__(self):
         """Retrieve the state for pickling.
 
@@ -154,10 +164,6 @@ class SQLiteLog(TrainingLogBase, Mapping):
         del state['conn']
         self.resume()
         return state
-
-    def __setstate__(self, state):
-        self.__dict__.update(state)
-        self.conn = sqlite3.connect(self.database)
 
     def __getitem__(self, time):
         self._check_time(time)
