@@ -77,9 +77,9 @@ def recurrent(*args, **kwargs):
     sequences : list of strs
         Specifies which of the arguments are elements of input sequences.
     states : list of strs
-        Specifies which of the arguments the states.
+        Specifies which of the arguments are the states.
     contexts : list of strs
-        Specifies which of the arguments the contexts.
+        Specifies which of the arguments are the contexts.
     outputs : list of strs
         Names of the outputs. The outputs whose names match with those
         in the `state` parameter are interpreted as next step states.
@@ -88,6 +88,11 @@ def recurrent(*args, **kwargs):
     -------
     recurrent_apply : :class:`~blocks.bricks.base.Application`
         The new application method that applies the RNN to sequences.
+
+    See Also
+    --------
+    :doc:`The tutorial on RNNs </rnn>`
+
 
     """
     def recurrent_wrapper(application_function):
