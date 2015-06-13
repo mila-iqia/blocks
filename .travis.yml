@@ -39,7 +39,6 @@ script:
   - # Must export environment variable so that the subprocess is aware of it
   - export THEANO_FLAGS=floatX=$FLOATX,optimizer=fast_compile
   - export FUEL_FLOATX=$FLOATX
-  - export BLOCKS_PROFILE=true
   - "if [[ $DB == 'sqlite' ]]; then echo 'log_backend: sqlite' > ~/.blocksrc; fi"
   - # Running nose2 within coverage makes imports count towards coverage
   - function fail { export FAILED=1; }
