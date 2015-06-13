@@ -12,6 +12,7 @@ from six.moves import cPickle
 from blocks.main_loop import MainLoop
 from blocks.extensions import TrainingExtension, FinishAfter, Printing
 from blocks.utils import unpack
+from blocks.config import config
 from tests import MockAlgorithm, MockMainLoop
 
 
@@ -23,6 +24,8 @@ class WriteBatchExtension(TrainingExtension):
 
 
 def test_main_loop():
+    old_config_profile_value = config.profile
+    config.profile = True
 
     main_loop = MainLoop(
         MockAlgorithm(), IterableDataset(range(10)).get_example_stream(),
@@ -35,6 +38,8 @@ def test_main_loop():
     assert len(main_loop.log) == 20
     for i in range(20):
         assert main_loop.log[i + 1]['batch'] == {'data': i % 10}
+
+    config.profile = old_config_profile_value
 
 
 def test_training_resumption():
