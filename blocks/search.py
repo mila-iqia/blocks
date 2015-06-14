@@ -95,11 +95,10 @@ class BeamSearch(object):
             self.inputs, self.contexts, on_unused_input='ignore')
 
     def _compile_initial_state_computer(self):
-        initial_states = [
-            self.generator.initial_state(
-                name, self.beam_size,
+        # TODO: should be now extractable from the computation graph
+        initial_states = self.generator.initial_states(
+                self.beam_size,
                 **dict(equizip(self.context_names, self.contexts)))
-            for name in self.state_names]
         self.initial_state_computer = function(
             self.contexts, initial_states, on_unused_input='ignore')
 
@@ -166,8 +165,7 @@ class BeamSearch(object):
         `self.state_names`.
 
         """
-        init_states = self.initial_state_computer(*list(contexts.values()))
-        return OrderedDict(equizip(self.state_names, init_states))
+        return self.initial_state_computer(*list(contexts.values()))
 
     def compute_logprobs(self, contexts, states):
         """Compute log probabilities of all possible outputs.

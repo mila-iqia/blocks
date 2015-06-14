@@ -3,7 +3,7 @@ import unittest
 
 import numpy
 import theano
-from numpy.testing import assert_allclose
+from numpy.testing import assert_allclose, assert_raises
 from theano import tensor
 from theano.gof.graph import is_same_graph
 
@@ -62,10 +62,33 @@ class TestRecurrentWrapper(unittest.TestCase):
         out_eval = out.eval({X: x_val})
         out_2_eval = out_2.eval({X: x_val})
 
+        # This also implicitly tests that the initial states are zeros
         assert_allclose(h, x_val.cumsum(axis=0))
         assert_allclose(h2, .5 * (numpy.arange(5).reshape((5, 1, 1)) + 1))
         assert_allclose(h * 10, out_eval)
         assert_allclose(h2 * 10, out_2_eval)
+
+
+class RecurrentBrickWithBugInInitialStates(BaseRecurrent):
+
+    @recurrent(sequences=[], contexts=[],
+               states=['states'], outputs=['states'])
+    def apply(self, states):
+        return states
+
+    @application
+    def initial_states(self, batch_size, *args, **kwargs):
+        return {'wrong_states': 0}
+
+    def get_dim(self, name):
+        return 100
+
+
+def test_bug_in_initial_states():
+    def do():
+        brick = RecurrentBrickWithBugInInitialStates()
+        brick.apply(n_steps=3, batch_size=5)
+    assert_raises(KeyError, do)
 
 
 class TestSimpleRecurrent(unittest.TestCase):

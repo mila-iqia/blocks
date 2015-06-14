@@ -30,18 +30,19 @@ class BaseRecurrent(Brick):
     has_bias = False
 
     @application
-    def initial_state(self, state_name, batch_size, *args, **kwargs):
-        r"""Return an initial state for an application call.
+    def initial_states(self, batch_size, *args, **kwargs):
+        r"""Return an initial states for an application call.
 
-        Default implementation returns a zero matrix.
-        :class:`SimpleRecurrent`, :class:`LSTM` and
-        :class:`GatedRecurrent` override it with trainable initial
-        states initialized with zeros.
+        Default implementation assumes that the recurrent application
+        method is called `apply`. It fetches the state names
+        from `apply.states` and a returns a zero matrix for each of them.
+
+        :class:`SimpleRecurrent`, :class:`LSTM` and :class:`GatedRecurrent`
+        override this method  with trainable initial states initialized
+        with zeros.
 
         Parameters
         ----------
-        state_name : str
-            The name of the state.
         batch_size : int
             The batch size.
         \*args
@@ -50,10 +51,19 @@ class BaseRecurrent(Brick):
             The keyword arguments of the application call.
 
         """
-        dim = self.get_dim(state_name)
-        if dim == 0:
-            return tensor.zeros((batch_size,))
-        return tensor.zeros((batch_size, dim))
+        states = self.apply.states
+        result = {}
+        for state in states:
+            dim = self.get_dim(state)
+            if dim == 0:
+                result[state] = tensor.zeros((batch_size,))
+            else:
+                result[state] = tensor.zeros((batch_size, dim))
+        return result
+
+    @initial_states.property('outputs')
+    def initial_states_outputs(self):
+        return self.apply.states
 
 
 def recurrent(*args, **kwargs):
@@ -167,6 +177,7 @@ def recurrent(*args, **kwargs):
                                    unknown_scan_input)
 
             # Ensure that all initial states are available.
+            initial_states = brick.initial_states(batch_size, *args, **kwargs)
             for state_name in application.states:
                 dim = brick.get_dim(state_name)
                 if state_name in kwargs:
@@ -179,11 +190,11 @@ def recurrent(*args, **kwargs):
                             kwargs[state_name](state_name, batch_size,
                                                *args, **kwargs))
                 else:
-                    # TODO init_func returns 2D-tensor, fails for iterate=False
-                    kwargs[state_name] = (
-                        brick.initial_state(state_name, batch_size,
-                                            *args, **kwargs))
-                    assert kwargs[state_name]
+                    try:
+                        kwargs[state_name] = initial_states[state_name]
+                    except KeyError:
+                        raise KeyError(
+                            "no initial state for '{}'".format(state_name))
             states_given = dict_subset(kwargs, application.states)
 
             # Theano issue 1772
@@ -315,9 +326,10 @@ class SimpleRecurrent(BaseRecurrent, Initializable):
                            (1 - mask[:, None]) * states)
         return next_states
 
-    @application
-    def initial_state(self, state_name, batch_size, *args, **kwargs):
-        return tensor.repeat(self.params[1][None, :], batch_size, 0)
+    @application(outputs=apply.states)
+    def initial_states(self, batch_size, *args, **kwargs):
+        return {'states':
+                tensor.repeat(self.params[1][None, :], batch_size, 0)}
 
 
 class LSTM(BaseRecurrent, Initializable):
@@ -457,13 +469,12 @@ class LSTM(BaseRecurrent, Initializable):
 
         return next_states, next_cells
 
-    @application
-    def initial_state(self, state_name, batch_size, *args, **kwargs):
-        if state_name == "states":
-            return tensor.repeat(self.initial_state_[None, :], batch_size, 0)
-        elif state_name == "cells":
-            return tensor.repeat(self.initial_cells[None, :], batch_size, 0)
-        raise ValueError("unknown state name " + state_name)
+    @application(outputs=apply.states)
+    def initial_states(self, batch_size, *args, **kwargs):
+        return {'states':
+                tensor.repeat(self.initial_state_[None, :], batch_size, 0),
+                'cells':
+                tensor.repeat(self.initial_cells[None, :], batch_size, 0)}
 
 
 class GatedRecurrent(BaseRecurrent, Initializable):
@@ -587,9 +598,10 @@ class GatedRecurrent(BaseRecurrent, Initializable):
                            (1 - mask[:, None]) * states)
         return next_states
 
-    @application
-    def initial_state(self, state_name, batch_size, *args, **kwargs):
-        return tensor.repeat(self.params[2][None, :], batch_size, 0)
+    @application(outputs=apply.states)
+    def initial_states(self, batch_size, *args, **kwargs):
+        return {'states':
+                tensor.repeat(self.params[2][None, :], batch_size, 0)}
 
 
 class Bidirectional(Initializable):

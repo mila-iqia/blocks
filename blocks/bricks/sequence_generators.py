@@ -338,15 +338,14 @@ class BaseSequenceGenerator(Initializable):
         return super(BaseSequenceGenerator, self).get_dim(name)
 
     @application
-    def initial_state(self, name, batch_size, *args, **kwargs):
-        if name == 'outputs':
-            return self.readout.initial_outputs(batch_size)
-        elif name in self._state_names + self._glimpse_names:
-            return self.transition.initial_state(name, batch_size,
-                                                 *args, **kwargs)
-        else:
-            # TODO: raise a nice exception
-            assert False
+    def initial_states(self, batch_size, *args, **kwargs):
+        return dict(self.transition.initial_states(
+                        batch_size, *args, **kwargs),
+                    outputs=self.readout.initial_outputs(batch_size))
+
+    @initial_states.property('outputs')
+    def initial_states_outputs(self):
+        return self.generate.states
 
 
 @add_metaclass(ABCMeta)
@@ -793,9 +792,9 @@ class FakeAttentionRecurrent(AbstractAttentionRecurrent, Initializable):
         return None
 
     @application
-    def initial_state(self, state_name, batch_size, *args, **kwargs):
-        return self.transition.initial_state(state_name, batch_size,
-                                             *args, **kwargs)
+    def initial_states(self, batch_size, *args, **kwargs):
+        return self.transition.initial_states(batch_size,
+                                              *args, **kwargs)
 
     def get_dim(self, name):
         return self.transition.get_dim(name)

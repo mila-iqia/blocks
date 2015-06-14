@@ -168,14 +168,11 @@ class AbstractAttention(Brick):
         pass
 
     @abstractmethod
-    def initial_glimpses(self, name, batch_size, attended):
+    def initial_glimpses(self, batch_size, attended):
         """Return sensible initial values for carried over glimpses.
 
         Parameters
         ----------
-        name : str
-            The name of the glimpse for which an initial value is
-            requested.
         batch_size : int or :class:`~theano.Variable`
             The batch size.
         attended : :class:`~theano.Variable`
@@ -183,8 +180,8 @@ class AbstractAttention(Brick):
 
         Returns
         -------
-        initial_glimpses : (list of) :class:`~theano.Variable`
-            The initial value for the requested glimpses. This might
+        initial_glimpses : dict of (str, :class:`~theano.Variable`)
+            The initial values for the requested glimpses. These might
             simply consist of zeros or be somehow extracted from
             the attended.
 
@@ -389,12 +386,10 @@ class SequenceContentAttention(GenericSequenceAttention, Initializable):
                 self.state_names)
 
     @application
-    def initial_glimpses(self, name, batch_size, attended):
-        if name == "weighted_averages":
-            return tensor.zeros((batch_size, self.attended_dim))
-        elif name == "weights":
-            return tensor.zeros((batch_size, attended.shape[0]))
-        raise ValueError("Unknown glimpse name {}".format(name))
+    def initial_glimpses(self, batch_size, attended):
+        return {
+         "weighted_averages": tensor.zeros((batch_size, self.attended_dim)),
+         "weights": tensor.zeros((batch_size, attended.shape[0]))}
 
     @application(inputs=['attended'], outputs=['preprocessed_attended'])
     def preprocess(self, attended):
@@ -738,11 +733,16 @@ class AttentionRecurrent(AbstractAttentionRecurrent, Initializable):
         return self._context_names
 
     @application
-    def initial_state(self, state_name, batch_size, **kwargs):
-        if state_name in self._glimpse_names:
-            return self.attention.initial_glimpses(
-                state_name, batch_size, kwargs[self.attended_name])
-        return self.transition.initial_state(state_name, batch_size, **kwargs)
+    def initial_states(self, batch_size, **kwargs):
+        return dict_union(
+            self.attention.initial_glimpses(
+                batch_size, kwargs[self.attended_name]),
+            self.transition.initial_states(
+                batch_size, **kwargs))
+
+    @initial_states.property('outputs')
+    def initial_states_outputs(self):
+        return self.do_apply.states
 
     def get_dim(self, name):
         if name in self._glimpse_names:
