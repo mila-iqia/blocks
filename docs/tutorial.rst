@@ -161,7 +161,7 @@ the Fuel_ framework. Have a look at `this tutorial`_ to get started.
 After having configured Fuel, you can load the dataset.
 
 >>> from fuel.datasets import MNIST
->>> mnist = MNIST("train")
+>>> mnist = MNIST(("train",))
 
 Datasets only provide an interface to the data. For actual training, we will
 need to iterate over the data in minibatches. This is done by initiating a data
@@ -186,7 +186,7 @@ learning rate.
 During training we will want to monitor the performance of our model on
 a separate set of examples. Let's create a new data stream for that.
 
->>> mnist_test = MNIST("test")
+>>> mnist_test = MNIST(("test",))
 >>> data_stream_test = Flatten(DataStream.default_stream(
 ...     mnist_test,
 ...     iteration_scheme=SequentialScheme(
