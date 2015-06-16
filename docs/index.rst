@@ -87,13 +87,13 @@ Calculate your loss function.
 
 Load your training data using Fuel.
 
->>> mnist_train = MNIST("train")
+>>> mnist_train = MNIST(("train",))
 >>> train_stream = Flatten(
 ...     DataStream.default_stream(
 ...         dataset=mnist_train,
 ...         iteration_scheme=SequentialScheme(mnist_train.num_examples, 128)),
 ...     which_sources=('features',))
->>> mnist_test = MNIST("test")
+>>> mnist_test = MNIST(("test",))
 >>> test_stream = Flatten(
 ...     DataStream.default_stream(
 ...         dataset=mnist_test,
