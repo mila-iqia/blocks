@@ -1,6 +1,6 @@
 import itertools
 import unittest
-
+from collections import OrderedDict
 import numpy
 import theano
 from numpy.testing import assert_allclose
@@ -12,7 +12,7 @@ from blocks.bricks.base import application
 from blocks.bricks import Tanh
 from blocks.bricks.recurrent import (
     recurrent, BaseRecurrent, GatedRecurrent,
-    SimpleRecurrent, Bidirectional, LSTM)
+    SimpleRecurrent, Bidirectional, LSTM, RecurrentStack)
 from blocks.initialization import Constant, IsotropicGaussian, Orthogonal
 from blocks.filter import get_application_call, VariableFilter
 from blocks.graph import ComputationGraph
@@ -126,7 +126,7 @@ class TestLSTM(unittest.TestCase):
 
     def test_one_step(self):
         h0 = tensor.matrix('h0')
-        c0 = tensor.matrix('h0')
+        c0 = tensor.matrix('c0')
         x = tensor.matrix('x')
         h1, c1 = self.lstm.apply(x, h0, c0, iterate=False)
         next_h = theano.function(inputs=[x, h0, c0], outputs=[h1])
@@ -203,6 +203,185 @@ class TestLSTM(unittest.TestCase):
         assert is_shared_variable(initial2)
         assert {initial1.name, initial2.name} == {
             'initial_state', 'initial_cells'}
+
+
+class TestRecurrentStack(unittest.TestCase):
+    def setUp(self):
+        depth = 4
+        self.depth = depth
+        dim = 3  # don't change, hardwired in the code
+        transitions = [LSTM(dim=dim) for _ in range(depth)]
+        self.stack0 = RecurrentStack(transitions,
+                                     weights_init=Constant(2),
+                                     biases_init=Constant(0))
+        self.stack0.initialize()
+
+        self.stack2 = RecurrentStack(transitions,
+                                     weights_init=Constant(2),
+                                     biases_init=Constant(0),
+                                     skip_connections=True)
+        self.stack2.initialize()
+
+    def do_one_step(self, stack, skip_connections=False, low_memory=False):
+        depth = self.depth
+
+        # batch=2
+        h0_val = 0.1 * numpy.array([[[1, 1, 0], [0, 1, 1]]] * depth,
+                                   dtype=theano.config.floatX)
+        c0_val = 0.1 * numpy.array([[[1, 1, 0], [0, 1, 1]]] * depth,
+                                   dtype=theano.config.floatX)
+        x_val = 0.1 * numpy.array([range(12), range(12, 24)],
+                                  dtype=theano.config.floatX)
+        # we will use same weights on all layers
+        W_state2x_val = 2 * numpy.ones((3, 12), dtype=theano.config.floatX)
+        W_state_val = 2 * numpy.ones((3, 12), dtype=theano.config.floatX)
+        W_cell_to_in = 2 * numpy.ones((3,), dtype=theano.config.floatX)
+        W_cell_to_out = 2 * numpy.ones((3,), dtype=theano.config.floatX)
+        W_cell_to_forget = 2 * numpy.ones((3,), dtype=theano.config.floatX)
+
+        kwargs = OrderedDict()
+        for d in range(depth):
+            if d > 0:
+                suffix = '_' + str(d)
+            else:
+                suffix = ''
+            if d == 0 or skip_connections:
+                kwargs['inputs' + suffix] = tensor.matrix('inputs' + suffix)
+                kwargs['inputs' + suffix].tag.test_value = x_val
+            kwargs['states' + suffix] = tensor.matrix('states' + suffix)
+            kwargs['states' + suffix].tag.test_value = h0_val[d]
+            kwargs['cells' + suffix] = tensor.matrix('cells' + suffix)
+            kwargs['cells' + suffix].tag.test_value = c0_val[d]
+        results = stack.apply(iterate=False, low_memory=low_memory, **kwargs)
+        next_h = theano.function(inputs=list(kwargs.values()),
+                                 outputs=results)
+
+        def sigmoid(x):
+            return 1. / (1. + numpy.exp(-x))
+
+        h1_val = []
+        x_v = x_val
+        args_val = []
+        for d in range(depth):
+            if d == 0 or skip_connections:
+                args_val.append(x_val)
+            h0_v = h0_val[d]
+            args_val.append(h0_v)
+            c0_v = c0_val[d]
+            args_val.append(c0_v)
+
+            # omitting biases because they are zero
+            activation = numpy.dot(h0_v, W_state_val) + x_v
+            if skip_connections and d > 0:
+                activation += x_val
+
+            i_t = sigmoid(activation[:, :3] + c0_v * W_cell_to_in)
+            f_t = sigmoid(activation[:, 3:6] + c0_v * W_cell_to_forget)
+            next_cells = f_t * c0_v + i_t * numpy.tanh(activation[:, 6:9])
+            o_t = sigmoid(activation[:, 9:12] +
+                          next_cells * W_cell_to_out)
+            h1_v = o_t * numpy.tanh(next_cells)
+            # current layer output state transformed to input of next
+            x_v = numpy.dot(h1_v, W_state2x_val)
+
+            h1_val.append(h1_v)
+
+        res = next_h(*args_val)
+        for d in range(depth):
+            assert_allclose(h1_val[d], res[d * 2], rtol=1e-6)
+
+    def test_one_step(self):
+        self.do_one_step(self.stack0)
+        self.do_one_step(self.stack0, low_memory=True)
+        self.do_one_step(self.stack2, skip_connections=True)
+        self.do_one_step(self.stack2, skip_connections=True, low_memory=True)
+
+    def do_many_steps(self, stack, skip_connections=False, low_memory=False):
+        depth = self.depth
+
+        # 24 steps
+        #  4 batch examples
+        # 12 dimensions per step
+        x_val = (0.1 * numpy.asarray(
+            list(itertools.islice(itertools.permutations(range(12)), 0, 24)),
+            dtype=theano.config.floatX))
+        x_val = numpy.ones((24, 4, 12),
+                           dtype=theano.config.floatX) * x_val[:, None, :]
+        # mask the last third of steps
+        mask_val = numpy.ones((24, 4), dtype=theano.config.floatX)
+        mask_val[12:24, 3] = 0
+        # unroll all states and cells for all steps and also initial value
+        h_val = numpy.zeros((depth, 25, 4, 3), dtype=theano.config.floatX)
+        c_val = numpy.zeros((depth, 25, 4, 3), dtype=theano.config.floatX)
+        # we will use same weights on all layers
+        W_state2x_val = 2 * numpy.ones((3, 12), dtype=theano.config.floatX)
+        W_state_val = 2 * numpy.ones((3, 12), dtype=theano.config.floatX)
+        W_cell_to_in = 2 * numpy.ones((3,), dtype=theano.config.floatX)
+        W_cell_to_out = 2 * numpy.ones((3,), dtype=theano.config.floatX)
+        W_cell_to_forget = 2 * numpy.ones((3,), dtype=theano.config.floatX)
+
+        kwargs = OrderedDict()
+
+        for d in range(depth):
+            if d > 0:
+                suffix = '_' + str(d)
+            else:
+                suffix = ''
+            if d == 0 or skip_connections:
+                kwargs['inputs' + suffix] = tensor.tensor3('inputs' + suffix)
+                kwargs['inputs' + suffix].tag.test_value = x_val
+
+        kwargs['mask'] = tensor.matrix('mask')
+        kwargs['mask'].tag.test_value = mask_val
+        results = stack.apply(iterate=True, low_memory=low_memory, **kwargs)
+        calc_h = theano.function(inputs=list(kwargs.values()),
+                                 outputs=results)
+
+        def sigmoid(x):
+            return 1. / (1. + numpy.exp(-x))
+
+        for i in range(1, 25):
+            x_v = x_val[i - 1]
+            h_vs = []
+            c_vs = []
+            for d in range(depth):
+                h_v = h_val[d][i - 1, :, :]
+                c_v = c_val[d][i - 1, :, :]
+                activation = numpy.dot(h_v, W_state_val) + x_v
+                if skip_connections and d > 0:
+                    activation += x_val[i - 1]
+
+                i_t = sigmoid(activation[:, :3] + c_v * W_cell_to_in)
+                f_t = sigmoid(activation[:, 3:6] + c_v * W_cell_to_forget)
+                c_v1 = f_t * c_v + i_t * numpy.tanh(activation[:, 6:9])
+                o_t = sigmoid(activation[:, 9:12] +
+                              c_v1 * W_cell_to_out)
+                h_v1 = o_t * numpy.tanh(c_v1)
+                h_v = (mask_val[i - 1, :, None] * h_v1 +
+                       (1 - mask_val[i - 1, :, None]) * h_v)
+                c_v = (mask_val[i - 1, :, None] * c_v1 +
+                       (1 - mask_val[i - 1, :, None]) * c_v)
+                # current layer output state transformed to input of next
+                x_v = numpy.dot(h_v, W_state2x_val)
+
+                h_vs.append(h_v)
+                c_vs.append(c_v)
+
+            for d in range(depth):
+                h_val[d][i, :, :] = h_vs[d]
+                c_val[d][i, :, :] = c_vs[d]
+
+        args_val = [x_val]*(depth if skip_connections else 1) + [mask_val]
+        res = calc_h(*args_val)
+        for d in range(depth):
+            assert_allclose(h_val[d][1:], res[d * 2], rtol=1e-4)
+            assert_allclose(c_val[d][1:], res[d * 2 + 1], rtol=1e-4)
+
+    def test_many_steps(self):
+        self.do_many_steps(self.stack0)
+        self.do_many_steps(self.stack0, low_memory=True)
+        self.do_many_steps(self.stack2, skip_connections=True)
+        self.do_many_steps(self.stack2, skip_connections=True, low_memory=True)
 
 
 class TestGatedRecurrent(unittest.TestCase):
