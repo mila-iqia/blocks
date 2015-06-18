@@ -76,9 +76,10 @@ class RecurrentBrickWithBugInInitialStates(BaseRecurrent):
     def apply(self, states):
         return states
 
-    @application
-    def initial_states(self, batch_size, *args, **kwargs):
-        return {'wrong_states': 0}
+    @recurrent(sequences=[], contexts=[],
+               states=['states2'], outputs=['states2'])
+    def apply2(self, states):
+        return states
 
     def get_dim(self, name):
         return 100
@@ -87,7 +88,7 @@ class RecurrentBrickWithBugInInitialStates(BaseRecurrent):
 def test_bug_in_initial_states():
     def do():
         brick = RecurrentBrickWithBugInInitialStates()
-        brick.apply(n_steps=3, batch_size=5)
+        brick.apply2(n_steps=3, batch_size=5)
     assert_raises(KeyError, do)
 
 

@@ -51,14 +51,13 @@ class BaseRecurrent(Brick):
             The keyword arguments of the application call.
 
         """
-        states = self.apply.states
-        result = {}
-        for state in states:
+        result = []
+        for state in self.apply.states:
             dim = self.get_dim(state)
             if dim == 0:
-                result[state] = tensor.zeros((batch_size,))
+                result.append(tensor.zeros((batch_size,)))
             else:
-                result[state] = tensor.zeros((batch_size, dim))
+                result.append(tensor.zeros((batch_size, dim)))
         return result
 
     @initial_states.property('outputs')
@@ -177,7 +176,8 @@ def recurrent(*args, **kwargs):
                                    unknown_scan_input)
 
             # Ensure that all initial states are available.
-            initial_states = brick.initial_states(batch_size, *args, **kwargs)
+            initial_states = brick.initial_states(batch_size, as_dict=True,
+                                                  *args, **kwargs)
             for state_name in application.states:
                 dim = brick.get_dim(state_name)
                 if state_name in kwargs:
@@ -194,7 +194,8 @@ def recurrent(*args, **kwargs):
                         kwargs[state_name] = initial_states[state_name]
                     except KeyError:
                         raise KeyError(
-                            "no initial state for '{}'".format(state_name))
+                            "no initial state for '{}' of the brick {}".format(
+                                state_name, brick.name))
             states_given = dict_subset(kwargs, application.states)
 
             # Theano issue 1772
@@ -328,8 +329,7 @@ class SimpleRecurrent(BaseRecurrent, Initializable):
 
     @application(outputs=apply.states)
     def initial_states(self, batch_size, *args, **kwargs):
-        return {'states':
-                tensor.repeat(self.params[1][None, :], batch_size, 0)}
+        return tensor.repeat(self.params[1][None, :], batch_size, 0)
 
 
 class LSTM(BaseRecurrent, Initializable):
@@ -471,10 +471,8 @@ class LSTM(BaseRecurrent, Initializable):
 
     @application(outputs=apply.states)
     def initial_states(self, batch_size, *args, **kwargs):
-        return {'states':
-                tensor.repeat(self.initial_state_[None, :], batch_size, 0),
-                'cells':
-                tensor.repeat(self.initial_cells[None, :], batch_size, 0)}
+        return [tensor.repeat(self.initial_state_[None, :], batch_size, 0),
+                tensor.repeat(self.initial_cells[None, :], batch_size, 0)]
 
 
 class GatedRecurrent(BaseRecurrent, Initializable):
@@ -600,8 +598,7 @@ class GatedRecurrent(BaseRecurrent, Initializable):
 
     @application(outputs=apply.states)
     def initial_states(self, batch_size, *args, **kwargs):
-        return {'states':
-                tensor.repeat(self.params[2][None, :], batch_size, 0)}
+        return [tensor.repeat(self.params[2][None, :], batch_size, 0)]
 
 
 class Bidirectional(Initializable):

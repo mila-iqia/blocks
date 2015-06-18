@@ -97,7 +97,7 @@ class BeamSearch(object):
     def _compile_initial_state_computer(self):
         # TODO: should be now extractable from the computation graph
         initial_states = self.generator.initial_states(
-                self.beam_size,
+                self.beam_size, as_dict=True,
                 **dict(equizip(self.context_names, self.contexts)))
         self.initial_state_computer = function(
             self.contexts, initial_states, on_unused_input='ignore')

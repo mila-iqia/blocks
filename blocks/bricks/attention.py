@@ -52,7 +52,7 @@ from blocks.bricks import (Brick, Initializable, Sequence,
 from blocks.bricks.base import lazy, application
 from blocks.bricks.parallel import Parallel, Distribute
 from blocks.bricks.recurrent import recurrent, BaseRecurrent
-from blocks.utils import dict_union, dict_subset
+from blocks.utils import dict_union, dict_subset, pack
 
 
 class AbstractAttention(Brick):
@@ -180,7 +180,7 @@ class AbstractAttention(Brick):
 
         Returns
         -------
-        initial_glimpses : dict of (str, :class:`~theano.Variable`)
+        initial_glimpses : list of :class:`~theano.Variable`
             The initial values for the requested glimpses. These might
             simply consist of zeros or be somehow extracted from
             the attended.
@@ -385,11 +385,10 @@ class SequenceContentAttention(GenericSequenceAttention, Initializable):
         return (['attended', 'preprocessed_attended', 'attended_mask'] +
                 self.state_names)
 
-    @application
+    @application(outputs=['weighted_averages', 'weights'])
     def initial_glimpses(self, batch_size, attended):
-        return {
-         "weighted_averages": tensor.zeros((batch_size, self.attended_dim)),
-         "weights": tensor.zeros((batch_size, attended.shape[0]))}
+        return [tensor.zeros((batch_size, self.attended_dim)),
+                tensor.zeros((batch_size, attended.shape[0]))]
 
     @application(inputs=['attended'], outputs=['preprocessed_attended'])
     def preprocess(self, attended):
@@ -734,11 +733,10 @@ class AttentionRecurrent(AbstractAttentionRecurrent, Initializable):
 
     @application
     def initial_states(self, batch_size, **kwargs):
-        return dict_union(
-            self.attention.initial_glimpses(
-                batch_size, kwargs[self.attended_name]),
-            self.transition.initial_states(
-                batch_size, **kwargs))
+        return (pack(self.transition.initial_states(
+                     batch_size, **kwargs)) +
+                pack(self.attention.initial_glimpses(
+                     batch_size, kwargs[self.attended_name])))
 
     @initial_states.property('outputs')
     def initial_states_outputs(self):

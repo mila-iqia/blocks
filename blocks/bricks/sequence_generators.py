@@ -339,9 +339,14 @@ class BaseSequenceGenerator(Initializable):
 
     @application
     def initial_states(self, batch_size, *args, **kwargs):
-        return dict(self.transition.initial_states(
-                        batch_size, *args, **kwargs),
-                    outputs=self.readout.initial_outputs(batch_size))
+        # TODO: support dict of outputs for application methods
+        # to simplify this code.
+        state_dict = dict(
+            self.transition.initial_states(
+                batch_size, as_dict=True, *args, **kwargs),
+            outputs=self.readout.initial_outputs(batch_size))
+        return [state_dict[state_name]
+                for state_name in self.generate.states]
 
     @initial_states.property('outputs')
     def initial_states_outputs(self):
@@ -795,6 +800,10 @@ class FakeAttentionRecurrent(AbstractAttentionRecurrent, Initializable):
     def initial_states(self, batch_size, *args, **kwargs):
         return self.transition.initial_states(batch_size,
                                               *args, **kwargs)
+
+    @initial_states.property('outputs')
+    def initial_states_outputs(self):
+        return self.transition.apply.states
 
     def get_dim(self, name):
         return self.transition.get_dim(name)
