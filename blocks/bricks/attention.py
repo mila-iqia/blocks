@@ -221,6 +221,8 @@ class GenericSequenceAttention(AbstractAttention):
             as `energies`.
 
         """
+        # Stabilize energies first and then exponentiate
+        energies = energies - energies.max(axis=0)
         unnormalized_weights = tensor.exp(energies)
         if attended_mask:
             unnormalized_weights *= attended_mask

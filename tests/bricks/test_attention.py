@@ -155,3 +155,28 @@ def test_compute_weights_with_zero_mask():
         numpy.zeros((attended_length, batch_size)))
     weights = attention.compute_weights(energies, mask).eval()
     assert numpy.all(numpy.isfinite(weights))
+
+
+def test_stable_attention_weights():
+    state_dim = 2
+    attended_dim = 3
+    match_dim = 4
+    attended_length = 5
+    batch_size = 6
+
+    attention = SequenceContentAttention(
+        state_names=["states"], state_dims=[state_dim],
+        attended_dim=attended_dim, match_dim=match_dim,
+        weights_init=IsotropicGaussian(0.5),
+        biases_init=Constant(0))
+    attention.initialize()
+
+    # Random high energies with mu=800, sigma=50
+    energies_val = (
+        50. * numpy.random.randn(attended_length, batch_size) + 800
+        ).astype(theano.config.floatX)
+    energies = tensor.as_tensor_variable(energies_val)
+    mask = tensor.as_tensor_variable(
+        numpy.ones((attended_length, batch_size)))
+    weights = attention.compute_weights(energies, mask).eval()
+    assert numpy.all(numpy.isfinite(weights))
