@@ -1,5 +1,6 @@
+import numbers
+
 import numpy
-import six
 import theano
 from numpy.testing import assert_equal, assert_allclose, assert_raises
 
@@ -68,7 +69,7 @@ def test_sparse():
         assert weights.shape == shape
         assert weights.dtype == theano.config.floatX
         if sparse_init is None:
-            if isinstance(num_init, six.integer_types):
+            if isinstance(num_init, numbers.Integral):
                 assert (numpy.count_nonzero(weights) <=
                         weights.size - num_init * weights.shape[0])
             else:

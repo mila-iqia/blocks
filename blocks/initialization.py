@@ -1,8 +1,8 @@
 """Objects for encapsulating parameter initialization strategies."""
 from abc import ABCMeta, abstractmethod
+import numbers
 
 import numpy
-import six
 import theano
 from six import add_metaclass
 
@@ -209,7 +209,7 @@ class Sparse(NdarrayInitialization):
 
     def generate(self, rng, shape):
         weights = self.sparse_init.generate(rng, shape)
-        if isinstance(self.num_init, six.integer_types):
+        if isinstance(self.num_init, numbers.Integral):
             if not self.num_init > 0:
                 raise ValueError
             num_init = self.num_init
