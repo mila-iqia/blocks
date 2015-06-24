@@ -59,7 +59,7 @@ def test_training_resumption():
             [ext for ext in main_loop.extensions
              if isinstance(ext, FinishAfter)], singleton=True)
         finish_after.add_condition(
-            "after_batch",
+            ["after_batch"],
             predicate=lambda log: log.status['iterations_done'] == 27)
         main_loop.run()
         assert main_loop.log.status['iterations_done'] == 27

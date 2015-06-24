@@ -138,7 +138,7 @@ def test_save_the_best():
                         Checkpoint(dst.name, after_batch=True,
                                    save_separately=['log'])
                         .add_condition(
-                            "after_batch",
+                            ["after_batch"],
                             OnLogRecord(track_cost.notification_name),
                             (dst_best.name,))])
         main_loop.run()
