@@ -89,8 +89,9 @@ def test_beam_search():
     simple_generator.initialize()
 
     inputs = tensor.lmatrix('inputs')
-    samples, = VariableFilter(bricks=[simple_generator.generator],
-                              name="outputs")(
+    samples, = VariableFilter(
+            applications=[simple_generator.generator.generate],
+            name="outputs")(
         ComputationGraph(simple_generator.generate(inputs)))
 
     input_vals = numpy.tile(rng.randint(alphabet_size, size=(length,)),
