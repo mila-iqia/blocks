@@ -61,3 +61,9 @@ class LookupTable(Initializable):
         output_shape = [indices.shape[i]
                         for i in range(indices.ndim)] + [self.dim]
         return self.W[indices.flatten()].reshape(output_shape)
+
+    def get_dim(self, name):
+        if name == 'output':
+            return self.dim
+        if name == 'input_':
+            return 0
