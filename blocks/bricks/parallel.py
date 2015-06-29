@@ -19,6 +19,7 @@ class Parallel(Initializable):
     >>> from blocks.initialization import Constant
     >>> x, y = tensor.matrix('x'), tensor.matrix('y')
     >>> parallel = Parallel(
+    ...     prototype=Linear(use_bias=False),
     ...     input_names=['x', 'y'], input_dims=[2, 3], output_dims=[4, 5],
     ...     weights_init=Constant(2))
     >>> parallel.initialize()
@@ -37,10 +38,10 @@ class Parallel(Initializable):
     output_dims : list
         List of output dimensions.
     prototype : :class:`~blocks.bricks.Feedforward`
-        A transformation prototype. A copy will be created for every
-        input.  If ``None``, a linear transformation without bias is used.
+        The transformation prototype. A copy will be created for every
+        input.
     child_prefix : str, optional
-        A prefix for children names. By default "transform" is used.
+        The prefix for children names. By default "transform" is used.
 
     Attributes
     ----------
@@ -58,10 +59,8 @@ class Parallel(Initializable):
     """
     @lazy(allocation=['input_names', 'input_dims', 'output_dims'])
     def __init__(self, input_names, input_dims, output_dims,
-                 prototype=None, child_prefix=None, **kwargs):
+                 prototype, child_prefix=None, **kwargs):
         super(Parallel, self).__init__(**kwargs)
-        if not prototype:
-            prototype = Linear(use_bias=False)
         if not child_prefix:
             child_prefix = "transform"
 
@@ -113,13 +112,13 @@ class Fork(Parallel):
     >>> x = tensor.matrix('x')
     >>> fork = Fork(output_names=['y', 'z'],
     ...             input_dim=2, output_dims=[3, 4],
-    ...             weights_init=Constant(2))
+    ...             weights_init=Constant(2), biases_init=Constant(1))
     >>> fork.initialize()
     >>> y, z = fork.apply(x)
     >>> y.eval({x: [[1, 1]]}) # doctest: +ELLIPSIS
-    array([[ 4.,  4.,  4.]]...
+    array([[ 5.,  5.,  5.]]...
     >>> z.eval({x: [[1, 1]]}) # doctest: +ELLIPSIS
-    array([[ 4.,  4.,  4.,  4.]]...
+    array([[ 5.,  5.,  5.,  5.]]...
 
     Parameters
     ----------
@@ -127,6 +126,9 @@ class Fork(Parallel):
         Names of the outputs to produce.
     input_dim : int
         The input dimension.
+    prototype : :class:`~blocks.bricks.Feedforward`, optional
+        The transformation prototype. A copy will be created for every
+        input. By default an affine transformation is used.
 
     Attributes
     ----------
@@ -136,15 +138,21 @@ class Fork(Parallel):
         The output dimensions as a list of integers, corresponding to
         `output_names`.
 
-    Notes
-    -----
-    See :class:`.Initializable` for initialization parameters.
+    See Also
+    --------
+    :class:`Parallel` for other parameters.
+
+    :class:`.Initializable` for initialization parameters.
 
     """
     @lazy(allocation=['input_dim'])
     def __init__(self, output_names, input_dim,  prototype=None, **kwargs):
+        if not prototype:
+            prototype = Linear()
+
         self.output_names = output_names
         self.input_dim = input_dim
+
         kwargs.setdefault('child_prefix', 'fork')
         super(Fork, self).__init__(output_names, prototype=prototype,
                                    **kwargs)
@@ -200,13 +208,18 @@ class Distribute(Fork):
         The names of the targets.
     source_name : str
         The name of the source.
-
-    Attributes
-    ----------
     target_dims : list
         A list of target dimensions, corresponding to `target_names`.
     source_dim : int
         The dimension of the source input.
+    prototype : :class:`~blocks.bricks.Feedforward`, optional
+        The transformation prototype. A copy will be created for every
+        input. By default a linear transformation is used.
+
+    Attributes
+    ----------
+    target_dims : list
+    source_dim : int
 
     Notes
     -----
@@ -216,6 +229,9 @@ class Distribute(Fork):
     @lazy(allocation=['source_name', 'target_dims', 'source_dim'])
     def __init__(self, target_names, source_name, target_dims, source_dim,
                  prototype=None, **kwargs):
+        if not prototype:
+            prototype = Linear(use_bias=False)
+
         self.target_names = target_names
         self.source_name = source_name
         self.target_dims = target_dims
@@ -274,9 +290,9 @@ class Merge(Parallel):
         are dimensions.
     output_dim : int
         The output dimension of the merged variables.
-    prototype : :class:`~blocks.bricks.Feedforward`
+    prototype : :class:`~blocks.bricks.Feedforward`, optional
         A transformation prototype. A copy will be created for every
-        input.  If ``None``, a linear transformation without bias is used.
+        input.  If ``None``, a linear transformation is used.
     child_prefix : str, optional
         A prefix for children names. By default "transform" is used.
 
@@ -311,11 +327,14 @@ class Merge(Parallel):
 
     """
     @lazy(allocation=['input_dims', 'output_dim'])
-    def __init__(self, input_names, input_dims, output_dim, **kwargs):
+    def __init__(self, input_names, input_dims, output_dim, prototype=None,
+                 **kwargs):
+        if not prototype:
+            prototype = Linear(use_bias=False)
         self.output_dim = output_dim
         super(Merge, self).__init__(
             input_names, input_dims,
-            [output_dim for _ in input_names], **kwargs
+            [output_dim for _ in input_names], prototype, **kwargs
         )
 
     @application(outputs=['output'])
