@@ -1,6 +1,7 @@
 """Introduces Lookup brick."""
 from blocks.bricks import Initializable
 from blocks.bricks.base import application, lazy
+from blocks.roles import WEIGHT, add_role
 from blocks.utils import check_theano_variable, shared_floatx_nans
 
 
@@ -35,6 +36,7 @@ class LookupTable(Initializable):
     def _allocate(self):
         self.parameters.append(shared_floatx_nans((self.length, self.dim),
                                name='W'))
+        add_role(self.parameters[-1], WEIGHT)
 
     def _initialize(self):
         self.weights_init.initialize(self.W, self.rng)
