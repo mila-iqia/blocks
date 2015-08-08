@@ -10,8 +10,9 @@ from picklable_itertools.extras import equizip
 
 from blocks.config import config
 from blocks.bricks.base import application, _Brick, Brick, lazy
+from blocks.bricks.wrappers import WithExtraDims
 from blocks.roles import add_role, WEIGHT, BIAS
-from blocks.utils import pack, shared_floatx_nans
+from blocks.utils import pack, shared_floatx_nans, named_copy
 
 logger = logging.getLogger(__name__)
 
@@ -495,43 +496,94 @@ class Rectifier(Activation):
         return tensor.switch(input_ > 0, input_, 0)
 
 
-class Softmax(Activation):
+class Softmax(Brick):
+    """A softmax brick.
+
+    Works with 2-dimensional inputs only. If you need more,
+    see :class:`NDimensionalSoftmax`.
+
+    """
     @application(inputs=['input_'], outputs=['output'])
     def apply(self, input_):
+        """Standard softmax.
+
+        Parameters
+        ----------
+        input_ : :class:`~theano.Variable`
+            A matrix, each row contains unnormalized log-probabilities of a
+            distribution.
+
+        Returns
+        -------
+        output_ : :class:`~theano.Variable`
+            A matrix with probabilities in each row for each distribution
+            from `input_`.
+
+        """
         return tensor.nnet.softmax(input_)
 
-    @application
-    def categorical_cross_entropy(self, y, x):
-        """Return computationally stable softmax cost.
+    @application(inputs=['input_'], outputs=['output'])
+    def log_probabilities(self, input_):
+        """Normalize log-probabilities.
+
+        Converts unnormalized log-probabilities (exponents of which do not
+        sum to one) into actual log-probabilities (exponents of which sum
+        to one).
+
+        Parameters
+        ----------
+        input_ : :class:`~theano.Variable`
+            A matrix, each row contains unnormalized log-probabilities of a
+            distribution.
+
+        Returns
+        -------
+        output : :class:`~theano.Variable`
+            A matrix with normalized log-probabilities in each row for each
+            distribution from `input_`.
+
+        """
+        shifted = input_ - input_.max(axis=1, keepdims=True)
+        return shifted - tensor.log(
+            tensor.exp(shifted).sum(axis=1, keepdims=True))
+
+    @application(inputs=['y', 'x'], outputs=['output'])
+    def categorical_cross_entropy(self, application_call, y, x):
+        """Computationally stable cross-entropy for pre-softmax values.
 
         Parameters
         ----------
         y : :class:`~tensor.TensorVariable`
-            In the case of a matrix argument, each slice along
-            axis represents one distribution. In the vector case, each
-            element represents the position of the '1' in a one hot-vector.
+            In the case of a matrix argument, each row represents a
+            probabilility distribution. In the vector case, each element
+            represents a distribution by specifying the position of 1 in a
+            1-hot vector.
         x : :class:`~tensor.TensorVariable`
-            Each slice along axis represents energies of a distribution,
-            that is pre-softmax values.
+            A matrix, each row contains unnormalized probabilities of a
+            distribution.
 
         Returns
         -------
         cost : :class:`~tensor.TensorVariable`
-            The cross entropy between y and x.
+            A vector of cross-entropies between respective distributions
+            from y and x.
 
         """
-        x = x - x.max(axis=1).dimshuffle(0, 'x')
-        log_prob = x - tensor.log(tensor.exp(x).sum(axis=1).dimshuffle(0, 'x'))
+        x = self.log_probabilities(x)
+        application_call.add_auxiliary_variable(
+            named_copy(x, 'log_probabilities'))
         if y.ndim == x.ndim - 1:
-            flat_log_prob = log_prob.flatten()
-            range_ = tensor.arange(y.shape[0])
-            flat_indices = y + range_ * x.shape[1]
-            cost = -tensor.mean(flat_log_prob[flat_indices])
+            indices = tensor.arange(y.shape[0]) * x.shape[1] + y
+            cost = -x.flatten()[indices]
         elif y.ndim == x.ndim:
-            cost = -tensor.mean((log_prob * y).sum(axis=1))
+            cost = -(x * y).sum(axis=1)
         else:
             raise TypeError('rank mismatch between x and y')
         return cost
+
+
+class NDimensionalSoftmax(Softmax):
+    decorators = [WithExtraDims()]
 
 
 class Sequence(Brick):
