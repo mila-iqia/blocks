@@ -490,6 +490,21 @@ class Logistic(Activation):
         return tensor.nnet.sigmoid(input_)
 
 
+class Softplus(Activation):
+    r""" Softplus brick.
+
+    The softplus is defined as :math:`\zeta(x) = \log(1+e^x)`.
+
+    .. Dugas, C., Bengio, Y., Belisle, F., Nadeau, C., and Garcia,
+       R. (2001). Incorporating second-order functional knowledge
+       for better option pricing. In NIPS 13 . MIT Press.
+
+    """
+    @application(inputs=['input_'], outputs=['output'])
+    def apply(self, input_):
+        return tensor.nnet.softplus(input_)
+
+
 class Rectifier(Activation):
     @application(inputs=['input_'], outputs=['output'])
     def apply(self, input_):
