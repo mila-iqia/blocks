@@ -5,7 +5,7 @@ from picklable_itertools.extras import equizip
 
 from blocks.bricks import Initializable, Linear
 from blocks.bricks.base import lazy, application
-from blocks.utils import pack
+from blocks.utils import pack, extract_args
 
 
 class Parallel(Initializable):
@@ -82,10 +82,9 @@ class Parallel(Initializable):
 
     @application
     def apply(self, *args, **kwargs):
-        args = args + tuple(kwargs[name] for name in
-                            self.input_names[len(args):])
-        return [child.apply(arg)
-                for arg, child in equizip(args, self.children)]
+        routed_args = extract_args(self.input_names, *args, **kwargs)
+        return [child.apply(routed_args[name])
+                for name, child in equizip(self.input_names, self.children)]
 
     @apply.property('inputs')
     def apply_inputs(self):
