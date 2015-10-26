@@ -8,7 +8,7 @@ picklable-itertools==0.1.0
 
 --allow-external theano
 --allow-unverified theano
-git+https://github.com/Theano/Theano.git@c6d2ab3929182cdf7cf12e4b1f191a6ff99d07cc#egg=theano
+git+https://github.com/Theano/Theano.git@8d3a67b73fda49350d9944c9a24fc9660131861c#egg=theano
 
 --allow-external fuel
 --allow-unverified fuel
