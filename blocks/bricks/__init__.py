@@ -10,6 +10,7 @@ from picklable_itertools.extras import equizip
 
 from blocks.config import config
 from blocks.bricks.base import application, _Brick, Brick, lazy
+from blocks.bricks.wrappers import WithExtraDims
 from blocks.roles import add_role, WEIGHT, BIAS
 from blocks.utils import pack, shared_floatx_nans
 
@@ -181,8 +182,9 @@ class Feedforward(Brick):
 class Linear(Initializable, Feedforward):
     r"""A linear transformation with optional bias.
 
-    Linear brick which applies a linear (affine) transformation by
-    multiplying the input with a weight matrix. Optionally a bias is added.
+    Brick which applies a linear (affine) transformation by multiplying
+    the input with a weight matrix. By default, a bias term is added
+    (see :class:`Initializable` for information on disabling this).
 
     Parameters
     ----------
@@ -209,29 +211,29 @@ class Linear(Initializable, Feedforward):
 
     @property
     def W(self):
-        return self.params[0]
+        return self.parameters[0]
 
     @property
     def b(self):
-        return self.params[1]
+        return self.parameters[1]
 
     def _allocate(self):
         W = shared_floatx_nans((self.input_dim, self.output_dim), name='W')
         add_role(W, WEIGHT)
-        self.params.append(W)
+        self.parameters.append(W)
         self.add_auxiliary_variable(W.norm(2), name='W_norm')
         if self.use_bias:
             b = shared_floatx_nans((self.output_dim,), name='b')
             add_role(b, BIAS)
-            self.params.append(b)
+            self.parameters.append(b)
             self.add_auxiliary_variable(b.norm(2), name='b_norm')
 
     def _initialize(self):
         if self.use_bias:
-            W, b = self.params
+            W, b = self.parameters
             self.biases_init.initialize(b, self.rng)
         else:
-            W, = self.params
+            W, = self.parameters
         self.weights_init.initialize(W, self.rng)
 
     @application(inputs=['input_'], outputs=['output'])
@@ -250,9 +252,9 @@ class Linear(Initializable, Feedforward):
 
         """
         if self.use_bias:
-            W, b = self.params
+            W, b = self.parameters
         else:
-            W, = self.params
+            W, = self.parameters
         output = tensor.dot(input_, W)
         if self.use_bias:
             output += b
@@ -276,10 +278,10 @@ class Bias(Feedforward, Initializable):
     def _allocate(self):
         b = shared_floatx_nans((self.output_dim,), name='b')
         add_role(b, BIAS)
-        self.params.append(b)
+        self.parameters.append(b)
 
     def _initialize(self):
-        b, = self.params
+        b, = self.parameters
         self.biases_init.initialize(b, self.rng)
 
     @application(inputs=['input_'], outputs=['output'])
@@ -297,13 +299,13 @@ class Bias(Feedforward, Initializable):
             The transformed input plus optional bias
 
         """
-        b, = self.params
+        b, = self.parameters
         return input_ + b
 
     def get_dim(self, name):
         if name in ['input_', 'output']:
             return self.dim
-        super(Linear, self).get_dim(name)
+        super(Bias, self).get_dim(name)
 
     def _get_dim(self):
         return self.dim
@@ -482,10 +484,25 @@ class Tanh(Activation):
         return tensor.tanh(input_)
 
 
-class Sigmoid(Activation):
+class Logistic(Activation):
     @application(inputs=['input_'], outputs=['output'])
     def apply(self, input_):
         return tensor.nnet.sigmoid(input_)
+
+
+class Softplus(Activation):
+    r""" Softplus brick.
+
+    The softplus is defined as :math:`\zeta(x) = \log(1+e^x)`.
+
+    .. Dugas, C., Bengio, Y., Belisle, F., Nadeau, C., and Garcia,
+       R. (2001). Incorporating second-order functional knowledge
+       for better option pricing. In NIPS 13 . MIT Press.
+
+    """
+    @application(inputs=['input_'], outputs=['output'])
+    def apply(self, input_):
+        return tensor.nnet.softplus(input_)
 
 
 class Rectifier(Activation):
@@ -494,43 +511,94 @@ class Rectifier(Activation):
         return tensor.switch(input_ > 0, input_, 0)
 
 
-class Softmax(Activation):
+class Softmax(Brick):
+    """A softmax brick.
+
+    Works with 2-dimensional inputs only. If you need more,
+    see :class:`NDimensionalSoftmax`.
+
+    """
     @application(inputs=['input_'], outputs=['output'])
     def apply(self, input_):
+        """Standard softmax.
+
+        Parameters
+        ----------
+        input_ : :class:`~theano.Variable`
+            A matrix, each row contains unnormalized log-probabilities of a
+            distribution.
+
+        Returns
+        -------
+        output_ : :class:`~theano.Variable`
+            A matrix with probabilities in each row for each distribution
+            from `input_`.
+
+        """
         return tensor.nnet.softmax(input_)
 
-    @application
-    def categorical_cross_entropy(self, y, x):
-        """Return computationally stable softmax cost.
+    @application(inputs=['input_'], outputs=['output'])
+    def log_probabilities(self, input_):
+        """Normalize log-probabilities.
+
+        Converts unnormalized log-probabilities (exponents of which do not
+        sum to one) into actual log-probabilities (exponents of which sum
+        to one).
+
+        Parameters
+        ----------
+        input_ : :class:`~theano.Variable`
+            A matrix, each row contains unnormalized log-probabilities of a
+            distribution.
+
+        Returns
+        -------
+        output : :class:`~theano.Variable`
+            A matrix with normalized log-probabilities in each row for each
+            distribution from `input_`.
+
+        """
+        shifted = input_ - input_.max(axis=1, keepdims=True)
+        return shifted - tensor.log(
+            tensor.exp(shifted).sum(axis=1, keepdims=True))
+
+    @application(inputs=['y', 'x'], outputs=['output'])
+    def categorical_cross_entropy(self, application_call, y, x):
+        """Computationally stable cross-entropy for pre-softmax values.
 
         Parameters
         ----------
         y : :class:`~tensor.TensorVariable`
-            In the case of a matrix argument, each slice along
-            axis represents one distribution. In the vector case, each
-            element represents the position of the '1' in a one hot-vector.
+            In the case of a matrix argument, each row represents a
+            probabilility distribution. In the vector case, each element
+            represents a distribution by specifying the position of 1 in a
+            1-hot vector.
         x : :class:`~tensor.TensorVariable`
-            Each slice along axis represents energies of a distribution,
-            that is pre-softmax values.
+            A matrix, each row contains unnormalized probabilities of a
+            distribution.
 
         Returns
         -------
         cost : :class:`~tensor.TensorVariable`
-            The cross entropy between y and x.
+            A vector of cross-entropies between respective distributions
+            from y and x.
 
         """
-        x = x - x.max(axis=1).dimshuffle(0, 'x')
-        log_prob = x - tensor.log(tensor.exp(x).sum(axis=1).dimshuffle(0, 'x'))
+        x = self.log_probabilities(x)
+        application_call.add_auxiliary_variable(
+            x.copy(name='log_probabilities'))
         if y.ndim == x.ndim - 1:
-            flat_log_prob = log_prob.flatten()
-            range_ = tensor.arange(y.shape[0])
-            flat_indices = y + range_ * x.shape[1]
-            cost = -tensor.mean(flat_log_prob[flat_indices])
+            indices = tensor.arange(y.shape[0]) * x.shape[1] + y
+            cost = -x.flatten()[indices]
         elif y.ndim == x.ndim:
-            cost = -tensor.mean((log_prob * y).sum(axis=1))
+            cost = -(x * y).sum(axis=1)
         else:
             raise TypeError('rank mismatch between x and y')
         return cost
+
+
+class NDimensionalSoftmax(Softmax):
+    decorators = [WithExtraDims()]
 
 
 class Sequence(Brick):

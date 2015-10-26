@@ -2,6 +2,7 @@ import inspect
 from abc import ABCMeta
 from collections import OrderedDict
 from functools import wraps
+from operator import attrgetter
 from types import MethodType
 
 import six
@@ -290,11 +291,14 @@ class Application(object):
                 kwargs[name] = copy_and_tag(input_, INPUT, name)
 
         # Run the application method on the annotated variables
-        if self.call_stack and brick is not self.call_stack[-1] and \
-                brick not in self.call_stack[-1].children:
+        last_brick = self.call_stack[-1] if self.call_stack else None
+        if (last_brick and brick is not last_brick and
+                brick not in last_brick.children):
             raise ValueError('Brick ' + str(self.call_stack[-1]) + ' tries '
                              'to call brick ' + str(self.brick) + ' which '
-                             'is not in the list of its children.')
+                             'is not in the list of its children. This could '
+                             'be caused because an @application decorator is '
+                             'missing.')
         self.call_stack.append(brick)
         try:
             outputs = self.application_function(brick, *args, **kwargs)
@@ -368,8 +372,21 @@ def rename_function(function, new_name):
 
 
 class _Brick(ABCMeta):
-    """Metaclass which attaches brick instances to the applications."""
+    """Metaclass which attaches brick instances to the applications.
+
+    In addition picklability of :class:`Application` objects is ensured.
+    This means that :class:`Application` objects can not be added to a
+    brick class after it is created. To allow adding application methods
+    programatically, the following hook is supported: the class namespace
+    is searched for `decorators` attribute, which can contain a
+    list of functions to be applied to the namespace of the class being
+    created. These functions can arbitratily modify this namespace.
+
+    """
     def __new__(mcs, name, bases, namespace):
+        decorators = namespace.get('decorators', [])
+        for decorator in decorators:
+            decorator(mcs, name, bases, namespace)
         for attr in list(namespace.values()):
             if (isinstance(attr, Application) and
                     hasattr(attr, '_application_function')):
@@ -458,7 +475,7 @@ class Brick(Annotation):
     print_shapes : bool
         ``False`` by default. If ``True`` it logs the shapes of all the
         input and output variables, which can be useful for debugging.
-    params : list of :class:`~tensor.TensorSharedVariable` and ``None``
+    parameters : list of :class:`~tensor.TensorSharedVariable` and ``None``
         After calling the :meth:`allocate` method this attribute will be
         populated with the shared variables storing this brick's
         parameters. Allows for ``None`` so that parameters can always be
@@ -540,12 +557,12 @@ class Brick(Annotation):
         return repr_attrs(self, 'name')
 
     @property
-    def params(self):
-        return self._params
+    def parameters(self):
+        return self._parameters
 
-    @params.setter
-    def params(self, value):
-        self._params = Parameters(self, value)
+    @parameters.setter
+    def parameters(self, value):
+        self._parameters = Parameters(self, value)
 
     @property
     def children(self):
@@ -560,7 +577,7 @@ class Brick(Annotation):
 
         Based on the current configuration of this :class:`Brick` create
         Theano shared variables to store the parameters.  After allocation,
-        parameters are accessible through the :attr:`params` attribute.
+        parameters are accessible through the :attr:`parameters` attribute.
 
         This method calls the :meth:`allocate` method of all children
         first, allowing the :meth:`_allocate` method to override the
@@ -575,7 +592,7 @@ class Brick(Annotation):
 
         Notes
         -----
-        This method sets the :attr:`params` attribute to an empty list.
+        This method sets the :attr:`parameters` attribute to an empty list.
         This is in order to ensure that calls to this method completely
         reset the parameters.
 
@@ -590,7 +607,7 @@ class Brick(Annotation):
             self.push_allocation_config()
         for child in self.children:
             child.allocate()
-        self.params = []
+        self.parameters = []
         self._allocate()
         self.allocated = True
 
@@ -737,6 +754,14 @@ class Brick(Annotation):
 
         """
         return [self.get_dim(name) for name in names]
+
+    def get_unique_path(self):
+        """Returns unique path to this brick in the application graph."""
+        if self.parents:
+            parent = min(self.parents, key=attrgetter('name'))
+            return parent.get_unique_path() + [self]
+        else:
+            return [self]
 
 
 def args_to_kwargs(args, f):

@@ -108,12 +108,17 @@ class Mean(AggregationScheme):
         numerator_acc = shared_like(self.numerator)
         denominator_acc = shared_like(self.denominator)
 
-        conditional_update_num = ifelse(initialized,
-                                        self.numerator + numerator_acc,
-                                        self.numerator)
-        conditional_update_den = ifelse(initialized,
-                                        self.denominator + denominator_acc,
-                                        self.denominator)
+        # Dummy default expression to use as the previously-accumulated
+        # value, that has the same shape as the new result
+        numerator_zeros = tensor.as_tensor(self.numerator).zeros_like()
+        denominator_zeros = tensor.as_tensor(self.denominator).zeros_like()
+
+        conditional_update_num = self.numerator + ifelse(initialized,
+                                                         numerator_acc,
+                                                         numerator_zeros)
+        conditional_update_den = self.denominator + ifelse(initialized,
+                                                           denominator_acc,
+                                                           denominator_zeros)
 
         initialization_updates = [(numerator_acc,
                                    tensor.zeros_like(numerator_acc)),

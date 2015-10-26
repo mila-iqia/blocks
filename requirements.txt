@@ -1,14 +1,13 @@
-numpy==1.9.2
-six==1.9.0
-pandas==0.16.1
+numpy==1.9.3
+picklable-itertools==0.1.1
 progressbar2==2.7.3
-PyYaml==3.11
+pyyaml==3.11
+six==1.9.0
 toolz==0.7.2
-picklable-itertools==0.1.0
 
 --allow-external theano
 --allow-unverified theano
-git+https://github.com/Theano/Theano.git@c6d2ab3929182cdf7cf12e4b1f191a6ff99d07cc#egg=theano
+git+https://github.com/Theano/Theano.git@8d3a67b73fda49350d9944c9a24fc9660131861c#egg=theano
 
 --allow-external fuel
 --allow-unverified fuel

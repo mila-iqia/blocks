@@ -40,16 +40,31 @@ The following configurations are supported:
    is pickling or unpickling a complex structure with lots of objects, such
    as a big Theano computation graph.
 
-.. option:: bokeh_server
-
-   The default URL to use when contacting a Bokeh server for live plotting.
-   This setting is used by the :class:`~blocks.extensions.plot.Plot`. The
-   default is ``http://localhost:5006/``.
-
 .. option:: profile, BLOCKS_PROFILE
 
    A boolean value which determines whether to print profiling information
    at the end of a call to :meth:`.MainLoop.run`.
+
+.. option:: log_backend
+
+   The backend to use for logging experiments. Defaults to `python`, which
+   stores the log as a Python object in memory. The other option is
+   `sqlite`.
+
+.. option:: sqlite_database, BLOCKS_SQLITEDB
+
+   The SQLite database file to use.
+
+.. option:: max_blob_size
+
+   The maximum size of an object to store in an SQLite database in bytes.
+   Objects beyond this size will trigger a warning. Defaults to 4 kilobyte.
+
+.. option:: temp_dir
+
+   The directory in which Blocks will create temporary files. If
+   unspecified, the platform-dependent default chosen by the Python
+   ``tempfile`` module is used.
 
 .. _YAML: http://yaml.org/
 .. _environment variables:
@@ -150,11 +165,22 @@ def bool_(val):
         return False
     return bool(val)
 
+
+def str_or_none(val):
+    """Like str, but allows a value of None to pass through as-is."""
+    return str(val) if val is not None else None
+
+
 # Define configuration options
 config = Configuration()
 config.add_config('default_seed', type_=int, default=1)
 config.add_config('recursion_limit', type_=int, default=10000)
-config.add_config('bokeh_server', type_=str, default='http://localhost:5006/')
 config.add_config('profile', type_=bool_, default=False,
                   env_var='BLOCKS_PROFILE')
+config.add_config('log_backend', type_=str, default='python')
+config.add_config('sqlite_database', type_=str,
+                  default=os.path.expanduser('~/blocks_log.sqlite'),
+                  env_var='BLOCKS_SQLITEDB')
+config.add_config('max_blob_size', type_=int, default=4096)
+config.add_config('temp_dir', type_=str_or_none, default=None)
 config.load_yaml()

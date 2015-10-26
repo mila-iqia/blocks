@@ -7,8 +7,6 @@ from blocks.graph import ComputationGraph
 from blocks.monitoring.evaluators import DatasetEvaluator
 from tests.monitoring.test_aggregation import TestBrick
 
-floatX = theano.config.floatX
-
 
 def test_dataset_evaluators():
     X = theano.tensor.matrix('X')
@@ -18,8 +16,8 @@ def test_dataset_evaluators():
     monitor_variables = [v for v in graph.auxiliary_variables]
     validator = DatasetEvaluator(monitor_variables)
 
-    data = [numpy.arange(1, 5, dtype=floatX).reshape(2, 2),
-            numpy.arange(10, 16, dtype=floatX).reshape(3, 2)]
+    data = [numpy.arange(1, 5, dtype=theano.config.floatX).reshape(2, 2),
+            numpy.arange(10, 16, dtype=theano.config.floatX).reshape(3, 2)]
     data_stream = IterableDataset(dict(X=data)).get_example_stream()
 
     values = validator.evaluate(data_stream)

@@ -66,6 +66,15 @@ class TrackTheBest(SimpleExtension):
     best_name : str
         The name of the status record to keep the best value so far.
     notification_name : str
+        The name of the record written to the log when the current
+        value of the tracked quantity is the best so far.
+
+    Notes
+    -----
+    In the likely case that you are relying on another extension to
+    add the tracked quantity to the log, make sure to place this
+    extension *after* the extension that writes the quantity to the log
+    in the `extensions` argument to :class:`blocks.main_loop.MainLoop`.
 
     """
     def __init__(self, record_name, notification_name=None,
@@ -76,7 +85,7 @@ class TrackTheBest(SimpleExtension):
         self.notification_name = notification_name
         self.best_name = "best_" + record_name
         self.choose_best = choose_best
-        kwargs.setdefault("after_batch", True)
+        kwargs.setdefault("after_epoch", True)
         super(TrackTheBest, self).__init__(**kwargs)
 
     def do(self, which_callback, *args):

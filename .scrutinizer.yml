@@ -5,9 +5,9 @@ build:
   tests:
     override:
       - flake8 --filename=* bin
-      - flake8 blocks doctests tests examples
+      - flake8 blocks doctests tests
       - pep257 bin --numpy --ignore=D100,D101,D102,D103 --match='.*'
-      - pep257 blocks examples --numpy --ignore=D100,D101,D102,D103
+      - pep257 blocks --numpy --ignore=D100,D101,D102,D103
       - pep257 doctests tests --numpy --ignore=D100,D101,D102,D103 --match='.*\.py'
 checks:
     python:

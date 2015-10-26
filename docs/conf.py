@@ -42,7 +42,7 @@ if not on_rtd:  # only import and set the theme if we're building docs locally
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.doctest',
-    'sphinxcontrib.napoleon',
+    'sphinx.ext.napoleon',
     'sphinx.ext.todo',
     'sphinx.ext.mathjax',
     'sphinx.ext.graphviz',
@@ -56,10 +56,8 @@ intersphinx_mapping = {
     'theano': ('http://theano.readthedocs.org/en/latest/', None),
     'numpy': ('http://docs.scipy.org/doc/numpy/', None),
     'scipy': ('http://docs.scipy.org/doc/scipy/reference/', None),
-    'python': ('http://docs.python.org/3.4', None),
-    'pandas': ('http://pandas.pydata.org/pandas-docs/stable/', None)
+    'python': ('http://docs.python.org/3.4', None)
 }
-
 
 class Mock(MagicMock):
     @classmethod

@@ -78,7 +78,7 @@ That is, avoid trivial checks such as
 
 .. code-block:: python
 
-   isinstance(var, six.integer_types)
+   isinstance(var, numbers.Integral)
    isinstance(var, (tuple, list))
 
 in cases where any number (like a float without a fractional part or a NumPy

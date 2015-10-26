@@ -1,6 +1,11 @@
 Live plotting
 =============
 
+.. note::
+
+   The live plotting functionality is part of ``blocks-extras``, which must be
+   separately installed.
+
 Plots often give a clearer image of your training progress than textual logs.
 This is why Blocks has a :class:`.Plot` extension which
 allows you to plot the entries from the log that you are interested in.
@@ -52,11 +57,11 @@ Now let's train with gradient descent and plot the results.
 >>> from blocks.algorithms import GradientDescent, Scale
 >>> from blocks.extensions import FinishAfter
 >>> from blocks.extensions.monitoring import TrainingDataMonitoring
->>> from blocks.extensions.plot import Plot
+>>> from blocks.extras.extensions.plot import Plot  # doctest: +SKIP
 >>> main_loop = MainLoop(
 ...     model=None, data_stream=data_stream,
 ...     algorithm=GradientDescent(cost=cost,
-...                               params=[a]
+...                               parameters=[a],
 ...                               step_rule=Scale(learning_rate=0.1)),
 ...     extensions=[FinishAfter(after_n_epochs=1),
 ...                 TrainingDataMonitoring([cost, a], after_batch=True),
@@ -81,3 +86,4 @@ cost go down in real-time!
 
 
 .. _Bokeh: http://bokeh.pydata.org/
+.. _blocks-extras: https://github.com/mila-udem/blocks-extras

@@ -47,12 +47,12 @@ from abc import ABCMeta, abstractmethod
 from theano import tensor
 from six import add_metaclass
 
-from blocks.bricks import (MLP, Identity, Brick, Initializable, Sequence,
+from blocks.bricks import (Brick, Initializable, Sequence,
                            Feedforward, Linear, Tanh)
 from blocks.bricks.base import lazy, application
 from blocks.bricks.parallel import Parallel, Distribute
 from blocks.bricks.recurrent import recurrent, BaseRecurrent
-from blocks.utils import dict_union, dict_subset
+from blocks.utils import dict_union, dict_subset, pack
 
 
 class AbstractAttention(Brick):
@@ -168,14 +168,11 @@ class AbstractAttention(Brick):
         pass
 
     @abstractmethod
-    def initial_glimpses(self, name, batch_size, attended):
+    def initial_glimpses(self, batch_size, attended):
         """Return sensible initial values for carried over glimpses.
 
         Parameters
         ----------
-        name : str
-            The name of the glimpse for which an initial value is
-            requested.
         batch_size : int or :class:`~theano.Variable`
             The batch size.
         attended : :class:`~theano.Variable`
@@ -183,8 +180,8 @@ class AbstractAttention(Brick):
 
         Returns
         -------
-        initial_glimpses : (list of) :class:`~theano.Variable`
-            The initial value for the requested glimpses. This might
+        initial_glimpses : list of :class:`~theano.Variable`
+            The initial values for the requested glimpses. These might
             simply consist of zeros or be somehow extracted from
             the attended.
 
@@ -224,6 +221,8 @@ class GenericSequenceAttention(AbstractAttention):
             as `energies`.
 
         """
+        # Stabilize energies first and then exponentiate
+        energies = energies - energies.max(axis=0)
         unnormalized_weights = tensor.exp(energies)
         if attended_mask:
             unnormalized_weights *= attended_mask
@@ -290,8 +289,8 @@ class SequenceContentAttention(GenericSequenceAttention, Initializable):
     match_dim : int
         The dimension of the match vector.
     state_transformer : :class:`.Brick`
-        A prototype for state transformations. If ``None``, the default
-        transformation from :class:`.Parallel` is used.
+        A prototype for state transformations. If ``None``,
+        a linear transformation is used.
     attended_transformer : :class:`.Feedforward`
         The transformation to be applied to the sequence. If ``None`` an
         affine transformation is used.
@@ -311,6 +310,8 @@ class SequenceContentAttention(GenericSequenceAttention, Initializable):
     def __init__(self, match_dim, state_transformer=None,
                  attended_transformer=None, energy_computer=None, **kwargs):
         super(SequenceContentAttention, self).__init__(**kwargs)
+        if not state_transformer:
+            state_transformer = Linear(use_bias=False)
         self.match_dim = match_dim
         self.state_transformer = state_transformer
 
@@ -388,13 +389,10 @@ class SequenceContentAttention(GenericSequenceAttention, Initializable):
         return (['attended', 'preprocessed_attended', 'attended_mask'] +
                 self.state_names)
 
-    @application
-    def initial_glimpses(self, name, batch_size, attended):
-        if name == "weighted_averages":
-            return tensor.zeros((batch_size, self.attended_dim))
-        elif name == "weights":
-            return tensor.zeros((batch_size, attended.shape[0]))
-        raise ValueError("Unknown glimpse name {}".format(name))
+    @application(outputs=['weighted_averages', 'weights'])
+    def initial_glimpses(self, batch_size, attended):
+        return [tensor.zeros((batch_size, self.attended_dim)),
+                tensor.zeros((batch_size, attended.shape[0]))]
 
     @application(inputs=['attended'], outputs=['preprocessed_attended'])
     def preprocess(self, attended):
@@ -421,7 +419,7 @@ class ShallowEnergyComputer(Sequence, Initializable, Feedforward):
     @lazy()
     def __init__(self, **kwargs):
         super(ShallowEnergyComputer, self).__init__(
-            [Tanh().apply, MLP([Identity()]).apply], **kwargs)
+            [Tanh().apply, Linear(use_bias=False).apply], **kwargs)
 
     @property
     def input_dim(self):
@@ -607,8 +605,8 @@ class AttentionRecurrent(AbstractAttentionRecurrent, Initializable):
             kwargs.pop(self.preprocessed_attended_name, None),
             kwargs.pop(self.attended_mask_name, None),
             **dict_union(states, glimpses_needed))
-        if kwargs:
-            raise ValueError("extra args to take_glimpses: {}".format(kwargs))
+        # At this point kwargs may contain additional items.
+        # e.g. AttentionRecurrent.transition.apply.contexts
         return result
 
     @take_glimpses.property('outputs')
@@ -636,13 +634,15 @@ class AttentionRecurrent(AbstractAttentionRecurrent, Initializable):
             Current states computed by `self.transition`.
 
         """
-        # Masks are not mandatory, that's why 'must_have=False'
-        sequences = dict_subset(kwargs, self._sequence_names,
-                                pop=True, must_have=False)
+        # make sure we are not popping the mask
+        normal_inputs = [name for name in self._sequence_names
+                         if 'mask' not in name]
+        sequences = dict_subset(kwargs, normal_inputs, pop=True)
         glimpses = dict_subset(kwargs, self._glimpse_names, pop=True)
         if self.add_contexts:
             kwargs.pop(self.attended_name)
-            kwargs.pop(self.attended_mask_name)
+            # attended_mask_name can be optional
+            kwargs.pop(self.attended_mask_name, None)
 
         sequences.update(self.distribute.apply(
             as_dict=True, **dict_subset(dict_union(sequences, glimpses),
@@ -738,11 +738,15 @@ class AttentionRecurrent(AbstractAttentionRecurrent, Initializable):
         return self._context_names
 
     @application
-    def initial_state(self, state_name, batch_size, **kwargs):
-        if state_name in self._glimpse_names:
-            return self.attention.initial_glimpses(
-                state_name, batch_size, kwargs[self.attended_name])
-        return self.transition.initial_state(state_name, batch_size, **kwargs)
+    def initial_states(self, batch_size, **kwargs):
+        return (pack(self.transition.initial_states(
+                     batch_size, **kwargs)) +
+                pack(self.attention.initial_glimpses(
+                     batch_size, kwargs[self.attended_name])))
+
+    @initial_states.property('outputs')
+    def initial_states_outputs(self):
+        return self.do_apply.states
 
     def get_dim(self, name):
         if name in self._glimpse_names:

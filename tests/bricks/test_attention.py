@@ -12,8 +12,6 @@ from blocks.initialization import IsotropicGaussian, Constant
 from blocks.graph import ComputationGraph
 from blocks.select import Selector
 
-floatX = theano.config.floatX
-
 
 def test_sequence_content_attention():
     # Disclaimer: only check dimensions, not values
@@ -40,9 +38,12 @@ def test_sequence_content_attention():
     assert glimpses.ndim == 2
     assert weights.ndim == 2
 
-    seq_values = numpy.zeros((seq_len, batch_size, attended_dim), dtype=floatX)
-    states_values = numpy.zeros((batch_size, state_dim), dtype=floatX)
-    mask_values = numpy.zeros((seq_len, batch_size), dtype=floatX)
+    seq_values = numpy.zeros((seq_len, batch_size, attended_dim),
+                             dtype=theano.config.floatX)
+    states_values = numpy.zeros((batch_size, state_dim),
+                                dtype=theano.config.floatX)
+    mask_values = numpy.zeros((seq_len, batch_size),
+                              dtype=theano.config.floatX)
     # randomly generate a sensible mask
     for sed_idx in range(batch_size):
         mask_values[:rng.randint(1, seq_len), sed_idx] = 1
@@ -90,11 +91,11 @@ def test_attention_recurrent():
 
     # For values.
     def rand(size):
-        return rng.uniform(size=size).astype(floatX)
+        return rng.uniform(size=size).astype(theano.config.floatX)
 
     # For masks.
     def generate_mask(length, batch_size):
-        mask = numpy.ones((length, batch_size), dtype=floatX)
+        mask = numpy.ones((length, batch_size), dtype=theano.config.floatX)
         # To make it look like read data
         for i in range(batch_size):
             mask[1 + rng.randint(0, length - 1):, i] = 0.0
@@ -114,7 +115,7 @@ def test_attention_recurrent():
     assert glimpses_vals.shape == (input_length, batch_size, attended_dim)
 
     assert (len(ComputationGraph(outputs).shared_variables) ==
-            len(Selector(recurrent).get_params()))
+            len(Selector(recurrent).get_parameters()))
 
     # weights for not masked position must be zero
     assert numpy.all(weight_vals * (1 - attended_mask_vals.T) == 0)
@@ -126,7 +127,7 @@ def test_attention_recurrent():
     for i in range(batch_size):
         last = int(input_mask_vals[:, i].sum())
         for j in range(last, input_length):
-            assert_allclose(weight_vals[last, i], weight_vals[j, i])
+            assert_allclose(weight_vals[last, i], weight_vals[j, i], 1e-5)
 
     # freeze sums
     assert_allclose(weight_vals.sum(), input_length * batch_size, 1e-5)
@@ -152,5 +153,30 @@ def test_compute_weights_with_zero_mask():
         numpy.random.rand(attended_length, batch_size))
     mask = tensor.as_tensor_variable(
         numpy.zeros((attended_length, batch_size)))
+    weights = attention.compute_weights(energies, mask).eval()
+    assert numpy.all(numpy.isfinite(weights))
+
+
+def test_stable_attention_weights():
+    state_dim = 2
+    attended_dim = 3
+    match_dim = 4
+    attended_length = 5
+    batch_size = 6
+
+    attention = SequenceContentAttention(
+        state_names=["states"], state_dims=[state_dim],
+        attended_dim=attended_dim, match_dim=match_dim,
+        weights_init=IsotropicGaussian(0.5),
+        biases_init=Constant(0))
+    attention.initialize()
+
+    # Random high energies with mu=800, sigma=50
+    energies_val = (
+        50. * numpy.random.randn(attended_length, batch_size) + 800
+        ).astype(theano.config.floatX)
+    energies = tensor.as_tensor_variable(energies_val)
+    mask = tensor.as_tensor_variable(
+        numpy.ones((attended_length, batch_size)))
     weights = attention.compute_weights(energies, mask).eval()
     assert numpy.all(numpy.isfinite(weights))

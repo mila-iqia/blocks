@@ -14,8 +14,28 @@ def l2_norm(tensors):
         The tensors.
 
     """
-    flattened = [tensor.as_tensor_variable(t).flatten() for t in tensors]
-    flattened = [(t if t.ndim > 0 else t.dimshuffle('x'))
-                 for t in flattened]
-    joined = tensor.join(0, *flattened)
-    return tensor.sqrt(tensor.sqr(joined).sum())
+    summed = [tensor.sqr(tensor.as_tensor_variable(t)).sum() for t in tensors]
+    joined = tensor.stack(*summed)
+    return tensor.sqrt(joined.sum())
+
+
+def hessian_times_vector(gradient, parameter, vector, r_op=False):
+    """Return an expression for the Hessian times a vector.
+
+    Parameters
+    ----------
+    gradient : :class:`~tensor.TensorVariable`
+        The gradient of a cost with respect to `parameter`
+    parameter : :class:`~tensor.TensorVariable`
+        The parameter with respect to which to take the gradient
+    vector : :class:`~tensor.TensorVariable`
+        The vector with which to multiply the Hessian
+    r_op : bool, optional
+        Whether to use :func:`~tensor.gradient.Rop` or not. Defaults to
+        ``False``. Which solution is fastest normally needs to be
+        determined by profiling.
+
+    """
+    if r_op:
+        return tensor.Rop(gradient, parameter, vector)
+    return tensor.grad(tensor.sum(gradient * vector), parameter)

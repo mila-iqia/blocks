@@ -5,7 +5,7 @@ from numpy.testing import assert_allclose, assert_raises
 from theano import tensor
 
 from blocks.bricks import (Identity, Linear, Maxout, LinearMaxout, MLP, Tanh,
-                           Sequence, Random)
+                           Sequence, Random, Logistic, Softplus, Softmax)
 from blocks.bricks.base import application, Brick, lazy, NoneAllocation
 from blocks.bricks.parallel import Parallel, Fork
 from blocks.filter import get_application_call, get_brick
@@ -88,7 +88,7 @@ class BrokenInitializeBrick(Brick):
 
 class ParameterBrick(Brick):
     def _allocate(self):
-        self.params.append(
+        self.parameters.append(
             theano.shared(numpy.zeros((10, 10), dtype=theano.config.floatX)))
 
 
@@ -135,13 +135,13 @@ def test_allocate():
     assert parent_brick.children[0].allocation_config_pushed
 
     parameter_brick = ParameterBrick()
-    assert not hasattr(parameter_brick, 'params')
+    assert not hasattr(parameter_brick, 'parameters')
     parameter_brick.allocate()
-    assert len(parameter_brick.params) == 1
-    parameter_brick.params[0].set_value(
+    assert len(parameter_brick.parameters) == 1
+    parameter_brick.parameters[0].set_value(
         numpy.ones((10, 10), dtype=theano.config.floatX))
     parameter_brick.allocate()
-    assert numpy.all(parameter_brick.params[0].get_value() == 0)
+    assert numpy.all(parameter_brick.parameters[0].get_value() == 0)
 
     broken_parent_brick = ParentBrick(BrokenAllocateBrick())
     assert_raises(AttributeError, broken_parent_brick.allocate)
@@ -323,9 +323,17 @@ def test_maxout():
 def test_activations():
     x = tensor.vector()
     x_val = numpy.random.rand(8).astype(theano.config.floatX)
+    exp_x_val = numpy.exp(x_val)
+
     assert_allclose(x_val, Identity().apply(x).eval({x: x_val}))
     assert_allclose(numpy.tanh(x_val), Tanh().apply(x).eval({x: x_val}),
                     rtol=1e-06)
+    assert_allclose(numpy.log(1 + exp_x_val),
+                    Softplus(x).apply(x).eval({x: x_val}), rtol=1e-6)
+    assert_allclose(exp_x_val / numpy.sum(exp_x_val),
+                    Softmax(x).apply(x).eval({x: x_val}).flatten(), rtol=1e-6)
+    assert_allclose(1.0 / (1.0 + numpy.exp(-x_val)),
+                    Logistic(x).apply(x).eval({x: x_val}), rtol=1e-6)
 
 
 def test_mlp():
@@ -454,8 +462,8 @@ def test_linear_nan_allocation():
                     biases_init=Constant(1))
     linear.apply(x)
     w1 = numpy.nan * numpy.zeros((16, 8))
-    w2 = linear.params[0].get_value()
+    w2 = linear.parameters[0].get_value()
     b1 = numpy.nan * numpy.zeros(8)
-    b2 = linear.params[1].get_value()
+    b2 = linear.parameters[1].get_value()
     numpy.testing.assert_equal(w1, w2)
     numpy.testing.assert_equal(b1, b2)

@@ -33,7 +33,7 @@ from abc import ABCMeta, abstractmethod
 from six import add_metaclass
 from theano import tensor
 
-from blocks.bricks import Initializable, Random, Bias
+from blocks.bricks import Initializable, Random, Bias, NDimensionalSoftmax
 from blocks.bricks.base import application, Brick, lazy
 from blocks.bricks.parallel import Fork, Merge
 from blocks.bricks.lookup import LookupTable
@@ -87,10 +87,10 @@ class BaseSequenceGenerator(Initializable):
            s_0, g_0 = transition.initial\_states(contexts)\\
            i = 1\\
 
-       The default `initial_states` method that a recurrent transition
-       inherits from :class:`.BaseRecurrent` creates an initial states
-       of all zeros. Use your own transition classes to get custom
-       initial states.
+       By default all recurrent bricks from :mod:`~blocks.bricks.recurrent`
+       have trainable initial states initialized with zeros. Subclass them
+       or :class:`~blocks.bricks.recurrent.BaseRecurrent` directly to get
+       custom initial states.
 
     2. New glimpses are computed:
 
@@ -230,7 +230,7 @@ class BaseSequenceGenerator(Initializable):
 
         # Add auxiliary variable for per sequence element cost
         application_call.add_auxiliary_variable(
-            (costs.sum() / mask.sum()) if mask is not None else costs.sum(),
+            (costs.sum() / mask.sum()) if mask is not None else costs.mean(),
             name='per_sequence_element')
         return cost
 
@@ -248,7 +248,8 @@ class BaseSequenceGenerator(Initializable):
 
         # Prepare input for the iterative part
         states = dict_subset(kwargs, self._state_names, must_have=False)
-        contexts = dict_subset(kwargs, self._context_names)
+        # masks in context are optional (e.g. `attended_mask`)
+        contexts = dict_subset(kwargs, self._context_names, must_have=False)
         feedback = self.readout.feedback(outputs)
         inputs = self.fork.apply(feedback, as_dict=True)
 
@@ -297,7 +298,8 @@ class BaseSequenceGenerator(Initializable):
 
         """
         states = dict_subset(kwargs, self._state_names)
-        contexts = dict_subset(kwargs, self._context_names)
+        # masks in context are optional (e.g. `attended_mask`)
+        contexts = dict_subset(kwargs, self._context_names, must_have=False)
         glimpses = dict_subset(kwargs, self._glimpse_names)
 
         next_glimpses = self.transition.take_glimpses(
@@ -338,15 +340,19 @@ class BaseSequenceGenerator(Initializable):
         return super(BaseSequenceGenerator, self).get_dim(name)
 
     @application
-    def initial_state(self, name, batch_size, *args, **kwargs):
-        if name == 'outputs':
-            return self.readout.initial_outputs(batch_size)
-        elif name in self._state_names + self._glimpse_names:
-            return self.transition.initial_state(name, batch_size,
-                                                 *args, **kwargs)
-        else:
-            # TODO: raise a nice exception
-            assert False
+    def initial_states(self, batch_size, *args, **kwargs):
+        # TODO: support dict of outputs for application methods
+        # to simplify this code.
+        state_dict = dict(
+            self.transition.initial_states(
+                batch_size, as_dict=True, *args, **kwargs),
+            outputs=self.readout.initial_outputs(batch_size))
+        return [state_dict[state_name]
+                for state_name in self.generate.states]
+
+    @initial_states.property('outputs')
+    def initial_states_outputs(self):
+        return self.generate.states
 
 
 @add_metaclass(ABCMeta)
@@ -658,14 +664,14 @@ class SoftmaxEmitter(AbstractEmitter, Initializable, Random):
 
     """
     def __init__(self, initial_output=0, **kwargs):
-        self.initial_output = initial_output
         super(SoftmaxEmitter, self).__init__(**kwargs)
+        self.initial_output = initial_output
+        self.softmax = NDimensionalSoftmax()
+        self.children = [self.softmax]
 
     @application
     def probs(self, readouts):
-        shape = readouts.shape
-        return tensor.nnet.softmax(readouts.reshape(
-            (tensor.prod(shape[:-1]), shape[-1]))).reshape(shape)
+        return self.softmax.apply(readouts, extra_ndim=readouts.ndim - 2)
 
     @application
     def emit(self, readouts):
@@ -680,13 +686,8 @@ class SoftmaxEmitter(AbstractEmitter, Initializable, Random):
         # WARNING: unfortunately this application method works
         # just fine when `readouts` and `outputs` have
         # different dimensions. Be careful!
-        probs = self.probs(readouts)
-        max_output = probs.shape[-1]
-        flat_outputs = outputs.flatten()
-        num_outputs = flat_outputs.shape[0]
-        return -tensor.log(
-            probs.flatten()[max_output * tensor.arange(num_outputs) +
-                            flat_outputs].reshape(outputs.shape))
+        return self.softmax.categorical_cross_entropy(
+            outputs, readouts, extra_ndim=readouts.ndim - 2)
 
     @application
     def initial_outputs(self, batch_size):
@@ -793,9 +794,13 @@ class FakeAttentionRecurrent(AbstractAttentionRecurrent, Initializable):
         return None
 
     @application
-    def initial_state(self, state_name, batch_size, *args, **kwargs):
-        return self.transition.initial_state(state_name, batch_size,
-                                             *args, **kwargs)
+    def initial_states(self, batch_size, *args, **kwargs):
+        return self.transition.initial_states(batch_size,
+                                              *args, **kwargs)
+
+    @initial_states.property('outputs')
+    def initial_states_outputs(self):
+        return self.transition.apply.states
 
     def get_dim(self, name):
         return self.transition.get_dim(name)

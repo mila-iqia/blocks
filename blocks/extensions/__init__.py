@@ -7,7 +7,7 @@ import progressbar
 from six import add_metaclass
 from toolz import first
 
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 
 def callback(func):
@@ -19,7 +19,7 @@ class TrainingExtension(object):
     """The base class for training extensions.
 
     An extension is a set of callbacks sharing a joint context that are
-    invoked at certain stages of the training procedure. This callbacks
+    invoked at certain stages of the training procedure. These callbacks
     typically add a certain functionality to the training procedure,
     e.g. running validation on auxiliary datasets or early stopping.
 
@@ -255,23 +255,23 @@ class SimpleExtension(TrainingExtension):
         for key, value in kwargs.items():
             if value:
                 if key in self.BOOLEAN_TRIGGERS:
-                    self.add_condition(conditions.get(key, key),
+                    self.add_condition([conditions.get(key, key)],
                                        predicate=predicates.get(key, None))
                 elif key in self.INTEGER_TRIGGERS:
                     predicate = Predicate(key, value)
-                    self.add_condition(conditions.get(key, key),
+                    self.add_condition([conditions.get(key, key)],
                                        predicate=predicate)
                 else:
                     raise KeyError("Invalid condition: {}".format(key))
         return self  # For chaining calls.
 
-    def add_condition(self, callback_name, predicate=None, arguments=None):
+    def add_condition(self, callbacks_names, predicate=None, arguments=None):
         """Adds a condition under which a :meth:`do` is called.
 
         Parameters
         ----------
-        callback_name : str
-            The name of the callback in which the method.
+        callbacks_names : list of str
+            The names of the callback in which the method.
         predicate : function
             A predicate function the main loop's log as the
             single parameter and returning ``True`` when the method
@@ -287,14 +287,17 @@ class SimpleExtension(TrainingExtension):
             The extension object (allow chaining calls)
 
         """
-        if not arguments:
-            arguments = []
-        if not predicate:
-            self._conditions.append((callback_name, always_true,
-                                     arguments))
-        else:
-            self._conditions.append((callback_name, predicate,
-                                     arguments))
+        if not isinstance(callbacks_names, (list, tuple)):
+            raise ValueError("callbacks_names must be list or tuple.")
+        for _callback_name in callbacks_names:
+            if not arguments:
+                arguments = []
+            if not predicate:
+                self._conditions.append((_callback_name, always_true,
+                                        arguments))
+            else:
+                self._conditions.append((_callback_name, predicate,
+                                        arguments))
         return self
 
     @abstractmethod
@@ -309,6 +312,11 @@ class SimpleExtension(TrainingExtension):
         \*args : tuple
             The arguments from the main loop concatenated with additional
             arguments from user.
+
+        Notes
+        -----
+        Subclasses *must* accept additional positional arguments in their
+        call signature for this method, even if they are unused.
 
         """
         pass
