@@ -1,15 +1,17 @@
 import numpy
 import theano
+import warnings
 from numpy.testing import assert_allclose
 from theano import tensor
 from theano.sandbox.rng_mrg import MRG_RandomStreams
 
-from blocks.bricks import MLP, Identity
-from blocks.graph import apply_noise, ComputationGraph
+from blocks.bricks import MLP, Identity, Logistic
+from blocks.bricks.cost import SquaredError
+from blocks.filter import VariableFilter
+from blocks.graph import apply_noise, collect_parameters, ComputationGraph
 from blocks.initialization import Constant
+from blocks.roles import add_role, COLLECTED, PARAMETER, AUXILIARY
 from tests.bricks.test_bricks import TestBrick
-
-floatX = theano.config.floatX
 
 
 def test_application_graph_auxiliary_vars():
@@ -47,7 +49,8 @@ def test_computation_graph():
     assert set(cg2.inputs) == {r}
     assert set([v.name for v in cg2.outputs]) == {'a', 'b'}
 
-    W = theano.shared(numpy.zeros((3, 3), dtype=floatX))
+    W = theano.shared(numpy.zeros((3, 3),
+                                  dtype=theano.config.floatX))
     cg3 = ComputationGraph([z + W])
     assert set(cg3.shared_variables) == {W}
 
@@ -101,6 +104,30 @@ def test_replace_multiple_inputs():
     assert_allclose(cg.outputs[1].eval({x: 1.0}), 1.5)
 
 
+def test_replace_variable_not_in_graph():
+    # Test if warning appears when variable is not in graph
+    with warnings.catch_warnings(record=True) as w:
+        x = tensor.scalar()
+        y = x + 1
+        z = tensor.scalar()
+        cg = ComputationGraph([y])
+        cg.replace([(y, 2 * y), (z, 2 * z)])
+        assert len(w) == 1
+        assert "not a part of" in str(w[-1].message)
+
+
+def test_replace_variable_is_auxiliary():
+    # Test if warning appears when variable is an AUXILIARY variable
+    with warnings.catch_warnings(record=True) as w:
+        x = tensor.scalar()
+        y = x + 1
+        add_role(y, AUXILIARY)
+        cg = ComputationGraph([y])
+        cg.replace([(y, 2 * y)])
+        assert len(w) == 1
+        assert "auxiliary" in str(w[-1].message)
+
+
 def test_apply_noise():
     x = tensor.scalar()
     y = tensor.scalar()
@@ -120,5 +147,28 @@ def test_snapshot():
     linear.initialize()
     y = linear.apply(x)
     cg = ComputationGraph(y)
-    snapshot = cg.get_snapshot(dict(x=numpy.zeros((1, 10), dtype=floatX)))
+    snapshot = cg.get_snapshot(dict(x=numpy.zeros((1, 10),
+                                                  dtype=theano.config.floatX)))
     assert len(snapshot) == 14
+
+
+def test_collect():
+    x = tensor.matrix()
+    mlp = MLP(activations=[Logistic(), Logistic()], dims=[784, 100, 784],
+              use_bias=False)
+    cost = SquaredError().apply(x, mlp.apply(x))
+    cg = ComputationGraph(cost)
+    var_filter = VariableFilter(roles=[PARAMETER])
+    W1, W2 = var_filter(cg.variables)
+    for i, W in enumerate([W1, W2]):
+        W.set_value(numpy.ones_like(W.get_value()) * (i + 1))
+    new_cg = collect_parameters(cg, cg.shared_variables)
+    collected_parameters, = new_cg.shared_variables
+    assert numpy.all(collected_parameters.get_value()[:784 * 100] == 1.)
+    assert numpy.all(collected_parameters.get_value()[784 * 100:] == 2.)
+    assert collected_parameters.ndim == 1
+    W1, W2 = VariableFilter(roles=[COLLECTED])(new_cg.variables)
+    assert W1.eval().shape == (784, 100)
+    assert numpy.all(W1.eval() == 1.)
+    assert W2.eval().shape == (100, 784)
+    assert numpy.all(W2.eval() == 2.)

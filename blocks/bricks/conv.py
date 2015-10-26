@@ -36,11 +36,32 @@ class Convolutional(Initializable):
     border_mode : {'valid', 'full'}, optional
         The border mode to use, see :func:`scipy.signal.convolve2d` for
         details. Defaults to 'valid'.
+    tied_biases : bool
+        If ``True``, it indicates that the biases of every filter in this
+        layer should be shared amongst all applications of that filter.
+        Setting this to ``False`` will untie the biases, yielding a
+        separate bias for every location at which the filter is applied.
+        Defaults to ``False``.
 
     """
+    # Make it possible to override the implementation of conv2d that gets
+    # used, i.e. to use theano.sandbox.cuda.dnn.dnn_conv directly in order
+    # to leverage features not yet available in Theano's standard conv2d.
+    # The function you override with here should accept at least the
+    # input and the kernels as positionals, and the keyword arguments
+    # image_shape, subsample, border_mode, and filter_shape. If some of
+    # these are unsupported they should still be accepted and ignored,
+    # e.g. with a wrapper function that swallows **kwargs.
+    conv2d_impl = staticmethod(conv2d)
+
+    # Used to override the output shape computation for a given value of
+    # conv2d_impl. Should accept 4 positional arguments: the image size,
+    # the filter size, the step (strides), and the border mode.
+    get_output_shape = staticmethod(ConvOp.getOutputShape)
+
     @lazy(allocation=['filter_size', 'num_filters', 'num_channels'])
     def __init__(self, filter_size, num_filters, num_channels, batch_size=None,
-                 image_size=None, step=(1, 1), border_mode='valid',
+                 image_size=(None, None), step=(1, 1), border_mode='valid',
                  tied_biases=False, **kwargs):
         super(Convolutional, self).__init__(**kwargs)
 
@@ -57,24 +78,32 @@ class Convolutional(Initializable):
         W = shared_floatx_nans((self.num_filters, self.num_channels) +
                                self.filter_size, name='W')
         add_role(W, FILTER)
-        self.params.append(W)
+        self.parameters.append(W)
         self.add_auxiliary_variable(W.norm(2), name='W_norm')
         if self.use_bias:
             if self.tied_biases:
                 b = shared_floatx_nans((self.num_filters,), name='b')
             else:
+                # this error is raised here instead of during initializiation
+                # because ConvolutionalSequence may specify the image size
+                if self.image_size == (None, None) and not self.tied_biases:
+                    raise ValueError('Cannot infer bias size without '
+                                     'image_size specified. If you use '
+                                     'variable image_size, you should use '
+                                     'tied_biases=True.')
+
                 b = shared_floatx_nans(self.get_dim('output'), name='b')
             add_role(b, BIAS)
 
-            self.params.append(b)
+            self.parameters.append(b)
             self.add_auxiliary_variable(b.norm(2), name='b_norm')
 
     def _initialize(self):
         if self.use_bias:
-            W, b = self.params
+            W, b = self.parameters
             self.biases_init.initialize(b, self.rng)
         else:
-            W, = self.params
+            W, = self.parameters
         self.weights_init.initialize(W, self.rng)
 
     @application(inputs=['input_'], outputs=['output'])
@@ -100,14 +129,19 @@ class Convolutional(Initializable):
 
         """
         if self.use_bias:
-            W, b = self.params
+            W, b = self.parameters
         else:
-            W, = self.params
+            W, = self.parameters
 
-        output = conv2d(
+        if self.image_size == (None, None):
+            image_shape = None
+        else:
+            image_shape = (self.batch_size, self.num_channels)
+            image_shape += self.image_size
+
+        output = self.conv2d_impl(
             input_, W,
-            image_shape=(self.batch_size, self.num_channels) +
-                        (self.image_size if self.image_size else (None, None)),
+            image_shape=image_shape,
             subsample=self.step,
             border_mode=self.border_mode,
             filter_shape=((self.num_filters, self.num_channels) +
@@ -124,7 +158,7 @@ class Convolutional(Initializable):
             return (self.num_channels,) + self.image_size
         if name == 'output':
             return ((self.num_filters,) +
-                    ConvOp.getOutputShape(self.image_size, self.filter_size,
+                    self.get_output_shape(self.image_size, self.filter_size,
                                           self.step, self.border_mode))
         return super(Convolutional, self).get_dim(name)
 
@@ -185,7 +219,15 @@ class MaxPooling(Initializable, Feedforward):
                                                        st=self.step))
 
 
-class ConvolutionalActivation(Sequence, Initializable):
+class _AllocationMixin(object):
+    def _push_allocation_config(self):
+        for attr in ['filter_size', 'num_filters', 'border_mode',
+                     'batch_size', 'num_channels', 'image_size',
+                     'tied_biases', 'use_bias']:
+            setattr(self.convolution, attr, getattr(self, attr))
+
+
+class ConvolutionalActivation(_AllocationMixin, Sequence, Initializable):
     """A convolution followed by an activation function.
 
     Parameters
@@ -218,18 +260,16 @@ class ConvolutionalActivation(Sequence, Initializable):
             application_methods=[self.convolution.apply, activation],
             **kwargs)
 
-    def _push_allocation_config(self):
-        for attr in ['filter_size', 'num_filters', 'step', 'border_mode',
-                     'batch_size', 'num_channels', 'image_size',
-                     'tied_biases']:
-            setattr(self.convolution, attr, getattr(self, attr))
-
     def get_dim(self, name):
         # TODO The name of the activation output doesn't need to be `output`
         return self.convolution.get_dim(name)
 
+    def _push_allocation_config(self):
+        super(ConvolutionalActivation, self)._push_allocation_config()
+        self.convolution.step = self.step
 
-class ConvolutionalLayer(Sequence, Initializable):
+
+class ConvolutionalLayer(_AllocationMixin, Sequence, Initializable):
     """A complete convolutional layer: Convolution, nonlinearity, pooling.
 
     .. todo::
@@ -278,10 +318,7 @@ class ConvolutionalLayer(Sequence, Initializable):
         self.tied_biases = tied_biases
 
     def _push_allocation_config(self):
-        for attr in ['filter_size', 'num_filters', 'num_channels',
-                     'batch_size', 'border_mode', 'image_size',
-                     'tied_biases']:
-            setattr(self.convolution, attr, getattr(self, attr))
+        super(ConvolutionalLayer, self)._push_allocation_config()
         self.convolution.step = self.conv_step
         self.convolution._push_allocation_config()
         if self.image_size is not None:
@@ -322,6 +359,14 @@ class ConvolutionalSequence(Sequence, Initializable, Feedforward):
         Width and height of the input (image/featuremap). If given,
         will be passed to theano's convolution operator resulting in
         possibly faster execution.
+    border_mode : 'valid', 'full' or None, optional
+        The border mode to use, see :func:`scipy.signal.convolve2d` for
+        details. Unlike with :class:`Convolutional`, this defaults to
+        None, in which case no default value is pushed down to child
+        bricks at allocation time. Child bricks will in this case
+        need to rely on either a default border mode (usually valid)
+        or one provided at construction and/or after construction
+        (but before allocation).
 
     Notes
     -----
@@ -331,10 +376,18 @@ class ConvolutionalSequence(Sequence, Initializable, Feedforward):
     input dimensions of a layer to the output dimensions of the previous
     layer by the :meth:`~.Brick.push_allocation_config` method.
 
+    The reason the `border_mode` parameter behaves the way it does is that
+    pushing a single default `border_mode` makes it very difficult to
+    have child bricks with different border modes. Normally, such things
+    would be overridden after `push_allocation_config()`, but this is
+    a particular hassle as the border mode affects the allocation
+    parameters of every subsequent child brick in the sequence. Thus, only
+    an explicitly specified border mode will be pushed down the hierarchy.
+
     """
     @lazy(allocation=['num_channels'])
     def __init__(self, layers, num_channels, batch_size=None, image_size=None,
-                 border_mode='valid', tied_biases=False, **kwargs):
+                 border_mode=None, tied_biases=False, **kwargs):
         self.layers = layers
         self.image_size = image_size
         self.num_channels = num_channels
@@ -357,11 +410,13 @@ class ConvolutionalSequence(Sequence, Initializable, Feedforward):
         num_channels = self.num_channels
         image_size = self.image_size
         for layer in self.layers:
-            for attr in ['border_mode', 'tied_biases']:
-                setattr(layer, attr, getattr(self, attr))
+            if self.border_mode is not None:
+                layer.border_mode = self.border_mode
+            layer.tied_biases = self.tied_biases
             layer.image_size = image_size
             layer.num_channels = num_channels
             layer.batch_size = self.batch_size
+            layer.use_bias = self.use_bias
 
             # Push input dimensions to children
             layer._push_allocation_config()

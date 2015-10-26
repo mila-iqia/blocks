@@ -36,18 +36,19 @@ class Path(object):
 
     """
     separator = "/"
-    param_separator = "."
-    separator_re = re.compile("([{}{}])".format(separator, param_separator))
+    parameter_separator = "."
+    separator_re = re.compile("([{}{}])".format(separator,
+                                                parameter_separator))
 
     class BrickName(str):
 
         def part(self):
             return Path.separator + self
 
-    class ParamName(str):
+    class ParameterName(str):
 
         def part(self):
-            return Path.param_separator + self
+            return Path.parameter_separator + self
 
     def __init__(self, nodes):
         if not isinstance(nodes, (list, tuple)):
@@ -90,8 +91,8 @@ class Path(object):
         for separator, part in equizip(separators, parts):
             if separator == Path.separator:
                 nodes.append(Path.BrickName(part))
-            elif Path.param_separator == Path.param_separator:
-                nodes.append(Path.ParamName(part))
+            elif Path.parameter_separator == Path.parameter_separator:
+                nodes.append(Path.ParameterName(part))
             else:
                 # This can not if separator_re is a correct regexp
                 raise ValueError("Wrong separator {}".format(separator))
@@ -142,8 +143,9 @@ class Selector(object):
         current_bricks = [None]
         for node in path.nodes:
             next_bricks = []
-            if isinstance(node, Path.ParamName):
-                return list(Selector(current_bricks).get_params(node).values())
+            if isinstance(node, Path.ParameterName):
+                return list(Selector(
+                    current_bricks).get_parameters(node).values())
             if isinstance(node, Path.BrickName):
                 for brick in current_bricks:
                     children = brick.children if brick else self.bricks
@@ -155,40 +157,63 @@ class Selector(object):
             current_bricks = next_bricks
         return Selector(current_bricks)
 
-    def get_params(self, param_name=None):
-        """Returns parameters the selected bricks and their ancestors.
+    def get_parameters(self, parameter_name=None):
+        r"""Returns parameters from selected bricks and their descendants.
 
         Parameters
         ----------
-        param_name : :class:`Path.ParamName`
-            If given, only parameters with the name `param_name` are
-            returned.
+        parameter_name : :class:`Path.ParameterName`, optional
+            If given, only parameters with a `name` attribute equal to
+            `parameter_name` are returned.
 
         Returns
         -------
-        params : OrderedDict
-            A dictionary of (`path`, `param`) pairs, where `path` is the
-            string representation of the part to the parameter, `param` is
-            the parameter.
+        parameters : OrderedDict
+            A dictionary of (`path`, `parameter`) pairs, where `path` is
+            a string representation of the path in the brick hierarchy
+            to the parameter (i.e. the slash-delimited path to the brick
+            that owns the parameter, followed by a dot, followed by the
+            parameter's name), and `parameter` is the Theano variable
+            representing the parameter.
+
+        Examples
+        --------
+        >>> from blocks.bricks import MLP, Tanh
+        >>> mlp = MLP([Tanh(), Tanh(), Tanh()], [5, 7, 11, 2])
+        >>> mlp.allocate()
+        >>> selector = Selector([mlp])
+        >>> selector.get_parameters()  # doctest: +NORMALIZE_WHITESPACE
+        OrderedDict([('/mlp/linear_0.W', W), ('/mlp/linear_0.b', b),
+        ('/mlp/linear_1.W', W), ('/mlp/linear_1.b', b),
+        ('/mlp/linear_2.W', W), ('/mlp/linear_2.b', b)])
+
+        Or, select just the weights of the MLP by passing the parameter
+        name `W`:
+
+        >>> w_select = Selector([mlp])
+        >>> w_select.get_parameters('W')  # doctest: +NORMALIZE_WHITESPACE
+        OrderedDict([('/mlp/linear_0.W', W), ('/mlp/linear_1.W', W),
+        ('/mlp/linear_2.W', W)])
 
         """
         def recursion(brick):
             # TODO path logic should be separate
-            result = [(Path([Path.BrickName(brick.name),
-                             Path.ParamName(param.name)]),
-                       param)
-                      for param in brick.params
-                      if not param_name or param.name == param_name]
+            result = [
+                (Path([Path.BrickName(brick.name),
+                       Path.ParameterName(parameter.name)]),
+                 parameter)
+                for parameter in brick.parameters
+                if not parameter_name or parameter.name == parameter_name]
             result = OrderedDict(result)
             for child in brick.children:
-                for path, param in recursion(child).items():
+                for path, parameter in recursion(child).items():
                     new_path = Path([Path.BrickName(brick.name)]) + path
                     if new_path in result:
                         raise ValueError(
                             "Name collision encountered while retrieving " +
                             "parameters." +
                             name_collision_error_message.format(new_path))
-                    result[new_path] = param
+                    result[new_path] = parameter
             return result
         result = dict_union(*[recursion(brick)
                             for brick in self.bricks])

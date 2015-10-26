@@ -5,7 +5,8 @@ using Theano.
 
 Want to get try it out? Start by :doc:`installing <setup>` Blocks and having a
 look at the :ref:`quickstart <quickstart>` further down this page. Once you're
-hooked, try your hand at the :ref:`tutorials <tutorials>`.
+hooked, try your hand at the :ref:`tutorials <tutorials>` and the
+examples_.
 
 Blocks is developed in parallel with Fuel_, a dataset processing framework.
 
@@ -23,6 +24,7 @@ Blocks is developed in parallel with Fuel_, a dataset processing framework.
 .. _mailing list: https://groups.google.com/forum/#!forum/blocks-users
 .. _making a GitHub issue: https://github.com/mila-udem/blocks/issues/new
 .. _Fuel: https://github.com/mila-udem/fuel
+.. _examples: https://github.com/mila-udem/blocks-examples
 
 .. _tutorials:
 
@@ -87,13 +89,13 @@ Calculate your loss function.
 
 Load your training data using Fuel.
 
->>> mnist_train = MNIST("train")
+>>> mnist_train = MNIST(("train",))
 >>> train_stream = Flatten(
 ...     DataStream.default_stream(
 ...         dataset=mnist_train,
 ...         iteration_scheme=SequentialScheme(mnist_train.num_examples, 128)),
 ...     which_sources=('features',))
->>> mnist_test = MNIST("test")
+>>> mnist_test = MNIST(("test",))
 >>> test_stream = Flatten(
 ...     DataStream.default_stream(
 ...         dataset=mnist_test,
@@ -106,7 +108,7 @@ And train!
 >>> main_loop = MainLoop(
 ...     model=Model(cost), data_stream=train_stream,
 ...     algorithm=GradientDescent(
-...         cost=cost, params=ComputationGraph(cost).parameters,
+...         cost=cost, parameters=ComputationGraph(cost).parameters,
 ...         step_rule=Scale(learning_rate=0.1)),
 ...     extensions=[FinishAfter(after_n_epochs=5),
 ...                 DataStreamMonitoring(
@@ -117,6 +119,9 @@ And train!
 >>> main_loop.run() # doctest: +ELLIPSIS
 <BLANKLINE>
 ...
+
+For a runnable version of this code, please see the MNIST demo
+in our repository with examples_.
 
 Features
 --------

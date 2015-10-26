@@ -30,11 +30,11 @@ class LookupTable(Initializable):
 
     @property
     def W(self):
-        return self.params[0]
+        return self.parameters[0]
 
     def _allocate(self):
-        self.params.append(shared_floatx_nans((self.length, self.dim),
-                           name='W'))
+        self.parameters.append(shared_floatx_nans((self.length, self.dim),
+                               name='W'))
 
     def _initialize(self):
         self.weights_init.initialize(self.W, self.rng)
@@ -57,7 +57,7 @@ class LookupTable(Initializable):
             representation element.
 
         """
-        check_theano_variable(indices, None, "int")
+        check_theano_variable(indices, None, ("int", "uint"))
         output_shape = [indices.shape[i]
                         for i in range(indices.ndim)] + [self.dim]
         return self.W[indices.flatten()].reshape(output_shape)

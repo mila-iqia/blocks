@@ -28,13 +28,6 @@ release is in the ``stable`` branch and can be installed as follows.
    Installing requirements from GitHub requires pip 1.5 or higher; you can
    update with ``pip update pip``.
 
-If you want to make sure that you can use the plotting integration with Bokeh_,
-run this command after installing the main framework.
-
-.. code-block:: bash
-
-   $ pip install git+git://github.com/mila-udem/blocks.git#egg=blocks[plot]
-
 If you don't have administrative rights, add the ``--user`` switch to the
 install commands to install the packages in your home folder. If you want to
 update Blocks, simply repeat the first command with the ``--upgrade`` switch
@@ -65,7 +58,7 @@ Blocks' requirements are
 * Toolz_, to add a bit of functional programming where it is needed
 
 Bokeh_ is an optional requirement for if you want to use live plotting of your
-training progress.
+training progress (part of ``blocks-extras_``).
 
 We develop using the bleeding-edge version of Theano, so be sure to follow the
 `relevant installation instructions`_ to make sure that your Theano version is
@@ -79,6 +72,7 @@ up to date if you didn't install it through Blocks.
 .. _six: http://pythonhosted.org/six/
 .. _Toolz: http://toolz.readthedocs.org/
 .. _relevant installation instructions: http://deeplearning.net/software/theano/install.html#bleeding-edge-install-instructions
+.. _blocks-extras: https://github.com/mila-udem/blocks-extras
 
 Development
 -----------
@@ -90,7 +84,7 @@ with your own GitHub user name:
 
 .. code-block:: bash
 
-   $ pip install -e git+git@github.com:USER/blocks.git#egg=blocks[test,plot,docs] --src=$HOME \
+   $ pip install -e git+git@github.com:USER/blocks.git#egg=blocks[test,docs] --src=$HOME \
      -r https://raw.githubusercontent.com/mila-udem/blocks/master/requirements.txt
 
 As with the usual installation, you can use ``--user`` or ``--no-deps`` if you
@@ -102,7 +96,7 @@ command from the folder you cloned Blocks to:
 
 .. code-block:: bash
 
-   $ pip install -e file:.#egg=blocks[test,plot,docs] -r requirements.txt
+   $ pip install -e file:.#egg=blocks[test,docs] -r requirements.txt
 
 .. _fork Blocks on GitHub: https://github.com/mila-udem/blocks/fork
 

@@ -1,8 +1,8 @@
 """Objects for encapsulating parameter initialization strategies."""
 from abc import ABCMeta, abstractmethod
+import numbers
 
 import numpy
-import six
 import theano
 from six import add_metaclass
 
@@ -158,7 +158,23 @@ class Orthogonal(NdarrayInitialization):
 
     Only works for 2D arrays.
 
+    Parameters
+    ----------
+    scale : float, optional
+        Multiply the resulting matrix with a scalar. Defaults to 1.
+        For a discussion of the importance of scale for training time
+        and generalization refer to  [Saxe2013]_.
+
+    ..
+        [Saxe2014] Saxe, A.M., McClelland, J.L., Ganguli, S., 2013.
+            Exact solutions to the nonlinear dynamics of learning in deep
+            linear neural networks.
+            arXiv:1312.6120 [cond-mat, q-bio, stat].
+
     """
+    def __init__(self, scale=1):
+        self.scale = scale
+
     def generate(self, rng, shape):
         if len(shape) != 2:
             raise ValueError
@@ -169,7 +185,7 @@ class Orthogonal(NdarrayInitialization):
             M = rng.randn(*shape).astype(theano.config.floatX)
             Q, R = numpy.linalg.qr(M)
             Q = Q * numpy.sign(numpy.diag(R))
-            return Q
+            return Q * self.scale
 
         M1 = rng.randn(shape[0], shape[0]).astype(theano.config.floatX)
         M2 = rng.randn(shape[1], shape[1]).astype(theano.config.floatX)
@@ -182,7 +198,7 @@ class Orthogonal(NdarrayInitialization):
         Q2 = Q2 * numpy.sign(numpy.diag(R2))
 
         n_min = min(shape[0], shape[1])
-        return numpy.dot(Q1[:, :n_min], Q2[:n_min, :])
+        return numpy.dot(Q1[:, :n_min], Q2[:n_min, :]) * self.scale
 
 
 class Sparse(NdarrayInitialization):
@@ -209,7 +225,7 @@ class Sparse(NdarrayInitialization):
 
     def generate(self, rng, shape):
         weights = self.sparse_init.generate(rng, shape)
-        if isinstance(self.num_init, six.integer_types):
+        if isinstance(self.num_init, numbers.Integral):
             if not self.num_init > 0:
                 raise ValueError
             num_init = self.num_init

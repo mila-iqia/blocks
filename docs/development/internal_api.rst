@@ -41,12 +41,6 @@ Utils
    :private-members:
    :show-inheritance:
 
-.. automodule:: blocks.dump
-   :undoc-members:
-   :members:
-   :private-members:
-   :show-inheritance:
-
 .. automodule:: blocks.utils.profile
    :undoc-members:
    :members:

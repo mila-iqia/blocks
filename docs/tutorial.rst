@@ -161,7 +161,7 @@ the Fuel_ framework. Have a look at `this tutorial`_ to get started.
 After having configured Fuel, you can load the dataset.
 
 >>> from fuel.datasets import MNIST
->>> mnist = MNIST("train")
+>>> mnist = MNIST(("train",))
 
 Datasets only provide an interface to the data. For actual training, we will
 need to iterate over the data in minibatches. This is done by initiating a data
@@ -180,13 +180,13 @@ The training algorithm we will use is straightforward SGD with a fixed
 learning rate.
 
 >>> from blocks.algorithms import GradientDescent, Scale
->>> algorithm = GradientDescent(cost=cost, params=cg.parameters,
+>>> algorithm = GradientDescent(cost=cost, parameters=cg.parameters,
 ...                             step_rule=Scale(learning_rate=0.1))
 
 During training we will want to monitor the performance of our model on
 a separate set of examples. Let's create a new data stream for that.
 
->>> mnist_test = MNIST("test")
+>>> mnist_test = MNIST(("test",))
 >>> data_stream_test = Flatten(DataStream.default_stream(
 ...     mnist_test,
 ...     iteration_scheme=SequentialScheme(
@@ -251,4 +251,4 @@ Log records from the iteration 235:
 .. _doctest mode: http://ipython.org/ipython-doc/dev/interactive/tips.html#run-doctests
 .. _download the MNIST files: http://yann.lecun.com/exdb/mnist/
 .. _Fuel: http://fuel.readthedocs.org/en/latest/
-.. _this tutorial: https://github.com/mila-udem/fuel/blob/master/docs/built_in_datasets.rst
+.. _this tutorial: https://fuel.readthedocs.org/en/latest/built_in_datasets.html
