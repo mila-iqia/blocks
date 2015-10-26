@@ -4,7 +4,6 @@ progressbar2==2.7.3
 pyyaml==3.11
 six==1.9.0
 toolz==0.7.2
-picklable-itertools==0.1.0
 
 --allow-external theano
 --allow-unverified theano
