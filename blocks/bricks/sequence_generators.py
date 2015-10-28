@@ -582,6 +582,19 @@ class AbstractEmitter(Brick):
 
     :class:`SoftmaxEmitter` : for integer outputs
 
+    Notes
+    -----
+    An important detail about the emitter cost is that it will be
+    evaluated with inputs of different dimensions so it has to be
+    flexible enough to handle this. The two ways in which it can be
+    applied are:
+
+        1. In :meth:BaseSequenceGenerator.cost_matrix where it will
+        be applied to the whole sequence at once.
+
+        2. In :meth:BaseSequenceGenerator.generate where it will be
+        applied to only one step of the sequence.
+
     """
     @abstractmethod
     def emit(self, readouts):

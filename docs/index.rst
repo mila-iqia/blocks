@@ -46,6 +46,7 @@ In-depth
 
    rnn
    configuration
+   create_your_own_brick
    serialization
    api/index.rst
    development/index.rst
