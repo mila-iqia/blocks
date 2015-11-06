@@ -162,31 +162,44 @@ class Convolutional(Initializable):
                                           self.step, self.border_mode))
         return super(Convolutional, self).get_dim(name)
 
+    @property
+    def num_output_channels(self):
+        return self.num_filters
 
-class MaxPooling(Initializable, Feedforward):
-    """Max pooling layer.
 
-    Parameters
-    ----------
-    pooling_size : tuple
-        The height and width of the pooling region i.e. this is the factor
-        by which your input's last two dimensions will be downscaled.
-    step : tuple, optional
-        The vertical and horizontal shift (stride) between pooling regions.
-        By default this is equal to `pooling_size`. Setting this to a lower
-        number results in overlapping pooling regions.
-    input_dim : tuple, optional
-        A tuple of integers representing the shape of the input. The last
-        two dimensions will be used to calculate the output dimension.
+class Pooling(Initializable, Feedforward):
+    """Base Brick for pooling operations.
+
+    This should generally not be instantiated directly; see
+    :class:`MaxPooling`.
 
     """
-    @lazy(allocation=['pooling_size'])
-    def __init__(self, pooling_size, step=None, input_dim=None, **kwargs):
-        super(MaxPooling, self).__init__(**kwargs)
-
-        self.input_dim = input_dim
+    @lazy(allocation=['mode', 'pooling_size'])
+    def __init__(self, mode, pooling_size, step, input_dim, ignore_border,
+                 padding, **kwargs):
+        super(Pooling, self).__init__(**kwargs)
         self.pooling_size = pooling_size
+        self.mode = mode
         self.step = step
+        self.input_dim = input_dim if input_dim is not None else (None,) * 3
+        self.ignore_border = ignore_border
+        self.padding = padding
+
+    @property
+    def image_size(self):
+        return self.input_dim[-2:]
+
+    @image_size.setter
+    def image_size(self, value):
+        self.input_dim = self.input_dim[:-2] + value
+
+    @property
+    def num_channels(self):
+        return self.input_dim[0]
+
+    @num_channels.setter
+    def num_channels(self, value):
+        self.input_dim = (value,) + self.input_dim[1:]
 
     @application(inputs=['input_'], outputs=['output'])
     def apply(self, input_):
@@ -207,16 +220,112 @@ class MaxPooling(Initializable, Feedforward):
             with the last two dimensions downsampled.
 
         """
-        output = max_pool_2d(input_, self.pooling_size, st=self.step)
+        output = max_pool_2d(input_, self.pooling_size, st=self.step,
+                             mode=self.mode, padding=self.padding,
+                             ignore_border=self.ignore_border)
         return output
 
     def get_dim(self, name):
         if name == 'input_':
             return self.input_dim
         if name == 'output':
-            return tuple(DownsampleFactorMax.out_shape(self.input_dim,
-                                                       self.pooling_size,
-                                                       st=self.step))
+            return tuple(DownsampleFactorMax.out_shape(
+                self.input_dim, self.pooling_size, st=self.step,
+                ignore_border=self.ignore_border, padding=self.padding))
+
+    @property
+    def num_output_channels(self):
+        return self.input_dim[0]
+
+
+class MaxPooling(Pooling):
+    """Max pooling layer.
+
+    Parameters
+    ----------
+    pooling_size : tuple
+        The height and width of the pooling region i.e. this is the factor
+        by which your input's last two dimensions will be downscaled.
+    step : tuple, optional
+        The vertical and horizontal shift (stride) between pooling regions.
+        By default this is equal to `pooling_size`. Setting this to a lower
+        number results in overlapping pooling regions.
+    input_dim : tuple, optional
+        A tuple of integers representing the shape of the input. The last
+        two dimensions will be used to calculate the output dimension.
+    padding : tuple, optional
+        A tuple of integers representing the vertical and horizontal
+        zero-padding to be applied to each of the top and bottom
+        (vertical) and left and right (horizontal) edges. For example,
+        an argument of (4, 3) will apply 4 pixels of padding to the
+        top edge, 4 pixels of padding to the bottom edge, and 3 pixels
+        each for the left and right edge. By default, no padding is
+        performed.
+    ignore_border : bool, optional
+        Whether or not to do partial downsampling based on borders where
+        the extent of the pooling region reaches beyond the edge of the
+        image. If `True`, a (5, 5) image with (2, 2) pooling regions
+        and (2, 2) step will be downsampled to shape (2, 2), otherwise
+        it will be downsampled to (3, 3). `True` by default.
+
+    Notes
+    -----
+    .. warning::
+        As of this writing, setting `ignore_border` to `False` with a step
+        not equal to the pooling size will force Theano to perform pooling
+        computations on CPU rather than GPU, even if you have specified
+        a GPU as your computation device. Additionally, Theano will only
+        use [cuDNN]_ (if available) for pooling computations with
+        `ignure_border` set to `True`. You can ensure that the entire
+        input is captured by at least one pool by using the `padding`
+        argument to add zero padding prior to pooling being performed.
+
+    .. [cuDNN]: `NVIDIA cuDNN <https://developer.nvidia.com/cudnn>`_.
+
+    """
+    @lazy(allocation=['pooling_size'])
+    def __init__(self, pooling_size, step=None, input_dim=None,
+                 ignore_border=True, padding=(0, 0),
+                 **kwargs):
+        super(MaxPooling, self).__init__('max', pooling_size,
+                                         step=step, input_dim=input_dim,
+                                         ignore_border=ignore_border,
+                                         padding=padding, **kwargs)
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        # Fix objects created before pull request #899.
+        self.mode = getattr(self, 'mode', 'max')
+        self.padding = getattr(self, 'padding', (0, 0))
+        self.ignore_border = getattr(self, 'ignore_border', False)
+
+
+class AveragePooling(Pooling):
+    """Average pooling layer.
+
+    Parameters
+    ----------
+    include_padding : bool, optional
+        When calculating an average, include zeros that are the
+        result of zero padding added by the `padding` argument.
+        A value of `True` is only accepted if `ignore_border`
+        is also `True`. `False` by default.
+
+    Notes
+    -----
+    For documentation on the remainder of the arguments to this
+    class, see :class:`MaxPooling`.
+
+    """
+    @lazy(allocation=['pooling_size'])
+    def __init__(self, pooling_size, step=None, input_dim=None,
+                 ignore_border=True, padding=(0, 0),
+                 include_padding=False, **kwargs):
+        mode = 'average_inc_pad' if include_padding else 'average_exc_pad'
+        super(AveragePooling, self).__init__(mode, pooling_size,
+                                             step=step, input_dim=input_dim,
+                                             ignore_border=ignore_border,
+                                             padding=padding, **kwargs)
 
 
 class _AllocationMixin(object):
@@ -225,6 +334,14 @@ class _AllocationMixin(object):
                      'batch_size', 'num_channels', 'image_size',
                      'tied_biases', 'use_bias']:
             setattr(self.convolution, attr, getattr(self, attr))
+
+    @property
+    def num_output_channels(self):
+        # Assumes an elementwise activation function. Would need to
+        # change to support e.g. maxout, but that would also require
+        # a way of querying the activation function for this kind of
+        # information.
+        return self.num_filters
 
 
 class ConvolutionalActivation(_AllocationMixin, Sequence, Initializable):
@@ -426,7 +543,7 @@ class ConvolutionalSequence(Sequence, Initializable, Feedforward):
             if layer.image_size is not None:
                 output_shape = layer.get_dim('output')
                 image_size = output_shape[1:]
-            num_channels = layer.num_filters
+            num_channels = layer.num_output_channels
 
 
 class Flattener(Brick):

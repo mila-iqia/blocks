@@ -1,3 +1,4 @@
+import pickle
 import numpy
 from nose.tools import assert_raises_regexp
 
@@ -8,7 +9,8 @@ from theano import function
 
 from blocks.bricks import Rectifier
 from blocks.bricks.conv import (Convolutional, ConvolutionalLayer, MaxPooling,
-                                ConvolutionalActivation, ConvolutionalSequence)
+                                AveragePooling, ConvolutionalActivation,
+                                ConvolutionalSequence)
 from blocks.initialization import Constant
 from blocks.graph import ComputationGraph
 
@@ -117,11 +119,108 @@ def test_max_pooling():
                        dtype=theano.config.floatX)
     assert_allclose(func(x_val),
                     numpy.ones((batch_size, num_channels,
-                                x_size / pool_size + 1,
-                                y_size / pool_size + 1)))
+                                x_size / pool_size,
+                                y_size / pool_size)))
     pool.input_dim = (x_size, y_size)
     pool.get_dim('output') == (num_channels, x_size / pool_size + 1,
                                y_size / pool_size + 1)
+
+
+def test_max_pooling_ignore_border_true():
+    x = tensor.tensor4('x')
+    brick = MaxPooling((3, 4), ignore_border=True)
+    y = brick.apply(x)
+    out = y.eval({x: numpy.zeros((8, 3, 10, 13), dtype=theano.config.floatX)})
+    assert out.shape == (8, 3, 3, 3)
+
+
+def test_max_pooling_ignore_border_false():
+    x = tensor.tensor4('x')
+    brick = MaxPooling((5, 7), ignore_border=False)
+    y = brick.apply(x)
+    out = y.eval({x: numpy.zeros((4, 6, 12, 15), dtype=theano.config.floatX)})
+    assert out.shape == (4, 6, 3, 3)
+
+
+def test_max_pooling_padding():
+    x = tensor.tensor4('x')
+    brick = MaxPooling((6, 2), padding=(3, 1), ignore_border=True)
+    y = brick.apply(x)
+    out = y.eval({x: numpy.zeros((2, 3, 6, 10), dtype=theano.config.floatX)})
+    assert out.shape == (2, 3, 2, 6)
+
+
+def test_max_pooling_old_pickle():
+    brick = MaxPooling((3, 4))
+    brick.allocate()
+    # Simulate old pickle, before #899.
+    del brick.ignore_border
+    del brick.mode
+    del brick.padding
+    # Pickle in this broken state and re-load.
+    broken_pickled = pickle.dumps(brick)
+    loaded = pickle.loads(broken_pickled)
+    # Same shape, same step.
+    assert brick.pooling_size == loaded.pooling_size
+    assert brick.step == loaded.step
+    # Check that the new attributes were indeed added.
+    assert hasattr(loaded, 'padding') and loaded.padding == (0, 0)
+    assert hasattr(loaded, 'mode') and loaded.mode == 'max'
+    assert hasattr(loaded, 'ignore_border') and not loaded.ignore_border
+    try:
+        loaded.apply(tensor.tensor4())
+    except Exception:
+        raise AssertionError("failed to apply on unpickled MaxPooling")
+    # Make sure we're not overriding these attributes wrongly.
+    new_brick = MaxPooling((4, 3), padding=(2, 1))
+    new_brick_unpickled = pickle.loads(pickle.dumps(new_brick))
+    assert new_brick_unpickled.padding == (2, 1)
+    assert new_brick_unpickled.ignore_border
+
+
+def test_average_pooling():
+    x = tensor.tensor4('x')
+    brick = AveragePooling((2, 2))
+    y = brick.apply(x)
+    tmp = numpy.arange(16, dtype=theano.config.floatX).reshape(1, 1, 4, 4)
+    x_ = numpy.tile(tmp, [2, 3, 1, 1])
+    out = y.eval({x: x_})
+    assert_allclose(
+        out - numpy.array([[10 / 4., 18 / 4.], [42 / 4., 50 / 4.]]),
+        numpy.zeros_like(out))
+
+
+def test_average_pooling_inc_padding():
+    x = tensor.tensor4('x')
+    brick = AveragePooling((2, 2), ignore_border=True, padding=(1, 1),
+                           include_padding=True)
+    y = brick.apply(x)
+    output = y.eval({x: 3 * numpy.ones((1, 1, 2, 2),
+                                       dtype=theano.config.floatX)})
+    expected_out = numpy.array([0.75, 0.75, 0.75, 0.75]).reshape(1, 1, 2, 2)
+    assert_allclose(expected_out, output)
+
+
+def test_average_pooling_exc_padding():
+    x = tensor.tensor4('x')
+    brick = AveragePooling((2, 2), ignore_border=True, padding=(1, 1),
+                           include_padding=False)
+    y = brick.apply(x)
+    x_ = 3 * numpy.ones((1, 1, 2, 2), dtype=theano.config.floatX)
+    output = y.eval({x: x_})
+    assert_allclose(x_, output)
+
+
+def test_pooling_works_in_convolutional_sequence():
+    x = tensor.tensor4('x')
+    brick = ConvolutionalSequence([AveragePooling((2, 2), step=(2, 2)),
+                                   MaxPooling((4, 4), step=(2, 2),
+                                              ignore_border=True)],
+                                  image_size=(16, 32), num_channels=3)
+    brick.allocate()
+    y = brick.apply(x)
+    out = y.eval({x: numpy.empty((2, 3, 16, 32), dtype=theano.config.floatX)})
+    assert out.shape == (2, 3, 3, 7)
 
 
 def test_convolutional_layer():
@@ -147,7 +246,7 @@ def test_convolutional_layer():
     x_val = numpy.ones((batch_size, num_channels, 17, 13),
                        dtype=theano.config.floatX)
     assert_allclose(func(x_val), numpy.prod(filter_size) * num_channels *
-                    numpy.ones((batch_size, num_filters, 5, 4)) + 5)
+                    numpy.ones((batch_size, num_filters, 5, 3)) + 5)
 
     assert_equal(conv.convolution.batch_size, batch_size)
     assert_equal(conv.pooling.batch_size, batch_size)
@@ -178,7 +277,7 @@ def test_convolutional_sequence():
     func = function([x], y)
 
     x_val = numpy.ones((batch_size, 4, 17, 13), dtype=theano.config.floatX)
-    y_val = (numpy.ones((batch_size, 4, 4, 3)) *
+    y_val = (numpy.ones((batch_size, 4, 4, 2)) *
              (9 * 4 + 5) * 4 * 5)
     assert_allclose(func(x_val), y_val)
 
