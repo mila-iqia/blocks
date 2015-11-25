@@ -4,7 +4,7 @@ from theano.tensor.nnet.abstract_conv import (AbstractConv2d_gradInputs,
                                               get_conv_output_shape)
 from theano.tensor.signal.pool import pool_2d, Pool
 
-from blocks.bricks import Initializable, Feedforward, Sequence
+from blocks.bricks import Initializable, Feedforward, Sequence, Activation
 from blocks.bricks.base import application, Brick, lazy
 from blocks.roles import add_role, FILTER, BIAS
 from blocks.utils import shared_floatx_nans
@@ -560,6 +560,10 @@ class ConvolutionalSequence(Sequence, Initializable, Feedforward):
         num_channels = self.num_channels
         image_size = self.image_size
         for layer in self.layers:
+            if isinstance(layer, Activation):
+                # Activations operate elementwise; nothing to set.
+                layer._push_allocation_config()
+                continue
             if self.border_mode is not None:
                 layer.border_mode = self.border_mode
             layer.tied_biases = self.tied_biases
