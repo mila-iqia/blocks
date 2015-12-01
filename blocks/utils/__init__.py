@@ -108,8 +108,8 @@ def shared_floatx_nans(shape, **kwargs):
     return shared_floatx(numpy.nan * numpy.zeros(shape), **kwargs)
 
 
-def shared_floatx(value, name=None, borrow=False, dtype=None):
-    """Transform a value into a shared variable of type floatX.
+def shared_floatx(value, name=None, borrow=False, dtype=None, **kwargs):
+    r"""Transform a value into a shared variable of type floatX.
 
     Parameters
     ----------
@@ -123,6 +123,8 @@ def shared_floatx(value, name=None, borrow=False, dtype=None):
     dtype : :obj:`str`, optional
         The `dtype` of the shared variable. Default value is
         :attr:`config.floatX`.
+    \*\*kwargs
+        Keyword arguments to pass to the :func:`~theano.shared` function.
 
     Returns
     -------
@@ -133,12 +135,11 @@ def shared_floatx(value, name=None, borrow=False, dtype=None):
     if dtype is None:
         dtype = theano.config.floatX
     return theano.shared(theano._asarray(value, dtype=dtype),
-                         name=name,
-                         borrow=borrow)
+                         name=name, borrow=borrow, **kwargs)
 
 
-def shared_like(variable, name=None):
-    """Construct a shared variable to hold the value of a tensor variable.
+def shared_like(variable, name=None, **kwargs):
+    r"""Construct a shared variable to hold the value of a tensor variable.
 
     Parameters
     ----------
@@ -148,6 +149,8 @@ def shared_like(variable, name=None):
     name : :obj:`str` or :obj:`None`
         The name of the shared variable. If None, the name is determined
         based on variable's name.
+    \*\*kwargs
+        Keyword arguments to pass to the :func:`~theano.shared` function.
 
     """
     variable = tensor.as_tensor_variable(variable)
@@ -155,7 +158,7 @@ def shared_like(variable, name=None):
         name = "shared_{}".format(variable.name)
     return theano.shared(numpy.zeros((0,) * variable.ndim,
                                      dtype=variable.dtype),
-                         name=name)
+                         name=name, **kwargs)
 
 
 def reraise_as(new_exc):
