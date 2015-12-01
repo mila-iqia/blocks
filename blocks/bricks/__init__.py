@@ -64,7 +64,40 @@ class Random(Brick):
         self._theano_rng = theano_rng
 
 
-class Initializable(Brick):
+class RNGMixin(object):
+    """Mixin for initialization random number generators."""
+
+    seed_rng = numpy.random.RandomState(config.default_seed)
+
+    @property
+    def seed(self):
+        if getattr(self, '_seed', None) is not None:
+            return self._seed
+        else:
+            self._seed = self.seed_rng.randint(
+                numpy.iinfo(numpy.int32).max)
+            return self._seed
+
+    @seed.setter
+    def seed(self, value):
+        if hasattr(self, '_seed'):
+            raise AttributeError("seed already set")
+        self._seed = value
+
+    @property
+    def rng(self):
+        if getattr(self, '_rng', None) is not None:
+            return self._rng
+        else:
+            self._rng = numpy.random.RandomState(self.seed)
+            return self._rng
+
+    @rng.setter
+    def rng(self, rng):
+        self._rng = rng
+
+
+class Initializable(RNGMixin, Brick):
     """Base class for bricks which push parameter initialization.
 
     Many bricks will initialize children which perform a linear
@@ -99,7 +132,6 @@ class Initializable(Brick):
 
     """
     has_biases = True
-    seed_rng = numpy.random.RandomState(config.default_seed)
 
     @lazy()
     def __init__(self, weights_init=None, biases_init=None, use_bias=True,
@@ -112,33 +144,6 @@ class Initializable(Brick):
             raise ValueError("This brick does not support biases config")
         self.use_bias = use_bias
         self.seed = seed
-
-    @property
-    def seed(self):
-        if getattr(self, '_seed', None) is not None:
-            return self._seed
-        else:
-            self._seed = self.seed_rng.randint(
-                numpy.iinfo(numpy.int32).max)
-            return self._seed
-
-    @seed.setter
-    def seed(self, value):
-        if hasattr(self, '_seed'):
-            raise AttributeError("seed already set")
-        self._seed = value
-
-    @property
-    def rng(self):
-        if getattr(self, '_rng', None) is not None:
-            return self._rng
-        else:
-            self._rng = numpy.random.RandomState(self.seed)
-            return self._rng
-
-    @rng.setter
-    def rng(self, rng):
-        self._rng = rng
 
     def _push_initialization_config(self):
         for child in self.children:
