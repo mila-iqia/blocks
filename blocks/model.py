@@ -48,7 +48,7 @@ class Model(ComputationGraph):
     it:
 
     >>> model.get_top_bricks() #doctest: +ELLIPSIS
-    [<blocks.bricks.MLP object at ...]
+    [<blocks.bricks.sequences.MLP object at ...]
 
     You can also get "hierarchical" names for the parameters,
     which encode the position of the owning brick in the

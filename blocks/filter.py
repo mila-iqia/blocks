@@ -84,7 +84,8 @@ class VariableFilter(object):
 
     Examples
     --------
-    >>> from blocks.bricks import MLP, Linear, Logistic, Identity, BIAS
+    >>> from blocks.bricks import MLP, Linear, Logistic, Identity
+    >>> from blocks.roles import BIAS
     >>> mlp = MLP(activations=[Identity(), Logistic()], dims=[20, 10, 20])
     >>> from theano import tensor
     >>> x = tensor.matrix()
