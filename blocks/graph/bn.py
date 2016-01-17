@@ -10,7 +10,9 @@ from theano import tensor
 
 from . import add_annotation
 from ..roles import (BATCH_NORM_OFFSET, BATCH_NORM_DIVISOR,
-                     BATCH_NORM_MINIBATCH_ESTIMATE, INPUT, add_role)
+                     BATCH_NORM_POPULATION_STATISTICS,
+                     BATCH_NORM_MINIBATCH_ESTIMATE, INPUT, add_role,
+                     has_roles)
 
 
 def batch_normalize(computation_graph, epsilon=1e-4):
@@ -32,6 +34,11 @@ def batch_normalize(computation_graph, epsilon=1e-4):
         The computation graph, with :class:`BatchNormalization`
         applications transformed to use minibatch statistics instead
         of accumulated population statistics.
+    population_to_minibatch : OrderedDict
+        A mapping of variables used in the original graph for population
+        means and standard deviations to the minibatch-derived quantities
+        that replace them. Useful to define updates in order to track
+        the approximate population statistics during learning.
 
     Notes
     -----
@@ -92,4 +99,11 @@ def batch_normalize(computation_graph, epsilon=1e-4):
         prepare_replacement(stdevs[application_call], minibatch_std,
                             BATCH_NORM_DIVISOR, application_call)
 
-    return computation_graph.replace(replacements)
+    new_graph = computation_graph.replace(replacements)
+
+    population_to_minibatch = collections.OrderedDict()
+    for original_graph_node, replacement in replacements:
+        pop_stats = original_graph_node.owner.inputs[0]
+        assert has_roles(pop_stats, [BATCH_NORM_POPULATION_STATISTICS])
+        population_to_minibatch[pop_stats] = replacement
+    return new_graph, population_to_minibatch

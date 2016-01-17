@@ -120,7 +120,7 @@ def test_batch_normalization_train_apply():
         epsilon = numpy.cast[theano.config.floatX](1e-4)
         bn, x, y = apply_setup(input_dim, broadcastable, save_memory)
         cg = ComputationGraph([y])
-        new_cg = batch_normalize(cg, epsilon=epsilon)
+        new_cg, _ = batch_normalize(cg, epsilon=epsilon)
         y_hat = new_cg.outputs[0]
 
         rng = numpy.random.RandomState((2015, 12, 16))
