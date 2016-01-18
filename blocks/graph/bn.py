@@ -103,7 +103,8 @@ def batch_normalize(computation_graph, epsilon=1e-4):
 
     population_to_minibatch = collections.OrderedDict()
     for original_graph_node, replacement in replacements:
-        pop_stats = original_graph_node.owner.inputs[0]
-        assert has_roles(pop_stats, [BATCH_NORM_POPULATION_STATISTICS])
+        pop_stats = original_graph_node
+        while not has_roles(pop_stats, [BATCH_NORM_POPULATION_STATISTICS]):
+            pop_stats = pop_stats.owner.inputs[0]
         population_to_minibatch[pop_stats] = replacement
     return new_graph, population_to_minibatch
