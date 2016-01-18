@@ -106,5 +106,13 @@ def batch_normalize(computation_graph, epsilon=1e-4):
         pop_stats = original_graph_node
         while not has_roles(pop_stats, [BATCH_NORM_POPULATION_STATISTICS]):
             pop_stats = pop_stats.owner.inputs[0]
+        # Above, we are replacing a node that has a batch axis added to it
+        # with a replacement formed via a reduction with keepdims=True. In
+        # order for the actual shared variable and the replacement to have
+        # compatible dimensions, we need to drop the leading axis of the
+        # replacement.
+        replacement = replacement[0]
+        assert pop_stats.dtype == replacement.dtype
+        assert pop_stats.broadcastable == replacement.broadcastable
         population_to_minibatch[pop_stats] = replacement
     return new_graph, population_to_minibatch

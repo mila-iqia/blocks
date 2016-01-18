@@ -35,11 +35,10 @@ def test_batch_normalization_allocation_initialization():
         assert save_memory == bn.save_memory
         assert input_dim == bn.input_dim
         assert bn.broadcastable == broadcastable
-        real_broadcastable = (True,) + input_broadcastable
-        assert bn.W.broadcastable == real_broadcastable
-        assert bn.b.broadcastable == real_broadcastable
-        assert bn.population_mean.broadcastable == real_broadcastable
-        assert bn.population_stdev.broadcastable == real_broadcastable
+        assert bn.W.broadcastable == input_broadcastable
+        assert bn.b.broadcastable == input_broadcastable
+        assert bn.population_mean.broadcastable == input_broadcastable
+        assert bn.population_stdev.broadcastable == input_broadcastable
         assert_allclose(bn.population_mean.get_value(borrow=True), 0.)
         assert_allclose(bn.population_stdev.get_value(borrow=True), 1.)
         assert_equal(bn.W.get_value(borrow=True).shape, expected_shape)
@@ -54,11 +53,11 @@ def test_batch_normalization_allocation_initialization():
         assert_allclose(bn.b.get_value(borrow=True), 0.)
         assert_allclose(bn.W.get_value(borrow=True), 1.)
 
-    yield check, 5, (1, 5)
-    yield check, (6, 7, 9), (1, 6, 7, 9), (False, False, False)
-    yield check, (7, 4, 3), (1, 1, 4, 3), (True, False, False)
-    yield check, (9, 3, 6), (1, 9, 1, 1), (False, True, True)
-    yield check, (7, 4, 5), (1, 7, 1, 5), (False, True, False), False
+    yield check, 5, (5,)
+    yield check, (6, 7, 9), (6, 7, 9), (False, False, False)
+    yield check, (7, 4, 3), (1, 4, 3), (True, False, False)
+    yield check, (9, 3, 6), (9, 1, 1), (False, True, True)
+    yield check, (7, 4, 5), (7, 1, 5), (False, True, False), False
 
 
 def apply_setup(input_dim, broadcastable, save_memory):
@@ -110,9 +109,9 @@ def test_batch_normalization_inference_apply():
                         (input_ - pop_mean) * (gamma / pop_stdev) + beta,
                         rtol=1e-4)
 
-    yield check, 9, (1, 9)
-    yield check, (5, 4), (1, 5, 4), None, False
-    yield check, (2, 9, 7), (1, 2, 1, 1), (False, True, True)
+    yield check, 9, (9,)
+    yield check, (5, 4), (5, 4), None, False
+    yield check, (2, 9, 7), (2, 1, 1), (False, True, True)
 
 
 def test_batch_normalization_train_apply():
@@ -128,8 +127,10 @@ def test_batch_normalization_train_apply():
                              (input_dim
                               if isinstance(input_dim, collections.Sequence)
                               else (input_dim,)))
-        axes = tuple(i for i, b in
-                     enumerate(bn.population_mean.broadcastable) if b)
+        # i + 1 because the axes are all shifted one over when the batch
+        # axis is added.
+        axes = (0,) + tuple((i + 1) for i, b in
+                            enumerate(bn.population_mean.broadcastable) if b)
 
         # NumPy implementation of the batch-normalization transform.
         def normalize(x):
@@ -170,9 +171,9 @@ def test_batch_normalization_train_apply():
                         atol=(1e-3 if theano.config.floatX == 'float32'
                               else 1e-7))
 
-    yield check, 9, (1, 9)
-    yield check, (5, 4), (1, 5, 4), None, False
-    yield check, (2, 9, 7), (1, 2, 1, 1), (False, True, True)
+    yield check, 9, (9,)
+    yield check, (5, 4), (5, 4), None, False
+    yield check, (2, 9, 7), (2, 1, 1), (False, True, True)
 
 
 def test_batch_normalization_image_size_setter():

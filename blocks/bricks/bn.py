@@ -84,20 +84,25 @@ class BatchNormalization(RNGMixin, Feedforward):
 
     @application(inputs=['input_'], outputs=['output'])
     def apply(self, input_, application_call):
-        mean = self.population_mean.copy(name='population_offset')
-        stdev = self.population_stdev.copy(name='population_divisor')
+        def add_batch_axis(var, name=None):
+            new_var = var.dimshuffle('x', *list(range(var.ndim)))
+            new_var.name = name
+            return new_var
 
         def annotate(var, role):
             add_role(var, role)
             add_annotation(var, self)
             add_annotation(var, application_call)
 
+        mean = add_batch_axis(self.population_mean, 'population_offset')
         annotate(mean, BATCH_NORM_OFFSET)
-        annotate(stdev, BATCH_NORM_DIVISOR)
 
+        stdev = add_batch_axis(self.population_stdev, 'population_divisor')
+        annotate(stdev, BATCH_NORM_DIVISOR)
+        W = add_batch_axis(self.W)
+        b = add_batch_axis(self.b)
         # Heavy lifting is done by the Theano utility function.
-        normalized = bn.batch_normalization(input_, self.W,
-                                            self.b, mean, stdev,
+        normalized = bn.batch_normalization(input_, W, b, mean, stdev,
                                             mode=('low_mem' if self.save_memory
                                                   else 'high_mem'))
         return normalized
@@ -110,10 +115,9 @@ class BatchNormalization(RNGMixin, Feedforward):
                          if self.broadcastable is None else self.broadcastable)
         if len(input_dim) != len(broadcastable):
             raise ValueError("input_dim and broadcastable must be same length")
-        var_dim = ((1,) +  # batch axis
-                   tuple(1 if broadcast else dim for dim, broadcast in
-                         equizip(input_dim, broadcastable)))
-        broadcastable = (True,) + broadcastable
+        var_dim = tuple(1 if broadcast else dim for dim, broadcast in
+                        equizip(input_dim, broadcastable))
+        broadcastable = broadcastable
 
         # "gamma", from the Ioffe & Szegedy manuscript.
         self._W = shared_floatx_nans(var_dim, name='batch_norm_scale',
