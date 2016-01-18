@@ -52,7 +52,8 @@ def batch_normalize(computation_graph, epsilon=1e-4):
     # Create filters for variables involved in a batch normalization brick
     # application.
     def make_variable_filter(role):
-        return VariableFilter(roles=[role])
+        from blocks.bricks import BatchNormalization
+        return VariableFilter(bricks=[BatchNormalization], roles=[role])
 
     mean_filter, stdev_filter, input_filter = map(make_variable_filter,
                                                   [BATCH_NORM_OFFSET,

@@ -270,12 +270,13 @@ def test_batch_normalized_mlp_allocation():
     assert not any(l.use_bias for l in mlp.linear_transformations)
 
 
-def test_batch_normalized_mlp_initialization():
+def test_batch_normalized_mlp_transformed():
+    """Smoke test that a graph involving a BatchNormalizedMLP transforms."""
+    x = tensor.matrix('x')
     mlp = BatchNormalizedMLP([Tanh(), Tanh()], [5, 7, 9])
-    mlp.allocate()
-    assert mlp.activations[0].children[0].input_dim == 7
-    assert mlp.activations[1].children[0].input_dim == 9
-    assert not any(l.use_bias for l in mlp.linear_transformations)
+    cg = ComputationGraph([mlp.apply(x)])
+    new_cg, replaced = batch_normalize(cg)
+    assert len(replaced) == 4  # 2 means, 2 standard deviations
 
 
 def test_batch_normalized_mlp_save_memory_propagated():
