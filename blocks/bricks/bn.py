@@ -221,9 +221,14 @@ class SpatialBatchNormalization(BatchNormalization):
 class BatchNormalizedMLP(MLP):
     """Convenient subclass for building an MLP with batch normalization.
 
+    Parameters
+    ----------
+    save_memory : bool, optional
+        See :class:`BatchNormalization`.
+
     Notes
     -----
-    All parameters are the same as :class:`~blocks.bricks.MLP`. Each
+    All other parameters are the same as :class:`~blocks.bricks.MLP`. Each
     activation brick is wrapped in a :class:`~blocks.bricks.Sequence`
     containing an appropriate :class:`BatchNormalization` brick and
     the activation that follows it.
@@ -237,14 +242,28 @@ class BatchNormalizedMLP(MLP):
     """
     @lazy(allocation=['dims'])
     def __init__(self, activations, dims, *args, **kwargs):
-        activations = [Sequence([BatchNormalization().apply, act.apply],
-                                name='batch_norm_activation_{}'.format(i))
-                       for i, act in enumerate(activations)]
+        save_memory = kwargs.pop('save_memory', True)
+        activations = [
+            Sequence([BatchNormalization(save_memory=save_memory).apply,
+                      act.apply], name='batch_norm_activation_{}'.format(i))
+            for i, act in enumerate(activations)
+        ]
         # Batch normalization bricks incorporate a bias, so there's no
         # need for our Linear bricks to have them.
         kwargs.setdefault('use_bias', False)
         super(BatchNormalizedMLP, self).__init__(activations, dims, *args,
                                                  **kwargs)
+
+    @property
+    def save_memory(self):
+        return self._save_memory
+
+    @save_memory.setter
+    def save_memory(self, value):
+        self._save_memory = value
+        for act in self.activations:
+            assert isinstance(act.children[0], BatchNormalization)
+            act.children[0].save_memory = value
 
     def _push_allocation_config(self):
         super(BatchNormalizedMLP, self)._push_allocation_config()

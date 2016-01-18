@@ -275,3 +275,12 @@ def test_batch_normalized_mlp_initialization():
     assert mlp.activations[0].children[0].input_dim == 7
     assert mlp.activations[1].children[0].input_dim == 9
     assert not any(l.use_bias for l in mlp.linear_transformations)
+
+
+def test_batch_normalized_mlp_save_memory_propagated():
+    mlp = BatchNormalizedMLP([Tanh(), Tanh()], [5, 7, 9],
+                             save_memory=False)
+    assert not any(act.children[0].save_memory for act in mlp.activations)
+    mlp.save_memory = True
+    assert mlp.save_memory
+    assert all(act.children[0].save_memory for act in mlp.activations)
