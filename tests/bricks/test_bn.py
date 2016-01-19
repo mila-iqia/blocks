@@ -9,7 +9,7 @@ from blocks.bricks import (BatchNormalization, SpatialBatchNormalization,
 from blocks.bricks.conv import (Convolutional, ConvolutionalSequence,
                                 MaxPooling, AveragePooling)
 from blocks.initialization import Constant
-from blocks.graph import ComputationGraph, batch_normalize
+from blocks.graph import ComputationGraph, apply_batch_normalization
 
 
 def random_unif(rng, dim, low=1, high=10):
@@ -61,7 +61,8 @@ def test_batch_normalization_allocation_initialization():
 
 
 def apply_setup(input_dim, broadcastable, save_memory):
-    bn = BatchNormalization(input_dim, broadcastable, save_memory)
+    bn = BatchNormalization(input_dim, broadcastable, save_memory,
+                            epsilon=1e-4)
     bn.initialize()
     b_len = (len(input_dim) if isinstance(input_dim, collections.Sequence)
              else 1)
@@ -116,10 +117,11 @@ def test_batch_normalization_inference_apply():
 
 def test_batch_normalization_train_apply():
     def check(input_dim, variable_dim, broadcastable=None, save_memory=True):
+        # Default epsilon value.
         epsilon = numpy.cast[theano.config.floatX](1e-4)
         bn, x, y = apply_setup(input_dim, broadcastable, save_memory)
         cg = ComputationGraph([y])
-        new_cg, _ = batch_normalize(cg, epsilon=epsilon)
+        new_cg, _ = apply_batch_normalization(cg)
         y_hat = new_cg.outputs[0]
 
         rng = numpy.random.RandomState((2015, 12, 16))
@@ -275,7 +277,7 @@ def test_batch_normalized_mlp_transformed():
     x = tensor.matrix('x')
     mlp = BatchNormalizedMLP([Tanh(), Tanh()], [5, 7, 9])
     cg = ComputationGraph([mlp.apply(x)])
-    new_cg, replaced = batch_normalize(cg)
+    new_cg, replaced = apply_batch_normalization(cg)
     assert len(replaced) == 4  # 2 means, 2 standard deviations
 
 

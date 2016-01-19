@@ -19,7 +19,7 @@ from ..roles import (add_role, has_roles, AUXILIARY, PARAMETER, DROPOUT,
 from ..utils import (is_graph_input, is_shared_variable, dict_union,
                      shared_floatx_zeros, shared_like)
 from .annotations import add_annotation, Annotation  # noqa
-from .bn import batch_normalize  # noqa
+from .bn import batch_normalization, apply_batch_normalization  # noqa
 
 logger = logging.getLogger(__name__)
 

@@ -2,18 +2,35 @@ import collections
 
 import numpy
 from picklable_itertools.extras import equizip
+import theano
+from theano import tensor
 from theano.tensor.nnet import bn
 
 from ..graph import add_annotation
 from ..initialization import Constant
 from ..roles import (WEIGHT, BIAS, BATCH_NORM_POPULATION_MEAN,
                      BATCH_NORM_POPULATION_STDEV, BATCH_NORM_OFFSET,
-                     BATCH_NORM_DIVISOR, add_role)
+                     BATCH_NORM_DIVISOR, BATCH_NORM_MINIBATCH_ESTIMATE,
+                     add_role)
 from ..utils import (shared_floatx_zeros, shared_floatx,
                      shared_floatx_nans)
 from .base import lazy, application
 from .sequences import Sequence, Feedforward, MLP
 from .interfaces import RNGMixin
+
+
+def _add_batch_axis(var, name=None):
+    """Prepend a singleton axis to a TensorVariable."""
+    new_var = var.dimshuffle('x', *list(range(var.ndim)))
+    new_var.name = name
+    return new_var
+
+
+def _add_role_and_annotate(var, role, annotations=()):
+    """Add a role and zero or more annotations to a variable."""
+    add_role(var, role)
+    for annotation in annotations:
+        add_annotation(var, annotation)
 
 
 class BatchNormalization(RNGMixin, Feedforward):
@@ -34,6 +51,11 @@ class BatchNormalization(RNGMixin, Feedforward):
         Use an implementation that stores less intermediate state and
         therefore uses less memory, at the expense of 5-10% speed. Default
         is `True`.
+    epsilon : float, optional
+       The stabilizing constant for the minibatch standard deviation
+       computation (when the brick is run in training mode).
+       Added to the variance inside the square root, as in the
+       batch normalization paper.
     weights_init : object, optional
         Initialization object to use for the learned scaling parameter
         ($\\gamma$ in [BN]_). By default, uses constant initialization
@@ -53,14 +75,29 @@ class BatchNormalization(RNGMixin, Feedforward):
     moving average of minibatch-wise statistics.
 
     In order to *train* with batch normalization, one must obtain a
-    training graph by transforming the original inference graph.  See
-    :func:`batch_normalize`.
+    training graph by transforming the original inference graph. See
+    :func:`~blocks.graph.apply_batch_normalization` for a routine to
+    transform graphs, and :func:`~blocks.graph.batch_normalization`
+    for a context manager that may enable shorter compile times
+    (every instance of :class:`BatchNormalization` is itself a context
+    manager, entry into which causes applications to be in minibatch
+    "training" mode, however it is usually more convenient to use
+    :func:`~blocks.graph.batch_normalization` to enable this behaviour
+    for all of your graph's :class:`BatchNormalization` bricks at once).
+
+    Note that training in inference mode should be avoided, as this
+    brick introduces scales and shift parameters (tagged with the
+    `PARAMETER` role) that, in the absence of batch normalization,
+    usually makes things unstable. If you must do this, filter for and
+    remove `BATCH_NORM_SHIFT` and `BATCH_NORM_SCALE` from the list of
+    parameters you are training, and this brick should behave as a
+    (somewhat expensive) no-op.
 
     This Brick accepts `weights_init` and `biases_init` arguments but is
     *not* an instance of :class:`~blocks.bricks.Initializable`, and will
     therefore not receive pushed initialization config from any parent
     brick. In almost all cases, you will probably want to stick with the
-    defaults (unit scale and zero shift), but you can explicitly pass one
+    defaults (unit scale and zero offset), but you can explicitly pass one
     or both initializers to override this.
 
     This has the necessary properties to be inserted into a
@@ -71,41 +108,70 @@ class BatchNormalization(RNGMixin, Feedforward):
     """
     @lazy(allocation=['input_dim'])
     def __init__(self, input_dim, broadcastable=None,
-                 save_memory=True, weights_init=None,
+                 save_memory=True, epsilon=1e-4, weights_init=None,
                  biases_init=None, **kwargs):
         self.input_dim = input_dim
         self.broadcastable = broadcastable
         self.save_memory = save_memory
+        self.epsilon = 1e-4
         self.weights_init = (Constant(1) if weights_init is None
                              else weights_init)
         self.biases_init = (Constant(0) if biases_init is None
                             else biases_init)
+        self._training_mode = False
         super(BatchNormalization, self).__init__(**kwargs)
 
     @application(inputs=['input_'], outputs=['output'])
     def apply(self, input_, application_call):
-        def add_batch_axis(var, name=None):
-            new_var = var.dimshuffle('x', *list(range(var.ndim)))
-            new_var.name = name
-            return new_var
-
-        def annotate(var, role):
-            add_role(var, role)
-            add_annotation(var, self)
-            add_annotation(var, application_call)
-
-        mean = add_batch_axis(self.population_mean, 'population_offset')
-        annotate(mean, BATCH_NORM_OFFSET)
-
-        stdev = add_batch_axis(self.population_stdev, 'population_divisor')
-        annotate(stdev, BATCH_NORM_DIVISOR)
-        W = add_batch_axis(self.W)
-        b = add_batch_axis(self.b)
+        if self._training_mode:
+            mean, stdev = self._compute_training_statistics(input_)
+        else:
+            mean, stdev = self._prepare_population_statistics()
+        # Useful for filtration of calls that were already made in
+        # training mode when doing graph transformations.
+        application_call.metadata['training_mode'] = self._training_mode
+        # Useful for retrieving a list of updates for population
+        # statistics. Ditch the broadcastable first axis, though, to
+        # make it the same dimensions as the population mean and stdev
+        # shared variables.
+        application_call.metadata['offset'] = mean[0]
+        application_call.metadata['divisor'] = stdev[0]
+        # Give these quantities roles in the graph.
+        _add_role_and_annotate(mean, BATCH_NORM_OFFSET,
+                               [self, application_call])
+        _add_role_and_annotate(stdev, BATCH_NORM_DIVISOR,
+                               [self, application_call])
+        W = _add_batch_axis(self.W, "W.dimshuffle('x'...)")
+        b = _add_batch_axis(self.b, "b.dimshuffle('x', ...)")
         # Heavy lifting is done by the Theano utility function.
         normalized = bn.batch_normalization(input_, W, b, mean, stdev,
                                             mode=('low_mem' if self.save_memory
                                                   else 'high_mem'))
         return normalized
+
+    def __enter__(self):
+        self._training_mode = True
+
+    def __exit__(self, *exc_info):
+        self._training_mode = False
+
+    def _compute_training_statistics(self, input_):
+        axes = (0,) + tuple((i + 1) for i, b in
+                            enumerate(self.population_mean.broadcastable)
+                            if b)
+        mean = input_.mean(axis=axes, keepdims=True)
+        assert mean.broadcastable[1:] == self.population_mean.broadcastable
+        stdev = tensor.sqrt(tensor.var(input_, axis=axes, keepdims=True) +
+                            numpy.cast[theano.config.floatX](self.epsilon))
+        assert stdev.broadcastable[1:] == self.population_stdev.broadcastable
+        add_role(mean, BATCH_NORM_MINIBATCH_ESTIMATE)
+        add_role(stdev, BATCH_NORM_MINIBATCH_ESTIMATE)
+        return mean, stdev
+
+    def _prepare_population_statistics(self):
+        mean = _add_batch_axis(self.population_mean, 'population_offset')
+        stdev = _add_batch_axis(self.population_stdev, 'population_divisor')
+        return mean, stdev
 
     def _allocate(self):
         input_dim = ((self.input_dim,)

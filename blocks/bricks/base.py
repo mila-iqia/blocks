@@ -873,6 +873,7 @@ class ApplicationCall(Annotation):
     """
     def __init__(self, application):
         self.application = application
+        self.metadata = {}
         super(ApplicationCall, self).__init__()
 
     def add_auxiliary_variable(self, variable, roles=None, name=None):

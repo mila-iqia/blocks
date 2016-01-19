@@ -1,7 +1,7 @@
 from __future__ import print_function
 import sys
 import contextlib
-from collections import OrderedDict
+from collections import OrderedDict, deque
 
 import numpy
 import six
@@ -516,3 +516,34 @@ def extract_args(expected, *args, **kwargs):
                          [name for name in expected
                           if name not in routed_args]))
     return OrderedDict((key, routed_args[key]) for key in expected)
+
+
+def find_bricks(top_bricks, predicate):
+    """Walk the brick hierarchy, return bricks that satisfy a predicate.
+
+    Parameters
+    ----------
+    top_bricks : list
+        A list of root bricks to search downward from.
+    predicate : callable
+        A callable that returns `True` for bricks that meet the
+        desired criteria or `False` for those that don't.
+
+    Returns
+    -------
+    found : list
+        A list of all bricks that are descendants of any element of
+        `top_bricks` that satisfy `predicate`.
+
+    """
+    found = []
+    visited = set()
+    to_visit = deque(top_bricks)
+    while len(to_visit) > 0:
+        current = to_visit.popleft()
+        if current not in visited:
+            visited.add(current)
+            if predicate(current):
+                found.append(current)
+            to_visit.extend(current.children)
+    return found
