@@ -45,7 +45,6 @@ def batch_normalization(*bricks):
     ...                          weights_init=IsotropicGaussian(0.1),
     ...                          biases_init=Constant(0))
     >>> mlp.initialize()
-    >>> data = numpy.arange(12, dtype=theano.config.floatX).reshape(3, 4)
     >>> x = theano.tensor.matrix('x')
 
     First, we'll construct an output variable as we would normally. This
