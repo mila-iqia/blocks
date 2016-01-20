@@ -70,14 +70,14 @@ def apply_setup(input_dim, broadcastable, save_memory):
              else 1)
     x = tensor.TensorType(theano.config.floatX,
                           [False] * (b_len + 1))()
-    y = bn.apply(x)
-    return bn, x, y
+    return bn, x
 
 
 def test_batch_normalization_inference_apply():
     """Test that BatchNormalization.apply works in inference mode."""
     def check(input_dim, variable_dim, broadcastable=None, save_memory=True):
-        bn, x, y = apply_setup(input_dim, broadcastable, save_memory)
+        bn, x = apply_setup(input_dim, broadcastable, save_memory)
+        y = bn.apply(x)
         rng = numpy.random.RandomState((2015, 12, 16))
         input_ = random_unif(rng,
                              (9,) +
@@ -122,7 +122,9 @@ def test_batch_normalization_train_apply():
     def check(input_dim, variable_dim, broadcastable=None, save_memory=True):
         # Default epsilon value.
         epsilon = numpy.cast[theano.config.floatX](1e-4)
-        bn, x, y = apply_setup(input_dim, broadcastable, save_memory)
+        bn, x = apply_setup(input_dim, broadcastable, save_memory)
+        with bn:
+            y = bn.apply(x)
         cg = ComputationGraph([y])
         new_cg, _ = apply_batch_normalization(cg)
         y_hat = new_cg.outputs[0]
