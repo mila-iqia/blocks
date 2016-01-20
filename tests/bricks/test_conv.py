@@ -26,7 +26,7 @@ def test_convolutional():
                          biases_init=Constant(5.))
     conv.initialize()
     y = conv.apply(x)
-    func = function([x], y)
+    func = function([x], y, mode='FAST_RUN')
 
     x_val = numpy.ones((batch_size, num_channels, 17, 13),
                        dtype=theano.config.floatX)
@@ -53,7 +53,7 @@ def test_convolutional_transpose():
         weights_init=Constant(1.), biases_init=Constant(5.))
     conv.initialize()
     y = conv.apply(x)
-    func = function([x], y)
+    func = function([x], y, mode='FAST_RUN')
 
     x_val = numpy.ones((batch_size, num_channels) + image_size,
                        dtype=theano.config.floatX)
@@ -115,7 +115,7 @@ def test_tied_biases():
                          tied_biases=True)
     conv.initialize()
     y = conv.apply(x)
-    func = function([x], y)
+    func = function([x], y, mode='FAST_RUN')
 
     # Tied biases allows to pass images of different sizes
     x_val_1 = numpy.ones((batch_size, num_channels, 10,
@@ -140,7 +140,7 @@ def test_max_pooling():
     pool_size = 3
     pool = MaxPooling((pool_size, pool_size))
     y = pool.apply(x)
-    func = function([x], y)
+    func = function([x], y, mode='FAST_RUN')
 
     x_val = numpy.ones((batch_size, num_channels, x_size, y_size),
                        dtype=theano.config.floatX)
@@ -272,7 +272,7 @@ def test_convolutional_sequence():
     conv2.convolution.use_bias = False
     y = seq.apply(x)
     seq.initialize()
-    func = function([x], y)
+    func = function([x], y, mode='FAST_RUN')
 
     x_val = numpy.ones((batch_size, 4, 17, 13), dtype=theano.config.floatX)
     y_val = (numpy.ones((batch_size, 4, 4, 2)) *
