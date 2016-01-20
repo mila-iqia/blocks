@@ -1,5 +1,5 @@
 from theano.tensor.nnet.conv import conv2d, get_conv_output_shape
-from theano.tensor.signal.downsample import max_pool_2d, DownsampleFactorMax
+from theano.tensor.signal.pool import pool_2d, Pool
 
 from blocks.bricks import Initializable, Feedforward, Sequence
 from blocks.bricks.base import application, Brick, lazy
@@ -230,16 +230,16 @@ class Pooling(Initializable, Feedforward):
             with the last two dimensions downsampled.
 
         """
-        output = max_pool_2d(input_, self.pooling_size, st=self.step,
-                             mode=self.mode, padding=self.padding,
-                             ignore_border=self.ignore_border)
+        output = pool_2d(input_, self.pooling_size, st=self.step,
+                         mode=self.mode, padding=self.padding,
+                         ignore_border=self.ignore_border)
         return output
 
     def get_dim(self, name):
         if name == 'input_':
             return self.input_dim
         if name == 'output':
-            return tuple(DownsampleFactorMax.out_shape(
+            return tuple(Pool.out_shape(
                 self.input_dim, self.pooling_size, st=self.step,
                 ignore_border=self.ignore_border, padding=self.padding))
 
