@@ -178,7 +178,7 @@ class BatchNormalization(RNGMixin, Feedforward):
         input_dim = ((self.input_dim,)
                      if not isinstance(self.input_dim, collections.Sequence)
                      else self.input_dim)
-        broadcastable = (tuple(False for _ in range(len(input_dim)))
+        broadcastable = (tuple(False for _ in input_dim)
                          if self.broadcastable is None else self.broadcastable)
         if len(input_dim) != len(broadcastable):
             raise ValueError("input_dim and broadcastable must be same length")
