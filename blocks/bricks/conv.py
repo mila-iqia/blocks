@@ -1,4 +1,5 @@
-from theano.tensor.nnet.conv import conv2d, get_conv_output_shape
+from theano.tensor.nnet import conv2d
+from theano.tensor.nnet.abstract_conv import get_conv_output_shape
 from theano.tensor.signal.pool import pool_2d, Pool
 
 from blocks.bricks import Initializable, Feedforward, Sequence
