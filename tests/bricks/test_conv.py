@@ -14,6 +14,12 @@ from blocks.bricks.conv import (Convolutional, ConvolutionalTranspose,
 from blocks.initialization import Constant
 from blocks.graph import ComputationGraph
 
+# NOTE : Our CI tests are run in FAST_COMPILE mode to save time, but that
+# forces the Python implementation to be used. Because CuDNN is not installed
+# on Travis, CorrMM is used, which has no Python implemenation. This means
+# we need to force the use of FAST_RUN mode in `theano.function` calls,
+# otherwise graph compilation will fail.
+
 
 def test_convolutional():
     x = tensor.tensor4('x')
