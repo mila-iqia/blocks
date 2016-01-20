@@ -78,11 +78,13 @@ def batch_normalization(*bricks):
     bn = find_bricks(bricks, lambda b: isinstance(b, BatchNormalization))
     # Can't use either nested() (deprecated) nor ExitStack (not available
     # on Python 2.7). Well, that sucks.
-    for brick in bn:
-        brick.__enter__()
-    yield
-    for brick in bn:
-        brick.__exit__()
+    try:
+        for brick in bn:
+            brick.__enter__()
+        yield
+    finally:
+        for brick in bn[::-1]:
+            brick.__exit__()
 
 
 def apply_batch_normalization(computation_graph):
