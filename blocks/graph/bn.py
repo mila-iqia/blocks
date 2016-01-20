@@ -8,6 +8,8 @@ which uses minibatch statistics in place of population statistics.
 import collections
 import contextlib
 
+import theano
+
 from ..roles import BATCH_NORM_OFFSET, BATCH_NORM_DIVISOR, INPUT, OUTPUT
 from ..utils import find_bricks
 
@@ -153,6 +155,9 @@ def apply_batch_normalization(computation_graph):
     update_pairs = []
     for app_call in inputs:
         old_output = outputs[app_call]
+        # Get rid of the copy made on the way into the original apply.
+        assert (inputs[app_call].owner.op == theano.tensor.Elemwise and
+                inputs[app_call].owner.op.scalar_op == theano.scalar.Identity)
         unpacked = inputs[app_call].owner.inputs[0]
         with app_call.application.brick:
             new_output = app_call.application.brick.apply(unpacked)
