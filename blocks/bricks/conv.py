@@ -237,9 +237,9 @@ class ConvolutionalTranspose(Initializable):
         self.tied_biases = tied_biases
 
     def _allocate(self):
-        # The GpuDnnConvGradI op takes a kernel that was used for the
-        # **convolution**. We therefore have to invert num_channels
-        # and num_filters for W.
+        # The AbstractConv2d_gradInputs op takes a kernel that was used for the
+        # **convolution**. We therefore have to invert num_channels and
+        # num_filters for W.
         W = shared_floatx_nans((self.num_channels, self.num_filters) +
                                self.filter_size, name='W')
         add_role(W, FILTER)
@@ -310,7 +310,7 @@ class ConvolutionalTranspose(Initializable):
             return (self.num_channels,) + self.image_size
         if name == 'output':
             return (self.num_filters,) + self.original_image_size
-        return super(Convolutional, self).get_dim(name)
+        return super(ConvolutionalTranspose, self).get_dim(name)
 
     @property
     def num_output_channels(self):
