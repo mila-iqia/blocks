@@ -283,7 +283,7 @@ class SpatialBatchNormalization(BatchNormalization):
         if not isinstance(input_dim,
                           collections.Sequence) or len(input_dim) < 2:
             raise ValueError('expected input_dim to be length >= 2 '
-                             '(channels, height, width)')
+                             'e.g. (channels, height, width)')
         broadcastable = (False,) + ((True,) * (len(input_dim) - 1))
         kwargs.setdefault('broadcastable', broadcastable)
         super(SpatialBatchNormalization, self).__init__(input_dim, **kwargs)
