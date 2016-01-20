@@ -20,10 +20,11 @@ def random_unif(rng, dim, low=1, high=10):
 
 def test_batch_normalization_allocation_initialization():
     """Sanity check allocation & initialization of BN bricks."""
-    def check(input_dim, expected_shape, broadcastable=None, save_memory=True):
+    def check(input_dim, expected_shape, broadcastable=None,
+              conserve_memory=True):
         bn = BatchNormalization(input_dim=input_dim,
                                 broadcastable=broadcastable,
-                                save_memory=save_memory)
+                                conserve_memory=conserve_memory)
         if broadcastable is None:
             if not isinstance(input_dim, collections.Sequence):
                 b_input_dim = (input_dim,)
@@ -33,7 +34,7 @@ def test_batch_normalization_allocation_initialization():
         else:
             input_broadcastable = broadcastable
         bn.allocate()
-        assert save_memory == bn.save_memory
+        assert conserve_memory == bn.conserve_memory
         assert input_dim == bn.input_dim
         assert bn.broadcastable == broadcastable
         assert bn.W.broadcastable == input_broadcastable
@@ -61,9 +62,9 @@ def test_batch_normalization_allocation_initialization():
     yield check, (7, 4, 5), (7, 1, 5), (False, True, False), False
 
 
-def apply_setup(input_dim, broadcastable, save_memory):
+def apply_setup(input_dim, broadcastable, conserve_memory):
     """Common setup code."""
-    bn = BatchNormalization(input_dim, broadcastable, save_memory,
+    bn = BatchNormalization(input_dim, broadcastable, conserve_memory,
                             epsilon=1e-4)
     bn.initialize()
     b_len = (len(input_dim) if isinstance(input_dim, collections.Sequence)
@@ -75,8 +76,9 @@ def apply_setup(input_dim, broadcastable, save_memory):
 
 def test_batch_normalization_inference_apply():
     """Test that BatchNormalization.apply works in inference mode."""
-    def check(input_dim, variable_dim, broadcastable=None, save_memory=True):
-        bn, x = apply_setup(input_dim, broadcastable, save_memory)
+    def check(input_dim, variable_dim, broadcastable=None,
+              conserve_memory=True):
+        bn, x = apply_setup(input_dim, broadcastable, conserve_memory)
         y = bn.apply(x)
         rng = numpy.random.RandomState((2015, 12, 16))
         input_ = random_unif(rng,
@@ -119,10 +121,11 @@ def test_batch_normalization_inference_apply():
 
 
 def test_batch_normalization_train_apply():
-    def check(input_dim, variable_dim, broadcastable=None, save_memory=True):
+    def check(input_dim, variable_dim, broadcastable=None,
+              conserve_memory=True):
         # Default epsilon value.
         epsilon = numpy.cast[theano.config.floatX](1e-4)
-        bn, x = apply_setup(input_dim, broadcastable, save_memory)
+        bn, x = apply_setup(input_dim, broadcastable, conserve_memory)
         with bn:
             y = bn.apply(x)
         cg = ComputationGraph([y])
@@ -292,11 +295,11 @@ def test_batch_normalized_mlp_transformed():
     assert len(replaced) == 4  # 2 means, 2 standard deviations
 
 
-def test_batch_normalized_mlp_save_memory_propagated():
-    """Test that setting save_memory on a BatchNormalizedMLP works."""
+def test_batch_normalized_mlp_conserve_memory_propagated():
+    """Test that setting conserve_memory on a BatchNormalizedMLP works."""
     mlp = BatchNormalizedMLP([Tanh(), Tanh()], [5, 7, 9],
-                             save_memory=False)
-    assert not any(act.children[0].save_memory for act in mlp.activations)
-    mlp.save_memory = True
-    assert mlp.save_memory
-    assert all(act.children[0].save_memory for act in mlp.activations)
+                             conserve_memory=False)
+    assert not any(act.children[0].conserve_memory for act in mlp.activations)
+    mlp.conserve_memory = True
+    assert mlp.conserve_memory
+    assert all(act.children[0].conserve_memory for act in mlp.activations)

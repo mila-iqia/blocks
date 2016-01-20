@@ -47,7 +47,7 @@ class BatchNormalization(RNGMixin, Feedforward):
         standard deviations. For example, in order to normalize over all
         spatial locations in a `(batch_index, channels, height, width)`
         image, pass `(False, True, True)`.
-    save_memory : bool, optional
+    conserve_memory : bool, optional
         Use an implementation that stores less intermediate state and
         therefore uses less memory, at the expense of 5-10% speed. Default
         is `True`.
@@ -108,11 +108,11 @@ class BatchNormalization(RNGMixin, Feedforward):
     """
     @lazy(allocation=['input_dim'])
     def __init__(self, input_dim, broadcastable=None,
-                 save_memory=True, epsilon=1e-4, weights_init=None,
+                 conserve_memory=True, epsilon=1e-4, weights_init=None,
                  biases_init=None, **kwargs):
         self.input_dim = input_dim
         self.broadcastable = broadcastable
-        self.save_memory = save_memory
+        self.conserve_memory = conserve_memory
         self.epsilon = 1e-4
         self.weights_init = (Constant(1) if weights_init is None
                              else weights_init)
@@ -145,7 +145,8 @@ class BatchNormalization(RNGMixin, Feedforward):
         b = _add_batch_axis(self.b, "b.dimshuffle('x', ...)")
         # Heavy lifting is done by the Theano utility function.
         normalized = bn.batch_normalization(input_, W, b, mean, stdev,
-                                            mode=('low_mem' if self.save_memory
+                                            mode=('low_mem'
+                                                  if self.conserve_memory
                                                   else 'high_mem'))
         return normalized
 
@@ -293,7 +294,7 @@ class BatchNormalizedMLP(MLP):
 
     Parameters
     ----------
-    save_memory : bool, optional
+    conserve_memory : bool, optional
         See :class:`BatchNormalization`.
 
     Notes
@@ -312,9 +313,9 @@ class BatchNormalizedMLP(MLP):
     """
     @lazy(allocation=['dims'])
     def __init__(self, activations, dims, *args, **kwargs):
-        save_memory = kwargs.pop('save_memory', True)
+        conserve_memory = kwargs.pop('conserve_memory', True)
         activations = [
-            Sequence([BatchNormalization(save_memory=save_memory).apply,
+            Sequence([BatchNormalization(conserve_memory=conserve_memory).apply,
                       act.apply], name='batch_norm_activation_{}'.format(i))
             for i, act in enumerate(activations)
         ]
@@ -325,15 +326,15 @@ class BatchNormalizedMLP(MLP):
                                                  **kwargs)
 
     @property
-    def save_memory(self):
-        return self._save_memory
+    def conserve_memory(self):
+        return self._conserve_memory
 
-    @save_memory.setter
-    def save_memory(self, value):
-        self._save_memory = value
+    @conserve_memory.setter
+    def conserve_memory(self, value):
+        self._conserve_memory = value
         for act in self.activations:
             assert isinstance(act.children[0], BatchNormalization)
-            act.children[0].save_memory = value
+            act.children[0].conserve_memory = value
 
     def _push_allocation_config(self):
         super(BatchNormalizedMLP, self)._push_allocation_config()
