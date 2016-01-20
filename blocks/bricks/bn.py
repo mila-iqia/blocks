@@ -343,4 +343,5 @@ class BatchNormalizedMLP(MLP):
         # of each linear transformation.  Exclude the first dimension,
         # which is the input dimension.
         for act, dim in equizip(self.activations, self.dims[1:]):
+            assert isinstance(act.children[0], BatchNormalization)
             act.children[0].input_dim = dim
