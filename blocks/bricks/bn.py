@@ -315,8 +315,10 @@ class BatchNormalizedMLP(MLP):
     def __init__(self, activations, dims, *args, **kwargs):
         conserve_memory = kwargs.pop('conserve_memory', True)
         activations = [
-            Sequence([BatchNormalization(conserve_memory=conserve_memory).apply,
-                      act.apply], name='batch_norm_activation_{}'.format(i))
+            Sequence([
+                BatchNormalization(conserve_memory=conserve_memory).apply,
+                act.apply
+            ], name='batch_norm_activation_{}'.format(i))
             for i, act in enumerate(activations)
         ]
         # Batch normalization bricks incorporate a bias, so there's no
