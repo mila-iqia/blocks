@@ -113,7 +113,7 @@ class BatchNormalization(RNGMixin, Feedforward):
         self.input_dim = input_dim
         self.broadcastable = broadcastable
         self.conserve_memory = conserve_memory
-        self.epsilon = 1e-4
+        self.epsilon = epsilon
         self.weights_init = (Constant(1) if weights_init is None
                              else weights_init)
         self.biases_init = (Constant(0) if biases_init is None
