@@ -36,9 +36,6 @@ def batch_normalization(*bricks):
     Examples
     --------
     First, we'll create a :class:`~blocks.bricks.BatchNormalizedMLP`.
-    This behaves almost exactly like a regular :class:`~blocks.bricks.MLP`
-    except that it contains :class:`~blocks.bricks.BatchNormalization`
-    bricks placed before each activation function.
 
     >>> import theano
     >>> from blocks.bricks import BatchNormalizedMLP, Tanh
@@ -47,13 +44,13 @@ def batch_normalization(*bricks):
     ...                          weights_init=IsotropicGaussian(0.1),
     ...                          biases_init=Constant(0))
     >>> mlp.initialize()
-    >>> x = theano.tensor.matrix('x')
 
-    First, we'll construct an output variable as we would normally. This
+    Now, we'll construct an output variable as we would normally. This
     is getting normalized by the *population* statistics, which by
     default are initialized to 0 (mean) and 1 (standard deviation),
     respectively.
 
+    >>> x = theano.tensor.matrix()
     >>> y = mlp.apply(x)
 
     And now, to construct an output with batch normalization enabled,
@@ -94,13 +91,13 @@ def apply_batch_normalization(computation_graph):
 
     Parameters
     ----------
-    computation_graph : instance of :class:`ComputationGraph`
+    computation_graph : :class:`~blocks.graph.ComputationGraph`
         The computation graph containing :class:`BatchNormalization`
         brick applications.
 
     Returns
     -------
-    batch_normed_computation_graph : instance of :class:`ComputationGraph`
+    batch_normed_graph : :class:`~blocks.graph.ComputationGraph`
         The computation graph, with :class:`BatchNormalization`
         applications transformed to use minibatch statistics instead
         of accumulated population statistics.
@@ -117,6 +114,43 @@ def apply_batch_normalization(computation_graph):
     --------
     :func:`batch_normalization`, for an alternative method to produce
     batch normalized graphs.
+
+    Examples
+    --------
+    First, we'll create a :class:`~blocks.bricks.BatchNormalizedMLP`.
+
+    >>> import theano
+    >>> from blocks.bricks import BatchNormalizedMLP, Tanh
+    >>> from blocks.initialization import Constant, IsotropicGaussian
+    >>> mlp = BatchNormalizedMLP([Tanh(), Tanh()], [4, 5, 6],
+    ...                          weights_init=IsotropicGaussian(0.1),
+    ...                          biases_init=Constant(0))
+    >>> mlp.initialize()
+
+    Now, we'll construct an output variable as we would normally. This
+    is getting normalized by the *population* statistics, which by
+    default are initialized to 0 (mean) and 1 (standard deviation),
+    respectively.
+
+    >>> x = theano.tensor.matrix()
+    >>> y = mlp.apply(x)
+
+    Finally, we'll create a :class:`~blocks.graph.ComputationGraph`
+    and transform it to switch to minibatch standardization:
+
+    >>> from blocks.graph import ComputationGraph
+    >>> cg, _ = apply_batch_normalization(ComputationGraph([y]))
+    >>> y_bn = cg.outputs[0]
+
+    Let's verify that these two graphs behave differently on the
+    same data:
+
+    >>> import numpy
+    >>> data = numpy.arange(12, dtype=theano.config.floatX).reshape(3, 4)
+    >>> inf_y = y.eval({x: data})
+    >>> trn_y = y_bn.eval({x: data})
+    >>> numpy.allclose(inf_y, trn_y)
+    False
 
     """
     # Avoid circular imports.
