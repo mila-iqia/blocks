@@ -580,7 +580,7 @@ class ConvolutionalTransposeActivation(_AllocationMixin, Sequence,
         return self.convolution.get_dim(name)
 
     def _push_allocation_config(self):
-        super(ConvolutionalActivation, self)._push_allocation_config()
+        super(ConvolutionalTransposeActivation, self)._push_allocation_config()
         self.convolution.step = self.step
         self.convolution.original_image_size = self.original_image_size
 
