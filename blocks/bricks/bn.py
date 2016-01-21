@@ -212,6 +212,11 @@ class BatchNormalization(RNGMixin, Feedforward):
         add_role(self.population_mean, BATCH_NORM_POPULATION_MEAN)
         add_role(self.population_stdev, BATCH_NORM_POPULATION_STDEV)
 
+        # Normally these would get annotated by an AnnotatingList, but they
+        # aren't in self.parameters.
+        add_annotation(self.population_mean, self)
+        add_annotation(self.population_stdev, self)
+
     def _initialize(self):
         self.biases_init.initialize(self.b, self.rng)
         self.weights_init.initialize(self.W, self.rng)
