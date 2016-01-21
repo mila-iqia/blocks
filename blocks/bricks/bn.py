@@ -187,12 +187,12 @@ class BatchNormalization(RNGMixin, Feedforward):
         broadcastable = broadcastable
 
         # "gamma", from the Ioffe & Szegedy manuscript.
-        self._W = shared_floatx_nans(var_dim, name='batch_norm_scale',
-                                     broadcastable=broadcastable)
+        self.W = shared_floatx_nans(var_dim, name='batch_norm_scale',
+                                    broadcastable=broadcastable)
 
         # "beta", from the Ioffe & Szegedy manuscript.
-        self._b = shared_floatx_nans(var_dim, name='batch_norm_shift',
-                                     broadcastable=broadcastable)
+        self.b = shared_floatx_nans(var_dim, name='batch_norm_shift',
+                                    broadcastable=broadcastable)
         add_role(self.W, WEIGHT)
         add_role(self.b, BIAS)
         self.parameters.append(self.W)
@@ -208,14 +208,6 @@ class BatchNormalization(RNGMixin, Feedforward):
                                               broadcastable=broadcastable)
         add_role(self.population_mean, BATCH_NORM_POPULATION_MEAN)
         add_role(self.population_stdev, BATCH_NORM_POPULATION_STDEV)
-
-    @property
-    def W(self):
-        return self._W
-
-    @property
-    def b(self):
-        return self._b
 
     def _initialize(self):
         self.biases_init.initialize(self.b, self.rng)
