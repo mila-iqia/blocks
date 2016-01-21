@@ -19,10 +19,10 @@ from .sequences import Sequence, Feedforward, MLP
 from .interfaces import RNGMixin
 
 
-def _add_batch_axis(var, name=None):
-    """Prepend a singleton axis to a TensorVariable."""
-    new_var = var.dimshuffle('x', *list(range(var.ndim)))
-    new_var.name = name
+def _add_batch_axis(var):
+    """Prepend a singleton axis to a TensorVariable and name it."""
+    new_var = new_var = tensor.shape_padleft(var)
+    new_var.name = 'shape_padleft({})'.format(var.name)
     return new_var
 
 
@@ -141,8 +141,8 @@ class BatchNormalization(RNGMixin, Feedforward):
                                [self, application_call])
         _add_role_and_annotate(stdev, BATCH_NORM_DIVISOR,
                                [self, application_call])
-        W = _add_batch_axis(self.W, "W.dimshuffle('x'...)")
-        b = _add_batch_axis(self.b, "b.dimshuffle('x', ...)")
+        W = _add_batch_axis(self.W)
+        b = _add_batch_axis(self.b)
         # Heavy lifting is done by the Theano utility function.
         normalized = bn.batch_normalization(input_, W, b, mean, stdev,
                                             mode=('low_mem'
@@ -170,8 +170,8 @@ class BatchNormalization(RNGMixin, Feedforward):
         return mean, stdev
 
     def _prepare_population_statistics(self):
-        mean = _add_batch_axis(self.population_mean, 'population_offset')
-        stdev = _add_batch_axis(self.population_stdev, 'population_divisor')
+        mean = _add_batch_axis(self.population_mean)
+        stdev = _add_batch_axis(self.population_stdev)
         return mean, stdev
 
     def _allocate(self):
