@@ -129,7 +129,10 @@ class BatchNormalization(RNGMixin, Feedforward):
             mean, stdev = self._prepare_population_statistics()
         # Useful for filtration of calls that were already made in
         # training mode when doing graph transformations.
-        application_call.metadata['training_mode'] = self._training_mode
+        # Very important to cast to bool, as self._training_mode is
+        # normally a list (to support nested context managers), which would
+        # otherwise get passed by reference and be remotely mutated.
+        application_call.metadata['training_mode'] = bool(self._training_mode)
         # Useful for retrieving a list of updates for population
         # statistics. Ditch the broadcastable first axis, though, to
         # make it the same dimensions as the population mean and stdev
