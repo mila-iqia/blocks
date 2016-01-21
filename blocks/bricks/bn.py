@@ -118,7 +118,7 @@ class BatchNormalization(RNGMixin, Feedforward):
                              else weights_init)
         self.biases_init = (Constant(0) if biases_init is None
                             else biases_init)
-        self._training_mode = False
+        self._training_mode = []
         super(BatchNormalization, self).__init__(**kwargs)
 
     @application(inputs=['input_'], outputs=['output'])
@@ -151,10 +151,10 @@ class BatchNormalization(RNGMixin, Feedforward):
         return normalized
 
     def __enter__(self):
-        self._training_mode = True
+        self._training_mode.append(True)
 
     def __exit__(self, *exc_info):
-        self._training_mode = False
+        self._training_mode.pop()
 
     def _compute_training_statistics(self, input_):
         axes = (0,) + tuple((i + 1) for i, b in
