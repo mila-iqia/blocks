@@ -9,7 +9,7 @@ from blocks.bricks import (BatchNormalization, SpatialBatchNormalization,
 from blocks.bricks.conv import (Convolutional, ConvolutionalSequence,
                                 MaxPooling, AveragePooling)
 from blocks.initialization import Constant
-from blocks.graph import ComputationGraph, apply_batch_normalization
+from blocks.graph import batch_normalization
 
 
 def random_unif(rng, dim, low=1, high=10):
@@ -127,10 +127,7 @@ def test_batch_normalization_train_apply():
         epsilon = numpy.cast[theano.config.floatX](1e-4)
         bn, x = apply_setup(input_dim, broadcastable, conserve_memory)
         with bn:
-            y = bn.apply(x)
-        cg = ComputationGraph([y])
-        new_cg, _ = apply_batch_normalization(cg)
-        y_hat = new_cg.outputs[0]
+            y_hat = bn.apply(x)
 
         rng = numpy.random.RandomState((2015, 12, 16))
         input_ = random_unif(rng, (9,) +
@@ -290,9 +287,8 @@ def test_batch_normalized_mlp_transformed():
     """Smoke test that a graph involving a BatchNormalizedMLP transforms."""
     x = tensor.matrix('x')
     mlp = BatchNormalizedMLP([Tanh(), Tanh()], [5, 7, 9])
-    cg = ComputationGraph([mlp.apply(x)])
-    new_cg, replaced = apply_batch_normalization(cg)
-    assert len(replaced) == 4  # 2 means, 2 standard deviations
+    with batch_normalization(mlp):
+        mlp.apply(x)
 
 
 def test_batch_normalized_mlp_conserve_memory_propagated():
