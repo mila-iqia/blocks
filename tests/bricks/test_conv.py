@@ -14,12 +14,6 @@ from blocks.bricks.conv import (Convolutional, ConvolutionalTranspose,
 from blocks.initialization import Constant
 from blocks.graph import ComputationGraph
 
-# NOTE : Our CI tests are run in FAST_COMPILE mode to save time, but that
-# forces the Python implementation to be used. Because CuDNN is not installed
-# on Travis, CorrMM is used, which has no Python implemenation. This means
-# we need to force the use of FAST_RUN mode in `theano.function` calls,
-# otherwise graph compilation will fail.
-
 
 def test_convolutional():
     x = tensor.tensor4('x')
@@ -32,7 +26,7 @@ def test_convolutional():
                          biases_init=Constant(5.))
     conv.initialize()
     y = conv.apply(x)
-    func = function([x], y, mode='FAST_RUN')
+    func = function([x], y)
 
     x_val = numpy.ones((batch_size, num_channels, 17, 13),
                        dtype=theano.config.floatX)
@@ -59,7 +53,7 @@ def test_convolutional_transpose():
         weights_init=Constant(1.), biases_init=Constant(5.))
     conv.initialize()
     y = conv.apply(x)
-    func = function([x], y, mode='FAST_RUN')
+    func = function([x], y)
 
     x_val = numpy.ones((batch_size, num_channels) + image_size,
                        dtype=theano.config.floatX)
@@ -121,7 +115,7 @@ def test_tied_biases():
                          tied_biases=True)
     conv.initialize()
     y = conv.apply(x)
-    func = function([x], y, mode='FAST_RUN')
+    func = function([x], y)
 
     # Tied biases allows to pass images of different sizes
     x_val_1 = numpy.ones((batch_size, num_channels, 10,
@@ -146,7 +140,7 @@ def test_max_pooling():
     pool_size = 3
     pool = MaxPooling((pool_size, pool_size))
     y = pool.apply(x)
-    func = function([x], y, mode='FAST_RUN')
+    func = function([x], y)
 
     x_val = numpy.ones((batch_size, num_channels, x_size, y_size),
                        dtype=theano.config.floatX)
@@ -278,7 +272,7 @@ def test_convolutional_sequence():
     conv2.convolution.use_bias = False
     y = seq.apply(x)
     seq.initialize()
-    func = function([x], y, mode='FAST_RUN')
+    func = function([x], y)
 
     x_val = numpy.ones((batch_size, 4, 17, 13), dtype=theano.config.floatX)
     y_val = (numpy.ones((batch_size, 4, 4, 2)) *
