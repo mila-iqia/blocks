@@ -8,9 +8,10 @@ from theano.tensor.nnet import bn
 
 from ..graph import add_annotation
 from ..initialization import Constant
-from ..roles import (WEIGHT, BIAS, BATCH_NORM_POPULATION_MEAN,
+from ..roles import (BATCH_NORM_POPULATION_MEAN,
                      BATCH_NORM_POPULATION_STDEV, BATCH_NORM_OFFSET,
                      BATCH_NORM_DIVISOR, BATCH_NORM_MINIBATCH_ESTIMATE,
+                     BATCH_NORM_SHIFT_PARAMETER, BATCH_NORM_SCALE_PARAMETER,
                      add_role)
 from ..utils import (shared_floatx_zeros, shared_floatx,
                      shared_floatx_nans)
@@ -56,11 +57,11 @@ class BatchNormalization(RNGMixin, Feedforward):
        computation (when the brick is run in training mode).
        Added to the variance inside the square root, as in the
        batch normalization paper.
-    weights_init : object, optional
+    scale_init : object, optional
         Initialization object to use for the learned scaling parameter
         ($\\gamma$ in [BN]_). By default, uses constant initialization
         of 1.
-    biases_init : object, optional
+    shift_init : object, optional
         Initialization object to use for the learned shift parameter
         ($\\beta$ in [BN]_). By default, uses constant initialization of 0.
 
@@ -89,11 +90,11 @@ class BatchNormalization(RNGMixin, Feedforward):
     brick introduces scales and shift parameters (tagged with the
     `PARAMETER` role) that, in the absence of batch normalization,
     usually makes things unstable. If you must do this, filter for and
-    remove `BATCH_NORM_SHIFT` and `BATCH_NORM_SCALE` from the list of
-    parameters you are training, and this brick should behave as a
-    (somewhat expensive) no-op.
+    remove `BATCH_NORM_SHIFT_PARAMETER` and `BATCH_NORM_SCALE_PARAMETER`
+    from the list of parameters you are training, and this brick should
+    behave as a (somewhat expensive) no-op.
 
-    This Brick accepts `weights_init` and `biases_init` arguments but is
+    This Brick accepts `scale_init` and `shift_init` arguments but is
     *not* an instance of :class:`~blocks.bricks.Initializable`, and will
     therefore not receive pushed initialization config from any parent
     brick. In almost all cases, you will probably want to stick with the
@@ -108,16 +109,16 @@ class BatchNormalization(RNGMixin, Feedforward):
     """
     @lazy(allocation=['input_dim'])
     def __init__(self, input_dim, broadcastable=None,
-                 conserve_memory=True, epsilon=1e-4, weights_init=None,
-                 biases_init=None, **kwargs):
+                 conserve_memory=True, epsilon=1e-4, scale_init=None,
+                 shift_init=None, **kwargs):
         self.input_dim = input_dim
         self.broadcastable = broadcastable
         self.conserve_memory = conserve_memory
         self.epsilon = epsilon
-        self.weights_init = (Constant(1) if weights_init is None
-                             else weights_init)
-        self.biases_init = (Constant(0) if biases_init is None
-                            else biases_init)
+        self.scale_init = (Constant(1) if scale_init is None
+                           else scale_init)
+        self.shift_init = (Constant(0) if shift_init is None
+                           else shift_init)
         self._training_mode = []
         super(BatchNormalization, self).__init__(**kwargs)
 
@@ -144,10 +145,10 @@ class BatchNormalization(RNGMixin, Feedforward):
                                [self, application_call])
         _add_role_and_annotate(stdev, BATCH_NORM_DIVISOR,
                                [self, application_call])
-        W = _add_batch_axis(self.W)
-        b = _add_batch_axis(self.b)
+        scale = _add_batch_axis(self.scale)
+        shift = _add_batch_axis(self.shift)
         # Heavy lifting is done by the Theano utility function.
-        normalized = bn.batch_normalization(input_, W, b, mean, stdev,
+        normalized = bn.batch_normalization(input_, scale, shift, mean, stdev,
                                             mode=('low_mem'
                                                   if self.conserve_memory
                                                   else 'high_mem'))
@@ -190,16 +191,16 @@ class BatchNormalization(RNGMixin, Feedforward):
         broadcastable = broadcastable
 
         # "gamma", from the Ioffe & Szegedy manuscript.
-        self.W = shared_floatx_nans(var_dim, name='batch_norm_scale',
-                                    broadcastable=broadcastable)
+        self.scale = shared_floatx_nans(var_dim, name='batch_norm_scale',
+                                        broadcastable=broadcastable)
 
         # "beta", from the Ioffe & Szegedy manuscript.
-        self.b = shared_floatx_nans(var_dim, name='batch_norm_shift',
-                                    broadcastable=broadcastable)
-        add_role(self.W, WEIGHT)
-        add_role(self.b, BIAS)
-        self.parameters.append(self.W)
-        self.parameters.append(self.b)
+        self.shift = shared_floatx_nans(var_dim, name='batch_norm_shift',
+                                        broadcastable=broadcastable)
+        add_role(self.scale, BATCH_NORM_SCALE_PARAMETER)
+        add_role(self.shift, BATCH_NORM_SHIFT_PARAMETER)
+        self.parameters.append(self.scale)
+        self.parameters.append(self.shift)
 
         # These aren't technically parameters, in that they should not be
         # learned using the same cost function as other model parameters.
@@ -218,8 +219,8 @@ class BatchNormalization(RNGMixin, Feedforward):
         add_annotation(self.population_stdev, self)
 
     def _initialize(self):
-        self.biases_init.initialize(self.b, self.rng)
-        self.weights_init.initialize(self.W, self.rng)
+        self.shift_init.initialize(self.shift, self.rng)
+        self.scale_init.initialize(self.scale, self.rng)
 
     # Needed for the Feedforward interface.
     @property

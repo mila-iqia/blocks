@@ -234,3 +234,22 @@ class BatchNormMinibatchEstimateRole(BatchNormGraphVariableRole):
 #: role added to variables that are the result of a batch normalization
 #  replacement, rather than the original population statistics variables.
 BATCH_NORM_MINIBATCH_ESTIMATE = BatchNormMinibatchEstimateRole()
+
+
+class BatchNormScaleParameterRole(ParameterRole):
+    pass
+
+#: role given to the scale parameter, referred to as "scale" in the
+# batch normalization manuscript, applied after normalizing.
+BATCH_NORM_SCALE_PARAMETER = BatchNormScaleParameterRole()
+
+
+class BatchNormShiftParameterRole(BiasRole):
+    pass
+
+#: role given to the shift parameter, referred to as "beta" in the
+# batch normalization manuscript, applied after normalizing and scaling.
+# Inherits from BIAS, because there really is no functional difference
+# with a normal bias, and indeed these are the only biases present
+# inside a BatchNormalizedMLP.
+BATCH_NORM_SHIFT_PARAMETER = BatchNormShiftParameterRole()

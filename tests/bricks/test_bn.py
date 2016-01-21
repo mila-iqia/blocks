@@ -9,7 +9,8 @@ from blocks.bricks import (BatchNormalization, SpatialBatchNormalization,
 from blocks.bricks.conv import (Convolutional, ConvolutionalSequence,
                                 MaxPooling, AveragePooling)
 from blocks.initialization import Constant
-from blocks.graph import batch_normalization
+from blocks.graph import (ComputationGraph, batch_normalization,
+                          batch_normalization_updates)
 
 
 def random_unif(rng, dim, low=1, high=10):
@@ -37,23 +38,23 @@ def test_batch_normalization_allocation_initialization():
         assert conserve_memory == bn.conserve_memory
         assert input_dim == bn.input_dim
         assert bn.broadcastable == broadcastable
-        assert bn.W.broadcastable == input_broadcastable
-        assert bn.b.broadcastable == input_broadcastable
+        assert bn.scale.broadcastable == input_broadcastable
+        assert bn.shift.broadcastable == input_broadcastable
         assert bn.population_mean.broadcastable == input_broadcastable
         assert bn.population_stdev.broadcastable == input_broadcastable
         assert_allclose(bn.population_mean.get_value(borrow=True), 0.)
         assert_allclose(bn.population_stdev.get_value(borrow=True), 1.)
-        assert_equal(bn.W.get_value(borrow=True).shape, expected_shape)
-        assert_equal(bn.b.get_value(borrow=True).shape, expected_shape)
+        assert_equal(bn.scale.get_value(borrow=True).shape, expected_shape)
+        assert_equal(bn.shift.get_value(borrow=True).shape, expected_shape)
         assert_equal(bn.population_mean.get_value(borrow=True).shape,
                      expected_shape)
         assert_equal(bn.population_stdev.get_value(borrow=True).shape,
                      expected_shape)
-        assert numpy.isnan(bn.b.get_value(borrow=True)).all()
-        assert numpy.isnan(bn.W.get_value(borrow=True)).all()
+        assert numpy.isnan(bn.shift.get_value(borrow=True)).all()
+        assert numpy.isnan(bn.scale.get_value(borrow=True)).all()
         bn.initialize()
-        assert_allclose(bn.b.get_value(borrow=True), 0.)
-        assert_allclose(bn.W.get_value(borrow=True), 1.)
+        assert_allclose(bn.shift.get_value(borrow=True), 0.)
+        assert_allclose(bn.scale.get_value(borrow=True), 1.)
 
     yield check, 5, (5,)
     yield check, (6, 7, 9), (6, 7, 9), (False, False, False)
@@ -103,14 +104,14 @@ def test_batch_normalization_inference_apply():
 
         # Test learned scale is applied.
         gamma = random_unif(rng, variable_dim)
-        bn.W.set_value(gamma)
+        bn.scale.set_value(gamma)
         assert_allclose(y.eval({x: input_}),
                         (input_ - pop_mean) * (gamma / pop_stdev),
                         rtol=1e-4)
 
         # Test learned offset is applied.
         beta = random_unif(rng, variable_dim)
-        bn.b.set_value(beta)
+        bn.shift.set_value(beta)
         assert_allclose(y.eval({x: input_}),
                         (input_ - pop_mean) * (gamma / pop_stdev) + beta,
                         rtol=1e-4)
@@ -154,13 +155,13 @@ def test_batch_normalization_train_apply():
 
         # Check that the scale parameters are still getting applied.
         gamma = random_unif(rng, variable_dim)
-        bn.W.set_value(gamma)
+        bn.scale.set_value(gamma)
         assert_allclose(y_hat.eval({x: input_}), normalize(input_) * gamma,
                         atol=(1e-3 if theano.config.floatX == 'float32'
                               else 1e-7))
 
         beta = random_unif(rng, variable_dim)
-        bn.b.set_value(beta)
+        bn.shift.set_value(beta)
         # Check that the shift parameters are still getting applied.
         assert_allclose(y_hat.eval({x: input_}),
                         normalize(input_) * gamma + beta,
@@ -288,7 +289,8 @@ def test_batch_normalized_mlp_transformed():
     x = tensor.matrix('x')
     mlp = BatchNormalizedMLP([Tanh(), Tanh()], [5, 7, 9])
     with batch_normalization(mlp):
-        mlp.apply(x)
+        y = mlp.apply(x)
+    assert len(batch_normalization_updates(ComputationGraph([y]))) == 4
 
 
 def test_batch_normalized_mlp_conserve_memory_propagated():
