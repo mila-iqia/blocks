@@ -229,8 +229,11 @@ def batch_normalization_updates(training_graph, allow_duplicates=False):
         deviation, and the second is a Theano variable for the
         corresponding statistics on a minibatch. Note that multiple
         applications of a single :class:`blocks.bricks.BatchNormalization`
-        may appear in the graph, and therefore a single population variable
-        may map to several different minibatch variables.
+        may appear in the graph, and therefore (if `allow_duplicates` is
+        True) a single population variable may map to several different
+        minibatch variables, and appear multiple times in this mapping.
+        This can happen in recurrent models, siamese networks or other
+        models that reuse pathways.
 
     Notes
     -----
