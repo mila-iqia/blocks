@@ -1,5 +1,3 @@
-from functools import partial
-
 import numpy
 from numpy.testing import assert_allclose
 import theano
@@ -84,12 +82,10 @@ class TestSimpleBatchNormalizationUpdates(object):
         assert len(updates) == num_updates
         assert all(is_shared_variable(u[0]) for u in updates)
         # This order is somewhat arbitrary and implementation_dependent
-        means = set(filter(partial(has_roles,
-                                   roles=[BATCH_NORM_POPULATION_MEAN]),
-                           [u[0] for u in updates]))
-        stdevs = set(filter(partial(has_roles,
-                                    roles=[BATCH_NORM_POPULATION_STDEV]),
-                            [u[0] for u in updates]))
+        means = set(u[0] for u in updates
+                    if has_roles(u[0], [BATCH_NORM_POPULATION_MEAN]))
+        stdevs = set(u[0] for u in updates
+                     if has_roles(u[0], [BATCH_NORM_POPULATION_STDEV]))
         assert means.isdisjoint(stdevs)
         assert len(set(get_brick(v) for v in means)) == num_bricks
         assert len(set(get_brick(v) for v in stdevs)) == num_bricks
