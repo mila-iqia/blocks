@@ -294,7 +294,7 @@ class ConvolutionalTranspose(Initializable):
             W, b = self.parameters
         else:
             W, = self.parameters
-        imshp = tensor.stack(*((input_.shape[0],) + self.get_dim('output')))
+        imshp = (None,) + self.get_dim('output')
         kshp = (self.num_channels, self.num_filters) + self.filter_size
         output = AbstractConv2d_gradInputs(
             imshp=imshp, kshp=kshp, border_mode=self.border_mode,
