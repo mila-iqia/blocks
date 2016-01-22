@@ -279,15 +279,13 @@ class SpatialBatchNormalization(BatchNormalization):
     keyword arguments).
 
     """
-    @lazy(allocation=['input_dim'])
-    def __init__(self, input_dim, **kwargs):
-        if not isinstance(input_dim,
-                          collections.Sequence) or len(input_dim) < 2:
+    def _allocate(self):
+        if not isinstance(self.input_dim,
+                          collections.Sequence) or len(self.input_dim) < 2:
             raise ValueError('expected input_dim to be length >= 2 '
                              'e.g. (channels, height, width)')
-        broadcastable = (False,) + ((True,) * (len(input_dim) - 1))
-        kwargs.setdefault('broadcastable', broadcastable)
-        super(SpatialBatchNormalization, self).__init__(input_dim, **kwargs)
+        self.broadcastable = (False,) + ((True,) * (len(self.input_dim) - 1))
+        super(SpatialBatchNormalization, self)._allocate()
 
 
 class BatchNormalizedMLP(MLP):

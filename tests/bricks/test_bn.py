@@ -215,12 +215,15 @@ def test_raise_exception_spatial():
     """Test that SpatialBatchNormalization raises an expected exception."""
     # Work around a stupid bug in nose2 that unpacks the tuple into
     # separate arguments.
-    yield assert_raises, (ValueError, SpatialBatchNormalization, (5,))
-    yield assert_raises, (ValueError, SpatialBatchNormalization, 3)
+    sbn1 = SpatialBatchNormalization((5,))
+    yield assert_raises, (ValueError, sbn1.allocate)
+    sbn2 = SpatialBatchNormalization(3)
+    yield assert_raises, (ValueError, sbn2.allocate)
 
     def do_not_fail(*input_dim):
         try:
-            SpatialBatchNormalization(input_dim)
+            sbn = SpatialBatchNormalization(input_dim)
+            sbn.allocate()
         except ValueError:
             assert False
 
