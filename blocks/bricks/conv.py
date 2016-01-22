@@ -180,142 +180,45 @@ class Convolutional(Initializable):
         return self.num_filters
 
 
-class ConvolutionalTranspose(Initializable):
+class ConvolutionalTranspose(Convolutional):
     """Performs the transpose of a 2D convolution.
 
     Parameters
     ----------
-    filter_size : tuple
-        The height and width of the filter (also called *kernels*).
-    num_filters : int
-        Number of filters per channel.
-    num_channels : int
-        Number of input channels in the image. For the first layer this is
-        normally 1 for grayscale images and 3 for color (RGB) images. For
-        subsequent layers this is equal to the number of filters output by
-        the previous convolutional layer. The filters are pooled over the
-        channels.
+    image_size : tuple, optional
+        Required for tied biases. Defaults to ``None``.
     original_image_size : tuple
         The height and width of the output (image or feature map).
-    batch_size : int, optional
-        Number of examples per batch. If given, this will be passed to
-        Theano convolution operator, possibly resulting in faster
-        execution.
-    image_size : tuple, optional
-        The height and width of the input (image or feature map). If given,
-        this will be passed to the Theano convolution operator, resulting
-        in possibly faster execution times.
-    step : tuple, optional
-        The step (or stride) with which to slide the filters over the
-        image. Defaults to (1, 1).
-    border_mode : {'valid', 'full'}, optional
-        The border mode to use, see :func:`scipy.signal.convolve2d` for
-        details. Defaults to 'valid'.
-    tied_biases : bool
-        If ``True``, it indicates that the biases of every filter in this
-        layer should be shared amongst all applications of that filter.
-        Setting this to ``False`` will untie the biases, yielding a
-        separate bias for every location at which the filter is applied.
-        Defaults to ``False``.
+
+    See Also
+    --------
+    :class:`Convolutional` : For the documentation of other parameters.
 
     """
     @lazy(allocation=['filter_size', 'num_filters', 'num_channels',
                       'original_image_size'])
     def __init__(self, filter_size, num_filters, num_channels,
-                 original_image_size, batch_size=None, image_size=(None, None),
-                 step=(1, 1), border_mode='valid', tied_biases=False,
-                 **kwargs):
-        super(ConvolutionalTranspose, self).__init__(**kwargs)
-
-        self.filter_size = filter_size
-        self.num_filters = num_filters
-        self.batch_size = batch_size
-        self.num_channels = num_channels
-        self.image_size = image_size
+                 original_image_size, **kwargs):
+        super(ConvolutionalTranspose, self).__init__(
+            filter_size, num_filters, num_channels, **kwargs)
         self.original_image_size = original_image_size
-        self.step = step
-        self.border_mode = border_mode
-        self.tied_biases = tied_biases
 
-    def _allocate(self):
+    def conv2d_impl(self, input_, W, image_shape, subsample, border_mode,
+                    filter_shape):
         # The AbstractConv2d_gradInputs op takes a kernel that was used for the
         # **convolution**. We therefore have to invert num_channels and
         # num_filters for W.
-        W = shared_floatx_nans((self.num_channels, self.num_filters) +
-                               self.filter_size, name='W')
-        add_role(W, FILTER)
-        self.parameters.append(W)
-        self.add_auxiliary_variable(W.norm(2), name='W_norm')
-        if self.use_bias:
-            if self.tied_biases:
-                b = shared_floatx_nans((self.num_filters,), name='b')
-            else:
-                # this error is raised here instead of during initializiation
-                # because ConvolutionalSequence may specify the image size
-                if self.image_size == (None, None) and not self.tied_biases:
-                    raise ValueError('Cannot infer bias size without '
-                                     'image_size specified. If you use '
-                                     'variable image_size, you should use '
-                                     'tied_biases=True.')
-
-                b = shared_floatx_nans(self.get_dim('output'), name='b')
-            add_role(b, BIAS)
-
-            self.parameters.append(b)
-            self.add_auxiliary_variable(b.norm(2), name='b_norm')
-
-    def _initialize(self):
-        if self.use_bias:
-            W, b = self.parameters
-            self.biases_init.initialize(b, self.rng)
-        else:
-            W, = self.parameters
-        self.weights_init.initialize(W, self.rng)
-
-    @application(inputs=['input_'], outputs=['output'])
-    def apply(self, input_):
-        """Perform the transposed convolution.
-
-        Parameters
-        ----------
-        input_ : :class:`~tensor.TensorVariable`
-            A 4D tensor with the axes representing batch size, number of
-            channels, image height, and image width.
-
-        Returns
-        -------
-        output : :class:`~tensor.TensorVariable`
-            A 4D tensor of filtered images (feature maps) with dimensions
-            representing batch size, number of filters, feature map height,
-            and feature map width.
-
-        """
-        if self.use_bias:
-            W, b = self.parameters
-        else:
-            W, = self.parameters
+        W = W.transpose(1, 0, 2, 3)
         imshp = (None,) + self.get_dim('output')
-        kshp = (self.num_channels, self.num_filters) + self.filter_size
-        output = AbstractConv2d_gradInputs(
-            imshp=imshp, kshp=kshp, border_mode=self.border_mode,
-            subsample=self.step)(W, input_, imshp[-2:])
-        if self.use_bias:
-            if self.tied_biases:
-                output += b.dimshuffle('x', 0, 'x', 'x')
-            else:
-                output += b.dimshuffle('x', 0, 1, 2)
-        return output
+        kshp = (filter_shape[1], filter_shape[0]) + filter_shape[2:]
+        return AbstractConv2d_gradInputs(
+            imshp=imshp, kshp=kshp, border_mode=border_mode,
+            subsample=subsample)(W, input_, self.get_dim('output')[1:])
 
     def get_dim(self, name):
-        if name == 'input_':
-            return (self.num_channels,) + self.image_size
         if name == 'output':
             return (self.num_filters,) + self.original_image_size
         return super(ConvolutionalTranspose, self).get_dim(name)
-
-    @property
-    def num_output_channels(self):
-        return self.num_filters
 
 
 class Pooling(Initializable, Feedforward):
