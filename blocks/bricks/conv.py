@@ -294,11 +294,11 @@ class ConvolutionalTranspose(Initializable):
             W, b = self.parameters
         else:
             W, = self.parameters
-        out_shape = tensor.stack(
-            *((input_.shape[0],) + self.get_dim('output')))
+        imshp = tensor.stack(*((input_.shape[0],) + self.get_dim('output')))
+        kshp = (self.num_channels, self.num_filters) + self.filter_size
         output = AbstractConv2d_gradInputs(
-            imshp=out_shape, kshp=W.shape, border_mode=self.border_mode,
-            subsample=self.step)(W, input_, out_shape[-2:])
+            imshp=imshp, kshp=kshp, border_mode=self.border_mode,
+            subsample=self.step)(W, input_, imshp[-2:])
         if self.use_bias:
             if self.tied_biases:
                 output += b.dimshuffle('x', 0, 'x', 'x')
