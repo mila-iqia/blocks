@@ -187,8 +187,20 @@ class ConvolutionalTranspose(Convolutional):
     ----------
     image_size : tuple, optional
         Required for tied biases. Defaults to ``None``.
+    num_filters : int
+        Number of filters at the *output* of the transposed convolution,
+        i.e. the number of channels in the corresponding convolution.
+    num_channels : int
+        Number of channels at the *input* of the transposed convolution,
+        i.e. the number of output filters in the corresponding
+        convolution.
     original_image_size : tuple
-        The height and width of the output (image or feature map).
+        The height and width of the image that forms the output of
+        the transpose operation, which is the input of the original
+        (non-transposed) convolution.
+    step : tuple, optional
+        The step (or stride) of the corresponding *convolution*.
+        Defaults to (1, 1).
 
     See Also
     --------
