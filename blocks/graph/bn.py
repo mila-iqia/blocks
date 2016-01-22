@@ -201,8 +201,8 @@ def apply_batch_normalization(computation_graph):
         unpacked = inputs[app_call].owner.inputs[0]
         with app_call.application.brick:
             new_output = app_call.application.brick.apply(unpacked)
-            new_app_call = get_application_call(new_output)
-            assert new_app_call.metadata['training_mode']
+        new_app_call = get_application_call(new_output)
+        assert new_app_call.metadata['training_mode']
         replacements.append((old_output, new_output))
     return computation_graph.replace(replacements)
 
