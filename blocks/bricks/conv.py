@@ -513,7 +513,7 @@ class ConvolutionalActivation(_AllocationMixin, Sequence, Initializable):
     def __init__(self, activation, filter_size, num_filters, num_channels,
                  batch_size=None, image_size=None, step=(1, 1),
                  border_mode='valid', tied_biases=False, **kwargs):
-        self.convolution = Convolutional()
+        self._build_convolution()
 
         self.filter_size = filter_size
         self.num_filters = num_filters
@@ -527,6 +527,9 @@ class ConvolutionalActivation(_AllocationMixin, Sequence, Initializable):
         super(ConvolutionalActivation, self).__init__(
             application_methods=[self.convolution.apply, activation],
             **kwargs)
+
+    def _build_convolution(self):
+        self.convolution = Convolutional()
 
     def get_dim(self, name):
         # TODO The name of the activation output doesn't need to be `output`
@@ -559,21 +562,15 @@ class ConvolutionalTransposeActivation(_AllocationMixin, Sequence,
                  original_image_size, batch_size=None, image_size=None,
                  step=(1, 1), border_mode='valid', tied_biases=False,
                  **kwargs):
-        self.convolution = ConvolutionalTranspose()
-
-        self.filter_size = filter_size
-        self.num_filters = num_filters
-        self.num_channels = num_channels
-        self.batch_size = batch_size
-        self.image_size = image_size
-        self.original_image_size = original_image_size
-        self.step = step
-        self.border_mode = border_mode
-        self.tied_biases = tied_biases
-
         super(ConvolutionalTransposeActivation, self).__init__(
-            application_methods=[self.convolution.apply, activation],
+            activation, filter_size, num_filters, num_channels,
+            batch_size, image_size, step, border_mode, tied_biases,
             **kwargs)
+
+        self.original_image_size = original_image_size
+
+    def _build_convolution(self):
+        self.convolution = ConvolutionalTranspose()
 
     def get_dim(self, name):
         # TODO The name of the activation output doesn't need to be `output`
