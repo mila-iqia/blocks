@@ -10,7 +10,7 @@ from blocks.bricks.conv import (Convolutional, ConvolutionalSequence,
                                 MaxPooling, AveragePooling)
 from blocks.initialization import Constant
 from blocks.graph import (ComputationGraph, batch_normalization,
-                          batch_normalization_updates)
+                          get_batch_normalization_updates)
 
 
 def random_unif(rng, dim, low=1, high=10):
@@ -290,7 +290,7 @@ def test_batch_normalized_mlp_transformed():
     mlp = BatchNormalizedMLP([Tanh(), Tanh()], [5, 7, 9])
     with batch_normalization(mlp):
         y = mlp.apply(x)
-    assert len(batch_normalization_updates(ComputationGraph([y]))) == 4
+    assert len(get_batch_normalization_updates(ComputationGraph([y]))) == 4
 
 
 def test_batch_normalized_mlp_conserve_memory_propagated():

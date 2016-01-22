@@ -207,7 +207,7 @@ def apply_batch_normalization(computation_graph):
     return computation_graph.replace(replacements)
 
 
-def batch_normalization_updates(training_graph, allow_duplicates=False):
+def get_batch_normalization_updates(training_graph, allow_duplicates=False):
     """Extract correspondences for learning BN population statistics.
 
     Parameters

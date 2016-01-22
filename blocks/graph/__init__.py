@@ -20,7 +20,7 @@ from ..utils import (is_graph_input, is_shared_variable, dict_union,
                      shared_floatx_zeros, shared_like)
 from .annotations import add_annotation, Annotation  # noqa
 from .bn import batch_normalization, apply_batch_normalization  # noqa
-from .bn import batch_normalization_updates  # noqa
+from .bn import get_batch_normalization_updates  # noqa
 
 logger = logging.getLogger(__name__)
 

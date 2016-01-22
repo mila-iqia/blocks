@@ -8,7 +8,7 @@ from blocks.bricks import (BatchNormalization, Sequence, Tanh, MLP,
 from blocks.filter import get_brick
 from blocks.graph import (ComputationGraph, batch_normalization,
                           apply_batch_normalization,
-                          batch_normalization_updates)
+                          get_batch_normalization_updates)
 from blocks.initialization import Constant
 from blocks.roles import (has_roles, BATCH_NORM_POPULATION_MEAN,
                           BATCH_NORM_POPULATION_STDEV)
@@ -72,7 +72,7 @@ def test_apply_batch_normalization_nested():
     assert_allclose(y_, y_expected, rtol=1e-3)
 
 
-class TestSimpleBatchNormalizationUpdates(object):
+class TestSimpleGetBatchNormalizationUpdates(object):
     def setUp(self):
         self.mlp = BatchNormalizedMLP([Tanh(), Tanh()], [5, 7, 9])
         self.x = tensor.matrix()
@@ -90,44 +90,44 @@ class TestSimpleBatchNormalizationUpdates(object):
         assert len(set(get_brick(v) for v in means)) == num_bricks
         assert len(set(get_brick(v) for v in stdevs)) == num_bricks
 
-    def test_batch_normalization_updates(self):
-        """Test that batch_normalization_updates works as expected."""
+    def test_get_batch_normalization_updates(self):
+        """Test that get_batch_normalization_updates works as expected."""
         with batch_normalization(self.mlp):
             y_bn = self.mlp.apply(self.x)
         graph = ComputationGraph([y_bn])
-        updates = batch_normalization_updates(graph)
+        updates = get_batch_normalization_updates(graph)
         self.simple_assertions(updates)
 
-    def test_batch_normalization_updates_non_training_applications(self):
+    def test_get_batch_normalization_updates_non_training_applications(self):
         """Test updates extracton in graph with non-training apply."""
         y = self.mlp.apply(self.x)
         with batch_normalization(self.mlp):
             y_bn = self.mlp.apply(self.x)
         graph = ComputationGraph([y_bn, y])
-        updates = batch_normalization_updates(graph)
+        updates = get_batch_normalization_updates(graph)
         self.simple_assertions(updates)
 
-    def test_batch_normalization_updates_no_training(self):
+    def test_get_batch_normalization_updates_no_training(self):
         """Test for exception if there are no training-mode nodes."""
         y = self.mlp.apply(self.x)
         graph = ComputationGraph([y])
-        numpy.testing.assert_raises(ValueError, batch_normalization_updates,
-                                    graph)
+        numpy.testing.assert_raises(ValueError,
+                                    get_batch_normalization_updates, graph)
 
-    def test_batch_normalization_updates_duplicates_error(self):
+    def test_get_batch_normalization_updates_duplicates_error(self):
         """Test that we get an error by default on multiple apply."""
         with batch_normalization(self.mlp):
             y = self.mlp.apply(self.x)
             y2 = self.mlp.apply(self.x)
         graph = ComputationGraph([y, y2])
-        numpy.testing.assert_raises(ValueError, batch_normalization_updates,
-                                    graph)
+        numpy.testing.assert_raises(ValueError,
+                                    get_batch_normalization_updates, graph)
 
-    def test_batch_normalization_updates_allow_duplicates(self):
-        """Test batch_normalization_updates(.., allow_duplicates=True)."""
+    def test_get_batch_normalization_updates_allow_duplicates(self):
+        """Test get_batch_normalization_updates(allow_duplicates=True)."""
         with batch_normalization(self.mlp):
             y = self.mlp.apply(self.x)
             y2 = self.mlp.apply(self.x)
         graph = ComputationGraph([y, y2])
-        updates = batch_normalization_updates(graph, allow_duplicates=True)
+        updates = get_batch_normalization_updates(graph, allow_duplicates=True)
         self.simple_assertions(updates, num_bricks=2, num_updates=8)
