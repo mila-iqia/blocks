@@ -70,6 +70,35 @@ def unpack(arg, singleton=False):
         return arg
 
 
+def shared_floatx_zeros_matching(shared_variable, name=None, **kwargs):
+    r"""Create another shared variable with matching shape and broadcast.
+
+    Parameters
+    ----------
+    shared_variable : :class:'tensor.TensorSharedVariable'
+        A Theano shared variable with the desired shape and broadcastable
+        flags.
+    name : :obj:`str`, optional
+        The name for the shared variable. Defaults to `None`.
+    \*\*kwargs
+        Keyword arguments to pass to the :func:`shared_floatx_zeros` function.
+
+    Returns
+    -------
+    :class:'tensor.TensorSharedVariable'
+        A new shared variable, initialized to all zeros, with the same
+        shape and broadcastable flags as `shared_variable`.
+
+
+    """
+    if not is_shared_variable(shared_variable):
+        raise ValueError('argument must be a shared variable')
+    return shared_floatx_zeros(shared_variable.get_value().shape,
+                               name=name,
+                               broadcastable=shared_variable.broadcastable,
+                               **kwargs)
+
+
 def shared_floatx_zeros(shape, **kwargs):
     r"""Creates a shared variable array filled with zeros.
 
