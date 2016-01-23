@@ -52,7 +52,7 @@ class Convolutional(Initializable):
     # to leverage features not yet available in Theano's standard conv2d.
     # The function you override with here should accept at least the
     # input and the kernels as positionals, and the keyword arguments
-    # image_shape, subsample, border_mode, and filter_shape. If some of
+    # input_shape, subsample, border_mode, and filter_shape. If some of
     # these are unsupported they should still be accepted and ignored,
     # e.g. with a wrapper function that swallows **kwargs.
     conv2d_impl = staticmethod(conv2d)
@@ -143,14 +143,14 @@ class Convolutional(Initializable):
             W, = self.parameters
 
         if self.image_size == (None, None):
-            image_shape = None
+            input_shape = None
         else:
-            image_shape = (self.batch_size, self.num_channels)
-            image_shape += self.image_size
+            input_shape = (self.batch_size, self.num_channels)
+            input_shape += self.image_size
 
         output = self.conv2d_impl(
             input_, W,
-            image_shape=image_shape,
+            input_shape=input_shape,
             subsample=self.step,
             border_mode=self.border_mode,
             filter_shape=((self.num_filters, self.num_channels) +
@@ -166,10 +166,10 @@ class Convolutional(Initializable):
         if name == 'input_':
             return (self.num_channels,) + self.image_size
         if name == 'output':
-            image_shape = (None, self.num_channels) + self.image_size
+            input_shape = (None, self.num_channels) + self.image_size
             kernel_shape = ((self.num_filters, self.num_channels) +
                             self.filter_size)
-            out_shape = self.get_output_shape(image_shape, kernel_shape,
+            out_shape = self.get_output_shape(input_shape, kernel_shape,
                                               self.border_mode, self.step)
             assert len(out_shape) == 4
             return out_shape[1:]
