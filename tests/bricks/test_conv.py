@@ -7,10 +7,12 @@ from numpy.testing import assert_allclose
 from theano import tensor
 from theano import function
 
-from blocks.bricks import Rectifier
+from blocks.bricks import Rectifier, Tanh
 from blocks.bricks.conv import (Convolutional, ConvolutionalTranspose,
                                 MaxPooling, AveragePooling,
-                                ConvolutionalActivation, ConvolutionalSequence)
+                                ConvolutionalActivation,
+                                ConvolutionalTransposeActivation,
+                                ConvolutionalSequence)
 from blocks.initialization import Constant
 from blocks.graph import ComputationGraph
 
@@ -48,9 +50,9 @@ def test_convolutional_transpose():
     filter_size = (3, 3)
     step = (2, 2)
     conv = ConvolutionalTranspose(
-        filter_size, num_filters, num_channels, step=step,
-        original_image_size=original_image_size, image_size=image_size,
-        weights_init=Constant(1.), biases_init=Constant(5.))
+        original_image_size, filter_size, num_filters, num_channels, step=step,
+        image_size=image_size, weights_init=Constant(1.),
+        biases_init=Constant(5.))
     conv.initialize()
     y = conv.apply(x)
     func = function([x], y)
@@ -286,6 +288,33 @@ def test_convolutional_activation_use_bias():
     act.allocate()
     assert not act.convolution.use_bias
     assert len(ComputationGraph([act.apply(tensor.tensor4())]).parameters) == 1
+
+
+def test_convolutional_transpose_activation():
+    x = tensor.tensor4('x')
+    num_channels = 4
+    num_filters = 3
+    image_size = (8, 6)
+    original_image_size = (17, 13)
+    batch_size = 5
+    filter_size = (3, 3)
+    step = (2, 2)
+    conv = ConvolutionalTransposeActivation(
+        Tanh().apply, original_image_size, filter_size, num_filters,
+        num_channels, step=step, image_size=image_size,
+        weights_init=Constant(1.), biases_init=Constant(5.))
+    conv.initialize()
+    y = conv.apply(x)
+    func = function([x], y)
+
+    x_val = numpy.ones((batch_size, num_channels) + image_size,
+                       dtype=theano.config.floatX)
+    expected_value = num_channels * numpy.ones(
+        (batch_size, num_filters) + original_image_size)
+    expected_value[:, :, 2:-2:2, :] += num_channels
+    expected_value[:, :, :, 2:-2:2] += num_channels
+    expected_value[:, :, 2:-2:2, 2:-2:2] += num_channels
+    assert_allclose(func(x_val), numpy.tanh(expected_value + 5))
 
 
 def test_convolutional_sequence_use_bias():
