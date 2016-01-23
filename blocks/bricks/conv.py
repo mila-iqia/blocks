@@ -185,8 +185,10 @@ class ConvolutionalTranspose(Convolutional):
 
     Parameters
     ----------
-    image_size : tuple, optional
-        Required for tied biases. Defaults to ``None``.
+    original_image_size : tuple
+        The height and width of the image that forms the output of
+        the transpose operation, which is the input of the original
+        (non-transposed) convolution.
     num_filters : int
         Number of filters at the *output* of the transposed convolution,
         i.e. the number of channels in the corresponding convolution.
@@ -194,28 +196,28 @@ class ConvolutionalTranspose(Convolutional):
         Number of channels at the *input* of the transposed convolution,
         i.e. the number of output filters in the corresponding
         convolution.
-    original_image_size : tuple
-        The height and width of the image that forms the output of
-        the transpose operation, which is the input of the original
-        (non-transposed) convolution.
     step : tuple, optional
         The step (or stride) of the corresponding *convolution*.
         Defaults to (1, 1).
+    image_size : tuple, optional
+        Image size of the input to the *transposed* convolution, i.e.
+        the output of the corresponding convolution. Required for tied
+        biases. Defaults to ``None``.
 
     See Also
     --------
     :class:`Convolutional` : For the documentation of other parameters.
 
     """
-    @lazy(allocation=['filter_size', 'num_filters', 'num_channels',
-                      'original_image_size'])
-    def __init__(self, filter_size, num_filters, num_channels,
-                 original_image_size, **kwargs):
+    @lazy(allocation=['original_image_size', 'filter_size', 'num_filters',
+                      'num_channels'])
+    def __init__(self, original_image_size, filter_size, num_filters,
+                 num_channels, **kwargs):
         super(ConvolutionalTranspose, self).__init__(
             filter_size, num_filters, num_channels, **kwargs)
         self.original_image_size = original_image_size
 
-    def conv2d_impl(self, input_, W, image_shape, subsample, border_mode,
+    def conv2d_impl(self, input_, W, input_shape, subsample, border_mode,
                     filter_shape):
         # The AbstractConv2d_gradInputs op takes a kernel that was used for the
         # **convolution**. We therefore have to invert num_channels and
@@ -455,8 +457,7 @@ class ConvolutionalActivation(_AllocationMixin, Sequence, Initializable):
         self.convolution.step = self.step
 
 
-class ConvolutionalTransposeActivation(_AllocationMixin, Sequence,
-                                       Initializable):
+class ConvolutionalTransposeActivation(ConvolutionalActivation):
     """A transposed convolution followed by an activation function.
 
     Parameters
@@ -471,29 +472,19 @@ class ConvolutionalTransposeActivation(_AllocationMixin, Sequence,
     parameters.
 
     """
-    @lazy(allocation=['filter_size', 'num_filters', 'num_channels',
-                      'original_image_size'])
-    def __init__(self, activation, filter_size, num_filters, num_channels,
-                 original_image_size, batch_size=None, image_size=None,
-                 step=(1, 1), border_mode='valid', tied_biases=False,
-                 **kwargs):
+    @lazy(allocation=['original_image_size', 'filter_size', 'num_filters',
+                      'num_channels'])
+    def __init__(self, activation, original_image_size, filter_size,
+                 num_filters, num_channels, **kwargs):
         super(ConvolutionalTransposeActivation, self).__init__(
-            activation, filter_size, num_filters, num_channels,
-            batch_size, image_size, step, border_mode, tied_biases,
-            **kwargs)
-
+            activation, filter_size, num_filters, num_channels, **kwargs)
         self.original_image_size = original_image_size
 
     def _build_convolution(self):
         self.convolution = ConvolutionalTranspose()
 
-    def get_dim(self, name):
-        # TODO The name of the activation output doesn't need to be `output`
-        return self.convolution.get_dim(name)
-
     def _push_allocation_config(self):
         super(ConvolutionalTransposeActivation, self)._push_allocation_config()
-        self.convolution.step = self.step
         self.convolution.original_image_size = self.original_image_size
 
 
