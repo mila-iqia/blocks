@@ -197,9 +197,10 @@ figure below).
    h1_0 -> plus_1_1 -> h1_1 -> plus_1_2 -> h1_2 -> plus_1_3 -> h1_3;
    h2_0 -> plus_2_1 -> h2_1 -> plus_2_2 -> h2_2 -> plus_2_3 -> h2_3;
    h1_1 -> plus_2_1; h1_2 -> plus_2_2; h1_3 -> plus_2_3;
+   h2_0 -> plus_1_1; h2_1 -> plus_1_2; h2_2 -> plus_1_3;
 
    edge [style=invis];
-   h2_0 -> h1_1; h2_1 -> h1_2; h2_2 -> h1_3; 
+   h2_0 -> h1_1; h2_1 -> h1_2; h2_2 -> h1_3;
    plus_2_1 -> plus_1_1; plus_2_2 -> plus_1_2; plus_2_3 -> plus_1_3;
 
    { rank=source; h2_0, h2_1, h2_2, h2_3, plus_2_1, plus_2_2, plus_2_3 }
