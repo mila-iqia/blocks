@@ -21,3 +21,7 @@ def test_lookup_table():
     desired = numpy.array([[[3, 4, 5], [6, 7, 8]], [[0, 1, 2], [9, 10, 11]]],
                           dtype=theano.config.floatX)
     assert_equal(f(x_val)[0], desired)
+
+    # Test get_dim
+    assert_equal(lt.get_dim(lt.apply.inputs[0]), 0)
+    assert_equal(lt.get_dim(lt.apply.outputs[0]), lt.dim)
