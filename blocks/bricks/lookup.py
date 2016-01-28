@@ -41,7 +41,7 @@ class LookupTable(Initializable):
     def _initialize(self):
         self.weights_init.initialize(self.W, self.rng)
 
-    @application
+    @application(inputs=['indices'], outputs=['output'])
     def apply(self, indices):
         """Perform lookup.
 
@@ -67,5 +67,5 @@ class LookupTable(Initializable):
     def get_dim(self, name):
         if name == 'output':
             return self.dim
-        if name == 'input_':
+        if name == 'indices':
             return 0
