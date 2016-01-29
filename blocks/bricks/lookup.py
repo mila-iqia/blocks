@@ -69,3 +69,4 @@ class LookupTable(Initializable):
             return self.dim
         if name == 'indices':
             return 0
+        return super(LookupTable, self).get_dim(name)
