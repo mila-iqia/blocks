@@ -569,7 +569,7 @@ class ConvolutionalSequence(Sequence, Initializable, Feedforward):
         for layer in self.layers:
             if isinstance(layer, Activation):
                 # Activations operate elementwise; nothing to set.
-                layer._push_allocation_config()
+                layer.push_allocation_config()
                 continue
             if self.border_mode is not None:
                 layer.border_mode = self.border_mode
@@ -580,7 +580,7 @@ class ConvolutionalSequence(Sequence, Initializable, Feedforward):
             layer.use_bias = self.use_bias
 
             # Push input dimensions to children
-            layer._push_allocation_config()
+            layer.push_allocation_config()
 
             # Retrieve output dimensions
             # and set it for next layer
