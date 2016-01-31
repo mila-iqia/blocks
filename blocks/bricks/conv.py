@@ -553,7 +553,15 @@ class ConvolutionalSequence(Sequence, Initializable, Feedforward):
         if name == 'input_':
             return ((self.num_channels,) + self.image_size)
         if name == 'output':
-            return self.layers[-1].get_dim(name)
+            last = len(self.layers) - 1
+            while last >= 0:
+                try:
+                    return self.layers[last].get_dim(name)
+                except ValueError:
+                    last -= 1
+            # The output shape of an empty ConvolutionalSequence or one
+            # consisting only of Activations is the input shape.
+            return self.get_dim('input_')
         return super(ConvolutionalSequence, self).get_dim(name)
 
     def _push_allocation_config(self):

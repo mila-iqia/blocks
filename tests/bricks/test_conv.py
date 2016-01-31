@@ -308,6 +308,19 @@ def test_convolutional_sequence_with_convolutions_raw_activation():
     assert out.shape == (10, 3, 8, 17)
 
 
+def test_convolutional_sequence_activation_get_dim():
+    seq = ConvolutionalSequence([Tanh()], num_channels=9, image_size=(4, 6))
+    seq.allocate()
+    assert seq.get_dim('output') == (9, 4, 6)
+
+    seq = ConvolutionalSequence([Convolutional(filter_size=(7, 7),
+                                               num_filters=5,
+                                               border_mode=(1, 1)),
+                                 Tanh()], num_channels=8, image_size=(8, 11))
+    seq.allocate()
+    assert seq.get_dim('output') == (5, 4, 7)
+
+
 def test_convolutional_activation_use_bias():
     act = ConvolutionalActivation(Rectifier().apply, (3, 3), 5, 4,
                                   image_size=(9, 9), use_bias=False)
