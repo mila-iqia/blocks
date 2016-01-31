@@ -495,6 +495,8 @@ class ConvolutionalSequence(Sequence, Initializable, Feedforward):
     layers : list
         List of convolutional bricks (i.e. :class:`Convolutional`,
         :class:`ConvolutionalActivation`, or :class:`Pooling` bricks).
+        :class:`Activation` bricks that operate elementwise can also
+        be included.
     num_channels : int
         Number of input channels in the image. For the first layer this is
         normally 1 for grayscale images and 3 for color (RGB) images. For
