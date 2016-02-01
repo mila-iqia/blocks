@@ -1,10 +1,9 @@
-from theano import tensor
 from theano.tensor.nnet import conv2d
 from theano.tensor.nnet.abstract_conv import (AbstractConv2d_gradInputs,
                                               get_conv_output_shape)
 from theano.tensor.signal.pool import pool_2d, Pool
 
-from blocks.bricks import Initializable, Feedforward, Sequence
+from blocks.bricks import Initializable, Feedforward, Sequence, Activation
 from blocks.bricks.base import application, Brick, lazy
 from blocks.roles import add_role, FILTER, BIAS
 from blocks.utils import shared_floatx_nans
@@ -496,6 +495,8 @@ class ConvolutionalSequence(Sequence, Initializable, Feedforward):
     layers : list
         List of convolutional bricks (i.e. :class:`Convolutional`,
         :class:`ConvolutionalActivation`, or :class:`Pooling` bricks).
+        :class:`Activation` bricks that operate elementwise can also
+        be included.
     num_channels : int
         Number of input channels in the image. For the first layer this is
         normally 1 for grayscale images and 3 for color (RGB) images. For
@@ -553,13 +554,25 @@ class ConvolutionalSequence(Sequence, Initializable, Feedforward):
         if name == 'input_':
             return ((self.num_channels,) + self.image_size)
         if name == 'output':
-            return self.layers[-1].get_dim(name)
+            last = len(self.layers) - 1
+            while last >= 0:
+                try:
+                    return self.layers[last].get_dim(name)
+                except ValueError:
+                    last -= 1
+            # The output shape of an empty ConvolutionalSequence or one
+            # consisting only of Activations is the input shape.
+            return self.get_dim('input_')
         return super(ConvolutionalSequence, self).get_dim(name)
 
     def _push_allocation_config(self):
         num_channels = self.num_channels
         image_size = self.image_size
         for layer in self.layers:
+            if isinstance(layer, Activation):
+                # Activations operate elementwise; nothing to set.
+                layer.push_allocation_config()
+                continue
             if self.border_mode is not None:
                 layer.border_mode = self.border_mode
             layer.tied_biases = self.tied_biases
@@ -569,7 +582,7 @@ class ConvolutionalSequence(Sequence, Initializable, Feedforward):
             layer.use_bias = self.use_bias
 
             # Push input dimensions to children
-            layer._push_allocation_config()
+            layer.push_allocation_config()
 
             # Retrieve output dimensions
             # and set it for next layer

@@ -282,6 +282,45 @@ def test_convolutional_sequence():
     assert_allclose(func(x_val), y_val)
 
 
+def test_convolutional_sequence_with_raw_activation():
+    seq = ConvolutionalSequence([Rectifier()], num_channels=4,
+                                image_size=(20, 14))
+    input_ = (((numpy.arange(2 * 4 * 20 * 14)
+                .reshape((2, 4, 20, 14)) % 2) * 2 - 1)
+              .astype(theano.config.floatX))
+    expected_ = input_ * (input_ > 0)
+    x = theano.tensor.tensor4()
+    assert_allclose(seq.apply(x).eval({x: input_}), expected_)
+
+
+def test_convolutional_sequence_with_convolutions_raw_activation():
+    seq = ConvolutionalSequence(
+        [Convolutional(filter_size=(3, 3), num_filters=4),
+         Rectifier(),
+         Convolutional(filter_size=(5, 5), num_filters=3, step=(2, 2)),
+         Tanh()],
+        num_channels=2,
+        image_size=(21, 39))
+    seq.allocate()
+    x = theano.tensor.tensor4()
+    out = seq.apply(x).eval({x: numpy.ones((10, 2, 21, 39),
+                                           dtype=theano.config.floatX)})
+    assert out.shape == (10, 3, 8, 17)
+
+
+def test_convolutional_sequence_activation_get_dim():
+    seq = ConvolutionalSequence([Tanh()], num_channels=9, image_size=(4, 6))
+    seq.allocate()
+    assert seq.get_dim('output') == (9, 4, 6)
+
+    seq = ConvolutionalSequence([Convolutional(filter_size=(7, 7),
+                                               num_filters=5,
+                                               border_mode=(1, 1)),
+                                 Tanh()], num_channels=8, image_size=(8, 11))
+    seq.allocate()
+    assert seq.get_dim('output') == (5, 4, 7)
+
+
 def test_convolutional_activation_use_bias():
     act = ConvolutionalActivation(Rectifier().apply, (3, 3), 5, 4,
                                   image_size=(9, 9), use_bias=False)
