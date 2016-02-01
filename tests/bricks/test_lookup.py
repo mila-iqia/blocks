@@ -1,5 +1,5 @@
 import numpy
-from numpy.testing import assert_equal
+from numpy.testing import assert_equal, assert_raises
 
 import theano
 from theano import tensor
@@ -25,3 +25,4 @@ def test_lookup_table():
     # Test get_dim
     assert_equal(lt.get_dim(lt.apply.inputs[0]), 0)
     assert_equal(lt.get_dim(lt.apply.outputs[0]), lt.dim)
+    assert_raises(ValueError, lt.get_dim, 'random_name')
