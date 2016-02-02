@@ -743,8 +743,10 @@ class AdaGrad(StepRule):
 
     """
     def __init__(self, learning_rate=0.002, epsilon=1e-6):
-        self.learning_rate = learning_rate
-        self.epsilon = epsilon
+        self.learning_rate = shared_floatx(learning_rate, "learning_rate")
+        self.epsilon = shared_floatx(epsilon, "epsilon")
+        add_role(self.learning_rate, ALGORITHM_HYPERPARAMETER)
+        add_role(self.epsilon, ALGORITHM_HYPERPARAMETER)
 
     def compute_step(self, parameter, previous_step):
         name = 'adagrad_sqs'
@@ -789,11 +791,14 @@ class Adam(StepRule):
     def __init__(self, learning_rate=0.002,
                  beta1=0.1, beta2=0.001, epsilon=1e-8,
                  decay_factor=(1 - 1e-8)):
-        self.learning_rate = learning_rate
-        self.beta1 = beta1
-        self.beta2 = beta2
-        self.epsilon = epsilon
-        self.decay_factor = decay_factor
+        self.learning_rate = shared_floatx(learning_rate, "learning_rate")
+        self.beta1 = shared_floatx(beta1, "beta1")
+        self.beta2 = shared_floatx(beta2, "beta2")
+        self.epsilon = shared_floatx(epsilon, "epsilon")
+        self.decay_factor = shared_floatx(decay_factor, "decay_factor")
+        for param in [self.learning_rate, self.beta1, self.beta2, self.epsilon,
+                      self.decay_factor]:
+            add_role(param, ALGORITHM_HYPERPARAMETER)
 
     def compute_step(self, parameter, previous_step):
         mean = shared_floatx_zeros_matching(parameter, 'mean')
