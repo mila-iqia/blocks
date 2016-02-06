@@ -71,11 +71,11 @@ class Checkpoint(SimpleExtension):
             if from_user:
                 path, = from_user
             if self.save_separately:
-                add_to_dump = {}
+                to_add = {}
                 for attr in self.save_separately:
-                    add_to_dump[attr] = getattr(self.main_loop, attr)
+                    to_add[attr] = getattr(self.main_loop, attr)
             else:
-                add_to_dump = None
+                to_add = None
             if hasattr(self.main_loop, 'model'):
                 parameters = self.main_loop.model.parameters
             else:
@@ -83,7 +83,7 @@ class Checkpoint(SimpleExtension):
             secure_dump(self.main_loop, path,
                         dump_function=_dump_and_add_to_dump,
                         parameters=parameters,
-                        add_to_dump=add_to_dump,
+                        to_add=to_add,
                         use_cpickle=self.use_cpickle)
         except Exception:
             path = None

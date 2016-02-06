@@ -392,7 +392,7 @@ def continue_training(path):
     main_loop.run()
 
 
-def _dump_and_add_to_dump(object_, file_, parameters=None, add_to_dump=None,
+def _dump_and_add_to_dump(object_, file_, parameters=None, to_add=None,
                           use_cpickle=False, protocol=DEFAULT_PROTOCOL,
                           **kwargs):
     r"""Calls both `dump` and `add_to_dump` to serialze several objects.
@@ -411,7 +411,7 @@ def _dump_and_add_to_dump(object_, file_, parameters=None, add_to_dump=None,
     parameters : list, optional
         Shared variables whose internal numpy arrays should be saved
         separately in the `_parameters` field of the tar file.
-    add_to_dump : dict of objects
+    to_add : dict of objects
         A {'name': object} dictionnary of additional objects to save in
         the tar archive. Its keys will be used as name in the tar file.
     use_cpickle : bool
@@ -429,8 +429,8 @@ def _dump_and_add_to_dump(object_, file_, parameters=None, add_to_dump=None,
     """
     dump(object_, file_, parameters=parameters, use_cpickle=use_cpickle,
          protocol=protocol, **kwargs)
-    if add_to_dump is not None:
-        for name, obj in enumerate(add_to_dump):
+    if to_add is not None:
+        for name, obj in enumerate(to_add):
             add_to_dump(obj, file_, name, parameters=parameters,
                         use_cpickle=use_cpickle, protocol=protocol, **kwargs)
 
