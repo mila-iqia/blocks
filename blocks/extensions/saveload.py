@@ -76,9 +76,13 @@ class Checkpoint(SimpleExtension):
                     add_to_dump[attr] = getattr(self.main_loop, attr)
             else:
                 add_to_dump = None
+            if hasattr(self.main_loop, 'model'):
+                parameters = self.main_loop.model.parameters
+            else:
+                parameters = None
             secure_dump(self.main_loop, path,
                         dump_function=_dump_and_add_to_dump,
-                        parameters=self.main_loop.model.parameters,
+                        parameters=parameters,
                         add_to_dump=add_to_dump,
                         use_cpickle=self.use_cpickle)
         except Exception:
