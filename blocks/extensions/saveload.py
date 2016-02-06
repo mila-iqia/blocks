@@ -2,12 +2,10 @@
 import os.path
 import logging
 
-from six.moves import cPickle
-
 from blocks.extensions import SimpleExtension, TrainingExtension
 from blocks.utils import reraise_as
-from blocks.serialization import (
-    secure_dump, load, load_parameter_values, DEFAULT_PROTOCOL)
+from blocks.serialization import (secure_dump, load, _dump_and_add_to_dump,
+                                  load_parameters)
 
 logger = logging.getLogger(__name__)
 
@@ -32,11 +30,10 @@ class Checkpoint(SimpleExtension):
     path : str
         The destination path for pickling.
     save_separately : list of str, optional
-        The list of the main loop's attributes to be pickled separately
-        to their own files. The paths will be formed by adding
-        the attribute name preceded by an underscore before the
-        `path` extension. The whole main loop will still be pickled
-        as usual.
+        The list of the main loop's attributes to be saved (copied)
+        in a separate file in the tar archive. It may be used for example
+        to save the log separetely. The name of the attribute will be used
+        as name in the tar file.
     use_cpickle : bool
         See documentation of :func:`~blocks.serialization.dump`.
 
@@ -56,30 +53,9 @@ class Checkpoint(SimpleExtension):
                  **kwargs):
         kwargs.setdefault("after_training", True)
         super(Checkpoint, self).__init__(**kwargs)
-        if not save_separately:
-            save_separately = []
         self.path = path
         self.save_separately = save_separately
         self.use_cpickle = use_cpickle
-
-    def save_separately_filenames(self, path):
-        """Compute paths for separately saved attributes.
-
-        Parameters
-        ----------
-        path : str
-            Path to which the main checkpoint file is being saved.
-
-        Returns
-        -------
-        paths : dict
-            A dictionary mapping attribute names to derived paths
-            based on the `path` passed in as an argument.
-
-        """
-        root, ext = os.path.splitext(path)
-        return {attribute: root + "_" + attribute + ext
-                for attribute in self.save_separately}
 
     def do(self, callback_name, *args):
         """Pickle the main loop object to the disk.
@@ -94,12 +70,17 @@ class Checkpoint(SimpleExtension):
             path = self.path
             if from_user:
                 path, = from_user
-            secure_dump(self.main_loop, path, use_cpickle=self.use_cpickle)
-            filenames = self.save_separately_filenames(path)
-            for attribute in self.save_separately:
-                secure_dump(getattr(self.main_loop, attribute),
-                            filenames[attribute], cPickle.dump,
-                            protocol=DEFAULT_PROTOCOL)
+            if self.save_separately:
+                add_to_dump = {}
+                for attr in self.save_separately:
+                    add_to_dump[attr] = getattr(self.main_loop, attr)
+            else:
+                add_to_dump = None
+            secure_dump(self.main_loop, path,
+                        dump_function=_dump_and_add_to_dump,
+                        parameters=self.main_loop.model.parameters,
+                        add_to_dump=add_to_dump,
+                        use_cpickle=self.use_cpickle)
         except Exception:
             path = None
             raise
@@ -146,7 +127,7 @@ class Load(TrainingExtension):
         self.load_log = load_log
 
     def load_to(self, main_loop):
-        main_loop.model.set_parameter_values(load_parameter_values(self.path))
+        main_loop.model.set_parameter_values(load_parameters(self.path))
         if self.load_iteration_state or self.load_log:
             with open(self.path, "rb") as source:
                 loaded_main_loop = load(source)
