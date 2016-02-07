@@ -1,3 +1,4 @@
+import os
 import numpy
 import theano
 from fuel.datasets import IterableDataset
@@ -28,7 +29,7 @@ def test_checkpointing():
         data_stream=data_stream,
         algorithm=GradientDescent(cost=cost, parameters=[W]),
         extensions=[FinishAfter(after_n_batches=5),
-                    Checkpoint('myweirdmodel.tar')]
+                    Checkpoint('myweirdmodel.tar', parameters=[W])]
     )
     main_loop.run()
 
@@ -54,3 +55,7 @@ def test_checkpointing():
     )
     main_loop.extensions[0].main_loop = main_loop
     main_loop._run_extensions('before_training')
+
+    # Cleaning
+    if os.path.exists('myweirdmodel.tar'):
+        os.remove('myweirdmodel.tar')

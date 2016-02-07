@@ -29,6 +29,9 @@ class Checkpoint(SimpleExtension):
     ----------
     path : str
         The destination path for pickling.
+    parameters : list, optional
+        The parameters to save separaetely. If None, the parameters from
+        the model (main_loop.model.parameters) are saved.
     save_separately : list of str, optional
         The list of the main loop's attributes to be saved (copied)
         in a separate file in the tar archive. It may be used for example
@@ -49,11 +52,12 @@ class Checkpoint(SimpleExtension):
 
 
     """
-    def __init__(self, path, save_separately=None, use_cpickle=False,
+    def __init__(self, path, parameters=None, save_separately=None, use_cpickle=False,
                  **kwargs):
         kwargs.setdefault("after_training", True)
         super(Checkpoint, self).__init__(**kwargs)
         self.path = path
+        self.parameters = parameters
         self.save_separately = save_separately
         self.use_cpickle = use_cpickle
 
@@ -76,13 +80,12 @@ class Checkpoint(SimpleExtension):
                     to_add[attr] = getattr(self.main_loop, attr)
             else:
                 to_add = None
-            if hasattr(self.main_loop, 'model'):
-                parameters = self.main_loop.model.parameters
-            else:
-                parameters = None
+            if self.parameters is None:
+                if hasattr(self.main_loop, 'model'):
+                    self.parameters = self.main_loop.model.parameters
             secure_dump(self.main_loop, path,
                         dump_function=_dump_and_add_to_dump,
-                        parameters=parameters,
+                        parameters=self.parameters,
                         to_add=to_add,
                         use_cpickle=self.use_cpickle)
         except Exception:
@@ -131,10 +134,10 @@ class Load(TrainingExtension):
         self.load_log = load_log
 
     def load_to(self, main_loop):
-        main_loop.model.set_parameter_values(load_parameters(self.path))
+        with open(self.path, "r") as source:
+            main_loop.model.set_parameter_values(load_parameters(source))
         if self.load_iteration_state or self.load_log:
-            with open(self.path, "rb") as source:
-                loaded_main_loop = load(source)
+            loaded_main_loop = load(source)
             if self.load_log:
                 main_loop.log = loaded_main_loop.log
             if self.load_iteration_state:
