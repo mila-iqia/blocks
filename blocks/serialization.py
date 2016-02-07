@@ -430,7 +430,7 @@ def _dump_and_add_to_dump(object_, file_, parameters=None, to_add=None,
     dump(object_, file_, parameters=parameters, use_cpickle=use_cpickle,
          protocol=protocol, **kwargs)
     if to_add is not None:
-        for name, obj in enumerate(to_add):
+        for name, obj in six.iteritems(to_add):
             add_to_dump(obj, file_, name, parameters=parameters,
                         use_cpickle=use_cpickle, protocol=protocol, **kwargs)
 
