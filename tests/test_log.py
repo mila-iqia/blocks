@@ -27,18 +27,18 @@ def test_training_log():
 
 def test_pickle_log():
     log1 = TrainingLog()
-    with open('log1.tar', 'w') as f:
+    with open('log1.tar', 'wb') as f:
         dump(log1, f)
-    with open('log1.tar', 'r') as f:
+    with open('log1.tar', 'rb') as f:
         log2 = load(f)
-    with open('log2.tar', 'w') as f:
+    with open('log2.tar', 'wb') as f:
         dump(log2, f)
-    with open('log2.tar', 'r') as f:
+    with open('log2.tar', 'rb') as f:
         load(f)  # loading an unresumed log works
     log2.resume()
-    with open('log3.tar', 'w') as f:
+    with open('log3.tar', 'wb') as f:
         dump(log2, f)
-    with open('log3.tar', 'r') as f:
+    with open('log3.tar', 'rb') as f:
         load(f)  # loading a resumed log does not work
     os.remove('log1.tar')
     os.remove('log2.tar')
