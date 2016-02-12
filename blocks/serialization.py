@@ -49,9 +49,9 @@ Let's see how the main loop is dumped by :func:`dump`
 
 >>> from blocks.serialization import dump, load
 >>> import tarfile
->>> with open('main_loop.tar', 'w') as dst:
+>>> with open('main_loop.tar', 'wb') as dst:
 ...     dump(main_loop, dst)
->>> tarball = tarfile.open('main_loop.tar', 'r')
+>>> tarball = tarfile.open('main_loop.tar', 'rb')
 >>> tarball # doctest: +ELLIPSIS
 <tarfile.TarFile object at ...>
 >>> tarball.getnames()
@@ -63,10 +63,10 @@ magic, it just contains the pickled main loop in '_pkl' file.
 
 Let's do something more interesting:
 
->>> with open('main_loop.tar', 'w') as dst:
+>>> with open('main_loop.tar', 'wb') as dst:
 ...     dump(main_loop, dst,
 ...          parameters=main_loop.model.parameters)
->>> tarball = tarfile.open('main_loop.tar', 'r')
+>>> tarball = tarfile.open('main_loop.tar', 'rb')
 >>> tarball.getnames()
 ['_parameters', '_pkl']
 
@@ -85,7 +85,7 @@ simply using the `.name` attribute, if they do not.
 
 The loading of the main loop as a whole still works:
 
->>> with open('main_loop.tar') as src:
+>>> with open('main_loop.tar', 'rb') as src:
 ...     main_loop_loaded = load(src)
 >>> main_loop_loaded # doctest: +ELLIPSIS
 <blocks.main_loop.MainLoop object at ...>
@@ -93,7 +93,7 @@ The loading of the main loop as a whole still works:
 Additionally, this module provides convenience routine
 :func:`load_parameters`:
 
->>> with open('main_loop.tar') as src:
+>>> with open('main_loop.tar', 'rb') as src:
 ...     parameters = load_parameters(src)
 >>> sorted(parameters.keys()) # doctest: +ELLIPSIS
 ['/mlp/linear_0.W', '/mlp/linear_0.b', '/mlp/linear_1.W', '/mlp/line...]
