@@ -58,7 +58,7 @@ def test_serialization():
     # Check the parameters.
     with NamedTemporaryFile(delete=False) as f:
         dump(mlp, f, parameters=[mlp.children[0].W, mlp.children[1].W])
-    with open(f.name) as ff:
+    with open(f.name, 'rb') as ff:
         numpy_data = load_parameters(ff)
     assert set(numpy_data.keys()) == \
         set(['/mlp/linear_0.W', '/mlp/linear_1.W'])
@@ -66,7 +66,7 @@ def test_serialization():
     assert numpy_data['/mlp/linear_0.W'].dtype == theano.config.floatX
 
     # Ensure that it can be unpickled.
-    with open(f.name) as ff:
+    with open(f.name, 'rb') as ff:
         mlp = load(ff)
     assert_allclose(mlp.linear_transformations[1].W.get_value(),
                     numpy.ones((10, 10)) * 2)
@@ -76,7 +76,7 @@ def test_serialization():
         child.name = 'linear'
     with NamedTemporaryFile(delete=False) as f:
         dump(mlp, f, parameters=[mlp.children[0].W, mlp.children[1].W])
-    with open(f.name) as ff:
+    with open(f.name, 'rb') as ff:
         numpy_data = load_parameters(ff)
     assert set(numpy_data.keys()) == \
         set(['/mlp/linear.W', '/mlp/linear.W_2'])
