@@ -105,27 +105,28 @@ ensures that their heirarchical names are compatible with
 TODO: Add information about :func:`add_to_dump`.
 
 """
+import numpy
 import os
-import shutil
-import tempfile
-import tarfile
 import pickle
+import shutil
+import six
+import tarfile
+import tempfile
 import warnings
+
 from contextlib import closing
 from pickle import HIGHEST_PROTOCOL
 try:
     from pickle import DEFAULT_PROTOCOL
+    from pickle import _Pickler
 except ImportError:
     DEFAULT_PROTOCOL = HIGHEST_PROTOCOL
+    from pickle import Pickler as _Pickler
+from six.moves import cPickle
 try:
     from theano.sandbox.cuda import cuda_ndarray
 except ImportError:
     cuda_ndarray = None
-import numpy
-import six
-
-from six.moves import cPickle
-from pickle import Pickler as _Pickler
 
 from blocks.config import config
 from blocks.filter import get_brick
