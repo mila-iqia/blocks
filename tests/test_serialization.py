@@ -104,7 +104,7 @@ def test_add_to_dump():
     # Ensure that adding to dump is working.
     with NamedTemporaryFile(delete=False) as f:
         dump(mlp, f, parameters=[mlp.children[0].W, mlp.children[1].W])
-    with open(f.name, 'r+') as ff:
+    with open(f.name, 'rb+') as ff:
         add_to_dump(mlp.children[0], ff, 'child_0',
                     parameters=[mlp.children[0].W])
         add_to_dump(mlp.children[1], ff, 'child_1')
@@ -113,7 +113,7 @@ def test_add_to_dump():
                                                'child_0', 'child_1'])
 
     # Ensure that we can load any object from the tarball.
-    with open(f.name, 'r') as ff:
+    with open(f.name, 'rb') as ff:
         saved_children_0 = load(ff, 'child_0')
         saved_children_1 = load(ff, 'child_1')
         assert_allclose(saved_children_0.W.get_value(),
@@ -122,11 +122,11 @@ def test_add_to_dump():
                         numpy.ones((10, 10)) * 2)
     
     # Check the error if using a reserved name.
-    with open(f.name, 'r+') as ff:
+    with open(f.name, 'rb+') as ff:
         assert_raises(ValueError, add_to_dump, *[mlp.children[0], ff, '_pkl'])
 
     # Check the error if saving an object with other parameters
-    with open(f.name, 'r+') as ff:
+    with open(f.name, 'rb+') as ff:
         assert_raises(ValueError, add_to_dump, *[mlp2, ff, 'mlp2'],
                       **dict(parameters=[mlp2.children[0].W,
                                          mlp2.children[1].W]))
@@ -134,7 +134,7 @@ def test_add_to_dump():
     # Check the warning if adding to a dump with no parameters
     with NamedTemporaryFile(delete=False) as f:
         dump(mlp, f)
-    with open(f.name, 'r+') as ff:
+    with open(f.name, 'rb+') as ff:
         assert_raises(ValueError, add_to_dump, *[mlp2, ff, 'mlp2'],
                       **dict(parameters=[mlp2.children[0].W,
                                          mlp2.children[1].W]))
