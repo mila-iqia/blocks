@@ -51,7 +51,7 @@ Let's see how the main loop is dumped by :func:`dump`
 >>> import tarfile
 >>> with open('main_loop.tar', 'wb') as dst:
 ...     dump(main_loop, dst)
->>> tarball = tarfile.open('main_loop.tar', 'rb')
+>>> tarball = tarfile.open('main_loop.tar', 'r')
 >>> tarball # doctest: +ELLIPSIS
 <tarfile.TarFile object at ...>
 >>> tarball.getnames()
@@ -66,7 +66,7 @@ Let's do something more interesting:
 >>> with open('main_loop.tar', 'wb') as dst:
 ...     dump(main_loop, dst,
 ...          parameters=main_loop.model.parameters)
->>> tarball = tarfile.open('main_loop.tar', 'rb')
+>>> tarball = tarfile.open('main_loop.tar', 'r')
 >>> tarball.getnames()
 ['_parameters', '_pkl']
 
