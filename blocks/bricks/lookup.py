@@ -9,7 +9,7 @@ class LookupTable(Initializable, Feedforward):
     """Encapsulates representations of a range of integers.
 
     This brick can be used to embed integers, e.g. word indices,
-    in a vector space.
+    into a vector space.
 
     Parameters
     ----------
