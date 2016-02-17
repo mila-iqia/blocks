@@ -1,12 +1,15 @@
 """Introduces Lookup brick."""
-from blocks.bricks import Initializable
+from blocks.bricks import Initializable, Feedforward
 from blocks.bricks.base import application, lazy
 from blocks.roles import WEIGHT, add_role
 from blocks.utils import check_theano_variable, shared_floatx_nans
 
 
-class LookupTable(Initializable):
+class LookupTable(Initializable, Feedforward):
     """Encapsulates representations of a range of integers.
+
+    This brick can be used to embed integers, e.g. word indices,
+    in a vector space.
 
     Parameters
     ----------
@@ -70,3 +73,15 @@ class LookupTable(Initializable):
         if name == 'indices':
             return 0
         return super(LookupTable, self).get_dim(name)
+
+    @property
+    def input_dim(self):
+        return 0
+
+    @property
+    def output_dim(self):
+        return self.dim
+
+    @output_dim.setter
+    def output_dim(self, dim):
+        self.dim = dim
