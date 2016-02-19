@@ -334,6 +334,7 @@ def add_to_dump(object_, file_, name, parameters=None, use_cpickle=False,
                 type(array_), n)
 
         # Check that the parameters are the same that the ones in the archive.
+        file_.seek(0)
         with closing(tarfile.TarFile(fileobj=file_, mode='r')) as tar_file:
             if '_parameters' not in tar_file.getnames():
                 raise ValueError("There is no parameters in the archive, so" \
