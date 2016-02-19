@@ -4,7 +4,7 @@ import logging
 
 from blocks.extensions import SimpleExtension, TrainingExtension
 from blocks.utils import reraise_as
-from blocks.serialization import (secure_dump, load, _dump_and_add_to_dump,
+from blocks.serialization import (secure_dump, load, dump_and_add_to_dump,
                                   load_parameters)
 
 logger = logging.getLogger(__name__)
@@ -30,7 +30,7 @@ class Checkpoint(SimpleExtension):
     path : str
         The destination path for pickling.
     parameters : list, optional
-        The parameters to save separaetely. If None, the parameters from
+        The parameters to save separately. If None, the parameters from
         the model (main_loop.model.parameters) are saved.
     save_separately : list of str, optional
         The list of the main loop's attributes to be saved (copied)
@@ -52,8 +52,8 @@ class Checkpoint(SimpleExtension):
 
 
     """
-    def __init__(self, path, parameters=None, save_separately=None, use_cpickle=False,
-                 **kwargs):
+    def __init__(self, path, parameters=None, save_separately=None,
+                 use_cpickle=False, **kwargs):
         kwargs.setdefault("after_training", True)
         super(Checkpoint, self).__init__(**kwargs)
         self.path = path
@@ -74,17 +74,15 @@ class Checkpoint(SimpleExtension):
             path = self.path
             if from_user:
                 path, = from_user
+            to_add = None
             if self.save_separately:
-                to_add = {}
-                for attr in self.save_separately:
-                    to_add[attr] = getattr(self.main_loop, attr)
-            else:
-                to_add = None
+                to_add = {attr: getattr(self.main_loop, attr) for attr in
+                          self.save_separately}
             if self.parameters is None:
                 if hasattr(self.main_loop, 'model'):
                     self.parameters = self.main_loop.model.parameters
             secure_dump(self.main_loop, path,
-                        dump_function=_dump_and_add_to_dump,
+                        dump_function=dump_and_add_to_dump,
                         parameters=self.parameters,
                         to_add=to_add,
                         use_cpickle=self.use_cpickle)
@@ -141,7 +139,8 @@ class Load(TrainingExtension):
                 if self.load_log:
                     main_loop.log = loaded_main_loop.log
                 if self.load_iteration_state:
-                    main_loop.iteration_state = loaded_main_loop.iteration_state
+                    main_loop.iteration_state = \
+                        loaded_main_loop.iteration_state
 
     def before_training(self):
         if not os.path.exists(self.path):

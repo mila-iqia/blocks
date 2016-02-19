@@ -394,9 +394,9 @@ def continue_training(path):
     main_loop.run()
 
 
-def _dump_and_add_to_dump(object_, file_, parameters=None, to_add=None,
-                          use_cpickle=False, protocol=DEFAULT_PROTOCOL,
-                          **kwargs):
+def dump_and_add_to_dump(object_, file_, parameters=None, to_add=None,
+                         use_cpickle=False, protocol=DEFAULT_PROTOCOL,
+                         **kwargs):
     r"""Calls both `dump` and `add_to_dump` to serialze several objects.
 
     This function is used to serialize several at the same time, using
