@@ -37,6 +37,10 @@ class Checkpoint(SimpleExtension):
         in a separate file in the tar archive. It may be used for example
         to save the log separetely. The name of the attribute will be used
         as name in the tar file.
+    save_main_loop : bool
+        Choose whether to save the main loop or not. This can be useful
+        for example if you are only interested in saving the log, but
+        not the whole main loop. Defaults to `True`.
     use_cpickle : bool
         See documentation of :func:`~blocks.serialization.dump`.
 
@@ -53,12 +57,13 @@ class Checkpoint(SimpleExtension):
 
     """
     def __init__(self, path, parameters=None, save_separately=None,
-                 use_cpickle=False, **kwargs):
+                 save_main_loop=True, use_cpickle=False, **kwargs):
         kwargs.setdefault("after_training", True)
         super(Checkpoint, self).__init__(**kwargs)
         self.path = path
         self.parameters = parameters
         self.save_separately = save_separately
+        self.save_main_loop = save_main_loop
         self.use_cpickle = use_cpickle
 
     def do(self, callback_name, *args):
@@ -81,7 +86,10 @@ class Checkpoint(SimpleExtension):
             if self.parameters is None:
                 if hasattr(self.main_loop, 'model'):
                     self.parameters = self.main_loop.model.parameters
-            secure_dump(self.main_loop, path,
+            object_ = None
+            if self.save_main_loop:
+                object_ = self.main_loop
+            secure_dump(object_, path,
                         dump_function=dump_and_add_to_dump,
                         parameters=self.parameters,
                         to_add=to_add,

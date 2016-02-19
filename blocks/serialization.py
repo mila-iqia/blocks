@@ -334,7 +334,7 @@ def add_to_dump(object_, file_, name, parameters=None, use_cpickle=False,
                 type(array_), n)
 
         # Check that the parameters are the same that the ones in the archive.
-        file_.seek(0)
+        file_.seek(0)  # To be able to read what is in the tar file already.
         with closing(tarfile.TarFile(fileobj=file_, mode='r')) as tar_file:
             if '_parameters' not in tar_file.getnames():
                 raise ValueError("There is no parameters in the archive, so" \
@@ -349,12 +349,11 @@ def add_to_dump(object_, file_, name, parameters=None, use_cpickle=False,
                     raise ValueError('The set of parameters is different' \
                                      ' from the one in the archive.')
 
-    file_.seek(0)
-
     if use_cpickle:
         pickler = cPickle.Pickler
     else:
         pickler = _PicklerWithWarning
+    file_.seek(0)  # To be able to add new things in the tar file.
     with closing(tarfile.TarFile(fileobj=file_, mode='a')) as tar_file:
         save_object = _SaveObject(pickler, object_, external_parameters,
                                   protocol, **kwargs)
