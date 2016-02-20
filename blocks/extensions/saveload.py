@@ -39,8 +39,8 @@ class Checkpoint(SimpleExtension):
         as name in the tar file.
     save_main_loop : bool
         Choose whether to save the main loop or not. This can be useful
-        for example if you are only interested in saving the log, but
-        not the whole main loop. Defaults to `True`.
+        for example if you are only interested in saving the parameters,
+        but not the whole main loop. Defaults to `True`.
     use_cpickle : bool
         See documentation of :func:`~blocks.serialization.dump`.
 
