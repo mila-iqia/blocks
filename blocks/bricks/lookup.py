@@ -78,6 +78,11 @@ class LookupTable(Initializable, Feedforward):
     def input_dim(self):
         return 0
 
+    @input_dim.setter
+    def input_dim(self, dim):
+        if dim != 0:
+            raise ValueError("LookupTable input must be integer")
+
     @property
     def output_dim(self):
         return self.dim
