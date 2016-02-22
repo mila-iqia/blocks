@@ -35,4 +35,5 @@ def test_lookup_table():
 
     def assign_input_dim():
         lt.input_dim = 11
-    assert_raises(AttributeError, assign_input_dim)
+    assert_raises(ValueError, assign_input_dim)
+    lt.input_dim = 0
