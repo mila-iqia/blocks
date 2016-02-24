@@ -54,6 +54,7 @@ script:
         cd $TRAVIS_BUILD_DIR
         git clone https://github.com/mila-udem/blocks-examples.git
         cd blocks-examples
+        git checkout e0d7a0e5b60e802634161a63602673717c3e3c78
         nose2 tests
       fi
 after_script:

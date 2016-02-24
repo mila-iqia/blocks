@@ -7,7 +7,7 @@ toolz==0.7.2
 
 --allow-external theano
 --allow-unverified theano
-git+https://github.com/Theano/Theano.git@8d3a67b73fda49350d9944c9a24fc9660131861c#egg=theano
+git+https://github.com/Theano/Theano.git@0aa5ff77273f45a1566013872732ea78675b388d#egg=theano
 
 --allow-external fuel
 --allow-unverified fuel
