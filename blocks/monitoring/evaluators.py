@@ -193,7 +193,7 @@ class AggregationBuffer(object):
             raise Exception("To readout you must first initialize, then"
                             "process batches!")
         ret_vals = self._readout_fun()
-        return dict(equizip(self.variable_names, ret_vals))
+        return OrderedDict(equizip(self.variable_names, ret_vals))
 
 
 class DatasetEvaluator(object):
