@@ -1,13 +1,16 @@
 """Extensions for monitoring the training process."""
 import logging
 
+import theano
+
 from blocks.extensions import SimpleExtension, TrainingExtension
 from blocks.algorithms import DifferentiableCostMinimizer
-from blocks.monitoring.evaluators import AggregationBuffer, DatasetEvaluator
+from blocks.monitoring.aggregation import MonitoredQuantity, take_last
+from blocks.monitoring.evaluators import (
+    AggregationBuffer, MonitoredQuantityBuffer, DatasetEvaluator)
 
 PREFIX_SEPARATOR = '_'
 logger = logging.getLogger(__name__)
-
 
 class MonitoringExtension(TrainingExtension):
     """A mixin with logic shared by monitoring extensions.
@@ -111,7 +114,16 @@ class TrainingDataMonitoring(SimpleExtension, MonitoringExtension):
     def __init__(self, variables, **kwargs):
         kwargs.setdefault("before_training", True)
         super(TrainingDataMonitoring, self).__init__(**kwargs)
-        self._buffer = AggregationBuffer(variables, use_take_last=True)
+        self.add_condition(['after_batch'], arguments=('just_accumulate',))
+        self._quantities = MonitoredQuantityBuffer(
+            [v for v in variables
+             if isinstance(v, MonitoredQuantity)])
+        self._required = AggregationBuffer(
+            [take_last(v) for v in self._quantities.requires])
+        self._variables = AggregationBuffer(
+            [v for v in variables
+             if isinstance(v, theano.Variable)],
+            use_take_last=True)
         self._last_time_called = -1
 
     def do(self, callback_name, *args):
@@ -122,22 +134,39 @@ class TrainingDataMonitoring(SimpleExtension, MonitoringExtension):
         aggregation buffer and instructs the training algorithm what
         additional computations should be carried at each step by adding
         corresponding updates to it. In all other cases it writes
-        aggregated values of the monitored variables to the log.
+aggregated values of the monitored variables to the log.
 
         """
+        data, args = self.parse_args(callback_name, args)
         if callback_name == 'before_training':
             if not isinstance(self.main_loop.algorithm,
                               DifferentiableCostMinimizer):
                 raise ValueError
             self.main_loop.algorithm.add_updates(
-                self._buffer.accumulation_updates)
-            self._buffer.initialize_aggregators()
+                self._variables.accumulation_updates)
+            self.main_loop.algorithm.add_updates(
+                self._required.accumulation_updates)
+            self._variables.initialize_aggregators()
+            self._required.initialize_aggregators()
+            self._quantities.initialize()
         else:
-            if (self.main_loop.status['iterations_done'] ==
+            # When called first time at any iterations, update
+            # monitored non-Theano quantities
+            if (self.main_loop.status['iterations_done'] >
                     self._last_time_called):
-                raise Exception("TrainingDataMonitoring.do should be invoked"
-                                " no more than once per iteration")
-            self._last_time_called = self.main_loop.status['iterations_done']
+                self._quantities.accumulate_quantities(
+                    self._required.get_aggregated_values().values())
+                self._required.initialize_aggregators()
+                self._last_time_called = self.main_loop.status['iterations_done']
+            # If only called to update non-Theano quantities,
+            # do just that
+            if args == ('just_accumulate',):
+                return
+            # Otherwise, also output current values of from the accumulators
+            # to the log.
             self.add_records(self.main_loop.log,
-                             self._buffer.get_aggregated_values().items())
-            self._buffer.initialize_aggregators()
+                             self._variables.get_aggregated_values().items())
+            self._variables.initialize_aggregators()
+            self.add_records(self.main_loop.log,
+                             self._quantities.get_aggregated_values().items())
+            self._quantities.initialize()

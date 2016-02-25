@@ -172,6 +172,12 @@ class TakeLast(AggregationScheme):
                           readout_variable=self.storage)
 
 
+def take_last(variable):
+    variable = variable.copy(variable.name)
+    variable.tag.aggregation_scheme = TakeLast(variable)
+    return variable
+
+
 @add_metaclass(ABCMeta)
 class MonitoredQuantity(object):
     """The base class for monitored-quantities.
