@@ -167,6 +167,39 @@ class Initializable(RNGMixin, Brick):
                     child.biases_init = self.biases_init
 
 
+class LinearLike(Initializable):
+    """Initializable subclass with logic for :class:`Linear`-like classes.
+
+    Notes
+    -----
+    Provides `W` and `b` properties that can be overridden in subclasses
+    to implement pre-application transformations on the weights and
+    biases.  Application methods should refer to ``self.W`` and ``self.b``
+    rather than accessing the parameters list directly.
+
+    This assumes a layout of the parameters list with the weights coming
+    first and biases (if ``use_bias`` is True) coming second.
+
+    """
+    @property
+    def W(self):
+        return self.parameters[0]
+
+    @property
+    def b(self):
+        if self.use_bias:
+            return self.parameters[1]
+        else:
+            raise AttributeError('use_bias is False')
+
+    def _initialize(self):
+        # Use self.parameters[] references in case W and b are overridden
+        # to return non-shared-variables.
+        if self.use_bias:
+            self.biases_init.initialize(self.parameters[1], self.rng)
+        self.weights_init.initialize(self.parameters[0], self.rng)
+
+
 class Random(Brick):
     """A mixin class for Bricks which need Theano RNGs.
 

@@ -5,7 +5,7 @@ from theano import tensor
 
 from blocks.bricks.base import application, Brick, lazy
 from blocks.bricks.interfaces import Activation, Feedforward, Initializable
-from blocks.bricks.interfaces import Random  # noqa
+from blocks.bricks.interfaces import LinearLike, Random  # noqa
 
 from blocks.bricks.wrappers import WithExtraDims
 from blocks.roles import add_role, WEIGHT, BIAS
@@ -14,7 +14,7 @@ from blocks.utils import shared_floatx_nans
 logger = logging.getLogger(__name__)
 
 
-class Linear(Initializable, Feedforward):
+class Linear(LinearLike, Feedforward):
     r"""A linear transformation with optional bias.
 
     Brick which applies a linear (affine) transformation by multiplying
@@ -44,14 +44,6 @@ class Linear(Initializable, Feedforward):
         self.input_dim = input_dim
         self.output_dim = output_dim
 
-    @property
-    def W(self):
-        return self.parameters[0]
-
-    @property
-    def b(self):
-        return self.parameters[1]
-
     def _allocate(self):
         W = shared_floatx_nans((self.input_dim, self.output_dim), name='W')
         add_role(W, WEIGHT)
@@ -62,14 +54,6 @@ class Linear(Initializable, Feedforward):
             add_role(b, BIAS)
             self.parameters.append(b)
             self.add_auxiliary_variable(b.norm(2), name='b_norm')
-
-    def _initialize(self):
-        if self.use_bias:
-            W, b = self.parameters
-            self.biases_init.initialize(b, self.rng)
-        else:
-            W, = self.parameters
-        self.weights_init.initialize(W, self.rng)
 
     @application(inputs=['input_'], outputs=['output'])
     def apply(self, input_):
@@ -86,13 +70,9 @@ class Linear(Initializable, Feedforward):
             The transformed input plus optional bias
 
         """
+        output = tensor.dot(input_, self.W)
         if self.use_bias:
-            W, b = self.parameters
-        else:
-            W, = self.parameters
-        output = tensor.dot(input_, W)
-        if self.use_bias:
-            output += b
+            output += self.b
         return output
 
     def get_dim(self, name):
