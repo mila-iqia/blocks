@@ -1,4 +1,5 @@
 import collections
+from functools import partial
 
 import numpy
 from picklable_itertools.extras import equizip
@@ -325,6 +326,8 @@ class BatchNormalizedMLP(MLP):
     ----------
     conserve_memory : bool, optional
         See :class:`BatchNormalization`.
+    mean_only : bool, optional
+        See :class:`BatchNormalization`.
 
     Notes
     -----
@@ -343,10 +346,11 @@ class BatchNormalizedMLP(MLP):
     @lazy(allocation=['dims'])
     def __init__(self, activations, dims, *args, **kwargs):
         self._conserve_memory = kwargs.pop('conserve_memory', True)
+        self._mean_only = kwargs.pop('mean_only', False)
         activations = [
             Sequence([
-                (BatchNormalization(conserve_memory=self._conserve_memory)
-                 .apply),
+                BatchNormalization(conserve_memory=self._conserve_memory,
+                                   mean_only=self._mean_only).apply,
                 act.apply
             ], name='batch_norm_activation_{}'.format(i))
             for i, act in enumerate(activations)
@@ -357,16 +361,24 @@ class BatchNormalizedMLP(MLP):
         super(BatchNormalizedMLP, self).__init__(activations, dims, *args,
                                                  **kwargs)
 
-    @property
-    def conserve_memory(self):
-        return self._conserve_memory
+    def _nested_brick_property_getter(self, property_name):
+        return getattr(self, '_' + property_name)
 
-    @conserve_memory.setter
-    def conserve_memory(self, value):
-        self._conserve_memory = value
+    def _nested_brick_property_setter(self, value, property_name):
+        setattr(self, '_' + property_name, value)
         for act in self.activations:
             assert isinstance(act.children[0], BatchNormalization)
-            act.children[0].conserve_memory = value
+            setattr(act.children[0], property_name, value)
+
+    conserve_memory = property(partial(_nested_brick_property_getter,
+                                       property_name='conserve_memory'),
+                               partial(_nested_brick_property_setter,
+                                       property_name='conserve_memory'))
+
+    mean_only = property(partial(_nested_brick_property_getter,
+                                 property_name='mean_only'),
+                         partial(_nested_brick_property_setter,
+                                 property_name='mean_only'))
 
     def _push_allocation_config(self):
         super(BatchNormalizedMLP, self)._push_allocation_config()
