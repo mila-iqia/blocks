@@ -337,6 +337,7 @@ def test_batch_normalized_mlp_conserve_memory_propagated():
     """Test that setting conserve_memory on a BatchNormalizedMLP works."""
     mlp = BatchNormalizedMLP([Tanh(), Tanh()], [5, 7, 9],
                              conserve_memory=False)
+    assert not mlp.conserve_memory
     assert not any(act.children[0].conserve_memory for act in mlp.activations)
     mlp.conserve_memory = True
     assert mlp.conserve_memory
