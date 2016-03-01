@@ -3,13 +3,14 @@ from theano.tensor.nnet.abstract_conv import (AbstractConv2d_gradInputs,
                                               get_conv_output_shape)
 from theano.tensor.signal.pool import pool_2d, Pool
 
-from blocks.bricks import Initializable, Feedforward, Sequence, Activation
+from blocks.bricks import (Initializable, Feedforward, Sequence, Activation,
+                           LinearLike)
 from blocks.bricks.base import application, Brick, lazy
 from blocks.roles import add_role, FILTER, BIAS
 from blocks.utils import shared_floatx_nans
 
 
-class Convolutional(Initializable):
+class Convolutional(LinearLike):
     """Performs a 2D convolution.
 
     Parameters
@@ -106,14 +107,6 @@ class Convolutional(Initializable):
             self.parameters.append(b)
             self.add_auxiliary_variable(b.norm(2), name='b_norm')
 
-    def _initialize(self):
-        if self.use_bias:
-            W, b = self.parameters
-            self.biases_init.initialize(b, self.rng)
-        else:
-            W, = self.parameters
-        self.weights_init.initialize(W, self.rng)
-
     @application(inputs=['input_'], outputs=['output'])
     def apply(self, input_):
         """Perform the convolution.
@@ -136,11 +129,6 @@ class Convolutional(Initializable):
             for 'full' it is ``image_size + filter_size - 1``.
 
         """
-        if self.use_bias:
-            W, b = self.parameters
-        else:
-            W, = self.parameters
-
         if self.image_size == (None, None):
             input_shape = None
         else:
@@ -148,7 +136,7 @@ class Convolutional(Initializable):
             input_shape += self.image_size
 
         output = self.conv2d_impl(
-            input_, W,
+            input_, self.W,
             input_shape=input_shape,
             subsample=self.step,
             border_mode=self.border_mode,
@@ -156,9 +144,9 @@ class Convolutional(Initializable):
                           self.filter_size))
         if self.use_bias:
             if self.tied_biases:
-                output += b.dimshuffle('x', 0, 'x', 'x')
+                output += self.b.dimshuffle('x', 0, 'x', 'x')
             else:
-                output += b.dimshuffle('x', 0, 1, 2)
+                output += self.b.dimshuffle('x', 0, 1, 2)
         return output
 
     def get_dim(self, name):

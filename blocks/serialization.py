@@ -321,7 +321,7 @@ def add_to_dump(object_, file_, name, parameters=None, use_cpickle=False,
 
     """
     if name in ['_pkl', '_parameters']:
-        raise ValueError("_pkl and _parameters are reserved names and can't" \
+        raise ValueError("_pkl and _parameters are reserved names and can't"
                          " be used as name for your object.")
 
     external_parameters = {}
@@ -337,7 +337,7 @@ def add_to_dump(object_, file_, name, parameters=None, use_cpickle=False,
         file_.seek(0)  # To be able to read what is in the tar file already.
         with closing(tarfile.TarFile(fileobj=file_, mode='r')) as tar_file:
             if '_parameters' not in tar_file.getnames():
-                raise ValueError("There is no parameters in the archive, so" \
+                raise ValueError("There is no parameters in the archive, so"
                                  " you can't use the argument parameters.")
             else:
                 parameters = numpy.load(
@@ -346,7 +346,7 @@ def add_to_dump(object_, file_, name, parameters=None, use_cpickle=False,
                 s2 = [_unmangle_parameter_name(x)[1] for x in
                       external_parameters.values()]
                 if not s1.issuperset(s2):
-                    raise ValueError('The set of parameters is different' \
+                    raise ValueError('The set of parameters is different'
                                      ' from the one in the archive.')
 
     if use_cpickle:

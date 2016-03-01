@@ -362,6 +362,16 @@ def test_mlp():
     assert mlp.rng == mlp.linear_transformations[0].rng
 
 
+def test_mlp_prototype_argument():
+    class MyLinear(Linear):
+        pass
+    mlp = MLP(activations=[Tanh(), Tanh(), None],
+              dims=[4, 5, 6, 7], prototype=MyLinear())
+    assert all(isinstance(lt, MyLinear) for lt in mlp.linear_transformations)
+    assert all(lt.name == 'mylinear_{}'.format(i)
+               for i, lt in enumerate(mlp.linear_transformations))
+
+
 def test_mlp_apply():
     x = tensor.matrix()
     x_val = numpy.random.rand(2, 16).astype(theano.config.floatX)

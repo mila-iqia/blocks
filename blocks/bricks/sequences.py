@@ -1,4 +1,5 @@
 """Bricks that compose together other bricks in linear sequences."""
+import copy
 from toolz import interleave
 from picklable_itertools.extras import equizip
 
@@ -86,6 +87,10 @@ class MLP(Sequence, Initializable, Feedforward):
     dims : list of ints
         A list of input dimensions, as well as the output dimension of the
         last layer. Required for :meth:`~.Brick.allocate`.
+    prototype : :class:`.Brick`, optional
+        The transformation prototype. A copy will be created for every
+        activation. If not provided, an instance of :class:`~simple.Linear`
+        will be used.
 
     Notes
     -----
@@ -107,11 +112,15 @@ class MLP(Sequence, Initializable, Feedforward):
 
     """
     @lazy(allocation=['dims'])
-    def __init__(self, activations, dims, **kwargs):
+    def __init__(self, activations, dims, prototype=None, **kwargs):
         self.activations = activations
-
-        self.linear_transformations = [Linear(name='linear_{}'.format(i))
-                                       for i in range(len(activations))]
+        self.prototype = Linear() if prototype is None else prototype
+        self.linear_transformations = []
+        for i in range(len(activations)):
+            linear = copy.deepcopy(self.prototype)
+            name = self.prototype.__class__.__name__.lower()
+            linear.name = '{}_{}'.format(name, i)
+            self.linear_transformations.append(linear)
         # Interleave the transformations and activations
         application_methods = []
         for entity in interleave([self.linear_transformations, activations]):
