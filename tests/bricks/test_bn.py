@@ -63,10 +63,11 @@ def test_batch_normalization_allocation_initialization():
     yield check, (7, 4, 5), (7, 1, 5), (False, True, False), False
 
 
-def apply_setup(input_dim, broadcastable, conserve_memory):
+def apply_setup(input_dim, broadcastable, conserve_memory,
+                mean_only):
     """Common setup code."""
     bn = BatchNormalization(input_dim, broadcastable, conserve_memory,
-                            epsilon=1e-4)
+                            epsilon=1e-4, mean_only=mean_only)
     bn.initialize()
     b_len = (len(input_dim) if isinstance(input_dim, collections.Sequence)
              else 1)
@@ -78,8 +79,9 @@ def apply_setup(input_dim, broadcastable, conserve_memory):
 def test_batch_normalization_inference_apply():
     """Test that BatchNormalization.apply works in inference mode."""
     def check(input_dim, variable_dim, broadcastable=None,
-              conserve_memory=True):
-        bn, x = apply_setup(input_dim, broadcastable, conserve_memory)
+              conserve_memory=True, mean_only=False):
+        bn, x = apply_setup(input_dim, broadcastable, conserve_memory,
+                            mean_only)
         y = bn.apply(x)
         rng = numpy.random.RandomState((2015, 12, 16))
         input_ = random_unif(rng,
@@ -96,37 +98,48 @@ def test_batch_normalization_inference_apply():
         bn.population_mean.set_value(pop_mean)
         assert_allclose(y.eval({x: input_}), input_ - pop_mean, rtol=1e-4)
 
-        # Test population stdev is divided out.
-        pop_stdev = random_unif(rng, variable_dim)
-        bn.population_stdev.set_value(pop_stdev)
-        assert_allclose(y.eval({x: input_}), (input_ - pop_mean) / pop_stdev,
-                        rtol=1e-4)
+        if not mean_only:
+            # Test population stdev is divided out.
+            pop_stdev = random_unif(rng, variable_dim)
+            bn.population_stdev.set_value(pop_stdev)
+            assert_allclose(y.eval({x: input_}),
+                            (input_ - pop_mean) / pop_stdev,
+                            rtol=1e-4)
 
-        # Test learned scale is applied.
-        gamma = random_unif(rng, variable_dim)
-        bn.scale.set_value(gamma)
-        assert_allclose(y.eval({x: input_}),
-                        (input_ - pop_mean) * (gamma / pop_stdev),
-                        rtol=1e-4)
+            # Test learned scale is applied.
+            gamma = random_unif(rng, variable_dim)
+            bn.scale.set_value(gamma)
+            assert_allclose(y.eval({x: input_}),
+                            (input_ - pop_mean) * (gamma / pop_stdev),
+                            rtol=1e-4)
 
-        # Test learned offset is applied.
-        beta = random_unif(rng, variable_dim)
-        bn.shift.set_value(beta)
-        assert_allclose(y.eval({x: input_}),
-                        (input_ - pop_mean) * (gamma / pop_stdev) + beta,
-                        rtol=1e-4)
+            # Test learned offset is applied.
+            beta = random_unif(rng, variable_dim)
+            bn.shift.set_value(beta)
+            assert_allclose(y.eval({x: input_}),
+                            (input_ - pop_mean) * (gamma / pop_stdev) + beta,
+                            rtol=1e-4)
+        else:
+            beta = random_unif(rng, variable_dim)
+            bn.shift.set_value(beta)
+            assert_allclose(y.eval({x: input_}), input_ - pop_mean + beta,
+                            rtol=1e-4)
 
     yield check, 9, (9,)
+    yield check, 9, (9,), None, True, True
     yield check, (5, 4), (5, 4), None, False
+    yield check, (5, 4), (5, 4), None, False, True
     yield check, (2, 9, 7), (2, 1, 1), (False, True, True)
+    yield check, (2, 9, 7), (2, 1, 1), (False, True, True), True, True
 
 
 def test_batch_normalization_train_apply():
     def check(input_dim, variable_dim, broadcastable=None,
-              conserve_memory=True):
+              conserve_memory=True, mean_only=False):
         # Default epsilon value.
         epsilon = numpy.cast[theano.config.floatX](1e-4)
-        bn, x = apply_setup(input_dim, broadcastable, conserve_memory)
+        bn, x = apply_setup(input_dim, broadcastable, conserve_memory,
+                            mean_only)
         with bn:
             y_hat = bn.apply(x)
 
@@ -141,47 +154,71 @@ def test_batch_normalization_train_apply():
                             enumerate(bn.population_mean.broadcastable) if b)
 
         # NumPy implementation of the batch-normalization transform.
-        def normalize(x):
-            return ((x - x.mean(axis=axes, keepdims=True,
-                                dtype=theano.config.floatX)) /
-                    numpy.sqrt(numpy.var(x, axis=axes, keepdims=True,
-                                         dtype=theano.config.floatX) +
-                               epsilon))
+        def normalize(x, mean_only):
+            centered = x - x.mean(axis=axes, keepdims=True,
+                                  dtype=theano.config.floatX)
+            if not mean_only:
+                var = numpy.var(x, axis=axes, keepdims=True,
+                                dtype=theano.config.floatX)
+                return centered / numpy.sqrt(var + epsilon)
+            else:
+                return centered
 
         # Check that batch norm is doing what it should be.
-        assert_allclose(y_hat.eval({x: input_}), normalize(input_),
+        assert_allclose(y_hat.eval({x: input_}), normalize(input_, mean_only),
                         atol=(1e-3 if theano.config.floatX == 'float32'
                               else 1e-7))
 
-        # Check that the scale parameters are still getting applied.
-        gamma = random_unif(rng, variable_dim)
-        bn.scale.set_value(gamma)
-        assert_allclose(y_hat.eval({x: input_}), normalize(input_) * gamma,
-                        atol=(1e-3 if theano.config.floatX == 'float32'
-                              else 1e-7))
+        if not mean_only:
+            # Check that the scale parameters are still getting applied.
+            gamma = random_unif(rng, variable_dim)
+            bn.scale.set_value(gamma)
+            assert_allclose(y_hat.eval({x: input_}),
+                            normalize(input_, mean_only) * gamma,
+                            atol=(1e-3 if theano.config.floatX == 'float32'
+                                  else 1e-7))
 
-        beta = random_unif(rng, variable_dim)
-        bn.shift.set_value(beta)
-        # Check that the shift parameters are still getting applied.
-        assert_allclose(y_hat.eval({x: input_}),
-                        normalize(input_) * gamma + beta,
-                        atol=(1e-3 if theano.config.floatX == 'float32'
-                              else 1e-7))
+            beta = random_unif(rng, variable_dim)
+            bn.shift.set_value(beta)
+            # Check that the shift parameters are still getting applied.
+            assert_allclose(y_hat.eval({x: input_}),
+                            normalize(input_, mean_only) * gamma + beta,
+                            atol=(1e-3 if theano.config.floatX == 'float32'
+                                  else 1e-7))
 
-        # Double check that setting the population parameters doesn't
-        # affect anything.
-        bn.population_mean.set_value(numpy.nan *
-                                     bn.population_mean.get_value())
-        bn.population_stdev.set_value(numpy.nan *
-                                      bn.population_mean.get_value())
-        assert_allclose(y_hat.eval({x: input_}),
-                        normalize(input_) * gamma + beta,
-                        atol=(1e-3 if theano.config.floatX == 'float32'
-                              else 1e-7))
+            # Double check that setting the population parameters doesn't
+            # affect anything.
+            bn.population_mean.set_value(numpy.nan *
+                                         bn.population_mean.get_value())
+            bn.population_stdev.set_value(numpy.nan *
+                                          bn.population_mean.get_value())
+            assert_allclose(y_hat.eval({x: input_}),
+                            normalize(input_, mean_only) * gamma + beta,
+                            atol=(1e-3 if theano.config.floatX == 'float32'
+                                  else 1e-7))
+        else:
+            beta = random_unif(rng, variable_dim)
+            bn.shift.set_value(beta)
+            # Check that the shift parameters are still getting applied.
+            assert_allclose(y_hat.eval({x: input_}),
+                            normalize(input_, mean_only) + beta,
+                            atol=(1e-3 if theano.config.floatX == 'float32'
+                                  else 1e-7))
+
+            # Double check that setting the population parameters doesn't
+            # affect anything.
+            bn.population_mean.set_value(numpy.nan *
+                                         bn.population_mean.get_value())
+            assert_allclose(y_hat.eval({x: input_}),
+                            normalize(input_, mean_only) + beta,
+                            atol=(1e-3 if theano.config.floatX == 'float32'
+                                  else 1e-7))
 
     yield check, 9, (9,)
     yield check, (5, 4), (5, 4), None, False
+    yield check, (5, 4), (5, 4), None, False, True
     yield check, (2, 9, 7), (2, 1, 1), (False, True, True)
+    yield check, (2, 9, 7), (2, 1, 1), (False, True, True), True, True
 
 
 def test_batch_normalization_image_size_setter():
@@ -300,7 +337,19 @@ def test_batch_normalized_mlp_conserve_memory_propagated():
     """Test that setting conserve_memory on a BatchNormalizedMLP works."""
     mlp = BatchNormalizedMLP([Tanh(), Tanh()], [5, 7, 9],
                              conserve_memory=False)
+    assert not mlp.conserve_memory
     assert not any(act.children[0].conserve_memory for act in mlp.activations)
     mlp.conserve_memory = True
     assert mlp.conserve_memory
     assert all(act.children[0].conserve_memory for act in mlp.activations)
+
+
+def test_batch_normalized_mlp_mean_only_propagated():
+    """Test that setting mean_only on a BatchNormalizedMLP works."""
+    mlp = BatchNormalizedMLP([Tanh(), Tanh()], [5, 7, 9],
+                             mean_only=False)
+    assert not mlp.mean_only
+    assert not any(act.children[0].mean_only for act in mlp.activations)
+    mlp.mean_only = True
+    assert mlp.mean_only
+    assert all(act.children[0].mean_only for act in mlp.activations)
