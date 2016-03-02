@@ -20,6 +20,13 @@ from blocks.utils import (dict_subset, pack, shared_floatx,
 logger = logging.getLogger(__name__)
 
 
+def _create_algorithm_buffer_for(param, *args, **kwargs):
+    buf = shared_floatx_zeros_matching(param, *args, **kwargs)
+    buf.tag.for_parameter = param
+    add_role(buf, ALGORITHM_BUFFER)
+    return buf
+
+
 @add_metaclass(ABCMeta)
 class TrainingAlgorithm(object):
     """Base class for training algorithms.
@@ -421,8 +428,7 @@ class BasicMomentum(StepRule):
         add_role(self.momentum, ALGORITHM_HYPERPARAMETER)
 
     def compute_step(self, parameter, previous_step):
-        velocity = shared_floatx_zeros_matching(parameter, "velocity")
-        add_role(velocity, ALGORITHM_BUFFER)
+        velocity = _create_algorithm_buffer_for(parameter, "velocity")
         step = self.momentum * velocity + previous_step
         updates = [(velocity, step)]
         return step, updates
@@ -488,12 +494,10 @@ class AdaDelta(StepRule):
         add_role(self.epsilon, ALGORITHM_HYPERPARAMETER)
 
     def compute_step(self, parameter, previous_step):
-        mean_square_step_tm1 = shared_floatx_zeros_matching(
+        mean_square_step_tm1 = _create_algorithm_buffer_for(
             parameter, "mean_square_step_tm1")
-        add_role(mean_square_step_tm1, ALGORITHM_BUFFER)
-        mean_square_delta_x_tm1 = shared_floatx_zeros_matching(
+        mean_square_delta_x_tm1 = _create_algorithm_buffer_for(
             parameter, "mean_square_delta_x_tm1")
-        add_role(mean_square_delta_x_tm1, ALGORITHM_BUFFER)
 
         mean_square_step_t = (
             self.decay_rate * mean_square_step_tm1 +
@@ -551,13 +555,11 @@ class BasicRMSProp(StepRule):
         self.epsilon = 1. / max_scaling
 
     def compute_step(self, parameter, previous_step):
-        mean_square_step_tm1 = shared_floatx_zeros_matching(
+        mean_square_step_tm1 = _create_algorithm_buffer_for(
             parameter, "mean_square_step_tm1")
-        add_role(mean_square_step_tm1, ALGORITHM_BUFFER)
         mean_square_step_t = (
             self.decay_rate * mean_square_step_tm1 +
             (1 - self.decay_rate) * tensor.sqr(previous_step))
-        add_role(mean_square_step_t, ALGORITHM_BUFFER)
         rms_step_t = tensor.maximum(
             tensor.sqrt(mean_square_step_t), self.epsilon)
         step = previous_step / rms_step_t
@@ -752,8 +754,7 @@ class AdaGrad(StepRule):
         name = 'adagrad_sqs'
         if parameter.name:
             name += '_' + parameter.name
-        ssq = shared_floatx_zeros_matching(parameter, name=name)
-        add_role(ssq, ALGORITHM_BUFFER)
+        ssq = _create_algorithm_buffer_for(parameter, name=name)
 
         ssq_t = (tensor.sqr(previous_step) + ssq)
         step = (self.learning_rate * previous_step /
@@ -801,10 +802,8 @@ class Adam(StepRule):
             add_role(param, ALGORITHM_HYPERPARAMETER)
 
     def compute_step(self, parameter, previous_step):
-        mean = shared_floatx_zeros_matching(parameter, 'mean')
-        add_role(mean, ALGORITHM_BUFFER)
-        variance = shared_floatx_zeros_matching(parameter, 'variance')
-        add_role(variance, ALGORITHM_BUFFER)
+        mean = _create_algorithm_buffer_for(parameter, 'mean')
+        variance = _create_algorithm_buffer_for(parameter, 'variance')
         time = shared_floatx(0., 'time')
         add_role(time, ALGORITHM_BUFFER)
 
