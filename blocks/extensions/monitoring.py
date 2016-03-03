@@ -12,6 +12,7 @@ from blocks.monitoring.evaluators import (
 PREFIX_SEPARATOR = '_'
 logger = logging.getLogger(__name__)
 
+
 class MonitoringExtension(TrainingExtension):
     """A mixin with logic shared by monitoring extensions.
 
@@ -98,9 +99,10 @@ class TrainingDataMonitoring(SimpleExtension, MonitoringExtension):
 
     Parameters
     ----------
-    variables : list of :class:`~tensor.TensorVariable`
-        The variables to monitor. The variable names are used as record
-        names in the logs.
+    observables : list of :class:`~tensor.TensorVariable`
+                or :class:`~blocks.monitoring.aggregation.MonitoredQuantity`
+        The variables or non-Theano quantities to monitor.
+        The variable names are used as record names in the logs.
 
     Notes
     -----
@@ -111,30 +113,40 @@ class TrainingDataMonitoring(SimpleExtension, MonitoringExtension):
     :class:`.DifferentiableCostMinimizer`.
 
     """
-    def __init__(self, variables, **kwargs):
+    def __init__(self, observables, **kwargs):
         kwargs.setdefault("before_training", True)
         super(TrainingDataMonitoring, self).__init__(**kwargs)
         self.add_condition(['after_batch'], arguments=('just_accumulate',))
-        self._quantities = MonitoredQuantityBuffer(
-            [v for v in variables
-             if isinstance(v, MonitoredQuantity)])
-        self._required = AggregationBuffer(
-            [take_last(v) for v in self._quantities.requires])
+
+        self._non_variables = []
+        self._variables = []
+        for observable in observables:
+            if isinstance(observable, theano.Variable):
+                self._variables.append(observable)
+            elif isinstance(observable, MonitoredQuantity):
+                self._non_variables.append(observable)
+            else:
+                raise ValueError("can not monitor {}".format(observable))
+
+        self._non_variables = MonitoredQuantityBuffer(self._non_variables)
+        self._required_for_non_variables = AggregationBuffer(
+            [take_last(v) for v in self._non_variables.requires])
         self._variables = AggregationBuffer(
-            [v for v in variables
-             if isinstance(v, theano.Variable)],
-            use_take_last=True)
+            self._variables, use_take_last=True)
         self._last_time_called = -1
 
     def do(self, callback_name, *args):
         """Initializes the buffer or commits the values to the log.
 
-        What this method does depends on from what callback it is called.
-        When called within `before_training`, it initializes the
-        aggregation buffer and instructs the training algorithm what
-        additional computations should be carried at each step by adding
-        corresponding updates to it. In all other cases it writes
-aggregated values of the monitored variables to the log.
+        What this method does depends on from what callback it is called and
+        with which arguments.  When called within `before_training`, it
+        initializes the aggregation buffer and instructs the training algorithm
+        what additional computations should be carried at each step by adding
+        corresponding updates to it. In most_other cases it writes aggregated
+        values of the monitored variables to the log. An exception is
+        when an argument `just_accumulate` is given: in this cases
+        it updates the values of monitored non-Theano quantities, but
+        does not write anything to the log.
 
         """
         data, args = self.parse_args(callback_name, args)
@@ -145,28 +157,32 @@ aggregated values of the monitored variables to the log.
             self.main_loop.algorithm.add_updates(
                 self._variables.accumulation_updates)
             self.main_loop.algorithm.add_updates(
-                self._required.accumulation_updates)
+                self._required_for_non_variables.accumulation_updates)
             self._variables.initialize_aggregators()
-            self._required.initialize_aggregators()
-            self._quantities.initialize()
+            self._required_for_non_variables.initialize_aggregators()
+            self._non_variables.initialize()
         else:
             # When called first time at any iterations, update
             # monitored non-Theano quantities
             if (self.main_loop.status['iterations_done'] >
                     self._last_time_called):
-                self._quantities.accumulate_quantities(
-                    self._required.get_aggregated_values().values())
-                self._required.initialize_aggregators()
-                self._last_time_called = self.main_loop.status['iterations_done']
+                self._non_variables.accumulate_quantities(
+                    self._required_for_non_variables
+                        .get_aggregated_values().values())
+                self._required_for_non_variables.initialize_aggregators()
+                self._last_time_called = (
+                    self.main_loop.status['iterations_done'])
             # If only called to update non-Theano quantities,
             # do just that
             if args == ('just_accumulate',):
                 return
             # Otherwise, also output current values of from the accumulators
             # to the log.
-            self.add_records(self.main_loop.log,
-                             self._variables.get_aggregated_values().items())
+            self.add_records(
+                self.main_loop.log,
+                self._variables.get_aggregated_values().items())
             self._variables.initialize_aggregators()
-            self.add_records(self.main_loop.log,
-                             self._quantities.get_aggregated_values().items())
-            self._quantities.initialize()
+            self.add_records(
+                self.main_loop.log,
+                self._non_variables.get_aggregated_values().items())
+            self._non_variables.initialize()
