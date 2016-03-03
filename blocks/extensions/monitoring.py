@@ -167,8 +167,8 @@ class TrainingDataMonitoring(SimpleExtension, MonitoringExtension):
             if (self.main_loop.status['iterations_done'] >
                     self._last_time_called):
                 self._non_variables.accumulate_quantities(
-                    self._required_for_non_variables
-                        .get_aggregated_values().values())
+                    list(self._required_for_non_variables
+                         .get_aggregated_values().values()))
                 self._required_for_non_variables.initialize_aggregators()
                 self._last_time_called = (
                     self.main_loop.status['iterations_done'])
