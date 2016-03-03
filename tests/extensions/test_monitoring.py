@@ -15,15 +15,15 @@ from blocks.main_loop import MainLoop
 class MeanFeaturesTimesTarget(aggregation.MonitoredQuantity):
 
     def initialize(self):
-        self._accumulated = 0.
+        self._aggregated = 0.
         self._num_batches = 0
 
-    def accumulate(self, features, targets):
-        self._accumulated += features * targets
+    def aggregate(self, features, targets):
+        self._aggregated += features * targets
         self._num_batches += 1
 
     def readout(self):
-        return self._accumulated / self._num_batches
+        return self._aggregated / self._num_batches
 
 
 def test_training_data_monitoring():

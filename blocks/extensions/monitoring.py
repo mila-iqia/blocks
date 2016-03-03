@@ -116,7 +116,7 @@ class TrainingDataMonitoring(SimpleExtension, MonitoringExtension):
     def __init__(self, variables, **kwargs):
         kwargs.setdefault("before_training", True)
         super(TrainingDataMonitoring, self).__init__(**kwargs)
-        self.add_condition(['after_batch'], arguments=('just_accumulate',))
+        self.add_condition(['after_batch'], arguments=('just_aggregate',))
 
         self._non_variables = []
         self._variables = []
@@ -144,7 +144,7 @@ class TrainingDataMonitoring(SimpleExtension, MonitoringExtension):
         algorithm what additional computations should be carried at each
         step by adding corresponding updates to it. In most_other cases it
         writes aggregated values of the monitored variables to the log. An
-        exception is when an argument `just_accumulate` is given: in this
+        exception is when an argument `just_aggregate` is given: in this
         cases it updates the values of monitored non-Theano quantities, but
         does not write anything to the log.
 
@@ -166,7 +166,7 @@ class TrainingDataMonitoring(SimpleExtension, MonitoringExtension):
             # monitored non-Theano quantities
             if (self.main_loop.status['iterations_done'] >
                     self._last_time_called):
-                self._non_variables.accumulate_quantities(
+                self._non_variables.aggregate_quantities(
                     list(self._required_for_non_variables
                          .get_aggregated_values().values()))
                 self._required_for_non_variables.initialize_aggregators()
@@ -174,7 +174,7 @@ class TrainingDataMonitoring(SimpleExtension, MonitoringExtension):
                     self.main_loop.status['iterations_done'])
             # If only called to update non-Theano quantities,
             # do just that
-            if args == ('just_accumulate',):
+            if args == ('just_aggregate',):
                 return
             # Otherwise, also output current values of from the accumulators
             # to the log.

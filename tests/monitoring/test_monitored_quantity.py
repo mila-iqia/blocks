@@ -14,7 +14,7 @@ class CrossEntropy(MonitoredQuantity):
     def initialize(self):
         self.total_cross_entropy, self.examples_seen = 0.0, 0
 
-    def accumulate(self, target, predicted):
+    def aggregate(self, target, predicted):
         import numpy
         self.total_cross_entropy += -(target * numpy.log(predicted)).sum()
         self.examples_seen += 1
