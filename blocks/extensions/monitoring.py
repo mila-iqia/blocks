@@ -99,8 +99,8 @@ class TrainingDataMonitoring(SimpleExtension, MonitoringExtension):
 
     Parameters
     ----------
-    observables : list of :class:`~tensor.TensorVariable`
-                or :class:`~blocks.monitoring.aggregation.MonitoredQuantity`
+    observables : list of :class:`~tensor.TensorVariable` or
+                  :class:`~blocks.monitoring.aggregation.MonitoredQuantity`
         The variables or non-Theano quantities to monitor.
         The variable names are used as record names in the logs.
 
@@ -138,14 +138,14 @@ class TrainingDataMonitoring(SimpleExtension, MonitoringExtension):
     def do(self, callback_name, *args):
         """Initializes the buffer or commits the values to the log.
 
-        What this method does depends on from what callback it is called and
-        with which arguments.  When called within `before_training`, it
-        initializes the aggregation buffer and instructs the training algorithm
-        what additional computations should be carried at each step by adding
-        corresponding updates to it. In most_other cases it writes aggregated
-        values of the monitored variables to the log. An exception is
-        when an argument `just_accumulate` is given: in this cases
-        it updates the values of monitored non-Theano quantities, but
+        What this method does depends on from what callback it is called
+        and with which arguments.  When called within `before_training`, it
+        initializes the aggregation buffer and instructs the training
+        algorithm what additional computations should be carried at each
+        step by adding corresponding updates to it. In most_other cases it
+        writes aggregated values of the monitored variables to the log. An
+        exception is when an argument `just_accumulate` is given: in this
+        cases it updates the values of monitored non-Theano quantities, but
         does not write anything to the log.
 
         """
