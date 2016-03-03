@@ -50,19 +50,19 @@ class MonitoredQuantityBuffer(object):
         self._computation_graph = ComputationGraph(self.requires)
         self.inputs = self._computation_graph.inputs
 
-    def initialize(self):
+    def initialize_quantities(self):
         """Initialize the quantities."""
         self._initialized = True
         for quantity in self.quantities:
             quantity.initialize()
 
     def get_aggregated_values(self):
-        """Readout the aggregated values."""
+        """Get the aggregated values."""
         if not self._initialized:
             raise Exception("To readout you must first initialize, then"
                             "process batches!")
         else:
-            ret_vals = [q.readout() for q in self.quantities]
+            ret_vals = [q.get_aggregated_value() for q in self.quantities]
             return dict(zip(self.quantity_names, ret_vals))
 
     def aggregate_quantities(self, numerical_values):
@@ -289,7 +289,7 @@ class DatasetEvaluator(object):
 
     def initialize_aggregators(self):
         self.theano_buffer.initialize_aggregators()
-        self.monitored_quantities_buffer.initialize()
+        self.monitored_quantities_buffer.initialize_quantities()
 
     def process_batch(self, batch):
         try:

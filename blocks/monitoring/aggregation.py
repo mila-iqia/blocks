@@ -218,6 +218,6 @@ class MonitoredQuantity(object):
         pass
 
     @abstractmethod
-    def readout(self):
-        """Readout the aggregated results to capture the final result."""
+    def get_aggregated_value(self):
+        """Obtain the result of aggregation."""
         pass

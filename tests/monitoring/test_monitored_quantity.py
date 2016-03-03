@@ -19,7 +19,7 @@ class CrossEntropy(MonitoredQuantity):
         self.total_cross_entropy += -(target * numpy.log(predicted)).sum()
         self.examples_seen += 1
 
-    def readout(self):
+    def get_aggregated_value(self):
         res = self.total_cross_entropy / self.examples_seen
         return res
 

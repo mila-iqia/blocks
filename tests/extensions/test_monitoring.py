@@ -22,7 +22,7 @@ class MeanFeaturesTimesTarget(aggregation.MonitoredQuantity):
         self._aggregated += features * targets
         self._num_batches += 1
 
-    def readout(self):
+    def get_aggregated_value(self):
         return self._aggregated / self._num_batches
 
 

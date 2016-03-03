@@ -160,7 +160,7 @@ class TrainingDataMonitoring(SimpleExtension, MonitoringExtension):
                 self._required_for_non_variables.accumulation_updates)
             self._variables.initialize_aggregators()
             self._required_for_non_variables.initialize_aggregators()
-            self._non_variables.initialize()
+            self._non_variables.initialize_quantities()
         else:
             # When called first time at any iterations, update
             # monitored non-Theano quantities
@@ -185,4 +185,4 @@ class TrainingDataMonitoring(SimpleExtension, MonitoringExtension):
             self.add_records(
                 self.main_loop.log,
                 self._non_variables.get_aggregated_values().items())
-            self._non_variables.initialize()
+            self._non_variables.initialize_quantities()
