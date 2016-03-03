@@ -99,7 +99,7 @@ class TrainingDataMonitoring(SimpleExtension, MonitoringExtension):
 
     Parameters
     ----------
-    observables : list of :class:`~tensor.TensorVariable` or
+    variables : list of :class:`~tensor.TensorVariable` or
                   :class:`~blocks.monitoring.aggregation.MonitoredQuantity`
         The variables or non-Theano quantities to monitor.
         The variable names are used as record names in the logs.
@@ -113,20 +113,20 @@ class TrainingDataMonitoring(SimpleExtension, MonitoringExtension):
     :class:`.DifferentiableCostMinimizer`.
 
     """
-    def __init__(self, observables, **kwargs):
+    def __init__(self, variables, **kwargs):
         kwargs.setdefault("before_training", True)
         super(TrainingDataMonitoring, self).__init__(**kwargs)
         self.add_condition(['after_batch'], arguments=('just_accumulate',))
 
         self._non_variables = []
         self._variables = []
-        for observable in observables:
-            if isinstance(observable, theano.Variable):
-                self._variables.append(observable)
-            elif isinstance(observable, MonitoredQuantity):
-                self._non_variables.append(observable)
+        for variable_or_not in variables:
+            if isinstance(variable_or_not, theano.Variable):
+                self._variables.append(variable_or_not)
+            elif isinstance(variable_or_not, MonitoredQuantity):
+                self._non_variables.append(variable_or_not)
             else:
-                raise ValueError("can not monitor {}".format(observable))
+                raise ValueError("can not monitor {}".format(variable_or_not))
 
         self._non_variables = MonitoredQuantityBuffer(self._non_variables)
         self._required_for_non_variables = AggregationBuffer(
