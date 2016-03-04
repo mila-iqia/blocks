@@ -45,7 +45,7 @@ script:
   - |
       if [[ $TESTS == 'blocks' ]]; then
         coverage run -p --source=blocks -m nose2.__main__ -v doctests || fail
-        export THEANO_FLAGS=$THEANO_FLAGS,cxx=
+        echo "[global]\ncxx =" > ~/.theanorc
         coverage run -p --source=blocks -m nose2.__main__ -v tests || fail
         return $FAILED
       fi
