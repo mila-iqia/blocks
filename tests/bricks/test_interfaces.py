@@ -1,5 +1,4 @@
 import numpy
-import theano
 from theano import tensor
 from blocks.bricks import Linear
 from blocks.initialization import Constant, IsotropicGaussian
