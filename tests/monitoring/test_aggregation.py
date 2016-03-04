@@ -55,9 +55,9 @@ def test_parameter_monitor():
     aggregator = monitor.tag.aggregation_scheme.get_aggregator()
     initialize = theano.function([], updates=aggregator.initialization_updates)
     initialize()
-    accumulate = theano.function([X], updates=aggregator.accumulation_updates)
-    accumulate(numpy.arange(4, dtype=theano.config.floatX).reshape(2, 2))
-    accumulate(numpy.arange(4, 10, dtype=theano.config.floatX).reshape(3, 2))
+    aggregate = theano.function([X], updates=aggregator.accumulation_updates)
+    aggregate(numpy.arange(4, dtype=theano.config.floatX).reshape(2, 2))
+    aggregate(numpy.arange(4, 10, dtype=theano.config.floatX).reshape(3, 2))
     assert_allclose(aggregator.readout_variable.eval(), 4.5)
 
 

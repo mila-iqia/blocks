@@ -66,7 +66,7 @@ class Aggregator(object):
         Updates that specify how a new batch of data gets processed
         by this Aggregator. *Can refer to model inputs.*
     readout_variable : :class:`~tensor.TensorVariable`
-        Theano variable that holds the final value based on accumulated
+        Theano variable that holds the final value based on aggregated
         partial results. *readout_variable must only consist of shared
         variables and constants.*
 
@@ -108,7 +108,7 @@ class Mean(AggregationScheme):
         numerator_acc = shared_like(self.numerator)
         denominator_acc = shared_like(self.denominator)
 
-        # Dummy default expression to use as the previously-accumulated
+        # Dummy default expression to use as the previously-aggregated
         # value, that has the same shape as the new result
         numerator_zeros = tensor.as_tensor(self.numerator).zeros_like()
         denominator_zeros = tensor.as_tensor(self.denominator).zeros_like()
@@ -172,15 +172,21 @@ class TakeLast(AggregationScheme):
                           readout_variable=self.storage)
 
 
+def take_last(variable):
+    variable = variable.copy(variable.name)
+    variable.tag.aggregation_scheme = TakeLast(variable)
+    return variable
+
+
 @add_metaclass(ABCMeta)
 class MonitoredQuantity(object):
     """The base class for monitored-quantities.
 
     To monitor a non-Theano quantity in Blocks you have to implement this
     interface for it. The initialize method initializes accumulators and
-    the parameters needed to compute this quantity, accumulate method
-    accumulates results for every batch, and finally readout is called
-    to get the accumulated results.
+    the parameters needed to compute this quantity, aggregate method
+    aggregates results for every batch, and finally readout is called
+    to get the aggregated results.
 
     Attributes
     ----------
@@ -207,11 +213,17 @@ class MonitoredQuantity(object):
         pass
 
     @abstractmethod
-    def accumulate(self):
-        """Accumulate results for every batch."""
+    def aggregate(self, *args):
+        r"""Aggregate results for every batch.
+
+        \*args : list of :class:`~numpy.ndarray`
+            The values of the variables required to aggregate the
+            value of the quantity.
+
+        """
         pass
 
     @abstractmethod
-    def readout(self):
-        """Readout the accumulated results to capture the final result."""
+    def get_aggregated_value(self):
+        """Obtain the result of aggregation."""
         pass

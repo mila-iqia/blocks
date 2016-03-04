@@ -12,11 +12,25 @@ from blocks.utils import shared_floatx
 from blocks.main_loop import MainLoop
 
 
+class MeanFeaturesTimesTarget(aggregation.MonitoredQuantity):
+
+    def initialize(self):
+        self._aggregated = 0.
+        self._num_batches = 0
+
+    def aggregate(self, features, targets):
+        self._aggregated += features * targets
+        self._num_batches += 1
+
+    def get_aggregated_value(self):
+        return self._aggregated / self._num_batches
+
+
 def test_training_data_monitoring():
     weights = numpy.array([-1, 1], dtype=theano.config.floatX)
     features = [numpy.array(f, dtype=theano.config.floatX)
-                for f in [[1, 2], [3, 4], [5, 6]]]
-    targets = [(weights * f).sum() for f in features]
+                for f in [[1, 2], [3, 5], [5, 8]]]
+    targets = numpy.array([(weights * f).sum() for f in features])
     n_batches = 3
     dataset = IterableDataset(dict(features=features, targets=targets))
 
@@ -35,15 +49,23 @@ def test_training_data_monitoring():
                 ((W.get_value() * data["features"]).sum() -
                  data["targets"]) ** 2)
 
+    # Note, that unlike a Theano variable, a monitored
+    # quantity can't be reused in more than one TrainingDataMonitoring
+
+    ftt1 = MeanFeaturesTimesTarget(
+        requires=[x, y], name='ftt1')
+    ftt2 = MeanFeaturesTimesTarget(
+        requires=[x, y], name='ftt2')
+
     main_loop = MainLoop(
         model=None, data_stream=dataset.get_example_stream(),
         algorithm=GradientDescent(cost=cost, parameters=[W],
                                   step_rule=Scale(0.001)),
         extensions=[
             FinishAfter(after_n_epochs=1),
-            TrainingDataMonitoring([W_sum, cost, V], prefix="train1",
+            TrainingDataMonitoring([W_sum, cost, V, ftt1], prefix="train1",
                                    after_batch=True),
-            TrainingDataMonitoring([aggregation.mean(W_sum), cost],
+            TrainingDataMonitoring([aggregation.mean(W_sum), cost, ftt2],
                                    prefix="train2", after_epoch=True),
             TrueCostExtension()])
 
@@ -66,3 +88,10 @@ def test_training_data_monitoring():
         main_loop.log[n_batches]['train2_W_sum'],
         sum([main_loop.log[i]['train1_W_sum']
              for i in range(1, n_batches + 1)]) / n_batches)
+
+    # Check monitoring of non-Theano quantites
+    for i in range(n_batches):
+        assert_allclose(main_loop.log[i + 1]['train1_ftt1'],
+                        features[i] * targets[i])
+        assert_allclose(main_loop.log[n_batches]['train2_ftt2'],
+                        (features * targets[:, None]).mean(axis=0))

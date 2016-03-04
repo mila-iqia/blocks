@@ -17,9 +17,9 @@ logger = logging.getLogger(__name__)
 class MonitoredQuantityBuffer(object):
     """Intermediate results of aggregating values of monitored-quantity.
 
-    Accumulate results for a list of monitored-quantity for every
+    Aggregate results for a list of monitored-quantity for every
     single batch. Provides initialization and readout routines to
-    initialize each quantity and capture its accumulated results.
+    initialize each quantity and capture its aggregated results.
 
 
     Parameters
@@ -50,29 +50,29 @@ class MonitoredQuantityBuffer(object):
         self._computation_graph = ComputationGraph(self.requires)
         self.inputs = self._computation_graph.inputs
 
-    def initialize(self):
+    def initialize_quantities(self):
         """Initialize the quantities."""
         self._initialized = True
         for quantity in self.quantities:
             quantity.initialize()
 
     def get_aggregated_values(self):
-        """Readout the accumulated values."""
+        """Get the aggregated values."""
         if not self._initialized:
             raise Exception("To readout you must first initialize, then"
                             "process batches!")
         else:
-            ret_vals = [q.readout() for q in self.quantities]
+            ret_vals = [q.get_aggregated_value() for q in self.quantities]
             return dict(zip(self.quantity_names, ret_vals))
 
-    def accumulate_quantities(self, numerical_values):
-        """Accumulate the results for every batch."""
+    def aggregate_quantities(self, numerical_values):
+        """Aggregate the results for every batch."""
         if not self._initialized:
             raise Exception("To readout you must first initialize, then"
                             "process batches!")
         else:
             for quantity in self.quantities:
-                quantity.accumulate(
+                quantity.aggregate(
                     *[numerical_values[self.requires.index(requirement)]
                         for requirement in quantity.requires])
 
@@ -193,7 +193,7 @@ class AggregationBuffer(object):
             raise Exception("To readout you must first initialize, then"
                             "process batches!")
         ret_vals = self._readout_fun()
-        return dict(equizip(self.variable_names, ret_vals))
+        return OrderedDict(equizip(self.variable_names, ret_vals))
 
 
 class DatasetEvaluator(object):
@@ -281,15 +281,15 @@ class DatasetEvaluator(object):
 
         if inputs != []:
             self.unique_inputs = list(set(inputs))
-            self._accumulate_fun = theano.function(self.unique_inputs,
-                                                   outputs,
-                                                   updates=updates)
+            self._aggregate_fun = theano.function(self.unique_inputs,
+                                                  outputs,
+                                                  updates=updates)
         else:
-            self._accumulate_fun = None
+            self._aggregate_fun = None
 
     def initialize_aggregators(self):
         self.theano_buffer.initialize_aggregators()
-        self.monitored_quantities_buffer.initialize()
+        self.monitored_quantities_buffer.initialize_quantities()
 
     def process_batch(self, batch):
         try:
@@ -300,9 +300,9 @@ class DatasetEvaluator(object):
                 "Not all data sources required for monitoring were"
                 " provided. The list of required data sources:"
                 " {}.".format(input_names))
-        if self._accumulate_fun is not None:
-            numerical_values = self._accumulate_fun(**batch)
-            self.monitored_quantities_buffer.accumulate_quantities(
+        if self._aggregate_fun is not None:
+            numerical_values = self._aggregate_fun(**batch)
+            self.monitored_quantities_buffer.aggregate_quantities(
                 numerical_values)
 
     def get_aggregated_values(self):
@@ -326,7 +326,7 @@ class DatasetEvaluator(object):
 
         """
         self.initialize_aggregators()
-        if self._accumulate_fun is not None:
+        if self._aggregate_fun is not None:
             for batch in data_stream.get_epoch_iterator(as_dict=True):
                 self.process_batch(batch)
         else:
