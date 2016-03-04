@@ -213,8 +213,14 @@ class MonitoredQuantity(object):
         pass
 
     @abstractmethod
-    def aggregate(self):
-        """Aggregate results for every batch."""
+    def aggregate(self, *args):
+        r"""Aggregate results for every batch.
+
+        \*args : list of :class:`~numpy.ndarray`
+            The values of the variables required to aggregate the
+            value of the quantity.
+
+        """
         pass
 
     @abstractmethod
