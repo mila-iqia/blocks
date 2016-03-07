@@ -9,7 +9,7 @@ from blocks.monitoring.aggregation import MonitoredQuantity, take_last
 from blocks.monitoring.evaluators import (
     AggregationBuffer, MonitoredQuantityBuffer, DatasetEvaluator)
 
-PREFIX_SEPARATOR = '_'
+SEPARATOR = '_'
 logger = logging.getLogger(__name__)
 
 
@@ -20,17 +20,31 @@ class MonitoringExtension(TrainingExtension):
     ----------
     prefix : str, optional
         The prefix for the log records done by the extension.  It is
-        appended to the variable names with an underscore as a separator.
-        If not given, the names of the observed variables are used as is.
+        prepended to the variable names with an underscore as a separator.
+        If not given, no prefix is added to the names of the observed
+        variables.
+    suffix : str, optional
+        The suffix for the log records done by the extension.  It is
+        appended to the end of variable names with an underscore as a
+        separator. If not given, no suffix is added the names of the
+        observed variables.
 
     """
-    def __init__(self, prefix=None, **kwargs):
+    SEPARATOR = SEPARATOR
+
+    def __init__(self, prefix=None, suffix=None, **kwargs):
         super(MonitoringExtension, self).__init__(**kwargs)
         self.prefix = prefix
+        self.suffix = suffix
 
     def _record_name(self, name):
         """The record name for a variable name."""
-        return self.prefix + PREFIX_SEPARATOR + name if self.prefix else name
+        if not isinstance(name, str):
+            raise ValueError("record name must be a string")
+
+        return self.SEPARATOR.join(
+            [morpheme for morpheme in [self.prefix, name, self.suffix]
+             if morpheme is not None])
 
     def record_name(self, variable):
         """The record name for a variable."""
@@ -68,8 +82,6 @@ class DataStreamMonitoring(SimpleExtension, MonitoringExtension):
         each time monitoring is done.
 
     """
-    PREFIX_SEPARATOR = '_'
-
     def __init__(self, variables, data_stream, updates=None, **kwargs):
         kwargs.setdefault("after_epoch", True)
         kwargs.setdefault("before_first_epoch", True)

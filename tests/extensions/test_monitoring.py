@@ -5,7 +5,9 @@ from numpy.testing import assert_allclose
 from theano import tensor
 
 from blocks.extensions import TrainingExtension, FinishAfter
-from blocks.extensions.monitoring import TrainingDataMonitoring
+from blocks.extensions.monitoring import (
+    MonitoringExtension,
+    TrainingDataMonitoring)
 from blocks.monitoring import aggregation
 from blocks.algorithms import GradientDescent, Scale
 from blocks.utils import shared_floatx
@@ -24,6 +26,31 @@ class MeanFeaturesTimesTarget(aggregation.MonitoredQuantity):
 
     def get_aggregated_value(self):
         return self._aggregated / self._num_batches
+
+
+def test_monitoring_extension__record_name():
+    test_name = "test-test"
+
+    monitor = MonitoringExtension()
+    assert monitor._record_name(test_name) == test_name
+
+    monitor = MonitoringExtension(prefix="abc")
+    assert (monitor._record_name(test_name) ==
+            "abc" + monitor.SEPARATOR + test_name)
+
+    monitor = MonitoringExtension(suffix="abc")
+    assert (monitor._record_name(test_name) ==
+            test_name + monitor.SEPARATOR + "abc")
+
+    monitor = MonitoringExtension(prefix="abc", suffix="def")
+    assert (monitor._record_name(test_name) ==
+            "abc" + monitor.SEPARATOR + test_name + monitor.SEPARATOR + "def")
+
+    try:
+        monitor = MonitoringExtension(prefix="abc", suffix="def")
+        monitor._record_name(None)
+    except ValueError as e:
+        assert str(e) == "record name must be a string"
 
 
 def test_training_data_monitoring():
