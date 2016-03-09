@@ -776,7 +776,7 @@ class Adam(StepRule):
     ----------
     learning_rate : float, optional
         Step size.
-        Default value is set to 0.0002.
+        Default value is set to 0.002.
     beta1 : float, optional
         Exponential decay rate for the first moment estimates.
         Default value is set to 0.1.
