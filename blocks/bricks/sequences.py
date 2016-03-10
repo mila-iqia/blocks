@@ -73,7 +73,7 @@ class FeedforwardSequence(Sequence, Feedforward):
         self.children[-1].output_dim = value
 
 
-class MLP(Sequence, Initializable, Feedforward):
+class MLP(FeedforwardSequence, Initializable):
     """A simple multi-layer perceptron.
 
     Parameters
