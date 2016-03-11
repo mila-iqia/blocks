@@ -1,3 +1,4 @@
+import os
 import warnings
 import tarfile
 from pickle import PicklingError
@@ -12,7 +13,8 @@ from theano import tensor, shared
 from blocks.bricks import MLP, Linear
 from blocks.initialization import Constant
 from blocks.serialization import (load, dump, secure_dump, load_parameters,
-                                  _Renamer, add_to_dump)
+                                  _Renamer, add_to_dump, dump_and_add_to_dump,
+                                  continue_training)
 
 
 def test_renamer():
@@ -148,3 +150,12 @@ def test_secure_dump():
     assert_raises(PicklingError, secure_dump, bar, f.name)
     with open(f.name, 'rb') as f:
         assert type(load(f)) is object
+
+
+def test_dump_and_add_to_dump():
+    x = 3
+    y = 2
+    with NamedTemporaryFile(delete=False) as f:
+        dump_and_add_to_dump(x, f, None, {'y': y})
+    assert load(open(f.name, 'rb')) == x
+    assert load(open(f.name, 'rb'), 'y') == y
