@@ -569,7 +569,7 @@ class _PersistentLoad(object):
         # As we empirically found out, this method can be called multiple
         # times  with the same id_. That's why we need a cache here to
         # avoid creating the same object more than once.
-        if not id_ in self._cache:
+        if id_ not in self._cache:
             components = _unmangle_parameter_name(id_)
             self._cache[id_] = components[0](self.parameters[components[1]])
         return self._cache[id_]
