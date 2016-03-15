@@ -563,10 +563,16 @@ class _PersistentLoad(object):
         if '_parameters' in tar_file.getnames():
             self.parameters = numpy.load(
                 tar_file.extractfile(tar_file.getmember('_parameters')))
+        self._cache = {}
 
     def __call__(self, id_):
-        components = _unmangle_parameter_name(id_)
-        return components[0](self.parameters[components[1]])
+        # As we empirically found out, this method can be called multiple
+        # times  with the same id_. That's why we need a cache here to
+        # avoid creating the same object more than once.
+        if id_ not in self._cache:
+            components = _unmangle_parameter_name(id_)
+            self._cache[id_] = components[0](self.parameters[components[1]])
+        return self._cache[id_]
 
 
 def _mangle_parameter_name(type_, name):
