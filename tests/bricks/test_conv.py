@@ -331,3 +331,18 @@ def test_convolutional_sequence_use_bias():
     y = cnn.apply(x)
     params = ComputationGraph(y).parameters
     assert len(params) == 3 and all(param.name == 'W' for param in params)
+
+
+def test_convolutional_sequence_use_bias_not_pushed_if_not_explicitly_set():
+    cnn = ConvolutionalSequence(
+        sum([[Convolutional(filter_size=(1, 1), num_filters=1,
+                            use_bias=False), Rectifier()]
+             for _ in range(3)], []),
+        num_channels=1, image_size=(1, 1))
+    cnn.allocate()
+    assert [not child.use_bias for child in cnn.children
+            if isinstance(child, Convolutional)]
+    x = tensor.tensor4()
+    y = cnn.apply(x)
+    params = ComputationGraph(y).parameters
+    assert len(params) == 3 and all(param.name == 'W' for param in params)

@@ -96,7 +96,8 @@ class MLP(Sequence, Initializable, Feedforward):
     -----
     See :class:`Initializable` for initialization parameters.
 
-    Note that the ``weights_init``, ``biases_init`` and ``use_bias``
+    Note that the ``weights_init``, ``biases_init`` (as well as
+    ``use_bias`` if set to a value other than the default of ``None``)
     configurations will overwrite those of the layers each time the
     :class:`MLP` is re-initialized. For more fine-grained control, push the
     configuration to the child layers manually before initialization.
@@ -159,4 +160,5 @@ class MLP(Sequence, Initializable, Feedforward):
                         self.linear_transformations):
             layer.input_dim = input_dim
             layer.output_dim = output_dim
-            layer.use_bias = self.use_bias
+            if getattr(self, 'use_bias', None) is not None:
+                layer.use_bias = self.use_bias

@@ -49,7 +49,7 @@ class Linear(LinearLike, Feedforward):
         add_role(W, WEIGHT)
         self.parameters.append(W)
         self.add_auxiliary_variable(W.norm(2), name='W_norm')
-        if self.use_bias:
+        if getattr(self, 'use_bias', True):
             b = shared_floatx_nans((self.output_dim,), name='b')
             add_role(b, BIAS)
             self.parameters.append(b)
@@ -71,7 +71,7 @@ class Linear(LinearLike, Feedforward):
 
         """
         output = tensor.dot(input_, self.W)
-        if self.use_bias:
+        if getattr(self, 'use_bias', True):
             output += self.b
         return output
 

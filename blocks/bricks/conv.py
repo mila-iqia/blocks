@@ -89,7 +89,7 @@ class Convolutional(LinearLike):
         add_role(W, FILTER)
         self.parameters.append(W)
         self.add_auxiliary_variable(W.norm(2), name='W_norm')
-        if self.use_bias:
+        if getattr(self, 'use_bias', True):
             if self.tied_biases:
                 b = shared_floatx_nans((self.num_filters,), name='b')
             else:
@@ -142,7 +142,7 @@ class Convolutional(LinearLike):
             border_mode=self.border_mode,
             filter_shape=((self.num_filters, self.num_channels) +
                           self.filter_size))
-        if self.use_bias:
+        if getattr(self, 'use_bias', True):
             if self.tied_biases:
                 output += self.b.dimshuffle('x', 0, 'x', 'x')
             else:
@@ -475,7 +475,8 @@ class ConvolutionalSequence(Sequence, Initializable, Feedforward):
             layer.image_size = image_size
             layer.num_channels = num_channels
             layer.batch_size = self.batch_size
-            layer.use_bias = self.use_bias
+            if getattr(self, 'use_bias', None) is not None:
+                layer.use_bias = self.use_bias
 
             # Push input dimensions to children
             layer.push_allocation_config()
