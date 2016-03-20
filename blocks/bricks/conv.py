@@ -414,6 +414,10 @@ class ConvolutionalSequence(Sequence, Initializable, Feedforward):
         need to rely on either a default border mode (usually valid)
         or one provided at construction and/or after construction
         (but before allocation).
+    tied_biases : bool, optional
+        Same meaning as in :class:`Convolutional`. Defaults to ``None``,
+        in which case no value is pushed to child :class:`Convolutional`
+        bricks.
 
     Notes
     -----
@@ -423,6 +427,9 @@ class ConvolutionalSequence(Sequence, Initializable, Feedforward):
     input dimensions of a layer to the output dimensions of the previous
     layer by the :meth:`~.Brick.push_allocation_config` method.
 
+    The push behaviour of `tied_biases` mirrors that of `use_bias` or any
+    initialization configuration: only an explicitly specified value is
+    pushed down the hierarchy. `border_mode` also has this behaviour.
     The reason the `border_mode` parameter behaves the way it does is that
     pushing a single default `border_mode` makes it very difficult to
     have child bricks with different border modes. Normally, such things
@@ -434,7 +441,7 @@ class ConvolutionalSequence(Sequence, Initializable, Feedforward):
     """
     @lazy(allocation=['num_channels'])
     def __init__(self, layers, num_channels, batch_size=None, image_size=None,
-                 border_mode=None, tied_biases=False, **kwargs):
+                 border_mode=None, tied_biases=None, **kwargs):
         self.layers = layers
         self.image_size = image_size
         self.num_channels = num_channels
@@ -471,7 +478,8 @@ class ConvolutionalSequence(Sequence, Initializable, Feedforward):
                 continue
             if self.border_mode is not None:
                 layer.border_mode = self.border_mode
-            layer.tied_biases = self.tied_biases
+            if self.tied_biases is not None:
+                layer.tied_biases = self.tied_biases
             layer.image_size = image_size
             layer.num_channels = num_channels
             layer.batch_size = self.batch_size
