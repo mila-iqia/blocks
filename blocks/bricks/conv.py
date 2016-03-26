@@ -224,7 +224,7 @@ class ConvolutionalTranspose(Convolutional):
 
     def _allocate(self):
         if self.original_image_size is None:
-            if self.image_size is None:
+            if all(s is None for s in self.image_size):
                 raise ValueError("can't infer original_image_size, "
                                  "no image_size set")
             last_edge = [d - s for d, s in zip(self.filter_size, self.step)]

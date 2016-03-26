@@ -3,7 +3,7 @@ import numpy
 from nose.tools import assert_raises_regexp
 
 import theano
-from numpy.testing import assert_allclose
+from numpy.testing import assert_allclose, assert_raises
 from theano import tensor
 from theano import function
 
@@ -80,6 +80,12 @@ def test_convolutional_transpose_original_size_inference():
     dummy = numpy.empty((4, 5, 6, 9), dtype=theano.config.floatX)
     result = brick.apply(input_).eval({input_: dummy})
     assert result.shape == (4, 10, 19, 21)
+
+
+def test_conv_transpose_exception():
+    brick = ConvolutionalTranspose(filter_size=(4, 5), num_filters=10,
+                                   num_channels=5, step=(3, 2))
+    assert_raises(ValueError, brick.allocate)
 
 
 def test_border_mode_not_pushed():
