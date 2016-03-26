@@ -48,7 +48,8 @@ def test_convolutional_transpose():
     filter_size = (3, 3)
     step = (2, 2)
     conv = ConvolutionalTranspose(
-        original_image_size, filter_size, num_filters, num_channels, step=step,
+        filter_size, num_filters, num_channels, step=step,
+        original_image_size=original_image_size,
         image_size=image_size, weights_init=Constant(1.),
         biases_init=Constant(5.))
     conv.initialize()
@@ -63,6 +64,22 @@ def test_convolutional_transpose():
     expected_value[:, :, :, 2:-2:2] += num_channels
     expected_value[:, :, 2:-2:2, 2:-2:2] += num_channels
     assert_allclose(func(x_val), expected_value + 5)
+
+
+def test_convolutional_transpose_original_size_inference():
+    brick = ConvolutionalTranspose(filter_size=(4, 5), num_filters=10,
+                                   num_channels=5, step=(3, 2),
+                                   image_size=(6, 9))
+    brick.allocate()
+    # In x: filter applied 6 times with a step of 3 and filter size of 4
+    # means 1 dangling pixel, total original image size of 6 * 3 + 1 == 19.
+    # In y: step of 2, applied 9 times, filter size of 5 means 3
+    # dangling pixels, so original is 2 * 9 + 3 == 21.
+    assert brick.original_image_size == (19, 21)
+    input_ = tensor.tensor4()
+    dummy = numpy.empty((4, 5, 6, 9), dtype=theano.config.floatX)
+    result = brick.apply(input_).eval({input_: dummy})
+    assert result.shape == (4, 10, 19, 21)
 
 
 def test_border_mode_not_pushed():
