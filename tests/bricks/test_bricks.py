@@ -372,6 +372,21 @@ def test_mlp_prototype_argument():
                for i, lt in enumerate(mlp.linear_transformations))
 
 
+def test_mlp_use_bias_pushed_when_not_explicitly_specified():
+    mlp = MLP(activations=[Tanh(), Tanh(), None],
+              dims=[4, 5, 6, 7], prototype=Linear(use_bias=False),
+              use_bias=True)
+    mlp.push_allocation_config()
+    assert [lin.use_bias for lin in mlp.linear_transformations]
+
+
+def test_mlp_use_bias_not_pushed_when_not_explicitly_specified():
+    mlp = MLP(activations=[Tanh(), Tanh(), None],
+              dims=[4, 5, 6, 7], prototype=Linear(use_bias=False))
+    mlp.push_allocation_config()
+    assert [not lin.use_bias for lin in mlp.linear_transformations]
+
+
 def test_mlp_apply():
     x = tensor.matrix()
     x_val = numpy.random.rand(2, 16).astype(theano.config.floatX)

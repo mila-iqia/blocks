@@ -331,3 +331,44 @@ def test_convolutional_sequence_use_bias():
     y = cnn.apply(x)
     params = ComputationGraph(y).parameters
     assert len(params) == 3 and all(param.name == 'W' for param in params)
+
+
+def test_convolutional_sequence_use_bias_not_pushed_if_not_explicitly_set():
+    cnn = ConvolutionalSequence(
+        sum([[Convolutional(filter_size=(1, 1), num_filters=1,
+                            use_bias=False), Rectifier()]
+             for _ in range(3)], []),
+        num_channels=1, image_size=(1, 1))
+    cnn.allocate()
+    assert [not child.use_bias for child in cnn.children
+            if isinstance(child, Convolutional)]
+
+
+def test_convolutional_sequence_tied_biases_not_pushed_if_not_explicitly_set():
+    cnn = ConvolutionalSequence(
+        sum([[Convolutional(filter_size=(1, 1), num_filters=1,
+                            tied_biases=True), Rectifier()]
+             for _ in range(3)], []),
+        num_channels=1, image_size=(1, 1))
+    cnn.allocate()
+    assert [child.tied_biases for child in cnn.children
+            if isinstance(child, Convolutional)]
+
+
+def test_convolutional_sequence_tied_biases_pushed_if_explicitly_set():
+    cnn = ConvolutionalSequence(
+        sum([[Convolutional(filter_size=(1, 1), num_filters=1,
+                            tied_biases=True), Rectifier()]
+             for _ in range(3)], []),
+        num_channels=1, image_size=(1, 1), tied_biases=False)
+    cnn.allocate()
+    assert [not child.tied_biases for child in cnn.children
+            if isinstance(child, Convolutional)]
+
+    cnn = ConvolutionalSequence(
+        sum([[Convolutional(filter_size=(1, 1), num_filters=1), Rectifier()]
+             for _ in range(3)], []),
+        num_channels=1, image_size=(1, 1), tied_biases=True)
+    cnn.allocate()
+    assert [child.tied_biases for child in cnn.children
+            if isinstance(child, Convolutional)]
