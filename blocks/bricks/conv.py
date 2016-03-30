@@ -220,17 +220,23 @@ class ConvolutionalTranspose(Convolutional):
                  original_image_size=None, **kwargs):
         super(ConvolutionalTranspose, self).__init__(
             filter_size, num_filters, num_channels, **kwargs)
-        self.original_image_size = original_image_size
+        self._original_image_size = original_image_size
 
-    def _allocate(self):
-        if self.original_image_size is None:
+    @property
+    def original_image_size(self):
+        if self._original_image_size is None:
             if all(s is None for s in self.image_size):
                 raise ValueError("can't infer original_image_size, "
                                  "no image_size set")
             last_edge = [d - s for d, s in zip(self.filter_size, self.step)]
             tups = zip(self.image_size, self.step, last_edge)
-            self.original_image_size = tuple(i * s + e for i, s, e in tups)
-        super(ConvolutionalTranspose, self)._allocate()
+            return tuple(i * s + e for i, s, e in tups)
+        else:
+            return self._original_image_size
+
+    @original_image_size.setter
+    def original_image_size(self, value):
+        self._original_image_size = value
 
     def conv2d_impl(self, input_, W, input_shape, subsample, border_mode,
                     filter_shape):

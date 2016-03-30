@@ -82,6 +82,18 @@ def test_convolutional_transpose_original_size_inference():
     assert result.shape == (4, 10, 19, 21)
 
 
+def test_convolutional_transpose_original_size_inferred_conv_sequence():
+    brick = ConvolutionalTranspose(filter_size=(4, 5), num_filters=10,
+                                   step=(3, 2))
+
+    seq = ConvolutionalSequence([brick], num_channels=5, image_size=(6, 9))
+    try:
+        seq.allocate()
+    except Exception as e:
+        raise AssertionError('exception raised: {}: {}'.format(
+            e.__class__.__name__, e))
+
+
 def test_conv_transpose_exception():
     brick = ConvolutionalTranspose(filter_size=(4, 5), num_filters=10,
                                    num_channels=5, step=(3, 2))
