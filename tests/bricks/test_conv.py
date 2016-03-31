@@ -148,8 +148,9 @@ def test_convolutional_transpose_original_size_inferred_conv_sequence():
 
 def test_conv_transpose_exception():
     brick = ConvolutionalTranspose(filter_size=(4, 5), num_filters=10,
-                                   num_channels=5, step=(3, 2))
-    assert_raises(ValueError, brick.allocate)
+                                   num_channels=5, step=(3, 2),
+                                   tied_biases=True)
+    assert_raises(ValueError, brick.apply, tensor.tensor4())
 
 
 def test_border_mode_not_pushed():
