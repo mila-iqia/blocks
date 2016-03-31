@@ -228,7 +228,7 @@ class ConvolutionalTranspose(Convolutional):
                  **kwargs):
         super(ConvolutionalTranspose, self).__init__(
             filter_size, num_filters, num_channels, **kwargs)
-        self._original_image_size = original_image_size
+        self.original_image_size = original_image_size
         self.unused_edge = unused_edge
 
     @property
