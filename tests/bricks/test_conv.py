@@ -121,6 +121,19 @@ def test_convolutional_transpose_original_size_inference_half_padding():
     assert result.shape == (4, 10, 15, 17)
 
 
+def test_convolutional_transpose_original_size_inference_unused_edge():
+    brick = ConvolutionalTranspose(filter_size=(3, 3), num_filters=10,
+                                   num_channels=5, step=(2, 2),
+                                   border_mode=(1, 1), image_size=(4, 4),
+                                   unused_edge=(1, 1))
+    brick.allocate()
+    assert brick.original_image_size == (8, 8)
+    input_ = tensor.tensor4()
+    dummy = numpy.empty((4, 5, 4, 4), dtype=theano.config.floatX)
+    result = brick.apply(input_).eval({input_: dummy})
+    assert result.shape == (4, 10, 8, 8)
+
+
 def test_convolutional_transpose_original_size_inferred_conv_sequence():
     brick = ConvolutionalTranspose(filter_size=(4, 5), num_filters=10,
                                    step=(3, 2))

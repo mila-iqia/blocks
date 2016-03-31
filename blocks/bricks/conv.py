@@ -186,6 +186,13 @@ class ConvolutionalTranspose(Convolutional):
         Image size of the input to the *transposed* convolution, i.e.
         the output of the corresponding convolution. Required for tied
         biases. Defaults to ``None``.
+    unused_edge : tuple, optional
+        Tuple of pixels added to the inferred height and width of the
+        output image, whose values would be ignored in the corresponding
+        forward convolution. Must be such that 0 <= ``unused_edge[i]`` <=
+        ``step[i]``. Note that this parameter is **ignored** if
+        ``original_image_size`` is specified in the constructor or manually
+        set as an attribute.
     original_image_size : tuple, optional
         The height and width of the image that forms the output of
         the transpose operation, which is the input of the original
@@ -217,10 +224,12 @@ class ConvolutionalTranspose(Convolutional):
     """
     @lazy(allocation=['filter_size', 'num_filters', 'num_channels'])
     def __init__(self, filter_size, num_filters, num_channels,
-                 original_image_size=None, **kwargs):
+                 original_image_size=None, unused_edge=(0, 0),
+                 **kwargs):
         super(ConvolutionalTranspose, self).__init__(
             filter_size, num_filters, num_channels, **kwargs)
         self._original_image_size = original_image_size
+        self.unused_edge = unused_edge
 
     @property
     def original_image_size(self):
@@ -236,8 +245,9 @@ class ConvolutionalTranspose(Convolutional):
                 border = tuple(k // 2 for k in self.filter_size)
             else:
                 border = [0] * len(self.image_size)
-            tups = zip(self.image_size, self.step, self.filter_size, border)
-            return tuple(s * (i - 1) + k - 2 * p for i, s, k, p in tups)
+            tups = zip(self.image_size, self.step, self.filter_size, border,
+                       self.unused_edge)
+            return tuple(s * (i - 1) + k - 2 * p + u for i, s, k, p, u in tups)
         else:
             return self._original_image_size
 
