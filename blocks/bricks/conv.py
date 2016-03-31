@@ -196,6 +196,10 @@ class ConvolutionalTranspose(Convolutional):
         border pixels (in the original convolution) are possible, and can
         be manually specified via this argument. See notes below.
 
+    See Also
+    --------
+    :class:`Convolutional` : For the documentation of other parameters.
+
     Notes
     -----
     By default, `original_image_size` is inferred from `image_size`
@@ -209,10 +213,6 @@ class ConvolutionalTranspose(Convolutional):
     However, no value will be output by the transposed convolution
     itself for these extra hanging border pixels, and they will be
     determined entirely by the bias.
-
-    See Also
-    --------
-    :class:`Convolutional` : For the documentation of other parameters.
 
     """
     @lazy(allocation=['filter_size', 'num_filters', 'num_channels'])
@@ -240,6 +240,7 @@ class ConvolutionalTranspose(Convolutional):
             return tuple(s * (i - 1) + k - 2 * p for i, s, k, p in tups)
         else:
             return self._original_image_size
+
     @original_image_size.setter
     def original_image_size(self, value):
         self._original_image_size = value
