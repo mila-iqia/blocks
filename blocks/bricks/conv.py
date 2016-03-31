@@ -228,12 +228,18 @@ class ConvolutionalTranspose(Convolutional):
             if all(s is None for s in self.image_size):
                 raise ValueError("can't infer original_image_size, "
                                  "no image_size set")
-            last_edge = [d - s for d, s in zip(self.filter_size, self.step)]
-            tups = zip(self.image_size, self.step, last_edge)
-            return tuple(i * s + e for i, s, e in tups)
+            if isinstance(self.border_mode, tuple):
+                border = self.border_mode
+            elif self.border_mode == 'full':
+                border = tuple(k - 1 for k in self.filter_size)
+            elif self.border_mode == 'half':
+                border = tuple(k // 2 for k in self.filter_size)
+            else:
+                border = [0] * len(self.image_size)
+            tups = zip(self.image_size, self.step, self.filter_size, border)
+            return tuple(s * (i - 1) + k - 2 * p for i, s, k, p in tups)
         else:
             return self._original_image_size
-
     @original_image_size.setter
     def original_image_size(self, value):
         self._original_image_size = value

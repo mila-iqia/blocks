@@ -82,6 +82,45 @@ def test_convolutional_transpose_original_size_inference():
     assert result.shape == (4, 10, 19, 21)
 
 
+def test_convolutional_transpose_original_size_inference_padding():
+    brick = ConvolutionalTranspose(filter_size=(4, 5), num_filters=10,
+                                   num_channels=5, step=(3, 2),
+                                   border_mode=(2, 1),
+                                   image_size=(6, 9))
+    brick.allocate()
+    assert brick.original_image_size == (15, 19)
+    input_ = tensor.tensor4()
+    dummy = numpy.empty((4, 5, 6, 9), dtype=theano.config.floatX)
+    result = brick.apply(input_).eval({input_: dummy})
+    assert result.shape == (4, 10, 15, 19)
+
+
+def test_convolutional_transpose_original_size_inference_full_padding():
+    brick = ConvolutionalTranspose(filter_size=(4, 5), num_filters=10,
+                                   num_channels=5, step=(3, 2),
+                                   border_mode='full',
+                                   image_size=(6, 9))
+    brick.allocate()
+    assert brick.original_image_size == (13, 13)
+    input_ = tensor.tensor4()
+    dummy = numpy.empty((4, 5, 6, 9), dtype=theano.config.floatX)
+    result = brick.apply(input_).eval({input_: dummy})
+    assert result.shape == (4, 10, 13, 13)
+
+
+def test_convolutional_transpose_original_size_inference_half_padding():
+    brick = ConvolutionalTranspose(filter_size=(4, 5), num_filters=10,
+                                   num_channels=5, step=(3, 2),
+                                   border_mode='half',
+                                   image_size=(6, 9))
+    brick.allocate()
+    assert brick.original_image_size == (15, 17)
+    input_ = tensor.tensor4()
+    dummy = numpy.empty((4, 5, 6, 9), dtype=theano.config.floatX)
+    result = brick.apply(input_).eval({input_: dummy})
+    assert result.shape == (4, 10, 15, 17)
+
+
 def test_convolutional_transpose_original_size_inferred_conv_sequence():
     brick = ConvolutionalTranspose(filter_size=(4, 5), num_filters=10,
                                    step=(3, 2))
