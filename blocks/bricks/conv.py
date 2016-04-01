@@ -440,8 +440,9 @@ class ConvolutionalSequence(Sequence, Initializable, Feedforward):
 
     """
     @lazy(allocation=['num_channels'])
-    def __init__(self, layers, num_channels, batch_size=None, image_size=None,
-                 border_mode=None, tied_biases=None, **kwargs):
+    def __init__(self, layers, num_channels, batch_size=None,
+                 image_size=(None, None), border_mode=None, tied_biases=None,
+                 **kwargs):
         self.layers = layers
         self.image_size = image_size
         self.num_channels = num_channels
@@ -491,7 +492,7 @@ class ConvolutionalSequence(Sequence, Initializable, Feedforward):
 
             # Retrieve output dimensions
             # and set it for next layer
-            if layer.image_size is not None:
+            if None not in layer.image_size:
                 output_shape = layer.get_dim('output')
                 image_size = output_shape[1:]
             num_channels = layer.num_output_channels
