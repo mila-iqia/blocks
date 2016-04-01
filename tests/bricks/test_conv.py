@@ -460,3 +460,31 @@ def test_convolutional_sequence_tied_biases_pushed_if_explicitly_set():
     cnn.allocate()
     assert [child.tied_biases for child in cnn.children
             if isinstance(child, Convolutional)]
+
+
+def test_convolutional_sequence_with_no_input_size():
+    # suppose x is outputted by some RNN
+    x = tensor.tensor4('x')
+    filter_size = (1, 1)
+    num_filters = 2
+    num_channels = 1
+    pooling_size = (1, 1)
+    conv = Convolutional(filter_size, num_filters, tied_biases=False,
+                         weights_init=Constant(1.), biases_init=Constant(1.))
+    act = Rectifier()
+    pool = MaxPooling(pooling_size)
+
+    bad_seq = ConvolutionalSequence([conv, act, pool], num_channels,
+                                    tied_biases=False)
+    assert_raises_regexp(ValueError, 'Cannot infer bias size \S+',
+                         bad_seq.initialize)
+
+    seq = ConvolutionalSequence([conv, act, pool], num_channels,
+                                tied_biases=True)
+    try:
+        seq.initialize()
+        out = seq.apply(x)
+    except TypeError:
+        assert False, "This should have succeeded"
+
+    assert out.ndim == 4
