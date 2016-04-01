@@ -172,10 +172,6 @@ class ConvolutionalTranspose(Convolutional):
 
     Parameters
     ----------
-    original_image_size : tuple
-        The height and width of the image that forms the output of
-        the transpose operation, which is the input of the original
-        (non-transposed) convolution.
     num_filters : int
         Number of filters at the *output* of the transposed convolution,
         i.e. the number of channels in the corresponding convolution.
@@ -190,19 +186,74 @@ class ConvolutionalTranspose(Convolutional):
         Image size of the input to the *transposed* convolution, i.e.
         the output of the corresponding convolution. Required for tied
         biases. Defaults to ``None``.
+    unused_edge : tuple, optional
+        Tuple of pixels added to the inferred height and width of the
+        output image, whose values would be ignored in the corresponding
+        forward convolution. Must be such that 0 <= ``unused_edge[i]`` <=
+        ``step[i]``. Note that this parameter is **ignored** if
+        ``original_image_size`` is specified in the constructor or manually
+        set as an attribute.
+    original_image_size : tuple, optional
+        The height and width of the image that forms the output of
+        the transpose operation, which is the input of the original
+        (non-transposed) convolution. By default, this is inferred
+        from `image_size` to be the size that has each pixel of the
+        original image touched by at least one filter application
+        in the original convolution. Degenerate cases with dropped
+        border pixels (in the original convolution) are possible, and can
+        be manually specified via this argument. See notes below.
 
     See Also
     --------
     :class:`Convolutional` : For the documentation of other parameters.
 
+    Notes
+    -----
+    By default, `original_image_size` is inferred from `image_size`
+    as being the *minimum* size of image that could have produced this
+    output. Let ``hanging[i] = original_image_size[i] - image_size[i]
+    * step[i]``. Any value of ``hanging[i]`` greater than
+    ``filter_size[i] - step[i]`` will result in border pixels that are
+    ignored by the original convolution. With this brick, any
+    ``original_image_size`` such that ``filter_size[i] - step[i] <
+    hanging[i] < filter_size[i]`` for all ``i`` can be validly specified.
+    However, no value will be output by the transposed convolution
+    itself for these extra hanging border pixels, and they will be
+    determined entirely by the bias.
+
     """
-    @lazy(allocation=['original_image_size', 'filter_size', 'num_filters',
-                      'num_channels'])
-    def __init__(self, original_image_size, filter_size, num_filters,
-                 num_channels, **kwargs):
+    @lazy(allocation=['filter_size', 'num_filters', 'num_channels'])
+    def __init__(self, filter_size, num_filters, num_channels,
+                 original_image_size=None, unused_edge=(0, 0),
+                 **kwargs):
         super(ConvolutionalTranspose, self).__init__(
             filter_size, num_filters, num_channels, **kwargs)
         self.original_image_size = original_image_size
+        self.unused_edge = unused_edge
+
+    @property
+    def original_image_size(self):
+        if self._original_image_size is None:
+            if all(s is None for s in self.image_size):
+                raise ValueError("can't infer original_image_size, "
+                                 "no image_size set")
+            if isinstance(self.border_mode, tuple):
+                border = self.border_mode
+            elif self.border_mode == 'full':
+                border = tuple(k - 1 for k in self.filter_size)
+            elif self.border_mode == 'half':
+                border = tuple(k // 2 for k in self.filter_size)
+            else:
+                border = [0] * len(self.image_size)
+            tups = zip(self.image_size, self.step, self.filter_size, border,
+                       self.unused_edge)
+            return tuple(s * (i - 1) + k - 2 * p + u for i, s, k, p, u in tups)
+        else:
+            return self._original_image_size
+
+    @original_image_size.setter
+    def original_image_size(self, value):
+        self._original_image_size = value
 
     def conv2d_impl(self, input_, W, input_shape, subsample, border_mode,
                     filter_shape):
