@@ -131,6 +131,7 @@ def recurrent(*args, **kwargs):
             if not iterate:
                 return application_function(brick, *args, **kwargs)
             reverse = kwargs.pop('reverse', False)
+            scan_kwargs = kwargs.pop('scan_kwargs', {})
             return_initial_states = kwargs.pop('return_initial_states', False)
 
             # Push everything to kwargs
@@ -227,7 +228,8 @@ def recurrent(*args, **kwargs):
                 n_steps=n_steps,
                 go_backwards=reverse,
                 name='{}_{}_scan'.format(
-                    brick.name, application.application_name))
+                    brick.name, application.application_name),
+                **scan_kwargs)
             result = pack(result)
             if return_initial_states:
                 # Undo Subtensor
