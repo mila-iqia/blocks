@@ -466,8 +466,8 @@ class LSTM(BaseRecurrent, Initializable):
         activation = tensor.dot(states, self.W_state) + inputs
         in_gate = self.gate_activation.apply(
             slice_last(activation, 0) + cells * self.W_cell_to_in)
-        forget_gate = self.gate_activation.apply(slice_last(activation, 1) +
-                                                 cells * self.W_cell_to_forget)
+        forget_gate = self.gate_activation.apply(
+            slice_last(activation, 1) + cells * self.W_cell_to_forget)
         next_cells = (forget_gate * cells +
                       in_gate * self.activation.apply(slice_last(activation, 2))
                       )
