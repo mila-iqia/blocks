@@ -113,6 +113,7 @@ import six
 import tarfile
 import tempfile
 import warnings
+import logging
 
 from contextlib import closing
 from pickle import HIGHEST_PROTOCOL
@@ -132,6 +133,8 @@ from blocks.config import config
 from blocks.filter import get_brick
 from blocks.utils import change_recursion_limit
 
+
+logger = logging.getLogger(__name__)
 
 BRICK_DELIMITER = '|'
 MAIN_MODULE_WARNING = """WARNING: Main loop depends on the function `{}` in \
@@ -215,10 +218,13 @@ def secure_dump(object_, path, dump_function=dump, **kwargs):
 
     """
     try:
+        logger.debug("Dump object to a temporaty file")
         with tempfile.NamedTemporaryFile(delete=False,
                                          dir=config.temp_dir) as temp:
             dump_function(object_, temp, **kwargs)
+        logger.debug("Move the temporary file")
         shutil.move(temp.name, path)
+        logger.debug("Dump finished")
     except:
         if "temp" in locals():
             os.remove(temp.name)
