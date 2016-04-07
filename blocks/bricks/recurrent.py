@@ -364,6 +364,9 @@ class LSTM(BaseRecurrent, Initializable):
     activation : :class:`.Brick`, optional
         The activation function. The default and by far the most popular
         is :class:`.Tanh`.
+    gate_activation : :class:`.Brick` or None
+        The brick to apply as activation for gates (input/output/forget).
+        If ``None`` a :class:`.Logistic` brick is used.
 
     Notes
     -----
@@ -371,12 +374,18 @@ class LSTM(BaseRecurrent, Initializable):
 
     """
     @lazy(allocation=['dim'])
-    def __init__(self, dim, activation=None, **kwargs):
+    def __init__(self, dim, activation=None, gate_activation=None, **kwargs):
         self.dim = dim
 
         if not activation:
             activation = Tanh()
-        children = [activation] + kwargs.get('children', [])
+        if not gate_activation:
+            gate_activation = Logistic()
+        self.activation = activation
+        self.gate_activation = gate_activation
+
+        children = ([self.activation, self.gate_activation] +
+                    kwargs.get('children', []))
         super(LSTM, self).__init__(children=children, **kwargs)
 
     def get_dim(self, name):
@@ -457,18 +466,17 @@ class LSTM(BaseRecurrent, Initializable):
         def slice_last(x, no):
             return x[:, no*self.dim: (no+1)*self.dim]
 
-        nonlinearity = self.children[0].apply
-
         activation = tensor.dot(states, self.W_state) + inputs
-        in_gate = tensor.nnet.sigmoid(slice_last(activation, 0) +
-                                      cells * self.W_cell_to_in)
-        forget_gate = tensor.nnet.sigmoid(slice_last(activation, 1) +
-                                          cells * self.W_cell_to_forget)
-        next_cells = (forget_gate * cells +
-                      in_gate * nonlinearity(slice_last(activation, 2)))
-        out_gate = tensor.nnet.sigmoid(slice_last(activation, 3) +
-                                       next_cells * self.W_cell_to_out)
-        next_states = out_gate * nonlinearity(next_cells)
+        in_gate = self.gate_activation.apply(
+            slice_last(activation, 0) + cells * self.W_cell_to_in)
+        forget_gate = self.gate_activation.apply(
+            slice_last(activation, 1) + cells * self.W_cell_to_forget)
+        next_cells = (
+            forget_gate * cells +
+            in_gate * self.activation.apply(slice_last(activation, 2)))
+        out_gate = self.gate_activation.apply(
+            slice_last(activation, 3) + next_cells * self.W_cell_to_out)
+        next_states = out_gate * self.activation.apply(next_cells)
 
         if mask:
             next_states = (mask[:, None] * next_states +
