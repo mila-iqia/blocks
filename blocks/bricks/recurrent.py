@@ -471,9 +471,9 @@ class LSTM(BaseRecurrent, Initializable):
             slice_last(activation, 0) + cells * self.W_cell_to_in)
         forget_gate = self.gate_activation.apply(
             slice_last(activation, 1) + cells * self.W_cell_to_forget)
-        next_cells = (forget_gate * cells +
-                      in_gate * self.activation.apply(slice_last(activation, 2))
-                      )
+        next_cells = (
+            forget_gate * cells +
+            in_gate * self.activation.apply(slice_last(activation, 2)))
         out_gate = self.gate_activation.apply(
             slice_last(activation, 3) + next_cells * self.W_cell_to_out)
         next_states = out_gate * self.activation.apply(next_cells)
