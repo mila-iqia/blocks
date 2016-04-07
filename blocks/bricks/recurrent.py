@@ -364,6 +364,9 @@ class LSTM(BaseRecurrent, Initializable):
     activation : :class:`.Brick`, optional
         The activation function. The default and by far the most popular
         is :class:`.Tanh`.
+    gate_activation : :class:`.Brick` or None
+        The brick to apply as activation for gates (input/output/forget).
+        If ``None`` a :class:`.Logistic` brick is used.
 
     Notes
     -----
