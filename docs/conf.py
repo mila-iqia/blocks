@@ -348,6 +348,6 @@ def linkcode_resolve(domain, info):
 
     fn = os.path.relpath(fn, start=os.path.dirname(blocks.__file__))
 
-    github = "https://github.com/mila-udem/blocks/blob/master/blocks/"
-    return github + "{}{}".format(fn, linespec)
+    github = "https://github.com/mila-udem/blocks/blob/master/blocks/{}{}"
+    return github.format(fn, linespec)
 
