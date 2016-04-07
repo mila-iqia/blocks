@@ -218,11 +218,11 @@ def secure_dump(object_, path, dump_function=dump, **kwargs):
 
     """
     try:
-        logger.debug("Dump object to a temporaty file")
+        logger.debug("Dumping object to a temporary file")
         with tempfile.NamedTemporaryFile(delete=False,
                                          dir=config.temp_dir) as temp:
             dump_function(object_, temp, **kwargs)
-        logger.debug("Move the temporary file")
+        logger.debug("Moving the temporary file")
         shutil.move(temp.name, path)
         logger.debug("Dump finished")
     except:
