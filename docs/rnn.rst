@@ -294,3 +294,12 @@ implementation.
     When looking at a recurrent brick's documentation, keep in mind that the
     parameters to its ``apply`` method are explained in terms of a single
     iteration, *i.e.* with the assumption that ``iterate = False``.
+
+See Also
+--------
+
+- LSTM implementation: :class:`.bricks.recurrent.LSTM`
+- GRU implementation: :class:`.bricks.recurrent.GatedRecurrent`
+- Bidirectional RNNs: :class:`.bricks.recurrent.Bidirectional`
+- Deep recurrent networks (stacked RNNs):
+  :class:`.bricks.recurrent.RecurrentStack`
