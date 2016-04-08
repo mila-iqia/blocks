@@ -74,6 +74,7 @@ class Checkpoint(SimpleExtension):
         construction stage.
 
         """
+        logger.info("Checkpointing has started")
         _, from_user = self.parse_args(callback_name, args)
         try:
             path = self.path
@@ -101,6 +102,7 @@ class Checkpoint(SimpleExtension):
             already_saved_to = self.main_loop.log.current_row.get(SAVED_TO, ())
             self.main_loop.log.current_row[SAVED_TO] = (already_saved_to +
                                                         (path,))
+            logger.info("Checkpointing has finished")
 
 
 class Load(TrainingExtension):
