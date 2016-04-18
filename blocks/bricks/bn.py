@@ -190,8 +190,10 @@ class BatchNormalization(RNGMixin, Feedforward):
         if self.mean_only:
             stdev = tensor.ones_like(mean)
         else:
-            stdev = tensor.sqrt(tensor.var(input_, axis=axes, keepdims=True) +
-                                numpy.cast[theano.config.floatX](self.epsilon))
+            var = (tensor.sqr(input_).mean(axis=axes, keepdims=True) -
+                   tensor.sqr(mean))
+            eps = numpy.cast[theano.config.floatX](self.epsilon)
+            stdev = tensor.sqrt(var + eps)
             assert (stdev.broadcastable[1:] ==
                     self.population_stdev.broadcastable)
             add_role(stdev, BATCH_NORM_MINIBATCH_ESTIMATE)
