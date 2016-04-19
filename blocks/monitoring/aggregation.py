@@ -124,12 +124,12 @@ class Mean(AggregationScheme):
                                    tensor.zeros_like(numerator_acc)),
                                   (denominator_acc,
                                    tensor.zeros_like(denominator_acc)),
-                                  (initialized, 0.)]
+                                  (initialized, tensor.zeros_like(initialized))]
         accumulation_updates = [(numerator_acc,
                                  conditional_update_num),
                                 (denominator_acc,
                                  conditional_update_den),
-                                (initialized, 1.)]
+                                (initialized, tensor.ones_like(initialized))]
         aggregator = Aggregator(aggregation_scheme=self,
                                 initialization_updates=initialization_updates,
                                 accumulation_updates=accumulation_updates,
