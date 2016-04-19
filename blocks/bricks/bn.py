@@ -44,11 +44,12 @@ class BatchNormalization(RNGMixin, Feedforward):
         Shape of a single input example. It is assumed that a batch axis
         will be prepended to this.
     broadcastable : tuple, optional
-        Tuple the same length as `input_dim` which specifies which of the
-        per-example axes should be averaged over to compute means and
+        Tuple of the same length as `input_dim` which specifies which of
+        the per-example axes should be averaged over to compute means and
         standard deviations. For example, in order to normalize over all
         spatial locations in a `(batch_index, channels, height, width)`
-        image, pass `(False, True, True)`.
+        image, pass `(False, True, True)`. The batch axis is always
+        averaged out.
     conserve_memory : bool, optional
         Use an implementation that stores less intermediate state and
         therefore uses less memory, at the expense of 5-10% speed. Default
