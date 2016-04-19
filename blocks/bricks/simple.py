@@ -284,6 +284,27 @@ class Rectifier(Activation):
         return tensor.switch(input_ > 0, input_, 0)
 
 
+class LeakyRectifier(Activation):
+    r"""A linear transformation with optional bias.
+
+    Like Rectifier, but instead does:
+
+    .. math:: f(x) = \text{max}(x, ax)
+
+    Parameters
+    ----------
+    leak, optional : float
+        The scalar to multiply negative values by. Named 'a' above.
+
+    """
+    def __init__(self, leak=0.01):
+        self._leak = leak
+
+    @application(inputs=['input_'], outputs=['output'])
+    def apply(self, input_):
+        return tensor.switch(input_ > 0, input_, self._leak * input_)
+
+
 class Softmax(Brick):
     """A softmax brick.
 
