@@ -297,7 +297,8 @@ class LeakyRectifier(Activation):
         The scalar to multiply negative values by. Named 'a' above.
 
     """
-    def __init__(self, leak=0.01):
+    def __init__(self, leak=0.01, **kwargs):
+        super(LeakyRectifier, self).__init__(**kwargs)
         self._leak = leak
 
     @application(inputs=['input_'], outputs=['output'])
