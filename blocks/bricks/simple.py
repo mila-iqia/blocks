@@ -285,13 +285,16 @@ class Rectifier(Activation):
 
 
 class LeakyRectifier(Activation):
-    r"""Like Rectifier, but instead does:
+    r"""Leaky ReLU
+
+    Like Rectifier, but inputs are scaled by small constant for negative
+    inputs.
 
     .. math:: f(x) = \text{max}(x, ax)
 
     Parameters
     ----------
-    leak, optional : float
+    leak : float, optional
         The scalar to multiply negative values by. Named 'a' above.
 
     .. Maas, Andrew L., Awni Y. Hannun, and Andrew Y. Ng. Rectifier
