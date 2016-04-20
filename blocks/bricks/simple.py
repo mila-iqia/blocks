@@ -285,9 +285,7 @@ class Rectifier(Activation):
 
 
 class LeakyRectifier(Activation):
-    r"""A linear transformation with optional bias.
-
-    Like Rectifier, but instead does:
+    r"""Like Rectifier, but instead does:
 
     .. math:: f(x) = \text{max}(x, ax)
 
@@ -296,6 +294,9 @@ class LeakyRectifier(Activation):
     leak, optional : float
         The scalar to multiply negative values by. Named 'a' above.
 
+    .. Maas, Andrew L., Awni Y. Hannun, and Andrew Y. Ng. Rectifier
+       nonlinearities improve neural network acoustic models. Proc.
+       ICML. Vol. 30. 2013.
     """
     def __init__(self, leak=0.01, **kwargs):
         super(LeakyRectifier, self).__init__(**kwargs)
