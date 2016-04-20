@@ -5,8 +5,8 @@ from .bn import (BatchNormalization, SpatialBatchNormalization,
 from .interfaces import (Activation, Feedforward, Initializable, LinearLike,
                          Random)
 from .simple import (Linear, Bias, Maxout, LinearMaxout, Identity, Tanh,
-                     Logistic, Softplus, Rectifier, Softmax,
-                     NDimensionalSoftmax)
+                     Logistic, Softplus, Rectifier, LeakyRectifier,
+                     Softmax, NDimensionalSoftmax)
 from .sequences import Sequence, FeedforwardSequence, MLP
 from .wrappers import WithExtraDims
 
@@ -14,6 +14,6 @@ __all__ = ('application', 'Brick', 'lazy', 'BatchNormalization',
            'SpatialBatchNormalization', 'BatchNormalizedMLP',
            'Activation', 'Feedforward', 'Initializable', 'LinearLike',
            'Random', 'Linear', 'Bias', 'Maxout', 'LinearMaxout', 'Identity',
-           'Tanh', 'Logistic', 'Softplus', 'Rectifier', 'Softmax',
-           'NDimensionalSoftmax', 'Sequence', 'FeedforwardSequence',
-           'MLP', 'WithExtraDims')
+           'Tanh', 'Logistic', 'Softplus', 'Rectifier', 'LeakyRectifier',
+           'Softmax', 'NDimensionalSoftmax', 'Sequence',
+           'FeedforwardSequence', 'MLP', 'WithExtraDims')

@@ -284,6 +284,32 @@ class Rectifier(Activation):
         return tensor.switch(input_ > 0, input_, 0)
 
 
+class LeakyRectifier(Activation):
+    r"""Leaky ReLU
+
+    Like Rectifier, but inputs are scaled by small constant for negative
+    inputs.
+
+    .. math:: f(x) = \text{max}(x, ax)
+
+    Parameters
+    ----------
+    leak : float, optional
+        The scalar to multiply negative values by. Named 'a' above.
+
+    .. Maas, Andrew L., Awni Y. Hannun, and Andrew Y. Ng. Rectifier
+       nonlinearities improve neural network acoustic models. Proc.
+       ICML. Vol. 30. 2013.
+    """
+    def __init__(self, leak=0.01, **kwargs):
+        super(LeakyRectifier, self).__init__(**kwargs)
+        self._leak = leak
+
+    @application(inputs=['input_'], outputs=['output'])
+    def apply(self, input_):
+        return tensor.switch(input_ > 0, input_, self._leak * input_)
+
+
 class Softmax(Brick):
     """A softmax brick.
 

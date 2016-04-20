@@ -6,7 +6,8 @@ from theano import tensor
 from six.moves import cPickle
 
 from blocks.bricks import (Identity, Linear, Maxout, LinearMaxout, MLP, Tanh,
-                           Sequence, Random, Logistic, Softplus, Softmax)
+                           Sequence, Random, Logistic, Softplus, Softmax,
+                           LeakyRectifier)
 from blocks.bricks.base import application, Brick, lazy, NoneAllocation
 from blocks.bricks.parallel import Parallel, Fork
 from blocks.filter import get_application_call, get_brick
@@ -339,6 +340,14 @@ def test_activations():
                     Softmax(x).apply(x).eval({x: x_val}).flatten(), rtol=1e-6)
     assert_allclose(1.0 / (1.0 + numpy.exp(-x_val)),
                     Logistic(x).apply(x).eval({x: x_val}), rtol=1e-6)
+    leaky_out_1 = x_val - 0.5
+    leaky_out_1[leaky_out_1 < 0] *= 0.01
+    assert_allclose(leaky_out_1,
+                    LeakyRectifier().apply(x).eval({x: x_val - 0.5}))
+    leaky_out_2 = x_val - 0.5
+    leaky_out_2[leaky_out_2 < 0] *= 0.05
+    assert_allclose(leaky_out_2,
+                    LeakyRectifier(leak=0.05).apply(x).eval({x: x_val - 0.5}))
 
 
 def test_mlp():
