@@ -47,14 +47,5 @@ class TestConfig(object):
         config.new_config = 'new_config'
         assert config.new_config == 'new_config'
 
-
-class TestEmptyConfig(object):
-    def setUp(self):
-        self._environ = dict(os.environ)
-
-    def tearDown(self):
-        os.environ.clear()
-        os.environ.update(self._environ)
-
     def test_empty_config(self):
         load_config('')
