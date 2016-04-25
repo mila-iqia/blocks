@@ -124,7 +124,8 @@ class Mean(AggregationScheme):
                                    tensor.zeros_like(numerator_acc)),
                                   (denominator_acc,
                                    tensor.zeros_like(denominator_acc)),
-                                  (initialized, tensor.zeros_like(initialized))]
+                                  (initialized,
+                                   tensor.zeros_like(initialized))]
         accumulation_updates = [(numerator_acc,
                                  conditional_update_num),
                                 (denominator_acc,

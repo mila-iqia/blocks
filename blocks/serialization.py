@@ -195,8 +195,8 @@ def dump(object_, file_, parameters=None, use_cpickle=False,
             for name, p in named_parameters.items():
                 array_ = p.container.storage[0]
                 context_name = (p.context_name
-                                if pygpu
-                                and isinstance(p, pygpu.gpuarray.GpuArray)
+                                if pygpu and
+                                isinstance(p, pygpu.gpuarray.GpuArray)
                                 else None)
                 external_objects[id(array_)] = _mangle_parameter_name(
                     type(array_), context_name, name)
@@ -552,11 +552,14 @@ class _Renamer(object):
         self.used_names.add(name)
         return name
 
+
 def _recreate_numpy_ndarray(_, content):
     return numpy.array(content)
 
+
 def _recreate_cuda_ndarray(_, content):
     return cuda_ndarray.cuda_ndarray.CudaNdarray(content)
+
 
 def _recreate_pygpu_array(context_name, content):
     context = theano.sandbox.gpuarray.get_context(context_name)
