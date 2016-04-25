@@ -195,7 +195,8 @@ def dump(object_, file_, parameters=None, use_cpickle=False,
             for name, p in named_parameters.items():
                 array_ = p.container.storage[0]
                 context_name = (p.context_name
-                                if isinstance(p, pygpu.gpuarray.GpuArray)
+                                if pygpu
+                                and isinstance(p, pygpu.gpuarray.GpuArray)
                                 else None)
                 external_objects[id(array_)] = _mangle_parameter_name(
                     type(array_), context_name, name)
