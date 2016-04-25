@@ -194,12 +194,7 @@ def dump(object_, file_, parameters=None, use_cpickle=False,
                               for n, p in named_parameters.items()})
             for name, p in named_parameters.items():
                 array_ = p.container.storage[0]
-                context_name = (p.context_name
-                                if pygpu and
-                                isinstance(p, pygpu.gpuarray.GpuArray)
-                                else None)
-                external_objects[id(array_)] = _mangle_parameter_name(
-                    type(array_), context_name, name)
+                external_objects[id(array_)] = _mangle_parameter_name(p, name)
         if parameters:
             _taradd(_save_parameters, tar_file, '_parameters')
         if object_ is not None:
@@ -344,8 +339,7 @@ def add_to_dump(object_, file_, name, parameters=None, use_cpickle=False,
         named_parameters = {renamer(p): p for p in parameters}
         for n, p in named_parameters.items():
             array_ = p.container.storage[0]
-            external_parameters[id(array_)] = _mangle_parameter_name(
-                type(array_), n)
+            external_parameters[id(array_)] = _mangle_parameter_name(p, n)
 
         # Check that the parameters are the same that the ones in the archive.
         file_.seek(0)  # To be able to read what is in the tar file already.
@@ -604,10 +598,16 @@ class _PersistentLoad(object):
         return self._cache[id_]
 
 
-def _mangle_parameter_name(type_, context_name, name):
+def _mangle_parameter_name(parameter, name):
+    array_type = type(parameter.container.storage[0])
+    context_name = (parameter.context_name
+                    if pygpu and
+                    isinstance(parameter, pygpu.gpuarray.GpuArray)
+                    else None)
     if isinstance(context_name, str) and '.' in context_name:
         raise ValueError("context name must not contain dots")
-    return '#1{}.{}.{}'.format(_ARRAY_TYPE_MAP[type_], context_name, name)
+    return '#1{}.{}.{}'.format(
+        _ARRAY_TYPE_MAP[array_type], context_name, name)
 
 
 def _unmangle_parameter_name(mangled_name):
