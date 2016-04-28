@@ -114,7 +114,6 @@ import tarfile
 import tempfile
 import warnings
 import logging
-
 from contextlib import closing
 from pickle import HIGHEST_PROTOCOL
 try:
@@ -123,12 +122,17 @@ try:
 except ImportError:
     DEFAULT_PROTOCOL = HIGHEST_PROTOCOL
     from pickle import Pickler as _Pickler
+
 from six.moves import cPickle
+import theano
 try:
     from theano.sandbox.cuda import cuda_ndarray
 except ImportError:
     cuda_ndarray = None
-
+try:
+    import pygpu
+except:
+    pygpu = None
 from blocks.config import config
 from blocks.filter import get_brick
 from blocks.utils import change_recursion_limit
@@ -188,10 +192,9 @@ def dump(object_, file_, parameters=None, use_cpickle=False,
             named_parameters = {renamer(p): p for p in parameters}
             numpy.savez(f, **{n: p.get_value()
                               for n, p in named_parameters.items()})
-            for n, p in named_parameters.items():
+            for name, p in named_parameters.items():
                 array_ = p.container.storage[0]
-                external_objects[id(array_)] = _mangle_parameter_name(
-                    type(array_), n)
+                external_objects[id(array_)] = _mangle_parameter_name(p, name)
         if parameters:
             _taradd(_save_parameters, tar_file, '_parameters')
         if object_ is not None:
@@ -336,8 +339,7 @@ def add_to_dump(object_, file_, name, parameters=None, use_cpickle=False,
         named_parameters = {renamer(p): p for p in parameters}
         for n, p in named_parameters.items():
             array_ = p.container.storage[0]
-            external_parameters[id(array_)] = _mangle_parameter_name(
-                type(array_), n)
+            external_parameters[id(array_)] = _mangle_parameter_name(p, n)
 
         # Check that the parameters are the same that the ones in the archive.
         file_.seek(0)  # To be able to read what is in the tar file already.
@@ -349,7 +351,7 @@ def add_to_dump(object_, file_, name, parameters=None, use_cpickle=False,
                 parameters = numpy.load(
                     tar_file.extractfile(tar_file.getmember('_parameters')))
                 s1 = set(parameters.keys())
-                s2 = [_unmangle_parameter_name(x)[1] for x in
+                s2 = [_unmangle_parameter_name(x)[2] for x in
                       external_parameters.values()]
                 if not s1.issuperset(s2):
                     raise ValueError('The set of parameters is different'
@@ -545,12 +547,26 @@ class _Renamer(object):
         return name
 
 
+def _recreate_numpy_ndarray(_, content):
+    return numpy.array(content)
+
+
+def _recreate_cuda_ndarray(_, content):
+    return cuda_ndarray.cuda_ndarray.CudaNdarray(content)
+
+
+def _recreate_pygpu_array(context_name, content):
+    context = theano.sandbox.gpuarray.get_context(context_name)
+    return pygpu.gpuarray.array(content, context=context)
+
 _ARRAY_TYPE_MAP = {numpy.ndarray: 'numpy_ndarray'}
-_INVERSE_ARRAY_TYPE_MAP = {'numpy_ndarray': numpy.array}
+_INVERSE_ARRAY_TYPE_MAP = {'numpy_ndarray': _recreate_numpy_ndarray}
 if cuda_ndarray:
     _ARRAY_TYPE_MAP[cuda_ndarray.cuda_ndarray.CudaNdarray] = 'cuda_ndarray'
-    _INVERSE_ARRAY_TYPE_MAP['cuda_ndarray'] = \
-        cuda_ndarray.cuda_ndarray.CudaNdarray
+    _INVERSE_ARRAY_TYPE_MAP['cuda_ndarray'] = _recreate_cuda_ndarray
+if pygpu:
+    _ARRAY_TYPE_MAP[pygpu.gpuarray.GpuArray] = 'gpuarray'
+    _INVERSE_ARRAY_TYPE_MAP['gpuarray'] = _recreate_pygpu_array
 
 
 class _PersistentID(object):
@@ -577,18 +593,35 @@ class _PersistentLoad(object):
         # avoid creating the same object more than once.
         if id_ not in self._cache:
             components = _unmangle_parameter_name(id_)
-            self._cache[id_] = components[0](self.parameters[components[1]])
+            self._cache[id_] = components[0](
+                components[1], self.parameters[components[2]])
         return self._cache[id_]
 
 
-def _mangle_parameter_name(type_, name):
-    return '#{}.{}'.format(_ARRAY_TYPE_MAP[type_], name)
+def _mangle_parameter_name(parameter, name):
+    array_type = type(parameter.container.storage[0])
+    context_name = (parameter.context_name
+                    if pygpu and
+                    isinstance(parameter, pygpu.gpuarray.GpuArray)
+                    else None)
+    if isinstance(context_name, str) and '.' in context_name:
+        raise ValueError("context name must not contain dots")
+    return '#1{}.{}.{}'.format(
+        _ARRAY_TYPE_MAP[array_type], context_name, name)
 
 
 def _unmangle_parameter_name(mangled_name):
-    if mangled_name.startswith('#'):
+    if mangled_name.startswith('#1'):
+        type_, context_name, name = mangled_name[2:].split('.', 2)
+        if context_name == 'None':
+            context_name = None
+    elif mangled_name.startswith('#'):
+        # Backward compatibility
         type_, name = mangled_name[1:].split('.', 1)
-        return _INVERSE_ARRAY_TYPE_MAP[type_], name
+        context_name = None
+    else:
+        raise ValueError("Do not recognize the mangled parameter name")
+    return _INVERSE_ARRAY_TYPE_MAP[type_], context_name, name
 
 
 def _taradd(func, tar_file, name):
