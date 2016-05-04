@@ -611,6 +611,10 @@ def _mangle_parameter_name(parameter, name):
 
 
 def _unmangle_parameter_name(mangled_name):
+    if not isinstance(mangled_name, str):
+        # This fixes an issue with protocol 0 on Python 3 where
+        # 'mangled_name' is a bytes object, for some reason.
+        mangled_name = mangled_name.decode('utf8')
     if mangled_name.startswith('#1'):
         type_, context_name, name = mangled_name[2:].split('.', 2)
         if context_name == 'None':
