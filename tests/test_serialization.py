@@ -2,6 +2,7 @@ import os
 import warnings
 import tarfile
 from pickle import PicklingError
+from io import BytesIO
 from tempfile import NamedTemporaryFile
 
 import numpy
@@ -159,3 +160,15 @@ def test_dump_and_add_to_dump():
         dump_and_add_to_dump(x, f, None, {'y': y})
     assert load(open(f.name, 'rb')) == x
     assert load(open(f.name, 'rb'), 'y') == y
+
+
+def test_protocol0_regression():
+    """Check for a regression where protocol 0 dumps fail on load."""
+    brick = Linear(5, 10)
+    brick.allocate()
+    buf = BytesIO()
+    dump(brick, buf, parameters=list(brick.parameters), protocol=0)
+    try:
+        load(buf)
+    except TypeError:
+        assert False  # Regression
