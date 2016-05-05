@@ -155,9 +155,8 @@ class BaseSequenceGenerator(Initializable):
         self.fork = fork
 
         children = [self.readout, self.fork, self.transition]
-        children += kwargs.get('children', [])
-        super(BaseSequenceGenerator, self).__init__(children=children,
-                                                    **kwargs)
+        kwargs.setdefault('children', []).extend(children)
+        super(BaseSequenceGenerator, self).__init__(**kwargs)
 
     @property
     def _state_names(self):
@@ -529,8 +528,9 @@ class Readout(AbstractReadout):
         self.merged_dim = merged_dim
 
         children = [self.emitter, self.feedback_brick, self.merge,
-                    self.post_merge] + kwargs.get('children', [])
-        super(Readout, self).__init__(children=children, **kwargs)
+                    self.post_merge]
+        kwargs.setdefault('children', []).extend(children)
+        super(Readout, self).__init__(**kwargs)
 
     def _push_allocation_config(self):
         self.emitter.readout_dim = self.get_dim('readouts')
@@ -688,8 +688,9 @@ class SoftmaxEmitter(AbstractEmitter, Initializable, Random):
     def __init__(self, initial_output=0, **kwargs):
         self.initial_output = initial_output
         self.softmax = NDimensionalSoftmax()
-        children = [self.softmax] + kwargs.get('children', [])
-        super(SoftmaxEmitter, self).__init__(children=children, **kwargs)
+        children = [self.softmax]
+        kwargs.setdefault('children', []).extend(children)
+        super(SoftmaxEmitter, self).__init__(**kwargs)
 
     @application
     def probs(self, readouts):
@@ -749,8 +750,9 @@ class LookupFeedback(AbstractFeedback, Initializable):
         self.feedback_dim = feedback_dim
 
         self.lookup = LookupTable(num_outputs, feedback_dim)
-        children = [self.lookup] + kwargs.get('children', [])
-        super(LookupFeedback, self).__init__(children=children, **kwargs)
+        children = [self.lookup]
+        kwargs.setdefault('children', []).extend(children)
+        super(LookupFeedback, self).__init__(**kwargs)
 
     def _push_allocation_config(self):
         self.lookup.length = self.num_outputs
@@ -791,9 +793,9 @@ class FakeAttentionRecurrent(AbstractAttentionRecurrent, Initializable):
         self.context_names = transition.apply.contexts
         self.glimpse_names = []
 
-        children = [self.transition] + kwargs.get('children', [])
-        super(FakeAttentionRecurrent, self).__init__(children=children,
-                                                     **kwargs)
+        children = [self.transition]
+        kwargs.setdefault('children', []).extend(children)
+        super(FakeAttentionRecurrent, self).__init__(**kwargs)
 
     @application
     def apply(self, *args, **kwargs):

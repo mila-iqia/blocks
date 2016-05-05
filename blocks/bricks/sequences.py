@@ -27,8 +27,8 @@ class Sequence(Brick):
         seen = set()
         children = [app.brick for app in application_methods
                     if not (app.brick in seen or seen.add(app.brick))]
-        children += kwargs.get('children', [])
-        super(Sequence, self).__init__(children=children, **kwargs)
+        kwargs.setdefault('children', []).extend(children)
+        super(Sequence, self).__init__(**kwargs)
 
     @application
     def apply(self, *args):

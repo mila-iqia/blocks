@@ -206,8 +206,9 @@ class LinearMaxout(Initializable, Feedforward):
     def __init__(self, input_dim, output_dim, num_pieces, **kwargs):
         self.linear = Linear()
         self.maxout = Maxout()
-        children = [self.linear, self.maxout] + kwargs.get('children', [])
-        super(LinearMaxout, self).__init__(children=children, **kwargs)
+        children = [self.linear, self.maxout]
+        kwargs.setdefault('children', []).extend(children)
+        super(LinearMaxout, self).__init__(**kwargs)
 
         self.input_dim = input_dim
         self.output_dim = output_dim
