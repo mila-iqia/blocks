@@ -213,8 +213,8 @@ specify the ``input_dim`` of ``brick2`` directly at its creation.
     ...         self.brick1 = brick1
     ...         self.brick2 = brick2
     ...         children = [self.brick1, self.brick2]
-    ...         children += kwargs.get('children', [])
-    ...         super(Feedforward, self).__init__(children=children, **kwargs)
+    ...         kwargs.setdefault('children', []).extend(children)
+    ...         super(Feedforward, self).__init__(**kwargs)
     ...
     ...     @property
     ...     def input_dim(self):
@@ -376,9 +376,8 @@ One can also create the brick using :class:`Linear` children bricks, which
     ...         self.linear2 = Linear(input_dim2, output_dim2,
     ...                               use_bias=False, **kwargs)
     ...         children = [self.linear1, self.linear2]
-    ...         children += kwargs.get('children', [])
-    ...         super(ParallelLinear2, self).__init__(children=children,
-    ...                                               **kwargs)
+    ...         kwargs.setdefault('children', []).extend(children)
+    ...         super(ParallelLinear2, self).__init__(**kwargs)
     ...
     ...     @application(inputs=['input1_', 'input2_'], outputs=['output1',
     ...         'output2'])

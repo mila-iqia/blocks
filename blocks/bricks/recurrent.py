@@ -278,8 +278,9 @@ class SimpleRecurrent(BaseRecurrent, Initializable):
     @lazy(allocation=['dim'])
     def __init__(self, dim, activation, **kwargs):
         self.dim = dim
-        children = [activation] + kwargs.get('children', [])
-        super(SimpleRecurrent, self).__init__(children=children, **kwargs)
+        children = [activation]
+        kwargs.setdefault('children', []).extend(children)
+        super(SimpleRecurrent, self).__init__(**kwargs)
 
     @property
     def W(self):
@@ -384,9 +385,9 @@ class LSTM(BaseRecurrent, Initializable):
         self.activation = activation
         self.gate_activation = gate_activation
 
-        children = ([self.activation, self.gate_activation] +
-                    kwargs.get('children', []))
-        super(LSTM, self).__init__(children=children, **kwargs)
+        children = [self.activation, self.gate_activation]
+        kwargs.setdefault('children', []).extend(children)
+        super(LSTM, self).__init__(**kwargs)
 
     def get_dim(self, name):
         if name == 'inputs':
@@ -532,8 +533,9 @@ class GatedRecurrent(BaseRecurrent, Initializable):
         self.activation = activation
         self.gate_activation = gate_activation
 
-        children = [activation, gate_activation] + kwargs.get('children', [])
-        super(GatedRecurrent, self).__init__(children=children, **kwargs)
+        children = [activation, gate_activation]
+        kwargs.setdefault('children', []).extend(children)
+        super(GatedRecurrent, self).__init__(**kwargs)
 
     @property
     def state_to_state(self):
@@ -644,8 +646,8 @@ class Bidirectional(Initializable):
         children = [copy.deepcopy(prototype) for _ in range(2)]
         children[0].name = 'forward'
         children[1].name = 'backward'
-        children += kwargs.get('children', [])
-        super(Bidirectional, self).__init__(children=children, **kwargs)
+        kwargs.setdefault('children', []).extend(children)
+        super(Bidirectional, self).__init__(**kwargs)
 
     @application
     def apply(self, *args, **kwargs):

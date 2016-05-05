@@ -325,9 +325,9 @@ class SequenceContentAttention(GenericSequenceAttention, Initializable):
         self.energy_computer = energy_computer
 
         children = [self.state_transformers, attended_transformer,
-                    energy_computer] + kwargs.get('children', [])
-        super(SequenceContentAttention, self).__init__(children=children,
-                                                       **kwargs)
+                    energy_computer]
+        kwargs.setdefault('children', []).extend(children)
+        super(SequenceContentAttention, self).__init__(**kwargs) 
 
     def _push_allocation_config(self):
         self.state_transformers.input_dims = self.state_dims
@@ -576,8 +576,8 @@ class AttentionRecurrent(AbstractAttentionRecurrent, Initializable):
             if name in self.attention.take_glimpses.inputs]
 
         children = [self.transition, self.attention, self.distribute]
-        children += kwargs.get('children', [])
-        super(AttentionRecurrent, self).__init__(children=children, **kwargs)
+        kwargs.setdefault('children', []).extend(children)
+        super(AttentionRecurrent, self).__init__(**kwargs)
 
     def _push_allocation_config(self):
         self.attention.state_dims = self.transition.get_dims(
