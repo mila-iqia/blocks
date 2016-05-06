@@ -56,93 +56,6 @@ class TrainingAlgorithm(object):
         pass
 
 
-class DifferentiableCostMinimizer(TrainingAlgorithm):
-    """Minimizes a differentiable cost given as a Theano expression.
-
-    Very often the goal of training is to minimize the expected value of a
-    Theano expression. Batch processing in this cases typically consists of
-    running a (or a few) Theano functions.
-    :class:`DifferentiableCostMinimizer` is the base class for such
-    algorithms.
-
-    Parameters
-    ----------
-    cost : :class:`~tensor.TensorVariable`
-        The objective to be minimized.
-    parameters : list of :class:`~tensor.TensorSharedVariable`
-        The parameters to be tuned.
-
-    Attributes
-    ----------
-    updates : list of :class:`~tensor.TensorSharedVariable` updates
-        Updates to be done for every batch. It is required that the
-        updates are done using the old values of optimized parameters.
-    cost : :class:`~tensor.TensorVariable`
-        The objective to be minimized.
-    parameters : list of :class:`~tensor.TensorSharedVariable`
-        The parameters to be tuned.
-
-    Notes
-    -----
-    Changing `updates` attribute or calling `add_updates` after
-    the `initialize` method is called will have no effect.
-
-    .. todo::
-
-       Some shared variables are not parameters (e.g. those created by
-       random streams).
-
-    .. todo::
-
-       Due to a rather premature status of the :class:`ComputationGraph`
-       class the parameter used only inside scans are not fetched
-       currently.
-
-    """
-    def __init__(self, cost, parameters):
-        self.cost = cost
-        self.parameters = parameters
-        self._cost_computation_graph = ComputationGraph(self.cost)
-        self._updates = []
-
-    @property
-    def inputs(self):
-        """Return inputs of the cost computation graph.
-
-        Returns
-        -------
-        inputs : list of :class:`~tensor.TensorVariable`
-            Inputs to this graph.
-
-        """
-        return self._cost_computation_graph.inputs
-
-    @property
-    def updates(self):
-        return self._updates
-
-    @updates.setter
-    def updates(self, value):
-        self._updates = value
-
-    def add_updates(self, updates):
-        """Add updates to the training process.
-
-        The updates will be done _before_ the parameters are changed.
-
-        Parameters
-        ----------
-        updates : list of tuples or :class:`~collections.OrderedDict`
-            The updates to add.
-
-        """
-        if isinstance(updates, OrderedDict):
-            updates = list(updates.items())
-        if not isinstance(updates, list):
-            raise ValueError
-        self.updates.extend(updates)
-
-
 variable_mismatch_error = """
 
 Blocks tried to match the sources ({sources}) of the training dataset to \
@@ -158,7 +71,7 @@ Blocks didn't find all the sources ({sources}) of the training dataset \
 that match the names of the Theano variables ({variables})."""
 
 
-class GradientDescent(DifferentiableCostMinimizer):
+class GradientDescent(TrainingAlgorithm):
     """A base class for all gradient descent algorithms.
 
     By "gradient descent" we mean a training algorithm of the following
@@ -177,6 +90,11 @@ class GradientDescent(DifferentiableCostMinimizer):
 
     Parameters
     ----------
+    cost : :class:`~tensor.TensorVariable`, optional
+        The objective to be minimized.
+    parameters : list of :class:`~tensor.TensorSharedVariable`, optional
+        The parameters to be tuned. If not provided, inferred from the
+        keys of `gradients`.
     step_rule : instance of :class:`StepRule`, optional
         An object encapsulating most of the algorithm's logic. Its
         `compute_steps` method is called to get Theano expression for
@@ -211,17 +129,46 @@ class GradientDescent(DifferentiableCostMinimizer):
         The gradient dictionary.
     step_rule : instance of :class:`StepRule`
         The step rule.
+    updates : list of :class:`~tensor.TensorSharedVariable` updates
+        Updates to be done for every batch. It is required that the
+        updates are done using the old values of optimized parameters.
+
+    Notes
+    -----
+    Changing `updates` attribute or calling `add_updates` after
+    the `initialize` method is called will have no effect.
+
+    .. todo::
+
+       Some shared variables are not parameters (e.g. those created by
+       random streams).
+
+    .. todo::
+
+       Due to a rather premature status of the :class:`ComputationGraph`
+       class the parameter used only inside scans are not fetched
+       currently.
 
     """
-    def __init__(self, step_rule=None, gradients=None, known_grads=None,
-                 consider_constant=None, on_unused_sources='raise',
-                 theano_func_kwargs=None, **kwargs):
-        if gradients:
-            kwargs.setdefault("parameters", gradients.keys())
+    def __init__(self, cost=None, parameters=None, step_rule=None,
+                 gradients=None, known_grads=None, consider_constant=None,
+                 on_unused_sources='raise', theano_func_kwargs=None, **kwargs):
         super(GradientDescent, self).__init__(**kwargs)
-
+        # Set initial values for cost, parameters, gradients.
+        self.cost = cost
+        self._updates = []
+        self.parameters = parameters
         self.gradients = gradients
+
+        # If we don't have gradients, we'll need to infer them from the
+        # cost and the parameters, both of which must not be None.
         if not self.gradients:
+            if self.cost is None:
+                raise ValueError("can't infer gradients; no cost specified")
+            elif self.parameters is None or len(self.parameters) == 0:
+                raise ValueError("can't infer gradients; "
+                                 "no parameters specified")
+            self.inputs = ComputationGraph(cost).inputs
             logger.info("Taking the cost gradient")
             self.gradients = dict(
                 equizip(self.parameters, tensor.grad(
@@ -230,6 +177,14 @@ class GradientDescent(DifferentiableCostMinimizer):
                     consider_constant=consider_constant)))
             logger.info("The cost gradient computation graph is built")
         else:
+            # If we have gradients, we get parameters from that.
+            # If you're specifying both then something is screwy.
+            if self.parameters is not None:
+                logger.warning('{} received both gradients and parameters '
+                               'arguments; using parameters deduced from '
+                               'gradients')
+            self.parameters = list(gradients.keys())
+            self.inputs = ComputationGraph(gradients.values()).inputs
             if known_grads:
                 raise ValueError("known_grads has no effect when gradients "
                                  "are passed in")
@@ -250,15 +205,14 @@ class GradientDescent(DifferentiableCostMinimizer):
 
     def initialize(self):
         logger.info("Initializing the training algorithm")
-        all_updates = self.updates
         # Note: the gradients are computed in the same order in which
         # the parameters were given. Keep it like that to ensure
         # reproducibility.
         for parameter in self.parameters:
-            all_updates.append((parameter, parameter - self.steps[parameter]))
-        all_updates += self.step_rule_updates
+            self.updates.append((parameter, parameter - self.steps[parameter]))
+        self.updates += self.step_rule_updates
         self._function = theano.function(
-            self.inputs, [], updates=all_updates, **self.theano_func_kwargs)
+            self.inputs, [], updates=self.updates, **self.theano_func_kwargs)
         logger.info("The training algorithm is initialized")
 
     def _validate_source_names(self, batch):
@@ -292,6 +246,31 @@ class GradientDescent(DifferentiableCostMinimizer):
         self._validate_source_names(batch)
         ordered_batch = [batch[v.name] for v in self.inputs]
         self._function(*ordered_batch)
+
+    @property
+    def updates(self):
+        return self._updates
+
+    @updates.setter
+    def updates(self, value):
+        self._updates = value
+
+    def add_updates(self, updates):
+        """Add updates to the training process.
+
+        The updates will be done _before_ the parameters are changed.
+
+        Parameters
+        ----------
+        updates : list of tuples or :class:`~collections.OrderedDict`
+            The updates to add.
+
+        """
+        if isinstance(updates, OrderedDict):
+            updates = list(updates.items())
+        if not isinstance(updates, list):
+            raise ValueError
+        self.updates.extend(updates)
 
 
 @add_metaclass(ABCMeta)

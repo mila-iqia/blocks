@@ -70,7 +70,7 @@ class ComputationGraph(object):
     def __init__(self, outputs):
         if isinstance(outputs, Variable):
             outputs = [outputs]
-        self.outputs = outputs
+        self.outputs = list(outputs)
         self._get_variables()
         self._has_inputs = {}
 
