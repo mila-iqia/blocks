@@ -71,149 +71,85 @@ Blocks didn't find all the sources ({sources}) of the training dataset \
 that match the names of the Theano variables ({variables})."""
 
 
-class GradientDescent(TrainingAlgorithm):
-    """A base class for all gradient descent algorithms.
+determinism_error = """Cannot infer parameter list in a fixed order.
 
-    By "gradient descent" we mean a training algorithm of the following
-    form:
+Because dictionaries are unordered (and Python uses randomized hashing, \
+which can change the iteration order over the same dictionary from one \
+interpreter session to the next), Blocks cannot infer the parameters list \
+from a plain dictionary of gradients in an order that is reproducible \
+across interpreter sessions; please either specify the parameters \
+explicitly or pass gradients as an OrderedDict (though exercise care in \
+constructing that OrderedDict, as an OrderedDict \ created by iterating \
+over an unordered iterable (e.g. a dict) will still \ have an arbitrary \
+and unpredictable order that could cause problems with \
+reproducibility)."""
 
-    .. code-block::  python
 
-        for batch in data:
-            steps = step_rule.compute_steps(parameters,
-                                            gradients_wr_parameters)
-            for parameter in parameters:
-                parameter -= steps[parameter]
-
-    Note, that the step is *subtracted, not added*! This is done in order
-    to make step rule chaining possible.
+class UpdatesAlgorithm(TrainingAlgorithm):
+    """Base class for algorithms that use Theano functions with updates.
 
     Parameters
     ----------
-    cost : :class:`~tensor.TensorVariable`, optional
-        The objective to be minimized.
-    parameters : list of :class:`~tensor.TensorSharedVariable`, optional
-        The parameters to be tuned. If not provided, inferred from the
-        keys of `gradients`.
-    step_rule : instance of :class:`StepRule`, optional
-        An object encapsulating most of the algorithm's logic. Its
-        `compute_steps` method is called to get Theano expression for
-        steps.  Note, that the step rule might have a state, e.g. to
-        remember a weighted sum of gradients from previous steps like it is
-        done in gradient descent with momentum. If ``None``, an instance of
-        :class:`Scale` is created.
-    gradients : dict, optional
-        A dictionary mapping a parameter to an expression for the cost's
-        gradient with respect to the parameter. If ``None``, the gradient
-        are taken automatically using :func:`theano.gradient.grad`.
-    known_grads : dict, optional
-        A passthrough to `theano.tensor.grad`'s `known_grads` argument.
-        Useful when you know the [approximate] gradients of some
-        sub-expressions and would like Theano to use that information
-        to compute parameter gradients. Only makes sense when `gradients`
-        is `None`.
-    consider_constant : list, optional
-        A passthrough to `theano.tensor.grad`'s `consider_constant`
-        argument.  A list of expressions through which gradients will not
-        be backpropagated. Only makes sense when `gradients` is `None`.
-    on_unused_sources : str, one of 'raise' (default), 'ignore', 'warn'
-        Controls behavior when not all sources are used.
+    updates : list of tuples or :class:`~collections.OrderedDict`
+        The updates that should be performed.
     theano_func_kwargs : dict, optional
         A passthrough to `theano.function` for additional arguments.
         Useful for passing `profile` or `mode` arguments to the theano
         function that will be compiled for the algorithm.
+    on_unused_sources : str, one of 'raise' (default), 'ignore', 'warn'
+        Controls behavior when not all sources in a batch are used
+        (i.e. there is no variable with a matching name in the inputs
+        of the computational graph of the updates).
 
     Attributes
     ----------
-    gradients : dict
-        The gradient dictionary.
-    step_rule : instance of :class:`StepRule`
-        The step rule.
     updates : list of :class:`~tensor.TensorSharedVariable` updates
         Updates to be done for every batch. It is required that the
         updates are done using the old values of optimized parameters.
 
-    Notes
-    -----
-    Changing `updates` attribute or calling `add_updates` after
-    the `initialize` method is called will have no effect.
-
-    .. todo::
-
-       Some shared variables are not parameters (e.g. those created by
-       random streams).
-
-    .. todo::
-
-       Due to a rather premature status of the :class:`ComputationGraph`
-       class the parameter used only inside scans are not fetched
-       currently.
-
     """
-    def __init__(self, cost=None, parameters=None, step_rule=None,
-                 gradients=None, known_grads=None, consider_constant=None,
-                 on_unused_sources='raise', theano_func_kwargs=None, **kwargs):
-        super(GradientDescent, self).__init__(**kwargs)
-        # Set initial values for cost, parameters, gradients.
-        self.cost = cost
-        self._updates = []
-        self.parameters = parameters
-        self.gradients = gradients
-
-        # If we don't have gradients, we'll need to infer them from the
-        # cost and the parameters, both of which must not be None.
-        if not self.gradients:
-            if self.cost is None:
-                raise ValueError("can't infer gradients; no cost specified")
-            elif self.parameters is None or len(self.parameters) == 0:
-                raise ValueError("can't infer gradients; "
-                                 "no parameters specified")
-            self.inputs = ComputationGraph(cost).inputs
-            logger.info("Taking the cost gradient")
-            self.gradients = dict(
-                equizip(self.parameters, tensor.grad(
-                    self.cost, self.parameters,
-                    known_grads=known_grads,
-                    consider_constant=consider_constant)))
-            logger.info("The cost gradient computation graph is built")
-        else:
-            # If we have gradients, we get parameters from that.
-            # If you're specifying both then something is screwy.
-            if self.parameters is not None:
-                logger.warning('{} received both gradients and parameters '
-                               'arguments; using parameters deduced from '
-                               'gradients')
-            self.parameters = list(gradients.keys())
-            self.inputs = ComputationGraph(gradients.values()).inputs
-            if known_grads:
-                raise ValueError("known_grads has no effect when gradients "
-                                 "are passed in")
-            if consider_constant is not None:
-                raise ValueError("consider_constant has no effect when "
-                                 "gradients are passed in")
-        self.step_rule = step_rule if step_rule else Scale()
-
-        self.total_gradient_norm = l2_norm(
-            self.gradients.values()).copy(name="total_gradient_norm")
-        self.steps, self.step_rule_updates = (
-            self.step_rule.compute_steps(self.gradients))
-        self.total_step_norm = l2_norm(
-            self.steps.values()).copy(name="total_step_norm")
-        self.on_unused_sources = on_unused_sources
+    def __init__(self, updates=None, theano_func_kwargs=None,
+                 on_unused_sources='raise', **kwargs):
+        self.updates = [] if updates is None else updates
         self.theano_func_kwargs = (theano_func_kwargs if theano_func_kwargs
                                    is not None else dict())
+        self.on_unused_sources = on_unused_sources
+        super(UpdatesAlgorithm, self).__init__(**kwargs)
 
     def initialize(self):
         logger.info("Initializing the training algorithm")
-        # Note: the gradients are computed in the same order in which
-        # the parameters were given. Keep it like that to ensure
-        # reproducibility.
-        for parameter in self.parameters:
-            self.updates.append((parameter, parameter - self.steps[parameter]))
-        self.updates += self.step_rule_updates
+        update_values = [new_value for _, new_value in self.updates]
+        logger.debug("Inferring graph inputs...")
+        self.inputs = ComputationGraph(update_values).inputs
+        logger.debug("Compiling training function...")
         self._function = theano.function(
             self.inputs, [], updates=self.updates, **self.theano_func_kwargs)
         logger.info("The training algorithm is initialized")
+
+    @property
+    def updates(self):
+        return self._updates
+
+    @updates.setter
+    def updates(self, value):
+        self._updates = value
+
+    def add_updates(self, updates):
+        """Add updates to the training process.
+
+        The updates will be done _before_ the parameters are changed.
+
+        Parameters
+        ----------
+        updates : list of tuples or :class:`~collections.OrderedDict`
+            The updates to add.
+
+        """
+        if isinstance(updates, OrderedDict):
+            updates = list(updates.items())
+        if not isinstance(updates, list):
+            raise ValueError
+        self.updates.extend(updates)
 
     def _validate_source_names(self, batch):
         in_names = [v.name for v in self.inputs]
@@ -247,30 +183,169 @@ class GradientDescent(TrainingAlgorithm):
         ordered_batch = [batch[v.name] for v in self.inputs]
         self._function(*ordered_batch)
 
-    @property
-    def updates(self):
-        return self._updates
 
-    @updates.setter
-    def updates(self, value):
-        self._updates = value
+class GradientDescent(UpdatesAlgorithm):
+    """A base class for all gradient descent algorithms.
 
-    def add_updates(self, updates):
-        """Add updates to the training process.
+    By "gradient descent" we mean a training algorithm of the following
+    form:
 
-        The updates will be done _before_ the parameters are changed.
+    .. code-block::  python
 
-        Parameters
-        ----------
-        updates : list of tuples or :class:`~collections.OrderedDict`
-            The updates to add.
+        for batch in data:
+            steps = step_rule.compute_steps(parameters,
+                                            gradients_wr_parameters)
+            for parameter in parameters:
+                parameter -= steps[parameter]
 
-        """
-        if isinstance(updates, OrderedDict):
-            updates = list(updates.items())
-        if not isinstance(updates, list):
-            raise ValueError
-        self.updates.extend(updates)
+    Note, that the step is *subtracted, not added*! This is done in order
+    to make step rule chaining possible.
+
+    Parameters
+    ----------
+    cost : :class:`~tensor.TensorVariable`, optional
+        The objective to be minimized.
+    parameters : list of :class:`~tensor.TensorSharedVariable`, optional
+        The parameters to be tuned. If not provided, inferred from the
+        keys of `gradients` (in which case `gradients` *must* be an
+        `OrderedDict`).
+    step_rule : instance of :class:`StepRule`, optional
+        An object encapsulating most of the algorithm's logic. Its
+        `compute_steps` method is called to get Theano expression for
+        steps.  Note, that the step rule might have a state, e.g. to
+        remember a weighted sum of gradients from previous steps like it is
+        done in gradient descent with momentum. If ``None``, an instance of
+        :class:`Scale` is created.
+    gradients : OrderedDict, optional
+        A dictionary mapping a parameter to an expression for the cost's
+        gradient with respect to the parameter. If ``None``, the gradient
+        are taken automatically using :func:`theano.gradient.grad`.
+    known_grads : dict, optional
+        A passthrough to `theano.tensor.grad`'s `known_grads` argument.
+        Useful when you know the [approximate] gradients of some
+        sub-expressions and would like Theano to use that information
+        to compute parameter gradients. Only makes sense when `gradients`
+        is `None`.
+    consider_constant : list, optional
+        A passthrough to `theano.tensor.grad`'s `consider_constant`
+        argument.  A list of expressions through which gradients will not
+        be backpropagated. Only makes sense when `gradients` is `None`.
+
+    Attributes
+    ----------
+    gradients : OrderedDict
+        The gradient dictionary.
+    step_rule : instance of :class:`StepRule`
+        The step rule.
+
+    Notes
+    -----
+    Changing `updates` attribute or calling `add_updates` after
+    the `initialize` method is called will have no effect.
+
+    `gradients` must be an `OrderedDict` if `parameters` is unspecified
+    because ordinary dictionaries have an unpredictable iteration
+    order due to hash randomization (which is enabled by default since
+    versions 2.7.3 and 3.2.3 of Python). This source of variability,
+    when combined with Theano's heuristic graph optimizations, can cause
+    serious reproducibility issues.
+
+    .. todo::
+
+       Some shared variables are not parameters (e.g. those created by
+       random streams).
+
+    .. todo::
+
+       Due to a rather premature status of the :class:`ComputationGraph`
+       class the parameter used only inside scans are not fetched
+       currently.
+
+    """
+    def __init__(self, cost=None, parameters=None, step_rule=None,
+                 gradients=None, known_grads=None, consider_constant=None,
+                 **kwargs):
+        # Set initial values for cost, parameters, gradients.
+        self.cost = cost
+        self.parameters = parameters
+        self.gradients = gradients
+
+        # If we don't have gradients, we'll need to infer them from the
+        # cost and the parameters, both of which must not be None.
+        if not self.gradients:
+            if self.cost is None:
+                raise ValueError("can't infer gradients; no cost specified")
+            elif self.parameters is None or len(self.parameters) == 0:
+                raise ValueError("can't infer gradients; "
+                                 "no parameters specified")
+
+            # While this strictly speaking could be a dict and not an
+            # OrderedDict (because we iterate over it in the order of
+            # self.parameters), this guards a little bit against
+            # nondeterminism introduced by future refactoring.
+            logger.info("Taking the cost gradient")
+            self.gradients = OrderedDict(
+                equizip(self.parameters, tensor.grad(
+                    self.cost, self.parameters,
+                    known_grads=known_grads,
+                    consider_constant=consider_constant)))
+            logger.info("The cost gradient computation graph is built")
+        else:
+            if self.parameters is None and isinstance(gradients, OrderedDict):
+                # If the dictionary is ordered, it's safe to use the keys
+                # as they have a deterministic order.
+                self.parameters = list(self.gradients.keys())
+            elif self.parameters is not None:
+                # If parameters and gradients.keys() don't match we can
+                # try to recover if gradients is ordered.
+                if set(self.parameters) != set(self.gradients.keys()):
+                    logger.warn("Specified parameters list does not match "
+                                "keys in provided gradient dictionary; "
+                                "using parameters inferred from gradients")
+                    if not isinstance(self.gradients, OrderedDict):
+                        raise ValueError(determinism_error)
+                    self.parameters = list(self.gradients.keys())
+            else:
+                # self.parameters is not None, and gradients isn't
+                # an OrderedDict. We can't do anything safe.
+                raise ValueError(determinism_error)
+            if known_grads:
+                raise ValueError("known_grads has no effect when gradients "
+                                 "are passed in")
+            if consider_constant is not None:
+                raise ValueError("consider_constant has no effect when "
+                                 "gradients are passed in")
+
+        # The order in which the different gradient terms appears
+        # here matters, as floating point addition is non-commutative (and
+        # Theano's graph optimizations are not order-independent).
+        # This is why we do not use .values().
+        gradient_values = [self.gradients[p] for p in self.parameters]
+        self.total_gradient_norm = (l2_norm(gradient_values)
+                                    .copy(name="total_gradient_norm"))
+
+        self.step_rule = step_rule if step_rule else Scale()
+        logger.debug("Computing parameter steps...")
+        self.steps, self.step_rule_updates = (
+            self.step_rule.compute_steps(self.gradients))
+
+        # Same as gradient_values above: the order may influence a
+        # bunch of things, so enforce a consistent one (don't use
+        # .values()).
+        step_values = [self.steps[p] for p in self.parameters]
+        self.total_step_norm = (l2_norm(step_values)
+                                .copy(name="total_step_norm"))
+
+        # Once again, iterating on gradients may not be deterministically
+        # ordered if it is not an OrderedDict. We add the updates here in
+        # the order specified in self.parameters. Keep it this way to
+        # maintain reproducibility.
+        kwargs.setdefault('updates', []).extend(
+            itertools.chain(((parameter, parameter - self.steps[parameter])
+                             for parameter in self.parameters),
+                            self.step_rule_updates)
+        )
+        super(GradientDescent, self).__init__(**kwargs)
 
 
 @add_metaclass(ABCMeta)
