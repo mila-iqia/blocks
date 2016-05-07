@@ -114,6 +114,16 @@ def test_gradient_descent_multiple_initialize():
     assert_allclose(W.get_value(), -0.5 * W_start_value)
 
 
+def test_gradient_descent_finds_inputs_additional_updates():
+    W = shared_floatx(numpy.array([[1, 2], [3, 4]]))
+    n = shared_floatx(1)
+    m = tensor.scalar('m')
+    algorithm = GradientDescent(gradients=OrderedDict([(W, W + 1)]))
+    algorithm.add_updates([(n, n + m)])
+    algorithm.initialize()
+    assert m in algorithm.inputs
+
+
 def test_gradient_descent_parameters_inferred():
     W = shared_floatx(numpy.array([[1, 2], [3, 4]]))
     algorithm = GradientDescent(gradients=OrderedDict([(W, W + 1)]))
