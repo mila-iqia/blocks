@@ -204,7 +204,7 @@ class GradientDescent(UpdatesAlgorithm):
     Parameters
     ----------
     cost : :class:`~tensor.TensorVariable`, optional
-        The objective to be minimized.
+        The objective to be minimized. Unused if `gradients` is specified.
     parameters : list of :class:`~tensor.TensorSharedVariable`, optional
         The parameters to be tuned. If not provided, inferred from the
         keys of `gradients` (in which case `gradients` *must* be an
@@ -291,6 +291,10 @@ class GradientDescent(UpdatesAlgorithm):
                     consider_constant=consider_constant)))
             logger.info("The cost gradient computation graph is built")
         else:
+            if cost is not None:
+                logger.warning(('{}: gradients already specified directly; '
+                                'cost is unused.'
+                                .format(self.__class__.__name__)))
             if self.parameters is None and isinstance(gradients, OrderedDict):
                 # If the dictionary is ordered, it's safe to use the keys
                 # as they have a deterministic order.
