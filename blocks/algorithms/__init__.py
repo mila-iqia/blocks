@@ -273,23 +273,8 @@ class GradientDescent(UpdatesAlgorithm):
         # If we don't have gradients, we'll need to infer them from the
         # cost and the parameters, both of which must not be None.
         if not self.gradients:
-            if self.cost is None:
-                raise ValueError("can't infer gradients; no cost specified")
-            elif self.parameters is None or len(self.parameters) == 0:
-                raise ValueError("can't infer gradients; "
-                                 "no parameters specified")
-
-            # While this strictly speaking could be a dict and not an
-            # OrderedDict (because we iterate over it in the order of
-            # self.parameters), this guards a little bit against
-            # nondeterminism introduced by future refactoring.
-            logger.info("Taking the cost gradient")
-            self.gradients = OrderedDict(
-                equizip(self.parameters, tensor.grad(
-                    self.cost, self.parameters,
-                    known_grads=known_grads,
-                    consider_constant=consider_constant)))
-            logger.info("The cost gradient computation graph is built")
+            self.gradients = self._compute_gradients(known_grads,
+                                                     consider_constant)
         else:
             if cost is not None:
                 logger.warning(('{}: gradients already specified directly; '
@@ -350,6 +335,25 @@ class GradientDescent(UpdatesAlgorithm):
                             self.step_rule_updates)
         )
         super(GradientDescent, self).__init__(**kwargs)
+
+    def _compute_gradients(self, known_grads, consider_constant):
+        if self.cost is None:
+            raise ValueError("can't infer gradients; no cost specified")
+        elif self.parameters is None or len(self.parameters) == 0:
+            raise ValueError("can't infer gradients; no parameters "
+                             "specified")
+        # While this strictly speaking could be a dict and not an
+        # OrderedDict (because we iterate over it in the order of
+        # self.parameters), this guards a little bit against
+        # nondeterminism introduced by future refactoring.
+        logger.info("Taking the cost gradient")
+        gradients = OrderedDict(
+            equizip(self.parameters, tensor.grad(
+                self.cost, self.parameters,
+                known_grads=known_grads,
+                consider_constant=consider_constant)))
+        logger.info("The cost gradient computation graph is built")
+        return gradients
 
 
 @add_metaclass(ABCMeta)
