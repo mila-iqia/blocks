@@ -89,11 +89,59 @@ def test_gradient_descent_with_gradients():
     gradients = OrderedDict()
     gradients[W] = tensor.grad(cost, W)
 
-    algorithm = GradientDescent(cost=cost, gradients=gradients)
+    algorithm = GradientDescent(gradients=gradients)
     algorithm.step_rule.learning_rate.set_value(0.75)
     algorithm.initialize()
     algorithm.process_batch(dict())
     assert_allclose(W.get_value(), -0.5 * W_start_value)
+
+
+def test_gradient_descent_parameters_inferred():
+    W = shared_floatx(numpy.array([[1, 2], [3, 4]]))
+    algorithm = GradientDescent(gradients=OrderedDict([(W, W + 1)]))
+    assert algorithm.parameters == [W]
+
+
+def test_gradient_descent_parameters_no_cost():
+    W = shared_floatx(numpy.array([[1, 2], [3, 4]]))
+    assert_raises_regex(ValueError, "no cost", GradientDescent, parameters=[W])
+
+
+def test_gradient_descent_parameters_no_parameters():
+    W = shared_floatx(numpy.array([[1, 2], [3, 4]]))
+    assert_raises_regex(ValueError, "no parameters",
+                        GradientDescent, cost=W.sum())
+
+
+def test_gradient_descent_infer_parameters_gradients_not_ordered():
+    W = shared_floatx(numpy.array([[1, 2], [3, 4]]))
+    assert_raises_regex(ValueError, "fixed order",
+                        GradientDescent, gradients={W: 2 * W})
+
+
+def test_gradient_descent_non_match_parameters_gradients_not_ordered():
+    W = shared_floatx(numpy.array([[1, 2], [3, 4]]))
+    z = shared_floatx(5)
+    assert_raises_regex(ValueError, "fixed order",
+                        GradientDescent, parameters=[z],
+                        gradients={W: 2 * W})
+
+
+def test_gradient_descent_non_match_parameters_gradients_ordered():
+    W = shared_floatx(numpy.array([[1, 2], [3, 4]]))
+    z = shared_floatx(5)
+    algorithm = GradientDescent(parameters=[z],
+                                gradients=OrderedDict([(W, W/2)]))
+    assert algorithm.parameters == [W]
+
+
+def test_gradient_descent_updates_keyword():
+    W = shared_floatx(numpy.array([[1, 2], [3, 4]]))
+    z = shared_floatx(5)
+    algorithm = GradientDescent(gradients=OrderedDict([(W, W/2)]),
+                                updates=[(z, z + 1)])
+    assert len(algorithm.updates) == 2
+    assert z in dict(algorithm.updates)
 
 
 def test_gradient_descent_spurious_sources():
