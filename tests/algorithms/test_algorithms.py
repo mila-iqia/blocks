@@ -2,14 +2,15 @@ from collections import OrderedDict
 
 import numpy
 import theano
-from numpy.testing import assert_allclose, assert_raises
+from numpy.testing import assert_allclose, assert_raises, assert_raises_regex
 from theano import tensor
 from theano.compile.profiling import ProfileStats
 
 from blocks.algorithms import (GradientDescent, StepClipping, VariableClipping,
                                CompositeRule, Scale, StepRule, BasicMomentum,
                                Momentum, AdaDelta, BasicRMSProp, RMSProp, Adam,
-                               AdaGrad, RemoveNotFinite, Restrict)
+                               AdaGrad, RemoveNotFinite, Restrict,
+                               UpdatesAlgorithm)
 from blocks.utils import shared_floatx, shared_floatx_zeros
 
 
@@ -31,6 +32,42 @@ def verify_broadcastable_handling(step_rule):
                               broadcastable=(True, True, True)))
     check(shared_floatx_zeros((1, 5, 1),
                               broadcastable=(True, False, True)))
+
+
+def test_updates_algorithm():
+    n = shared_floatx(1)
+    algorithm = UpdatesAlgorithm(updates=[(n, n + 1)])
+    algorithm.initialize()
+    algorithm.process_batch({})
+    assert_allclose(n.get_value(), 2)
+    algorithm.process_batch({})
+    assert_allclose(n.get_value(), 3)
+
+
+def test_updates_algorithm_data():
+    n = shared_floatx(1)
+    m = tensor.scalar('m')
+    algorithm = UpdatesAlgorithm(updates=[(n, m + 1)])
+    algorithm.initialize()
+    algorithm.process_batch({'m': 5})
+    assert_allclose(n.get_value(), 6)
+    algorithm.process_batch({'m': 3})
+    assert_allclose(n.get_value(), 4)
+
+
+def test_updates_algorithm_add_updates():
+    n = shared_floatx(1)
+    m = shared_floatx(0)
+    algorithm = UpdatesAlgorithm(updates=[(n, n + 1)])
+    algorithm.add_updates([(m, n % 2)])
+    assert len(algorithm.updates) == 2
+    algorithm.initialize()
+    algorithm.process_batch({})
+    assert_allclose(n.get_value(), 2)
+    assert_allclose(m.get_value(), 1)
+    algorithm.process_batch({})
+    assert_allclose(n.get_value(), 3)
+    assert_allclose(m.get_value(), 0)
 
 
 def test_gradient_descent():
