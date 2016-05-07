@@ -96,6 +96,24 @@ def test_gradient_descent_with_gradients():
     assert_allclose(W.get_value(), -0.5 * W_start_value)
 
 
+def test_gradient_descent_multiple_initialize():
+    W = shared_floatx(numpy.array([[1, 2], [3, 4]]))
+    W_start_value = W.get_value()
+    cost = tensor.sum(W ** 2)
+    gradients = OrderedDict()
+    gradients[W] = tensor.grad(cost, W)
+
+    algorithm = GradientDescent(gradients=gradients)
+    algorithm.step_rule.learning_rate.set_value(0.75)
+    algorithm.initialize()
+    algorithm.initialize()
+    algorithm.initialize()
+
+    assert len(algorithm.updates) == 1
+    algorithm.process_batch(dict())
+    assert_allclose(W.get_value(), -0.5 * W_start_value)
+
+
 def test_gradient_descent_parameters_inferred():
     W = shared_floatx(numpy.array([[1, 2], [3, 4]]))
     algorithm = GradientDescent(gradients=OrderedDict([(W, W + 1)]))
