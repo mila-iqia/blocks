@@ -107,6 +107,11 @@ class UpdatesAlgorithm(TrainingAlgorithm):
         Updates to be done for every batch. It is required that the
         updates are done using the old values of optimized parameters.
 
+    Notes
+    -----
+    Changing `updates` attribute or calling `add_updates` after
+    the `initialize` method is called will have no effect.
+
     """
     def __init__(self, updates=None, theano_func_kwargs=None,
                  on_unused_sources='raise', **kwargs):
@@ -242,6 +247,10 @@ class GradientDescent(UpdatesAlgorithm):
     -----
     Changing `updates` attribute or calling `add_updates` after
     the `initialize` method is called will have no effect.
+
+    If a cost and parameters are provided, gradients are taken immediately
+    upon construction, and changes to these attributes after construction
+    will have no effect.
 
     `gradients` must be an `OrderedDict` if `parameters` is unspecified
     because ordinary dictionaries have an unpredictable iteration
