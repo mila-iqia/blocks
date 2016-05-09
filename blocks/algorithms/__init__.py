@@ -61,9 +61,9 @@ variable_mismatch_error = """
 Blocks tried to match the sources ({sources}) of the training dataset to \
 the names of the Theano variables ({variables}), but failed to do so. \
 If you want to train on a subset of the sources that your dataset provides, \
-pass the `sources` keyword argument to its constructor. Or pass \
-on_unused_sources='warn' or on_unused_sources='ignore' to \
-the GradientDescent algorithm."""
+pass the `sources` keyword argument to its constructor, use the \
+FilterSources transformer provided by Fuel, or pass on_unused_sources='warn' \
+or on_unused_sources='ignore' to the GradientDescent algorithm."""
 
 source_missing_error = """
 
@@ -79,8 +79,8 @@ interpreter session to the next), Blocks cannot infer the parameters list \
 from a plain dictionary of gradients in an order that is reproducible \
 across interpreter sessions; please either specify the parameters \
 explicitly or pass gradients as an OrderedDict (though exercise care in \
-constructing that OrderedDict, as an OrderedDict \ created by iterating \
-over an unordered iterable (e.g. a dict) will still \ have an arbitrary \
+constructing that OrderedDict, as an OrderedDict created by iterating \
+over an unordered iterable (e.g. a dict) will still have an arbitrary \
 and unpredictable order that could cause problems with \
 reproducibility)."""
 
