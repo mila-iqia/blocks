@@ -4,7 +4,7 @@ import logging
 import theano
 
 from blocks.extensions import SimpleExtension, TrainingExtension
-from blocks.algorithms import DifferentiableCostMinimizer
+from blocks.algorithms import UpdatesAlgorithm
 from blocks.monitoring.aggregation import MonitoredQuantity, take_last
 from blocks.monitoring.evaluators import (
     AggregationBuffer, MonitoredQuantityBuffer, DatasetEvaluator)
@@ -122,7 +122,7 @@ class TrainingDataMonitoring(SimpleExtension, MonitoringExtension):
     update.
 
     Requires the training algorithm to be an instance of
-    :class:`.DifferentiableCostMinimizer`.
+    :class:`.UpdatesAlgorithm`.
 
     """
     def __init__(self, variables, **kwargs):
@@ -164,7 +164,7 @@ class TrainingDataMonitoring(SimpleExtension, MonitoringExtension):
         data, args = self.parse_args(callback_name, args)
         if callback_name == 'before_training':
             if not isinstance(self.main_loop.algorithm,
-                              DifferentiableCostMinimizer):
+                              UpdatesAlgorithm):
                 raise ValueError
             self.main_loop.algorithm.add_updates(
                 self._variables.accumulation_updates)

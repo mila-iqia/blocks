@@ -9,7 +9,7 @@ from blocks.extensions.monitoring import (
     MonitoringExtension,
     TrainingDataMonitoring)
 from blocks.monitoring import aggregation
-from blocks.algorithms import GradientDescent, Scale
+from blocks.algorithms import GradientDescent, UpdatesAlgorithm, Scale
 from blocks.utils import shared_floatx
 from blocks.main_loop import MainLoop
 
@@ -122,3 +122,26 @@ def test_training_data_monitoring():
                         features[i] * targets[i])
         assert_allclose(main_loop.log[n_batches]['train2_ftt2'],
                         (features * targets[:, None]).mean(axis=0))
+
+
+def test_training_data_monitoring_updates_algorithm():
+    features = [numpy.array(f, dtype=theano.config.floatX)
+                for f in [[1, 2], [3, 5], [5, 8]]]
+    targets = numpy.array([f.sum() for f in features])
+    dataset = IterableDataset(dict(features=features, targets=targets))
+
+    x = tensor.vector('features')
+    y = tensor.scalar('targets')
+    m = x.mean().copy(name='features_mean')
+    t = y.sum().copy(name='targets_sum')
+
+    main_loop = MainLoop(
+        model=None, data_stream=dataset.get_example_stream(),
+        algorithm=UpdatesAlgorithm(),
+        extensions=[TrainingDataMonitoring([m, t], prefix="train1",
+                                           after_batch=True)],
+    )
+    main_loop.extensions[0].main_loop = main_loop
+    assert len(main_loop.algorithm.updates) == 0
+    main_loop.extensions[0].do('before_training')
+    assert len(main_loop.algorithm.updates) > 0
