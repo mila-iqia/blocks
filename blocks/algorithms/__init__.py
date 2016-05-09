@@ -259,17 +259,6 @@ class GradientDescent(UpdatesAlgorithm):
     when combined with Theano's heuristic graph optimizations, can cause
     serious reproducibility issues.
 
-    .. todo::
-
-       Some shared variables are not parameters (e.g. those created by
-       random streams).
-
-    .. todo::
-
-       Due to a rather premature status of the :class:`ComputationGraph`
-       class the parameter used only inside scans are not fetched
-       currently.
-
     """
     def __init__(self, cost=None, parameters=None, step_rule=None,
                  gradients=None, known_grads=None, consider_constant=None,
