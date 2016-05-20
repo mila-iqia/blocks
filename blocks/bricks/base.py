@@ -1,7 +1,7 @@
 import inspect
 from abc import ABCMeta
 from collections import OrderedDict
-from functools import wraps
+from six import wraps
 from operator import attrgetter
 from types import MethodType
 

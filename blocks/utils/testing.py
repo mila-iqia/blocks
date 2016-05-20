@@ -1,7 +1,7 @@
 import logging
 import os
 import sys
-from functools import wraps
+from six import wraps
 from importlib import import_module
 from unittest.case import SkipTest
 
