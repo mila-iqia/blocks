@@ -2,7 +2,7 @@
 import copy
 import inspect
 import logging
-from functools import wraps
+from six import wraps
 
 from picklable_itertools.extras import equizip
 import numpy
