@@ -198,7 +198,7 @@ class AggregationBuffer(object):
     def get_aggregated_values(self):
         """Readout the aggregated values."""
         if not self._initialized:
-            raise Exception("To readout you must first initialize, then"
+            raise Exception("To readout you must first initialize, then "
                             "process batches!")
         ret_vals = self._readout_fun()
         return OrderedDict(equizip(self.variable_names, ret_vals))
