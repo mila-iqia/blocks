@@ -17,7 +17,7 @@ def l2_norm(tensors, squared=False):
 
     """
     summed = [tensor.sqr(tensor.as_tensor_variable(t)).sum() for t in tensors]
-    joined = tensor.stack(*summed)
+    joined = tensor.stack(summed, axis=0)
     return joined.sum() if squared else tensor.sqrt(joined.sum())
 
 
