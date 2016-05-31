@@ -12,6 +12,8 @@ def l2_norm(tensors, squared=False):
     ----------
     tensors : iterable of :class:`~tensor.TensorVariable` (or compatible)
         The tensors.
+    squared : bool, optional
+        If `True`, return the squared L2 norm. Default: `False`.
 
     """
     summed = [tensor.sqr(tensor.as_tensor_variable(t)).sum() for t in tensors]
