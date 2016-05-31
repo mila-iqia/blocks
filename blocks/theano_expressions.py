@@ -2,7 +2,7 @@
 from theano import tensor
 
 
-def l2_norm(tensors):
+def l2_norm(tensors, squared=False):
     """Computes the total L2 norm of a set of tensors.
 
     Converts all operands to :class:`~tensor.TensorVariable`
@@ -16,7 +16,7 @@ def l2_norm(tensors):
     """
     summed = [tensor.sqr(tensor.as_tensor_variable(t)).sum() for t in tensors]
     joined = tensor.stack(*summed)
-    return tensor.sqrt(joined.sum())
+    return joined.sum() if squared else tensor.sqrt(joined.sum())
 
 
 def hessian_times_vector(gradient, parameter, vector, r_op=False):
