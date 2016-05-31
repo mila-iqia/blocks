@@ -41,7 +41,7 @@ class MonitoredQuantityBuffer(object):
     ----------
     quantities : list of :class:`MonitoredQuantity`
         The quantity names are used as record names in the logs. Hence, all
-        the quantity names must be different.
+        the quantity names must be unique.
 
     Attributes
     ----------
@@ -104,7 +104,7 @@ class AggregationBuffer(object):
     ----------
     variables : list of :class:`~tensor.TensorVariable`
         The variable names are used as record names in the logs. Hence, all
-        the variable names must be different.
+        the variable names must be unique.
     use_take_last : bool
         When ``True``, the :class:`TakeLast` aggregation scheme is used
         instead of :class:`_DataIndependent` for those variables that
@@ -225,7 +225,7 @@ class DatasetEvaluator(object):
     variables : list of :class:`~tensor.TensorVariable` and
         :class:`MonitoredQuantity`
         The variable names are used as record names in the logs. Hence, all
-        the names must be different.
+        the names must be unique.
 
         Each variable can be tagged with an :class:`AggregationScheme` that
         specifies how the value can be computed for a data set by
