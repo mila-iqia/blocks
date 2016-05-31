@@ -1,4 +1,4 @@
-from collections import OrderedDict
+from collections import OrderedDict, Counter
 import logging
 
 from picklable_itertools.extras import equizip
@@ -12,6 +12,21 @@ from blocks.graph import ComputationGraph
 from blocks.utils import reraise_as
 
 logger = logging.getLogger(__name__)
+
+
+def _validate_variable_names(variables):
+    """Check for missing and duplicate variable names."""
+    variable_names = [v.name for v in variables]
+    name_counts = Counter(variable_names)
+    if None in name_counts:
+        none_names = [v for v in variables if v.name is None]
+        raise ValueError('Variables must have names: {}'.format(none_names))
+
+    if any(v > 1 for v in name_counts.values()):
+        raise ValueError("Variables should have unique names."
+                         " Duplicates: {}"
+                         .format(', '.join(k for k, v in name_counts.items()
+                                           if v > 1)))
 
 
 class MonitoredQuantityBuffer(object):
@@ -109,17 +124,10 @@ class AggregationBuffer(object):
 
     """
     def __init__(self, variables, use_take_last=False):
+        _validate_variable_names(variables)
         self.variables = variables
-        self.use_take_last = use_take_last
-
         self.variable_names = [v.name for v in self.variables]
-        if len(set(self.variable_names)) < len(self.variables):
-            duplicates = []
-            for vname in set(self.variable_names):
-                if self.variable_names.count(vname) > 1:
-                    duplicates.append(vname)
-            raise ValueError("variables should have different names!"
-                             " Duplicates: {}".format(', '.join(duplicates)))
+        self.use_take_last = use_take_last
         self._computation_graph = ComputationGraph(self.variables)
         self.inputs = self._computation_graph.inputs
 
@@ -233,6 +241,7 @@ class DatasetEvaluator(object):
 
     """
     def __init__(self, variables, updates=None):
+        _validate_variable_names(variables)
         theano_variables = []
         monitored_quantities = []
         for variable in variables:
@@ -242,9 +251,6 @@ class DatasetEvaluator(object):
                 theano_variables.append(variable)
         self.theano_variables = theano_variables
         self.monitored_quantities = monitored_quantities
-        variable_names = [v.name for v in variables]
-        if len(set(variable_names)) < len(variables):
-            raise ValueError("variables should have different names")
         self.theano_buffer = AggregationBuffer(theano_variables)
         self.monitored_quantities_buffer = MonitoredQuantityBuffer(
             monitored_quantities)
