@@ -15,7 +15,7 @@ from ..roles import (BATCH_NORM_POPULATION_MEAN,
                      BATCH_NORM_SHIFT_PARAMETER, BATCH_NORM_SCALE_PARAMETER,
                      add_role)
 from ..utils import (shared_floatx_zeros, shared_floatx,
-                     shared_floatx_nans)
+                     shared_floatx_nans, is_shared_variable)
 from .base import lazy, application
 from .sequences import Sequence, Feedforward, MLP
 from .interfaces import RNGMixin
@@ -68,6 +68,13 @@ class BatchNormalization(RNGMixin, Feedforward):
         ($\\beta$ in [BN]_). By default, uses constant initialization of 0.
     mean_only : bool, optional
         Perform "mean-only" batch normalization as described in [SK2016]_.
+    learn_scale : bool, optional
+        Whether to include a learned scale parameter ($\\gamma$ in [BN]_)
+        in this brick. Default is `True`. Has no effect if `mean_only` is
+        `True` (i.e. a scale parameter is never learned in mean-only mode).
+    learn_shift : bool, optional
+        Whether to include a learned shift parameter ($\\beta$ in [BN]_)
+        in this brick. Default is `True`.
 
     Notes
     -----
@@ -123,11 +130,14 @@ class BatchNormalization(RNGMixin, Feedforward):
     @lazy(allocation=['input_dim'])
     def __init__(self, input_dim, broadcastable=None,
                  conserve_memory=True, epsilon=1e-4, scale_init=None,
-                 shift_init=None, mean_only=False, **kwargs):
+                 shift_init=None, mean_only=False, learn_scale=True,
+                 learn_shift=True, **kwargs):
         self.input_dim = input_dim
         self.broadcastable = broadcastable
         self.conserve_memory = conserve_memory
         self.epsilon = epsilon
+        self.learn_scale = learn_scale
+        self.learn_shift = learn_shift
         self.scale_init = (Constant(1) if scale_init is None
                            else scale_init)
         self.shift_init = (Constant(0) if shift_init is None
@@ -158,15 +168,13 @@ class BatchNormalization(RNGMixin, Feedforward):
         _add_role_and_annotate(mean, BATCH_NORM_OFFSET,
                                [self, application_call])
         if self.mean_only:
-            scale = tensor.ones_like(self.shift)
             stdev = tensor.ones_like(mean)
         else:
-            scale = self.scale
             # The annotation/role information is useless if it's a constant.
             _add_role_and_annotate(stdev, BATCH_NORM_DIVISOR,
                                    [self, application_call])
         shift = _add_batch_axis(self.shift)
-        scale = _add_batch_axis(scale)
+        scale = _add_batch_axis(self.scale)
         # Heavy lifting is done by the Theano utility function.
         normalized = bn.batch_normalization(input_, scale, shift, mean, stdev,
                                             mode=('low_mem'
@@ -221,10 +229,13 @@ class BatchNormalization(RNGMixin, Feedforward):
         broadcastable = broadcastable
 
         # "beta", from the Ioffe & Szegedy manuscript.
-        self.shift = shared_floatx_nans(var_dim, name='batch_norm_shift',
-                                        broadcastable=broadcastable)
-        add_role(self.shift, BATCH_NORM_SHIFT_PARAMETER)
-        self.parameters.append(self.shift)
+        if self.learn_shift:
+            self.shift = shared_floatx_nans(var_dim, name='batch_norm_shift',
+                                            broadcastable=broadcastable)
+            add_role(self.shift, BATCH_NORM_SHIFT_PARAMETER)
+            self.parameters.append(self.shift)
+        else:
+            self.shift = tensor.constant(0, dtype=theano.config.floatX)
 
         # These aren't technically parameters, in that they should not be
         # learned using the same cost function as other model parameters.
@@ -237,14 +248,17 @@ class BatchNormalization(RNGMixin, Feedforward):
         # aren't in self.parameters.
         add_annotation(self.population_mean, self)
 
-        if not self.mean_only:
+        if self.learn_scale and not self.mean_only:
             # "gamma", from the Ioffe & Szegedy manuscript.
             self.scale = shared_floatx_nans(var_dim, name='batch_norm_scale',
                                             broadcastable=broadcastable)
 
             add_role(self.scale, BATCH_NORM_SCALE_PARAMETER)
             self.parameters.append(self.scale)
+        else:
+            self.scale = tensor.constant(1., dtype=theano.config.floatX)
 
+        if not self.mean_only:
             self.population_stdev = shared_floatx(numpy.ones(var_dim),
                                                   name='population_stdev',
                                                   broadcastable=broadcastable)
@@ -252,8 +266,9 @@ class BatchNormalization(RNGMixin, Feedforward):
             add_annotation(self.population_stdev, self)
 
     def _initialize(self):
-        self.shift_init.initialize(self.shift, self.rng)
-        if not self.mean_only:
+        if is_shared_variable(self.shift):
+            self.shift_init.initialize(self.shift, self.rng)
+        if is_shared_variable(self.scale):
             self.scale_init.initialize(self.scale, self.rng)
 
     # Needed for the Feedforward interface.
@@ -331,6 +346,10 @@ class BatchNormalizedMLP(MLP):
         See :class:`BatchNormalization`.
     mean_only : bool, optional, by keyword only
         See :class:`BatchNormalization`.
+    learn_scale : bool, optional, by keyword only
+        See :class:`BatchNormalization`.
+    learn_shift : bool, optional, by keyword only
+        See :class:`BatchNormalization`.
 
     Notes
     -----
@@ -350,6 +369,8 @@ class BatchNormalizedMLP(MLP):
     def __init__(self, activations, dims, *args, **kwargs):
         self._conserve_memory = kwargs.pop('conserve_memory', True)
         self.mean_only = kwargs.pop('mean_only', False)
+        self.learn_scale = kwargs.pop('learn_scale', True)
+        self.learn_shift = kwargs.pop('learn_shift', True)
 
         activations = [
             Sequence([
@@ -391,4 +412,5 @@ class BatchNormalizedMLP(MLP):
         for act, dim in equizip(self.activations, self.dims[1:]):
             assert isinstance(act.children[0], BatchNormalization)
             act.children[0].input_dim = dim
-            act.children[0].mean_only = mean_only
+            for attr in ['mean_only', 'learn_scale', 'learn_shift']:
+                setattr(act.children[0], attr, getattr(self, attr))
