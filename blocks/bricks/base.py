@@ -15,7 +15,7 @@ from blocks.roles import add_role, PARAMETER, INPUT, OUTPUT
 from blocks.utils import dict_union, pack, repr_attrs, reraise_as, unpack
 from blocks.utils.containers import AnnotatingList
 
-BRICK_PATH_DELIMITER = '/'
+BRICK_DELIMITER = '/'
 
 
 def create_unbound_method(func, cls):
@@ -775,7 +775,7 @@ class Brick(Annotation):
         else:
             return [self]
 
-    def get_hierarchical_name(self, parameter, delimiter=BRICK_PATH_DELIMITER):
+    def get_hierarchical_name(self, parameter, delimiter=BRICK_DELIMITER):
         """Return hierarhical name for a parameter.
 
         Returns a path of the form _brick1/brick2/brick3.parameter1_. The

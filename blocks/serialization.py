@@ -136,12 +136,12 @@ except:
 from blocks.config import config
 from blocks.filter import get_brick
 from blocks.utils import change_recursion_limit
-from blocks.bricks.base import BRICK_PATH_DELIMITER
+from blocks.bricks.base import BRICK_DELIMITER
 
 
 logger = logging.getLogger(__name__)
 
-SERIALIZATION_BRICK_PATH_DELIMITER = '|'
+SERIALIZATION_BRICK_DELIMITER = '|'
 MAIN_MODULE_WARNING = """WARNING: Main loop depends on the function `{}` in \
 `__main__` namespace.
 
@@ -294,8 +294,8 @@ def load_parameters(file_):
 
     """
     with closing(_load_parameters_npzfile(file_)) as npz_file:
-        return {name.replace(SERIALIZATION_BRICK_PATH_DELIMITER,
-                             BRICK_PATH_DELIMITER): value
+        return {name.replace(SERIALIZATION_BRICK_DELIMITER,
+                             BRICK_DELIMITER): value
                 for name, value in npz_file.items()}
 
 
@@ -530,7 +530,7 @@ class _Renamer(object):
         # Standard Blocks parameter
         if get_brick(parameter) is not None:
             name = get_brick(parameter).get_hierarchical_name(
-                parameter, SERIALIZATION_BRICK_PATH_DELIMITER)
+                parameter, SERIALIZATION_BRICK_DELIMITER)
         # Shared variables with tag.name
         elif hasattr(parameter.tag, 'name'):
             name = parameter.tag.name
