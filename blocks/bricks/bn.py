@@ -327,9 +327,9 @@ class BatchNormalizedMLP(MLP):
 
     Parameters
     ----------
-    conserve_memory : bool, optional
+    conserve_memory : bool, optional, by keyword only
         See :class:`BatchNormalization`.
-    mean_only : bool, optional
+    mean_only : bool, optional, by keyword only
         See :class:`BatchNormalization`.
 
     Notes
@@ -349,11 +349,12 @@ class BatchNormalizedMLP(MLP):
     @lazy(allocation=['dims'])
     def __init__(self, activations, dims, *args, **kwargs):
         self._conserve_memory = kwargs.pop('conserve_memory', True)
-        self._mean_only = kwargs.pop('mean_only', False)
+        self.mean_only = kwargs.pop('mean_only', False)
+
         activations = [
             Sequence([
-                BatchNormalization(conserve_memory=self._conserve_memory,
-                                   mean_only=self._mean_only).apply,
+                (BatchNormalization(conserve_memory=self._conserve_memory)
+                 .apply),
                 act.apply
             ], name='batch_norm_activation_{}'.format(i))
             for i, act in enumerate(activations)
@@ -373,15 +374,13 @@ class BatchNormalizedMLP(MLP):
             assert isinstance(act.children[0], BatchNormalization)
             setattr(act.children[0], property_name, value)
 
+    # conserve_memory is a bit special in that it can be modified
+    # after construction/allocation and still have a valid effect on
+    # apply(). Thus we propagate down all property sets.
     conserve_memory = property(partial(_nested_brick_property_getter,
                                        property_name='conserve_memory'),
                                partial(_nested_brick_property_setter,
                                        property_name='conserve_memory'))
-
-    mean_only = property(partial(_nested_brick_property_getter,
-                                 property_name='mean_only'),
-                         partial(_nested_brick_property_setter,
-                                 property_name='mean_only'))
 
     def _push_allocation_config(self):
         super(BatchNormalizedMLP, self)._push_allocation_config()
@@ -392,3 +391,4 @@ class BatchNormalizedMLP(MLP):
         for act, dim in equizip(self.activations, self.dims[1:]):
             assert isinstance(act.children[0], BatchNormalization)
             act.children[0].input_dim = dim
+            act.children[0].mean_only = mean_only

@@ -344,12 +344,11 @@ def test_batch_normalized_mlp_conserve_memory_propagated():
     assert all(act.children[0].conserve_memory for act in mlp.activations)
 
 
-def test_batch_normalized_mlp_mean_only_propagated():
+def test_batch_normalized_mlp_mean_only_propagated_at_alloc():
     """Test that setting mean_only on a BatchNormalizedMLP works."""
     mlp = BatchNormalizedMLP([Tanh(), Tanh()], [5, 7, 9],
-                             mean_only=False)
-    assert not mlp.mean_only
-    assert not any(act.children[0].mean_only for act in mlp.activations)
-    mlp.mean_only = True
+                             mean_only=True)
     assert mlp.mean_only
+    assert not any(act.children[0].mean_only for act in mlp.activations)
+    mlp.allocate()
     assert all(act.children[0].mean_only for act in mlp.activations)
