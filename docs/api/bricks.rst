@@ -39,7 +39,7 @@ Recurrent bricks
 ----------------
 
 Recurrent architectures
-=======================
+^^^^^^^^^^^^^^^^^^^^^^^
 
 .. automodule:: blocks.bricks.recurrent.architectures
     :members:
@@ -47,7 +47,7 @@ Recurrent architectures
     :show-inheritance:
 
 Helper bricks for recurrent networks
-====================================
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. automodule:: blocks.bricks.recurrent.misc
     :members:
@@ -55,7 +55,7 @@ Helper bricks for recurrent networks
     :show-inheritance:
 
 Base definitions for recurrent bricks
-=====================================
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. automodule:: blocks.bricks.recurrent.base
     :members:
