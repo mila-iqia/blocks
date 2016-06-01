@@ -327,7 +327,7 @@ class SequenceContentAttention(GenericSequenceAttention, Initializable):
         children = [self.state_transformers, attended_transformer,
                     energy_computer]
         kwargs.setdefault('children', []).extend(children)
-        super(SequenceContentAttention, self).__init__(**kwargs) 
+        super(SequenceContentAttention, self).__init__(**kwargs)
 
     def _push_allocation_config(self):
         self.state_transformers.input_dims = self.state_dims
