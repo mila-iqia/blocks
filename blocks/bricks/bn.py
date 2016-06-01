@@ -266,6 +266,11 @@ class BatchNormalization(RNGMixin, Feedforward):
             add_annotation(self.population_stdev, self)
 
     def _initialize(self):
+        # We gate with is_shared_variable rather than relying on
+        # learn_scale and learn_shift so as to avoid the unlikely but nasty
+        # scenario where those flags are changed post-allocation but
+        # pre-initialization. This ensures that such a change simply has no
+        # effect rather than doing an inconsistent combination of things.
         if is_shared_variable(self.shift):
             self.shift_init.initialize(self.shift, self.rng)
         if is_shared_variable(self.scale):
@@ -363,6 +368,10 @@ class BatchNormalizedMLP(MLP):
     in the :class:`BatchNormalization` bricks being added. Pass
     `use_bias` with a value of `True` if you really want this for some
     reason.
+
+    `mean_only`, `learn_scale` and `learn_shift` are pushed down to
+    all created :class:`BatchNormalization` bricks as allocation
+    config.
 
     """
     @lazy(allocation=['dims'])
