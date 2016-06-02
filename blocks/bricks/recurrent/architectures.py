@@ -2,8 +2,8 @@
 import numpy
 from theano import tensor
 
-from ...bricks.base import application, lazy
-from ...bricks.simple import Initializable, Logistic, Tanh
+from ..base import application, lazy
+from ..simple import Initializable, Logistic, Tanh
 from ...roles import add_role, WEIGHT, INITIAL_STATE
 from ...utils import shared_floatx_nans, shared_floatx_zeros
 from .base import BaseRecurrent, recurrent

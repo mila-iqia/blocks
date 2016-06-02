@@ -7,7 +7,7 @@ from picklable_itertools.extras import equizip
 import theano
 from theano import tensor, Variable
 
-from ...bricks.base import Application, application, Brick
+from ..base import Application, application, Brick
 from ...initialization import NdarrayInitialization
 from ...utils import pack, dict_union, dict_subset, is_shared_variable
 
