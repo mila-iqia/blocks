@@ -42,6 +42,7 @@ script:
   - "if [[ $DB == 'sqlite' ]]; then echo 'log_backend: sqlite' > ~/.blocksrc; fi"
   - # Running nose2 within coverage makes imports count towards coverage
   - function fail { export FAILED=1; }
+  - sphinx-build -vW docs html
   - |
       if [[ $TESTS == 'blocks' ]]; then
         coverage run -p --source=blocks -m nose2.__main__ -v doctests || fail
