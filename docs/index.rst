@@ -156,6 +156,8 @@ In the future we also hope to support:
 .. image:: https://img.shields.io/badge/license-MIT-blue.svg
    :target: https://github.com/mila-udem/blocks/blob/master/LICENSE
 
+|
+
 Indices and tables
 ==================
 * :ref:`genindex`
