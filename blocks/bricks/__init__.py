@@ -1,4 +1,6 @@
 """Bricks are parameterized Theano operations."""
+from __future__ import absolute_import
+
 from .base import application, Brick, lazy
 from .bn import (BatchNormalization, SpatialBatchNormalization,
                  BatchNormalizedMLP)
