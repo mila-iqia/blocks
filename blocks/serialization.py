@@ -259,7 +259,7 @@ def load(file_, name='_pkl', use_cpickle=False, **kwargs):
 
     Returns
     -------
-    The object saved in file_.
+    The object saved in ``file_``.
 
     """
     file_.seek(0)  # To be able to read several objects in one file

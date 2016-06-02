@@ -411,6 +411,7 @@ class BatchNormalizedMLP(MLP):
                                        property_name='conserve_memory'),
                                partial(_nested_brick_property_setter,
                                        property_name='conserve_memory'))
+    conserve_memory.__doc__ = "Conserve memory."
 
     def _push_allocation_config(self):
         super(BatchNormalizedMLP, self)._push_allocation_config()

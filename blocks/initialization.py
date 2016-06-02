@@ -163,13 +163,12 @@ class Orthogonal(NdarrayInitialization):
     scale : float, optional
         Multiply the resulting matrix with a scalar. Defaults to 1.
         For a discussion of the importance of scale for training time
-        and generalization refer to  [Saxe2013]_.
+        and generalization refer to [Saxe2013]_.
 
-    ..
-        [Saxe2014] Saxe, A.M., McClelland, J.L., Ganguli, S., 2013.
-            Exact solutions to the nonlinear dynamics of learning in deep
-            linear neural networks.
-            arXiv:1312.6120 [cond-mat, q-bio, stat].
+        .. [Saxe2013] Saxe, A.M., McClelland, J.L., Ganguli, S., 2013.,
+           *Exact solutions to the nonlinear dynamics of learning in deep
+           linear neural networks*,
+           arXiv:1312.6120 [cond-mat, q-bio, stat].
 
     """
     def __init__(self, scale=1):

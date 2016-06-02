@@ -798,9 +798,9 @@ class AdaGrad(StepRule):
     -----
     For more information, see [ADAGRAD]_.
 
-    .. [ADADGRAD] Duchi J, Hazan E, Singer Y.,
+    .. [ADAGRAD] Duchi J, Hazan E, Singer Y.,
        *Adaptive subgradient methods for online learning and
-        stochastic optimization*,
+       stochastic optimization*,
        http://www.jmlr.org/papers/volume12/duchi11a/duchi11a.pdf
 
     """

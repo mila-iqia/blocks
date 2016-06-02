@@ -778,7 +778,7 @@ class Brick(Annotation):
     def get_hierarchical_name(self, parameter, delimiter=BRICK_DELIMITER):
         """Return hierarhical name for a parameter.
 
-        Returns a path of the form _brick1/brick2/brick3.parameter1_. The
+        Returns a path of the form ``brick1/brick2/brick3.parameter1``. The
         delimiter is configurable.
 
         Parameters

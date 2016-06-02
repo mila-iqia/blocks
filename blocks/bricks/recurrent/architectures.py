@@ -19,7 +19,7 @@ class SimpleRecurrent(BaseRecurrent, Initializable):
     ----------
     dim : int
         The dimension of the hidden state
-    activation : :class:`.Brick`
+    activation : :class:`~.bricks.Brick`
         The brick to apply as activation.
 
     Notes
@@ -114,10 +114,10 @@ class LSTM(BaseRecurrent, Initializable):
     ----------
     dim : int
         The dimension of the hidden state.
-    activation : :class:`.Brick`, optional
+    activation : :class:`~.bricks.Brick`, optional
         The activation function. The default and by far the most popular
         is :class:`.Tanh`.
-    gate_activation : :class:`.Brick` or None
+    gate_activation : :class:`~.bricks.Brick` or None
         The brick to apply as activation for gates (input/output/forget).
         If ``None`` a :class:`.Logistic` brick is used.
 
@@ -256,10 +256,10 @@ class GatedRecurrent(BaseRecurrent, Initializable):
     ----------
     dim : int
         The dimension of the hidden state.
-    activation : :class:`.Brick` or None
+    activation : :class:`~.bricks.Brick` or None
         The brick to apply as activation. If ``None`` a
         :class:`.Tanh` brick is used.
-    gate_activation : :class:`.Brick` or None
+    gate_activation : :class:`~.bricks.Brick` or None
         The brick to apply as activation for gates. If ``None`` a
         :class:`.Logistic` brick is used.
 
@@ -268,9 +268,9 @@ class GatedRecurrent(BaseRecurrent, Initializable):
     See :class:`.Initializable` for initialization parameters.
 
     .. [CvMG14] Kyunghyun Cho, Bart van Merriënboer, Çağlar Gülçehre,
-        Dzmitry Bahdanau, Fethi Bougares, Holger Schwenk, and Yoshua
-        Bengio, *Learning Phrase Representations using RNN Encoder-Decoder
-        for Statistical Machine Translation*, EMNLP (2014), pp. 1724-1734.
+       Dzmitry Bahdanau, Fethi Bougares, Holger Schwenk, and Yoshua
+       Bengio, *Learning Phrase Representations using RNN Encoder-Decoder
+       for Statistical Machine Translation*, EMNLP (2014), pp. 1724-1734.
 
     """
     @lazy(allocation=['dim'])
