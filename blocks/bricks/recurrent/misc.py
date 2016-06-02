@@ -359,17 +359,17 @@ class RecurrentStack(BaseRecurrent, Initializable):
 
     @application
     def apply(self, *args, **kwargs):
-        """Apply the stack of transitions.
+        r"""Apply the stack of transitions.
 
         Parameters
         ----------
         low_memory : bool
             Use the slow, but also memory efficient, implementation of
             this code.
-        *args : :class:`~tensor.TensorVariable`, optional
+        \*args : :class:`~tensor.TensorVariable`, optional
             Positional argumentes in the order in which they appear in
             `self.apply.sequences` followed by `self.apply.contexts`.
-        **kwargs : :class:`~tensor.TensorVariable`
+        \*\*kwargs : :class:`~tensor.TensorVariable`
             Named argument defined in `self.apply.sequences`,
             `self.apply.states` or `self.apply.contexts`
 
