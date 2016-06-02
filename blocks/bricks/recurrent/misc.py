@@ -4,9 +4,9 @@ import copy
 from picklable_itertools.extras import equizip
 from theano import tensor
 
-from blocks.bricks.base import application, lazy
-from blocks.bricks.parallel import Fork
-from blocks.bricks.simple import Initializable, Linear
+from ...bricks.base import application, lazy
+from ...bricks.parallel import Fork
+from ...bricks.simple import Initializable, Linear
 from .base import BaseRecurrent, recurrent
 
 
