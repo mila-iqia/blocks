@@ -1,24 +1,34 @@
+from collections import defaultdict
 import unittest
 from blocks.extensions.stopping import FinishIfNoImprovementAfter
 
 
-class FakeLog(object):
+class FakeLog(defaultdict):
     epoch_length = 4
 
     def __init__(self):
-        self.current_row = {}
+        super(FakeLog, self).__init__(dict)
         self.status = {'iterations_done': 0, 'epochs_done': 0}
 
     def advance(self, epochs):
         self.status['iterations_done'] += self.epoch_length if epochs else 1
-        self.status['epochs_done'] += (1 if epochs
+        self.status['epochs_done'] += (epochs if epochs
                                        else (self.status['iterations_done'] //
                                              self.epoch_length))
 
+    @property
+    def current_row(self):
+        return self[self.status['iterations_done']]
+
 
 class FakeMainLoop(object):
-    def __init__(self):
+    def __init__(self, extensions=()):
         self.log = FakeLog()
+        self.extensions = list(extensions)
+
+    @property
+    def status(self):
+        return self.log.status
 
 
 class FinishIfNoImprovementAfterTester(unittest.TestCase):
@@ -48,33 +58,29 @@ class FinishIfNoImprovementAfterTester(unittest.TestCase):
         if log_entry is None:
             log_entry = notification_name + '_patience_' + (
                 'iterations' if not epochs else 'epochs')
-        ext.do(which_callback)
         # First is a new best.
         self.main_loop.log.current_row[notification_name] = True
-        self.main_loop.log.advance(epochs)
         ext.do(which_callback)
         self.check_log(log_entry, 3)
         self.check_not_stopping()
-        # No best found for another 2 iterations.
-        del self.main_loop.log.current_row[notification_name]
         self.main_loop.log.advance(epochs)
+        # No best found for another 2 iterations.
         ext.do(which_callback)
         self.check_log(log_entry, 2)
         self.check_not_stopping()
-        # One iteration down, one to go.
         self.main_loop.log.advance(epochs)
+        # One iteration down, one to go.
         ext.do(which_callback)
         self.check_log(log_entry, 1)
         self.check_not_stopping()
+        self.main_loop.log.advance(epochs)
         # Oh look, a new best!
         self.main_loop.log.current_row[notification_name] = True
-        self.main_loop.log.advance(epochs)
         ext.do(which_callback)
         self.check_log(log_entry, 3)
         self.check_not_stopping()
-        # Now, run out our patience. 3 iterations with no best.
-        del self.main_loop.log.current_row[notification_name]
         self.main_loop.log.advance(epochs)
+        # Now, run out our patience. 3 iterations with no best.
         ext.do(which_callback)
         self.check_log(log_entry, 2)
         self.check_not_stopping()
