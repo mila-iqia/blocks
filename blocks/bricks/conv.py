@@ -40,11 +40,11 @@ class Convolutional(LinearLike):
         The border mode to use, see :func:`scipy.signal.convolve2d` for
         details. Defaults to 'valid'.
     tied_biases : bool
-        If ``True``, it indicates that the biases of every filter in this
-        layer should be shared amongst all applications of that filter.
         Setting this to ``False`` will untie the biases, yielding a
         separate bias for every location at which the filter is applied.
-        Defaults to ``False``.
+        If ``True``, it indicates that the biases of every filter in this
+        layer should be shared amongst all applications of that filter.
+        Defaults to ``True``.
 
     """
     # Make it possible to override the implementation of conv2d that gets
@@ -71,7 +71,7 @@ class Convolutional(LinearLike):
     @lazy(allocation=['filter_size', 'num_filters', 'num_channels'])
     def __init__(self, filter_size, num_filters, num_channels, batch_size=None,
                  image_size=(None, None), step=(1, 1), border_mode='valid',
-                 tied_biases=False, **kwargs):
+                 tied_biases=True, **kwargs):
         super(Convolutional, self).__init__(**kwargs)
 
         self.filter_size = filter_size
