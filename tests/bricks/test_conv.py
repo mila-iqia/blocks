@@ -203,7 +203,7 @@ def test_untied_biases():
     filter_size = (3, 3)
     conv = Convolutional(filter_size, num_filters, num_channels,
                          weights_init=Constant(1.), biases_init=Constant(2.),
-                         image_size = (28, 30), tied_biases=False)
+                         image_size=(28, 30), tied_biases=False)
     conv.initialize()
 
     y = conv.apply(x)
