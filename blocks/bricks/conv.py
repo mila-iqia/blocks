@@ -386,7 +386,7 @@ class MaxPooling(Pooling):
         input is captured by at least one pool by using the `padding`
         argument to add zero padding prior to pooling being performed.
 
-    .. [cuDNN]: `NVIDIA cuDNN <https://developer.nvidia.com/cudnn>`_.
+    .. [cuDNN] `NVIDIA cuDNN <https://developer.nvidia.com/cudnn>`_.
 
     """
     @lazy(allocation=['pooling_size'])
@@ -476,7 +476,7 @@ class ConvolutionalSequence(Sequence, Initializable, Feedforward):
     is, without specifying the batch_size, num_channels and image_size. The
     main feature of :class:`ConvolutionalSequence` is that it will set the
     input dimensions of a layer to the output dimensions of the previous
-    layer by the :meth:`~.Brick.push_allocation_config` method.
+    layer by the :meth:`~bricks.Brick.push_allocation_config` method.
 
     The push behaviour of `tied_biases` mirrors that of `use_bias` or any
     initialization configuration: only an explicitly specified value is

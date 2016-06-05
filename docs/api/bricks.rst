@@ -10,7 +10,9 @@ Bricks
 
 .. automodule:: blocks.bricks
     :members:
-    :exclude-members: Activation, ActivationDocumentation
+    :exclude-members: Activation, ActivationDocumentation, BaseRecurrent,
+                      recurrent, SimpleRecurrent, LSTM, GatedRecurrent,
+                      Bidirectional, RecurrentStack, RECURRENTSTACK_SEPARATOR
     :undoc-members:
     :show-inheritance:
 
