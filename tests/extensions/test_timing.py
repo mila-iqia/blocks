@@ -12,7 +12,7 @@ def test_timing():
                                                 every_n_epochs=2),
                                          FinishAfter(after_n_epochs=epochs)])
     main_loop.run()
-    iterations = main_loop.log.status['iterations_done'] / epochs
+    iterations = int(main_loop.log.status['iterations_done'] / epochs)
     assert_allclose(
         (main_loop.log[iterations]['each_time_train_this_epoch'] +
          main_loop.log[iterations]['each_time_train_this_epoch']) / 2,
