@@ -526,8 +526,8 @@ class Timing(SimpleExtension):
     -----
     Add this extension *before* the :class:`Printing` extension.
 
-    Called with callbacks like ``every_n_batches`` this extension this
-    extension averages the time.
+    Created with callbacks like ``every_n_batches`` this extension
+    averages the time.
 
     This extension does *not* enable full profiling information. To see a
     full profile of the main loop at the end of training, use the
