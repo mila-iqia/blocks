@@ -110,6 +110,11 @@ class EarlyStopping(CompositeExtension):
 
     Notes
     -----
+    .. warning::
+        If you want the best model to be saved, you need to specify
+        a value for the ``checkpoint_extension`` and
+        ``checkpoint_filename`` arguments!
+
     Trigger keyword arguments will affect how often the log is inspected
     for the record name (in order to determine if a new best has been
     found), as well as how often a decision is made about whether to
@@ -121,8 +126,88 @@ class EarlyStopping(CompositeExtension):
     when the `before_training` trigger is run, it will be added as a
     sub-extension of this object.
 
-    """
+    Examples
+    --------
+    To simply track the best value of a log entry and halt training
+    when it hasn't improved in a sufficient amount of time, we could
+    use e.g.
 
+    >>> stopping_ext = EarlyStopping('valid_error', iterations=100)
+
+    which would halt training if a new minimum ``valid_error`` has not
+    been achieved in 100 iterations (i.e. minibatches/steps). To measure
+    in terms of epochs (which usually correspond to passes through the
+    training set), you could use
+
+    >>> epoch_stop_ext = EarlyStopping('valid_error', epochs=5)
+
+    If you are tracking a log entry where there's a different definition
+    of 'best', you can provide a callable that takes two log values
+    and returns the one that :class:`EarlyStopping` should consider
+    "better". For example, if you were tracking accuracy, where higher
+    is better, you could pass the built-in ``max`` function:
+
+    >>> max_acc_stop = EarlyStopping('valid_accuracy', choose_best=max,
+    ...                              notification_name='highest_acc',
+    ...                              epochs=10)
+
+    Above we've also provided an alternate notification name, meaning
+    a value of ``True`` will be written under the entry name
+    ``highest_acc`` whenever a new highest accuracy is found (by default
+    this would be a name like ``valid_accuracy_best_so_far``).
+
+    Let's configure a checkpointing extension to save the model and log
+    (but not the main loop):
+
+    >>> from blocks.extensions.saveload import Checkpoint
+    >>> checkpoint = Checkpoint('my_model.tar', save_main_loop=False,
+    ...                         save_separately=['model', 'log'],
+    ...                         after_epoch=True)
+
+    When we pass this object to :class:`EarlyStopping`, along with a
+    different filename, :class:`EarlyStopping` will configure that same
+    checkpointing extension to *also* serialize to ``best_model.tar`` when
+    a new best value of validation error is achieved.
+
+    >>> stopping = EarlyStopping('valid_error', checkpoint,
+    ...                          'best_model.tar', epochs=5)
+
+    Finally, we'll set up the main loop:
+
+    >>> from blocks.main_loop import MainLoop
+    >>> # You would, of course, use a real algorithm and data stream here.
+    >>> algorithm = data_stream = None
+    >>> main_loop = MainLoop(algorithm=algorithm,
+    ...                      data_stream=data_stream,
+    ...                      extensions=[stopping, checkpoint])
+
+    Note that you do want to place the checkpoint extension *after*
+    the stopping extension, so that the appropriate log records
+    have been written in order to trigger the checkpointing
+    extension.
+
+    It's also possible to in-line the creation of the
+    checkpointing extension:
+
+    >>> main_loop = MainLoop(algorithm=algorithm,
+    ...                      data_stream=data_stream,
+    ...                      extensions=[EarlyStopping(
+    ...                          'valid_error',
+    ...                          Checkpoint('my_model.tar',
+    ...                                     save_main_loop=False,
+    ...                                     save_separately=['model',
+    ...                                                      'log'],
+    ...                                     after_epoch=True),
+    ...                          'my_best_model.tar',
+    ...                          epochs=5)])
+
+    Note that we haven't added the checkpointing extension to the
+    main loop's extensions list. No problem: :class:`EarlyStopping` will
+    detect that it isn't being managed by the main loop and manage it
+    internally. It will automatically be executed in the right order
+    for it to function properly alongside :class:`EarlyStopping`.
+
+    """
     def __init__(self, record_name, checkpoint_extension=None,
                  checkpoint_filename=None, notification_name=None,
                  choose_best=min, iterations=None, epochs=None, **kwargs):
