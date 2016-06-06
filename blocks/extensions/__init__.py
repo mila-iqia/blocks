@@ -506,23 +506,35 @@ class ProgressBar(TrainingExtension):
 
 
 class Timing(SimpleExtension):
-    """Add timing information to the log.
+    r"""Add timing information to the log.
 
     This adds data about the time spent in the algorithm's
     :meth:`~.Algorithm.process_batch` method as well as the time spent
     reading data per batch or epoch. It also reports the time spent
     initializing the algorithm.
 
+    Parameters
+    ----------
+    prefix : str
+        Prefix to be added to the log record, looks the best if ends with
+        ``_``. Defaults to the empty string.
+    \*\*kwargs
+        Keyword arguments which are passed to the
+        :class:`.SimpleExtension`.
+
     Notes
     -----
     Add this extension *before* the :class:`Printing` extension.
+
+    Called with callbacks like ``every_n_batches`` this extension this
+    extension averages the time.
 
     This extension does *not* enable full profiling information. To see a
     full profile of the main loop at the end of training, use the
     ``profile`` configuration (e.g.  by setting ``BLOCKS_PROFILE=true``).
 
     """
-    def __init__(self, **kwargs):
+    def __init__(self, prefix="", **kwargs):
         kwargs.setdefault('before_first_epoch', True)
         kwargs.setdefault('after_epoch', True)
         super(Timing, self).__init__(**kwargs)
@@ -534,6 +546,11 @@ class Timing(SimpleExtension):
             level: {'train': 0, 'read_data': 0}
             for level in ['batch', 'epoch']
         }
+        self.divisor = {
+            'batch': kwargs.get('every_n_batches', 1),
+            'epoch': kwargs.get('every_n_epochs', 1)
+        }
+        self.prefix = prefix
 
     def do(self, which_callback, *args):
         current_row = self.main_loop.log.current_row
@@ -549,7 +566,10 @@ class Timing(SimpleExtension):
         for action in ['train', 'read_data']:
             self.previous[level][action] = self.current[level][action]
             self.current[level][action] = profile['training', 'epoch', action]
-            current_row['time_{}_this_{}'.format(action, level)] = \
-                self.current[level][action] - self.previous[level][action]
-            current_row['time_{}_total'.format(action)] = \
+            this_time = self.prefix + 'time_{}_this_{}'
+            current_row[this_time.format(action, level)] = (
+                (self.current[level][action] - self.previous[level][action]) /
+                self.divisor[level])
+            total_time = self.prefix + 'time_{}_total'
+            current_row[total_time.format(action)] = \
                 self.current[level][action]
