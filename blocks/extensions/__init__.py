@@ -506,7 +506,7 @@ class ProgressBar(TrainingExtension):
 
 
 class Timing(SimpleExtension):
-    r"""Add timing information to the log.
+    """Add timing information to the log.
 
     This adds data about the time spent in the algorithm's
     :meth:`~.Algorithm.process_batch` method as well as the time spent
@@ -516,11 +516,7 @@ class Timing(SimpleExtension):
     Parameters
     ----------
     prefix : str
-        Prefix to be added to the log record, looks the best if ends with
-        ``_``. Defaults to the empty string.
-    \*\*kwargs
-        Keyword arguments which are passed to the
-        :class:`.SimpleExtension`.
+        Prefix to be added to the log record. Defaults to the empty string.
 
     Notes
     -----
@@ -551,6 +547,8 @@ class Timing(SimpleExtension):
             'epoch': kwargs.get('every_n_epochs', 1)
         }
         self.prefix = prefix
+        if self.prefix:
+            self.prefix += '_'
 
     def do(self, which_callback, *args):
         current_row = self.main_loop.log.current_row
