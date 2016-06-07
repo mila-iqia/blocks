@@ -6,6 +6,8 @@ import numpy
 import theano
 from six import add_metaclass
 
+from blocks.utils import repr_attrs
+
 
 @add_metaclass(ABCMeta)
 class NdarrayInitialization(object):
@@ -62,12 +64,15 @@ class Constant(NdarrayInitialization):
 
     """
     def __init__(self, constant):
-        self._constant = numpy.asarray(constant)
+        self.constant = numpy.asarray(constant)
 
     def generate(self, rng, shape):
         dest = numpy.empty(shape, dtype=theano.config.floatX)
-        dest[...] = self._constant
+        dest[...] = self.constant
         return dest
+
+    def __repr__(self):
+        return repr_attrs(self, 'constant')
 
 
 class IsotropicGaussian(NdarrayInitialization):
@@ -87,12 +92,15 @@ class IsotropicGaussian(NdarrayInitialization):
 
     """
     def __init__(self, std=1, mean=0):
-        self._mean = mean
-        self._std = std
+        self.mean = mean
+        self.std = std
 
     def generate(self, rng, shape):
-        m = rng.normal(self._mean, self._std, size=shape)
+        m = rng.normal(self.mean, self.std, size=shape)
         return m.astype(theano.config.floatX)
+
+    def __repr__(self):
+        return repr_attrs(self, 'mean', 'std')
 
 
 class Uniform(NdarrayInitialization):
@@ -120,15 +128,18 @@ class Uniform(NdarrayInitialization):
                              "but not both")
         if std is not None:
             # Variance of a uniform is 1/12 * width^2
-            self._width = numpy.sqrt(12) * std
+            self.width = numpy.sqrt(12) * std
         else:
-            self._width = width
-        self._mean = mean
+            self.width = width
+        self.mean = mean
 
     def generate(self, rng, shape):
-        w = self._width / 2
-        m = rng.uniform(self._mean - w, self._mean + w, size=shape)
+        w = self.width / 2
+        m = rng.uniform(self.mean - w, self.mean + w, size=shape)
         return m.astype(theano.config.floatX)
+
+    def __repr__(self):
+        return repr_attrs(self, 'mean', 'width')
 
 
 class Identity(NdarrayInitialization):
@@ -151,6 +162,9 @@ class Identity(NdarrayInitialization):
             raise ValueError
         rows, cols = shape
         return self.mult * numpy.eye(rows, cols, dtype=theano.config.floatX)
+
+    def __repr__(self):
+        return repr_attrs(self, 'mult')
 
 
 class Orthogonal(NdarrayInitialization):
@@ -198,6 +212,9 @@ class Orthogonal(NdarrayInitialization):
 
         n_min = min(shape[0], shape[1])
         return numpy.dot(Q1[:, :n_min], Q2[:n_min, :]) * self.scale
+
+    def __repr__(self):
+        return repr_attrs(self, 'scale')
 
 
 class Sparse(NdarrayInitialization):
