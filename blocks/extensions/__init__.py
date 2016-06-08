@@ -365,6 +365,69 @@ class SimpleExtension(TrainingExtension):
         return (), args
 
 
+class CompositeExtension(SimpleExtension):
+    """An extension that manages several other extensions.
+
+    Parameters
+    ----------
+    sub_extensions : iterable
+        An iterable collection of sub-extensions to manage.
+    run_before_children : bool, optional
+        Whether the container extension's own logic should
+        be dispatched before that of the sub-extensions.
+        If ``False``, the containing extension is dispatched last.
+        Defaults to ``True``.
+
+    Notes
+    -----
+    The main use case for this class is bundling together groups
+    of extensions that are most commonly used in tandem, configured
+    so as to interact with one another. Encapsulating this pattern
+    in a single extension reduces boilerplate.
+
+    Sub-extensions are dispatched in the order specified in
+    ``sub_extensions``, on whatever triggers they are individually
+    configured to respect.
+
+    Sub-extensions may be run on different triggers than the containing
+    extension; the trigger keywords passed to the constructor
+    for this class only affect the outer extension's logic, and
+    sub-extensions should be configured independently (possibly in
+    a constructor for a subclass of :class:`CompositeExtension`).
+
+    """
+    def __init__(self, sub_extensions, run_before_children=True, **kwargs):
+        self.sub_extensions = sub_extensions
+        self.run_before_children = run_before_children
+        super(CompositeExtension, self).__init__(**kwargs)
+
+    def dispatch(self, callback_invoked, *from_main_loop):
+        def run_super():
+            super(CompositeExtension, self).dispatch(callback_invoked,
+                                                     *from_main_loop)
+        if self.run_before_children:
+            run_super()
+
+        for ext in self.sub_extensions:
+            ext.dispatch(callback_invoked, *from_main_loop)
+
+        if not self.run_before_children:
+            run_super()
+
+    @property
+    def main_loop(self):
+        return super(CompositeExtension, self).main_loop
+
+    @main_loop.setter
+    def main_loop(self, value):
+        self._main_loop = value
+        for sub in self.sub_extensions:
+            sub.main_loop = value
+
+    def do(self, which_callback, *args):
+        pass
+
+
 class FinishAfter(SimpleExtension):
     """Finishes the training process when triggered."""
     def __init__(self, **kwargs):
