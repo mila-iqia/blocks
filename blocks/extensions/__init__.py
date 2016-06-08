@@ -513,16 +513,24 @@ class Timing(SimpleExtension):
     reading data per batch or epoch. It also reports the time spent
     initializing the algorithm.
 
+    Parameters
+    ----------
+    prefix : str
+        Prefix to be added to the log record. Defaults to the empty string.
+
     Notes
     -----
     Add this extension *before* the :class:`Printing` extension.
+
+    Created with callbacks like ``every_n_batches`` this extension
+    averages the time.
 
     This extension does *not* enable full profiling information. To see a
     full profile of the main loop at the end of training, use the
     ``profile`` configuration (e.g.  by setting ``BLOCKS_PROFILE=true``).
 
     """
-    def __init__(self, **kwargs):
+    def __init__(self, prefix="", **kwargs):
         kwargs.setdefault('before_first_epoch', True)
         kwargs.setdefault('after_epoch', True)
         super(Timing, self).__init__(**kwargs)
@@ -534,6 +542,17 @@ class Timing(SimpleExtension):
             level: {'train': 0, 'read_data': 0}
             for level in ['batch', 'epoch']
         }
+        self.current_index = {
+            level: 0
+            for level in ['batch', 'epoch']
+            }
+        self.previous_index = {
+            level: 0
+            for level in ['batch', 'epoch']
+        }
+        self.prefix = prefix
+        if self.prefix:
+            self.prefix += '_'
 
     def do(self, which_callback, *args):
         current_row = self.main_loop.log.current_row
@@ -544,12 +563,26 @@ class Timing(SimpleExtension):
             return
         if which_callback == 'after_batch':
             level = 'batch'
+            counter = 'iterations_done'
         elif which_callback == 'after_epoch':
             level = 'epoch'
+            counter = 'epochs_done'
         for action in ['train', 'read_data']:
+            self.previous_index[level] = self.current_index[level]
+            self.current_index[level] = self.main_loop.log.status[counter]
+            if self.current_index[level] == self.previous_index[level]:
+                logger.debug('Timing extension was called twice this %s, '
+                             'log was not updated.', level)
+                # Nothing to report for this level
+                continue
+
             self.previous[level][action] = self.current[level][action]
             self.current[level][action] = profile['training', 'epoch', action]
-            current_row['time_{}_this_{}'.format(action, level)] = \
-                self.current[level][action] - self.previous[level][action]
-            current_row['time_{}_total'.format(action)] = \
+
+            this_time = self.prefix + 'time_{}_this_{}'
+            current_row[this_time.format(action, level)] = (
+                (self.current[level][action] - self.previous[level][action]) /
+                (self.current_index[level] - self.previous_index[level]))
+            total_time = self.prefix + 'time_{}_total'
+            current_row[total_time.format(action)] = \
                 self.current[level][action]
