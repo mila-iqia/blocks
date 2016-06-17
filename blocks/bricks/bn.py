@@ -189,9 +189,7 @@ class BatchNormalization(RNGMixin, Feedforward):
         self._training_mode.pop()
 
     def _compute_training_statistics(self, input_):
-        axes = (0,) + tuple((i + 1) for i, b in
-                            enumerate(self.population_mean.broadcastable)
-                            if b)
+        axes = self.normalization_axes
         mean = input_.mean(axis=axes, keepdims=True)
         assert mean.broadcastable[1:] == self.population_mean.broadcastable
         add_role(mean, BATCH_NORM_MINIBATCH_ESTIMATE)
@@ -206,6 +204,12 @@ class BatchNormalization(RNGMixin, Feedforward):
                     self.population_stdev.broadcastable)
             add_role(stdev, BATCH_NORM_MINIBATCH_ESTIMATE)
         return mean, stdev
+
+    @property
+    def normalization_axes(self):
+        return (0,) + tuple((i + 1) for i, b in
+                            enumerate(self.population_mean.broadcastable)
+                            if b)
 
     def _prepare_population_statistics(self):
         mean = _add_batch_axis(self.population_mean)
