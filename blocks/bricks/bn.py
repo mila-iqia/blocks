@@ -187,8 +187,9 @@ class BatchNormalization(RNGMixin, Feedforward):
     def __exit__(self, *exc_info):
         self._training_mode.pop()
 
-    def _compute_training_statistics(self, input_):
-        axes = self.normalization_axes
+    def _compute_training_statistics(self, input_, axes=None):
+        if axes is None:
+            axes = self.normalization_axes
         mean = input_.mean(axis=axes, keepdims=True)
         add_role(mean, BATCH_NORM_MINIBATCH_ESTIMATE)
         if self.mean_only:
