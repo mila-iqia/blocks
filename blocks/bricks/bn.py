@@ -190,7 +190,6 @@ class BatchNormalization(RNGMixin, Feedforward):
     def _compute_training_statistics(self, input_):
         axes = self.normalization_axes
         mean = input_.mean(axis=axes, keepdims=True)
-        assert mean.broadcastable[1:] == self.population_mean.broadcastable
         add_role(mean, BATCH_NORM_MINIBATCH_ESTIMATE)
         if self.mean_only:
             stdev = tensor.ones_like(mean)
@@ -199,8 +198,6 @@ class BatchNormalization(RNGMixin, Feedforward):
                    tensor.sqr(mean))
             eps = numpy.cast[theano.config.floatX](self.epsilon)
             stdev = tensor.sqrt(var + eps)
-            assert (stdev.broadcastable[1:] ==
-                    self.population_stdev.broadcastable)
             add_role(stdev, BATCH_NORM_MINIBATCH_ESTIMATE)
         return mean, stdev
 

@@ -9,8 +9,10 @@ from blocks.bricks import (BatchNormalization, SpatialBatchNormalization,
 from blocks.bricks.conv import (Convolutional, ConvolutionalSequence,
                                 MaxPooling, AveragePooling)
 from blocks.initialization import Constant
+from blocks.filter import VariableFilter
 from blocks.graph import (ComputationGraph, batch_normalization,
                           get_batch_normalization_updates)
+from blocks.roles import BATCH_NORM_MINIBATCH_ESTIMATE
 
 
 def random_unif(rng, dim, low=1, high=10):
@@ -408,3 +410,12 @@ def test_batch_normalized_mlp_learn_scale_propagated_at_alloc():
     assert all(act.children[0].learn_scale for act in mlp.activations)
     mlp.allocate()
     assert not any(act.children[0].learn_scale for act in mlp.activations)
+
+
+def test_batch_normalization_broadcastable_sanity():
+    bn = BatchNormalization((5, 3, 2), broadcastable=(False, True, False))
+    with bn:
+        cg = ComputationGraph([bn.apply(tensor.tensor4('abc'))])
+    vars = VariableFilter(roles=[BATCH_NORM_MINIBATCH_ESTIMATE])(cg)
+    assert all(v.broadcastable[1:] == bn.population_mean.broadcastable
+               for v in vars)
