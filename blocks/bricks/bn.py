@@ -14,8 +14,7 @@ from ..roles import (BATCH_NORM_POPULATION_MEAN,
                      BATCH_NORM_DIVISOR, BATCH_NORM_MINIBATCH_ESTIMATE,
                      BATCH_NORM_SHIFT_PARAMETER, BATCH_NORM_SCALE_PARAMETER,
                      add_role)
-from ..utils import (shared_floatx_zeros, shared_floatx,
-                     shared_floatx_nans, is_shared_variable)
+from ..utils import shared_floatx, shared_floatx_nans, is_shared_variable
 from .base import lazy, application
 from .sequences import Sequence, Feedforward, MLP
 from .interfaces import RNGMixin
@@ -188,12 +187,10 @@ class BatchNormalization(RNGMixin, Feedforward):
     def __exit__(self, *exc_info):
         self._training_mode.pop()
 
-    def _compute_training_statistics(self, input_):
-        axes = (0,) + tuple((i + 1) for i, b in
-                            enumerate(self.population_mean.broadcastable)
-                            if b)
+    def _compute_training_statistics(self, input_, axes=None):
+        if axes is None:
+            axes = self.normalization_axes
         mean = input_.mean(axis=axes, keepdims=True)
-        assert mean.broadcastable[1:] == self.population_mean.broadcastable
         add_role(mean, BATCH_NORM_MINIBATCH_ESTIMATE)
         if self.mean_only:
             stdev = tensor.ones_like(mean)
@@ -202,10 +199,14 @@ class BatchNormalization(RNGMixin, Feedforward):
                    tensor.sqr(mean))
             eps = numpy.cast[theano.config.floatX](self.epsilon)
             stdev = tensor.sqrt(var + eps)
-            assert (stdev.broadcastable[1:] ==
-                    self.population_stdev.broadcastable)
             add_role(stdev, BATCH_NORM_MINIBATCH_ESTIMATE)
         return mean, stdev
+
+    @property
+    def normalization_axes(self):
+        return (0,) + tuple((i + 1) for i, b in
+                            enumerate(self.population_mean.broadcastable)
+                            if b)
 
     def _prepare_population_statistics(self):
         mean = _add_batch_axis(self.population_mean)
@@ -237,17 +238,6 @@ class BatchNormalization(RNGMixin, Feedforward):
         else:
             self.shift = tensor.constant(0, dtype=theano.config.floatX)
 
-        # These aren't technically parameters, in that they should not be
-        # learned using the same cost function as other model parameters.
-        self.population_mean = shared_floatx_zeros(var_dim,
-                                                   name='population_mean',
-                                                   broadcastable=broadcastable)
-        add_role(self.population_mean, BATCH_NORM_POPULATION_MEAN)
-
-        # Normally these would get annotated by an AnnotatingList, but they
-        # aren't in self.parameters.
-        add_annotation(self.population_mean, self)
-
         if self.learn_scale and not self.mean_only:
             # "gamma", from the Ioffe & Szegedy manuscript.
             self.scale = shared_floatx_nans(var_dim, name='batch_norm_scale',
@@ -258,12 +248,28 @@ class BatchNormalization(RNGMixin, Feedforward):
         else:
             self.scale = tensor.constant(1., dtype=theano.config.floatX)
 
-        if not self.mean_only:
-            self.population_stdev = shared_floatx(numpy.ones(var_dim),
-                                                  name='population_stdev',
-                                                  broadcastable=broadcastable)
-            add_role(self.population_stdev, BATCH_NORM_POPULATION_STDEV)
-            add_annotation(self.population_stdev, self)
+        self._allocate_population_statistics(var_dim, broadcastable)
+
+    def _allocate_population_statistics(self, var_dim, broadcastable):
+        def _allocate_buffer(name, role, value):
+            # These aren't technically parameters, in that they should not be
+            # learned using the same cost function as other model parameters.
+            population_buffer = shared_floatx(value * numpy.ones(var_dim),
+                                              broadcastable=broadcastable,
+                                              name=name)
+            add_role(population_buffer, role)
+            # Normally these would get annotated by an AnnotatingList, but they
+            # aren't in self.parameters.
+            add_annotation(population_buffer, self)
+            return population_buffer
+
+        self.population_mean = _allocate_buffer('population_mean',
+                                                BATCH_NORM_POPULATION_MEAN,
+                                                numpy.zeros(var_dim))
+
+        self.population_stdev = _allocate_buffer('population_stdev',
+                                                 BATCH_NORM_POPULATION_STDEV,
+                                                 numpy.ones(var_dim))
 
     def _initialize(self):
         # We gate with is_shared_variable rather than relying on
