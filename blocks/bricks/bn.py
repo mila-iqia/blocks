@@ -195,8 +195,13 @@ class BatchNormalization(RNGMixin, Feedforward):
         if self.mean_only:
             stdev = tensor.ones_like(mean)
         else:
-            var = (tensor.sqr(input_).mean(axis=axes, keepdims=True) -
-                   tensor.sqr(mean))
+            # We already have the mean; this saves Theano the trouble of
+            # optimizing the graph produced by tensor.var().
+            # This two pass version is going to be slightly more stable than
+            # E[X^2] - E[X]^2, at least when n is small. It's also never
+            # going to be negative due to numerical error.
+            var = tensor.mean(tensor.sqr(input_ - mean),
+                              axis=axes, keepdims=True)
             eps = numpy.cast[theano.config.floatX](self.epsilon)
             stdev = tensor.sqrt(var + eps)
             add_role(stdev, BATCH_NORM_MINIBATCH_ESTIMATE)
