@@ -1,5 +1,5 @@
 coveralls==1.1
-nose2[coverage_plugin]==0.6.4
+nose2[coverage_plugin]==0.6.5
 picklable-itertools==0.1.1
 progressbar2==3.9.3
 
