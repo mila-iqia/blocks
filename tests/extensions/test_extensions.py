@@ -130,3 +130,19 @@ def test_composite_extension_different_schedules():
     comp.do.assert_called_once_with('before_training')
     a.do.assert_called_once_with('after_training')
     b.do.assert_called_once_with('after_batch')
+
+
+def test_simple_extension_before_batch_callback():
+
+    class Foo(SimpleExtension):
+        def __init__(self, **kwargs):
+            self.do = Mock()
+            super(Foo, self).__init__(**kwargs)
+
+        def do(self, which_callback, *args):
+            pass
+
+    ext = Foo(before_batch=True)
+    ext.main_loop = Mock()
+    ext.dispatch('before_batch')
+    ext.do.assert_called_once_with('before_batch')
