@@ -116,9 +116,6 @@ def test_composite_extension_different_schedules():
             self.do = Mock()
             super(Foo, self).__init__(**kwargs)
 
-        def do(self, *args):
-            pass
-
     a = Foo(after_batch=False, after_training=True)
     b = Foo(after_batch=True)
     comp = CompositeExtension([a, b], before_training=True)
