@@ -72,9 +72,15 @@ class TrainingExtension(object):
         pass
 
     @callback
-    def on_error(self):
-        """The callback invoked when an error occurs."""
-        pass
+    def on_error(self, exception):
+        """The callback invoked when an error occurs.
+
+        Parameters
+        ----------
+        exception : object
+            Exception occurred during the main loop run.
+
+        """
 
     @callback
     def before_training(self):
