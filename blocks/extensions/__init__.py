@@ -604,22 +604,15 @@ class Timing(SimpleExtension):
         kwargs.setdefault('before_first_epoch', True)
         kwargs.setdefault('after_epoch', True)
         super(Timing, self).__init__(**kwargs)
-        self.current = {
-            level: {'train': 0, 'read_data': 0}
-            for level in ['batch', 'epoch']
-        }
-        self.previous = {
-            level: {'train': 0, 'read_data': 0}
-            for level in ['batch', 'epoch']
-        }
-        self.current_index = {
-            level: {'train': 0, 'read_data': 0}
-            for level in ['batch', 'epoch']
-            }
-        self.previous_index = {
-            level: {'train': 0, 'read_data': 0}
-            for level in ['batch', 'epoch']
-        }
+
+        def init_dict():
+            return {
+                level: {'train': 0, 'read_data': 0}
+                for level in ['batch', 'epoch']}
+        self.current = init_dict()
+        self.previous = init_dict()
+        self.current_index = init_dict()
+        self.previous_index = init_dict()
         self.prefix = prefix
         if self.prefix:
             self.prefix += '_'
