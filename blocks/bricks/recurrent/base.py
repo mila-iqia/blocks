@@ -164,7 +164,7 @@ def recurrent(*args, **kwargs):
                            if key not in scan_arguments}
             for value in rest_kwargs.values():
                 if (isinstance(value, Variable) and not
-                is_shared_variable(value)):
+                        is_shared_variable(value)):
                     logger.warning("unknown input {}".format(value) +
                                    unknown_scan_input)
 
@@ -230,7 +230,7 @@ def recurrent(*args, **kwargs):
                 for i, info in enumerate(outputs_info):
                     if info is not None:
                         assert isinstance(result[i].owner.op,
-                                        tensor.subtensor.Subtensor)
+                                          tensor.subtensor.Subtensor)
                         result[i] = result[i].owner.inputs[0]
             if updates:
                 application_call.updates = dict_union(application_call.updates,
