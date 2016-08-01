@@ -18,3 +18,5 @@ def test_timing():
          main_loop.log[iterations]['each_time_train_this_epoch']) / 2,
         main_loop.log.current_row['each_second_time_train_this_epoch'],
         atol=1e-2)
+    assert 'each_time_read_data_this_epoch' in main_loop.log[iterations]
+    assert 'each_second_time_read_data_this_epoch' in main_loop.log[iterations]
