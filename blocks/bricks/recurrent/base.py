@@ -227,10 +227,11 @@ def recurrent(*args, **kwargs):
             result = pack(result)
             if return_initial_states:
                 # Undo Subtensor
-                for i in range(len(states_given)):
-                    assert isinstance(result[i].owner.op,
-                                      tensor.subtensor.Subtensor)
-                    result[i] = result[i].owner.inputs[0]
+                for i, info in enumerate(outputs_info):
+                    if info is not None:
+                        assert isinstance(result[i].owner.op,
+                                        tensor.subtensor.Subtensor)
+                        result[i] = result[i].owner.inputs[0]
             if updates:
                 application_call.updates = dict_union(application_call.updates,
                                                       updates)
