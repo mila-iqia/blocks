@@ -99,18 +99,18 @@ class RecurrentBrickWithOutputs(BaseRecurrent):
     @recurrent(sequences=[], contexts=[],
                states=['states'], outputs=['outputs', 'states'])
     def apply(self, states):
-        return states + 1, states
+        return states + 1, states + 1
 
     def get_dim(self, name):
-        return 3
+        return 4
 
 
 def test_return_initial_states_with_outputs():
     brick = RecurrentBrickWithOutputs()
-    states, outputs = brick.apply(
+    outputs, states = brick.apply(
         n_steps=3, batch_size=5, return_initial_states=True)
-    states.eval()
-    outputs.eval()
+    assert_allclose(outputs.eval()[0], numpy.ones((5, 4)))
+    assert_allclose(states.eval()[0], numpy.zeros((5, 4)))
 
 
 class TestSimpleRecurrent(unittest.TestCase):
