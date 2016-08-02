@@ -42,7 +42,7 @@ class SimpleRecurrent(BaseRecurrent, Initializable):
         if name == 'mask':
             return 0
         if name in (SimpleRecurrent.apply.sequences +
-                        SimpleRecurrent.apply.states):
+                    SimpleRecurrent.apply.states):
             return self.dim
         return super(SimpleRecurrent, self).get_dim(name)
 
