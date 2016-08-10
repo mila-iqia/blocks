@@ -7,7 +7,7 @@ pillow==3.3.0
 git+https://github.com/rtfd/readthedocs-sphinx-ext.git@0.6-alpha#egg=readthedocs-sphinx-ext
 sphinx-rtd-theme==0.1.9
 alabaster>=0.7,<0.8,!=0.7.5
-commonmark==0.7.1
+commonmark==0.7.2
 recommonmark==0.4.0
 pyyaml==3.11
 six==1.10.0
