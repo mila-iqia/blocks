@@ -3,7 +3,7 @@ import logging
 import itertools
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
-from collections.abc import Mapping
+from collections import Mapping
 from six.moves import reduce
 
 from picklable_itertools.extras import equizip
