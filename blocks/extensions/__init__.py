@@ -604,22 +604,15 @@ class Timing(SimpleExtension):
         kwargs.setdefault('before_first_epoch', True)
         kwargs.setdefault('after_epoch', True)
         super(Timing, self).__init__(**kwargs)
-        self.current = {
-            level: {'train': 0, 'read_data': 0}
-            for level in ['batch', 'epoch']
-        }
-        self.previous = {
-            level: {'train': 0, 'read_data': 0}
-            for level in ['batch', 'epoch']
-        }
-        self.current_index = {
-            level: 0
-            for level in ['batch', 'epoch']
-            }
-        self.previous_index = {
-            level: 0
-            for level in ['batch', 'epoch']
-        }
+
+        def init_dict():
+            return {
+                level: {'train': 0, 'read_data': 0}
+                for level in ['batch', 'epoch']}
+        self.current = init_dict()
+        self.previous = init_dict()
+        self.current_index = init_dict()
+        self.previous_index = init_dict()
         self.prefix = prefix
         if self.prefix:
             self.prefix += '_'
@@ -637,10 +630,16 @@ class Timing(SimpleExtension):
         elif which_callback == 'after_epoch':
             level = 'epoch'
             counter = 'epochs_done'
+        else:
+            raise ValueError('wrong callback type `{}`'.format(which_callback))
         for action in ['train', 'read_data']:
-            self.previous_index[level] = self.current_index[level]
-            self.current_index[level] = self.main_loop.log.status[counter]
-            if self.current_index[level] == self.previous_index[level]:
+            self.previous_index[level][action] = (
+                self.current_index[level][action])
+            self.current_index[level][action] = (
+                self.main_loop.log.status[counter])
+            current_index = self.current_index[level][action]
+            previous_index = self.previous_index[level][action]
+            if current_index == previous_index:
                 logger.debug('Timing extension was called twice this %s, '
                              'log was not updated.', level)
                 # Nothing to report for this level
@@ -652,7 +651,7 @@ class Timing(SimpleExtension):
             this_time = self.prefix + 'time_{}_this_{}'
             current_row[this_time.format(action, level)] = (
                 (self.current[level][action] - self.previous[level][action]) /
-                (self.current_index[level] - self.previous_index[level]))
+                (current_index - previous_index))
             total_time = self.prefix + 'time_{}_total'
             current_row[total_time.format(action)] = \
                 self.current[level][action]
