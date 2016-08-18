@@ -268,6 +268,9 @@ class GradientDescent(UpdatesAlgorithm):
         # Set initial values for cost, parameters, gradients.
         self.cost = cost
         self.parameters = parameters
+        # Coerce lists of tuples to OrderedDict. Do not coerce Mappings,
+        # as we don't want to convert dict -> OrderedDict and give it
+        # an arbitrary, non-deterministic order.
         if gradients is not None and not isinstance(gradients, Mapping):
             gradients = OrderedDict(gradients)
         self.gradients = gradients
