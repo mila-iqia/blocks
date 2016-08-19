@@ -7,7 +7,7 @@ from blocks.config import config
 from blocks.log import BACKENDS
 from blocks.utils import reraise_as, unpack, change_recursion_limit
 from blocks.utils.profile import Profile, Timer
-from blocks.algorithms import DifferentiableCostMinimizer
+from blocks.algorithms import GradientDescent
 from blocks.extensions import CallbackName
 from blocks.model import Model
 
@@ -152,7 +152,7 @@ class MainLoop(object):
 
         # Sanity check for the most common case
         if (self._model and isinstance(self._model, Model) and
-                isinstance(self.algorithm, DifferentiableCostMinimizer)):
+                isinstance(self.algorithm, GradientDescent)):
             if not (set(self._model.get_parameter_dict().values()) ==
                     set(self.algorithm.parameters)):
                 logger.warning("different parameters for model and algorithm")
@@ -189,7 +189,7 @@ class MainLoop(object):
                 self.log.current_row['got_exception'] = traceback.format_exc()
                 logger.error("Error occured during training." + error_message)
                 try:
-                    self._run_extensions('on_error')
+                    self._run_extensions('on_error', e)
                 except Exception:
                     logger.error(traceback.format_exc())
                     logger.error("Error occured when running extensions." +

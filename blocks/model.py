@@ -7,7 +7,7 @@ deliberately made unaware of specific annotations that a Theano graph
 created by Blocks typically has, such as bricks and application calls.  The
 :class:`Model` adds this functionality. Using :class:`Model` you can do
 things like query all the bricks used to build the computation graph,
-request "hierarhical names" of the parameters (a hierarchical name is a
+request "hierarchical names" of the parameters (a hierarchical name is a
 path-like string which in addition to the parameter's name contains names
 of the bricks on the path from a root brick to the brick that owns the
 parameters, e.g. ``/mlp/linear/W``).
@@ -20,7 +20,6 @@ from collections import OrderedDict, Counter
 from itertools import chain
 
 from blocks.graph import ComputationGraph
-from blocks.select import Selector
 from blocks.filter import get_brick
 
 logger = logging.getLogger(__name__)
@@ -75,14 +74,12 @@ class Model(ComputationGraph):
         if repeated_names:
             raise ValueError("top bricks with the same name:"
                              " {}".format(', '.join(repeated_names)))
-        brick_parameter_names = {
-            v: k for k, v in Selector(
-                self.top_bricks).get_parameters().items()}
         parameter_list = []
         for parameter in self.parameters:
-            if parameter in brick_parameter_names:
-                parameter_list.append((brick_parameter_names[parameter],
-                                       parameter))
+            if get_brick(parameter):
+                parameter_list.append(
+                    (get_brick(parameter).get_hierarchical_name(parameter),
+                     parameter))
             else:
                 parameter_list.append((parameter.name, parameter))
         self._parameter_dict = OrderedDict(parameter_list)

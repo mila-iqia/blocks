@@ -1,7 +1,7 @@
 import inspect
 from abc import ABCMeta
 from collections import OrderedDict
-from functools import wraps
+from six import wraps
 from operator import attrgetter
 from types import MethodType
 
@@ -14,6 +14,8 @@ from blocks.graph import add_annotation, Annotation
 from blocks.roles import add_role, PARAMETER, INPUT, OUTPUT
 from blocks.utils import dict_union, pack, repr_attrs, reraise_as, unpack
 from blocks.utils.containers import AnnotatingList
+
+BRICK_DELIMITER = '/'
 
 
 def create_unbound_method(func, cls):
@@ -326,6 +328,13 @@ class Application(object):
             return OrderedDict(zip(bound_application.outputs, outputs))
         return unpack(outputs)
 
+    # Application instances are used instead of usual methods in bricks.
+    # The usual methods are not pickled per-se, similarly to classes
+    # and modules. Instead, a reference to the method is put into the pickle.
+    # Here, we ensure the same behaviour for Application instances.
+    def __reduce__(self):
+        return (getattr, (self.brick, self.application_name))
+
 
 class BoundApplication(object):
     """An application method bound to a :class:`Brick` instance."""
@@ -539,12 +548,15 @@ class Brick(Annotation):
     #: See :attr:`Brick.print_shapes`
     print_shapes = False
 
-    def __init__(self, name=None):
+    def __init__(self, name=None, children=None):
         if name is None:
             name = self.__class__.__name__.lower()
-        self.name = name
 
-        self.children = []
+        if children is None:
+            children = []
+
+        self.name = name
+        self.children = children
         self.parents = []
 
         self.allocated = False
@@ -762,6 +774,24 @@ class Brick(Annotation):
             return parent.get_unique_path() + [self]
         else:
             return [self]
+
+    def get_hierarchical_name(self, parameter, delimiter=BRICK_DELIMITER):
+        """Return hierarhical name for a parameter.
+
+        Returns a path of the form ``brick1/brick2/brick3.parameter1``. The
+        delimiter is configurable.
+
+        Parameters
+        ----------
+        delimiter : str
+            The delimiter used to separate brick names in the path.
+
+        """
+        return '{}.{}'.format(
+            delimiter.join(
+                [""] + [brick.name for brick in
+                        self.get_unique_path()]),
+            parameter.name)
 
 
 def args_to_kwargs(args, f):

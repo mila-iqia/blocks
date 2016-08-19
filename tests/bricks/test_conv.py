@@ -3,15 +3,13 @@ import numpy
 from nose.tools import assert_raises_regexp
 
 import theano
-from numpy.testing import assert_allclose
+from numpy.testing import assert_allclose, assert_raises
 from theano import tensor
 from theano import function
 
 from blocks.bricks import Rectifier, Tanh
 from blocks.bricks.conv import (Convolutional, ConvolutionalTranspose,
                                 MaxPooling, AveragePooling,
-                                ConvolutionalActivation,
-                                ConvolutionalTransposeActivation,
                                 ConvolutionalSequence)
 from blocks.initialization import Constant
 from blocks.graph import ComputationGraph
@@ -50,7 +48,8 @@ def test_convolutional_transpose():
     filter_size = (3, 3)
     step = (2, 2)
     conv = ConvolutionalTranspose(
-        original_image_size, filter_size, num_filters, num_channels, step=step,
+        filter_size, num_filters, num_channels, step=step,
+        original_image_size=original_image_size,
         image_size=image_size, weights_init=Constant(1.),
         biases_init=Constant(5.))
     conv.initialize()
@@ -67,23 +66,113 @@ def test_convolutional_transpose():
     assert_allclose(func(x_val), expected_value + 5)
 
 
+def test_convolutional_transpose_original_size_inference():
+    brick = ConvolutionalTranspose(filter_size=(4, 5), num_filters=10,
+                                   num_channels=5, step=(3, 2),
+                                   image_size=(6, 9))
+    brick.allocate()
+    # In x: filter applied 6 times with a step of 3 and filter size of 4
+    # means 1 dangling pixel, total original image size of 6 * 3 + 1 == 19.
+    # In y: step of 2, applied 9 times, filter size of 5 means 3
+    # dangling pixels, so original is 2 * 9 + 3 == 21.
+    assert brick.original_image_size == (19, 21)
+    input_ = tensor.tensor4()
+    dummy = numpy.empty((4, 5, 6, 9), dtype=theano.config.floatX)
+    result = brick.apply(input_).eval({input_: dummy})
+    assert result.shape == (4, 10, 19, 21)
+
+
+def test_convolutional_transpose_original_size_inference_padding():
+    brick = ConvolutionalTranspose(filter_size=(4, 5), num_filters=10,
+                                   num_channels=5, step=(3, 2),
+                                   border_mode=(2, 1),
+                                   image_size=(6, 9))
+    brick.allocate()
+    assert brick.original_image_size == (15, 19)
+    input_ = tensor.tensor4()
+    dummy = numpy.empty((4, 5, 6, 9), dtype=theano.config.floatX)
+    result = brick.apply(input_).eval({input_: dummy})
+    assert result.shape == (4, 10, 15, 19)
+
+
+def test_convolutional_transpose_original_size_inference_full_padding():
+    brick = ConvolutionalTranspose(filter_size=(4, 5), num_filters=10,
+                                   num_channels=5, step=(3, 2),
+                                   border_mode='full',
+                                   image_size=(6, 9))
+    brick.allocate()
+    assert brick.original_image_size == (13, 13)
+    input_ = tensor.tensor4()
+    dummy = numpy.empty((4, 5, 6, 9), dtype=theano.config.floatX)
+    result = brick.apply(input_).eval({input_: dummy})
+    assert result.shape == (4, 10, 13, 13)
+
+
+def test_convolutional_transpose_original_size_inference_half_padding():
+    brick = ConvolutionalTranspose(filter_size=(4, 5), num_filters=10,
+                                   num_channels=5, step=(3, 2),
+                                   border_mode='half',
+                                   image_size=(6, 9))
+    brick.allocate()
+    assert brick.original_image_size == (15, 17)
+    input_ = tensor.tensor4()
+    dummy = numpy.empty((4, 5, 6, 9), dtype=theano.config.floatX)
+    result = brick.apply(input_).eval({input_: dummy})
+    assert result.shape == (4, 10, 15, 17)
+
+
+def test_convolutional_transpose_original_size_inference_unused_edge():
+    brick = ConvolutionalTranspose(filter_size=(3, 3), num_filters=10,
+                                   num_channels=5, step=(2, 2),
+                                   border_mode=(1, 1), image_size=(4, 4),
+                                   unused_edge=(1, 1))
+    brick.allocate()
+    assert brick.original_image_size == (8, 8)
+    input_ = tensor.tensor4()
+    dummy = numpy.empty((4, 5, 4, 4), dtype=theano.config.floatX)
+    result = brick.apply(input_).eval({input_: dummy})
+    assert result.shape == (4, 10, 8, 8)
+
+
+def test_convolutional_transpose_original_size_inferred_conv_sequence():
+    brick = ConvolutionalTranspose(filter_size=(4, 5), num_filters=10,
+                                   step=(3, 2))
+
+    seq = ConvolutionalSequence([brick], num_channels=5, image_size=(6, 9))
+    try:
+        seq.allocate()
+    except Exception as e:
+        raise AssertionError('exception raised: {}: {}'.format(
+            e.__class__.__name__, e))
+
+
+def test_conv_transpose_exception():
+    brick = ConvolutionalTranspose(filter_size=(4, 5), num_filters=10,
+                                   num_channels=5, step=(3, 2),
+                                   tied_biases=True)
+    assert_raises(ValueError, brick.apply, tensor.tensor4())
+
+
 def test_border_mode_not_pushed():
     layers = [Convolutional(border_mode='full'),
-              ConvolutionalActivation(Rectifier().apply),
-              ConvolutionalActivation(Rectifier().apply, border_mode='valid'),
-              ConvolutionalActivation(Rectifier().apply, border_mode='full')]
+              Convolutional(),
+              Rectifier(),
+              Convolutional(border_mode='valid'),
+              Rectifier(),
+              Convolutional(border_mode='full'),
+              Rectifier()]
     stack = ConvolutionalSequence(layers)
     stack.push_allocation_config()
     assert stack.children[0].border_mode == 'full'
     assert stack.children[1].border_mode == 'valid'
-    assert stack.children[2].border_mode == 'valid'
-    assert stack.children[3].border_mode == 'full'
+    assert stack.children[3].border_mode == 'valid'
+    assert stack.children[5].border_mode == 'full'
     stack2 = ConvolutionalSequence(layers, border_mode='full')
     stack2.push_allocation_config()
     assert stack2.children[0].border_mode == 'full'
     assert stack2.children[1].border_mode == 'full'
-    assert stack2.children[2].border_mode == 'full'
     assert stack2.children[3].border_mode == 'full'
+    assert stack2.children[5].border_mode == 'full'
 
 
 def test_no_input_size():
@@ -106,7 +195,7 @@ def test_no_input_size():
                          c.initialize)
 
 
-def test_tied_biases():
+def test_untied_biases():
     x = tensor.tensor4('x')
     num_channels = 4
     num_filters = 3
@@ -114,10 +203,49 @@ def test_tied_biases():
     filter_size = (3, 3)
     conv = Convolutional(filter_size, num_filters, num_channels,
                          weights_init=Constant(1.), biases_init=Constant(2.),
-                         tied_biases=True)
+                         image_size=(28, 30), tied_biases=False)
+    conv.initialize()
+
+    y = conv.apply(x)
+    func = function([x], y)
+
+    # Untied biases provide a bias for every individual output
+    assert_allclose(conv.b.eval().shape, (3, 26, 28))
+
+    # Untied biases require images of a specific size
+    x_val_1 = numpy.ones((batch_size, num_channels, 28, 30),
+                          dtype=theano.config.floatX)
+
+    assert_allclose(func(x_val_1),
+                    numpy.prod(filter_size) * num_channels *
+                    numpy.ones((batch_size, num_filters, 26, 28)) + 2)
+
+    x_val_2 = numpy.ones((batch_size, num_channels, 23, 19),
+                          dtype=theano.config.floatX)
+
+    def wrongsize():
+        func(x_val_2)
+
+    assert_raises_regexp(ValueError, 'Input dimension mis-match.*',
+                         wrongsize)
+
+
+def test_tied_biases():
+    x = tensor.tensor4('x')
+    num_channels = 4
+    num_filters = 3
+    batch_size = 5
+    filter_size = (3, 3)
+
+    # Tied biases are the default
+    conv = Convolutional(filter_size, num_filters, num_channels,
+                         weights_init=Constant(1.), biases_init=Constant(2.))
     conv.initialize()
     y = conv.apply(x)
     func = function([x], y)
+
+    # Tied biases only provide one bias for each filter
+    assert_allclose(conv.b.eval().shape, (3,))
 
     # Tied biases allows to pass images of different sizes
     x_val_1 = numpy.ones((batch_size, num_channels, 10,
@@ -257,21 +385,19 @@ def test_convolutional_sequence():
     num_channels = 4
     pooling_size = 3
     batch_size = 5
-    activation = Rectifier().apply
+    act = Rectifier()
 
-    conv = ConvolutionalActivation(activation, (3, 3), 5,
-                                   weights_init=Constant(1.),
-                                   biases_init=Constant(5.))
+    conv = Convolutional((3, 3), 5, weights_init=Constant(1.),
+                         biases_init=Constant(5.))
     pooling = MaxPooling(pooling_size=(pooling_size, pooling_size))
-    conv2 = ConvolutionalActivation(activation, (2, 2), 4,
-                                    weights_init=Constant(1.))
+    conv2 = Convolutional((2, 2), 4, weights_init=Constant(1.))
 
-    seq = ConvolutionalSequence([conv, pooling, conv2], num_channels,
+    seq = ConvolutionalSequence([conv, act, pooling, conv2, act], num_channels,
                                 image_size=(17, 13))
     seq.push_allocation_config()
     assert conv.num_channels == 4
     assert conv2.num_channels == 5
-    conv2.convolution.use_bias = False
+    conv2.use_bias = False
     y = seq.apply(x)
     seq.initialize()
     func = function([x], y)
@@ -321,46 +447,10 @@ def test_convolutional_sequence_activation_get_dim():
     assert seq.get_dim('output') == (5, 4, 7)
 
 
-def test_convolutional_activation_use_bias():
-    act = ConvolutionalActivation(Rectifier().apply, (3, 3), 5, 4,
-                                  image_size=(9, 9), use_bias=False)
-    act.allocate()
-    assert not act.convolution.use_bias
-    assert len(ComputationGraph([act.apply(tensor.tensor4())]).parameters) == 1
-
-
-def test_convolutional_transpose_activation():
-    x = tensor.tensor4('x')
-    num_channels = 4
-    num_filters = 3
-    image_size = (8, 6)
-    original_image_size = (17, 13)
-    batch_size = 5
-    filter_size = (3, 3)
-    step = (2, 2)
-    conv = ConvolutionalTransposeActivation(
-        Tanh().apply, original_image_size, filter_size, num_filters,
-        num_channels, step=step, image_size=image_size,
-        weights_init=Constant(1.), biases_init=Constant(5.))
-    conv.initialize()
-    y = conv.apply(x)
-    func = function([x], y)
-
-    x_val = numpy.ones((batch_size, num_channels) + image_size,
-                       dtype=theano.config.floatX)
-    expected_value = num_channels * numpy.ones(
-        (batch_size, num_filters) + original_image_size)
-    expected_value[:, :, 2:-2:2, :] += num_channels
-    expected_value[:, :, :, 2:-2:2] += num_channels
-    expected_value[:, :, 2:-2:2, 2:-2:2] += num_channels
-    assert_allclose(func(x_val), numpy.tanh(expected_value + 5))
-
-
 def test_convolutional_sequence_use_bias():
     cnn = ConvolutionalSequence(
-        [ConvolutionalActivation(activation=Rectifier().apply,
-                                 filter_size=(1, 1), num_filters=1)
-         for _ in range(3)],
+        sum([[Convolutional(filter_size=(1, 1), num_filters=1), Rectifier()]
+             for _ in range(3)], []),
         num_channels=1, image_size=(1, 1),
         use_bias=False)
     cnn.allocate()
@@ -368,3 +458,72 @@ def test_convolutional_sequence_use_bias():
     y = cnn.apply(x)
     params = ComputationGraph(y).parameters
     assert len(params) == 3 and all(param.name == 'W' for param in params)
+
+
+def test_convolutional_sequence_use_bias_not_pushed_if_not_explicitly_set():
+    cnn = ConvolutionalSequence(
+        sum([[Convolutional(filter_size=(1, 1), num_filters=1,
+                            use_bias=False), Rectifier()]
+             for _ in range(3)], []),
+        num_channels=1, image_size=(1, 1))
+    cnn.allocate()
+    assert [not child.use_bias for child in cnn.children
+            if isinstance(child, Convolutional)]
+
+
+def test_convolutional_sequence_tied_biases_not_pushed_if_not_explicitly_set():
+    cnn = ConvolutionalSequence(
+        sum([[Convolutional(filter_size=(1, 1), num_filters=1,
+                            tied_biases=True), Rectifier()]
+             for _ in range(3)], []),
+        num_channels=1, image_size=(1, 1))
+    cnn.allocate()
+    assert [child.tied_biases for child in cnn.children
+            if isinstance(child, Convolutional)]
+
+
+def test_convolutional_sequence_tied_biases_pushed_if_explicitly_set():
+    cnn = ConvolutionalSequence(
+        sum([[Convolutional(filter_size=(1, 1), num_filters=1,
+                            tied_biases=True), Rectifier()]
+             for _ in range(3)], []),
+        num_channels=1, image_size=(1, 1), tied_biases=False)
+    cnn.allocate()
+    assert [not child.tied_biases for child in cnn.children
+            if isinstance(child, Convolutional)]
+
+    cnn = ConvolutionalSequence(
+        sum([[Convolutional(filter_size=(1, 1), num_filters=1), Rectifier()]
+             for _ in range(3)], []),
+        num_channels=1, image_size=(1, 1), tied_biases=True)
+    cnn.allocate()
+    assert [child.tied_biases for child in cnn.children
+            if isinstance(child, Convolutional)]
+
+
+def test_convolutional_sequence_with_no_input_size():
+    # suppose x is outputted by some RNN
+    x = tensor.tensor4('x')
+    filter_size = (1, 1)
+    num_filters = 2
+    num_channels = 1
+    pooling_size = (1, 1)
+    conv = Convolutional(filter_size, num_filters, tied_biases=False,
+                         weights_init=Constant(1.), biases_init=Constant(1.))
+    act = Rectifier()
+    pool = MaxPooling(pooling_size)
+
+    bad_seq = ConvolutionalSequence([conv, act, pool], num_channels,
+                                    tied_biases=False)
+    assert_raises_regexp(ValueError, 'Cannot infer bias size \S+',
+                         bad_seq.initialize)
+
+    seq = ConvolutionalSequence([conv, act, pool], num_channels,
+                                tied_biases=True)
+    try:
+        seq.initialize()
+        out = seq.apply(x)
+    except TypeError:
+        assert False, "This should have succeeded"
+
+    assert out.ndim == 4

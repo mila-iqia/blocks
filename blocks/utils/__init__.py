@@ -483,7 +483,8 @@ def print_shape(x, header=None):
 def change_recursion_limit(limit):
     """Temporarily changes the recursion limit."""
     old_limit = sys.getrecursionlimit()
-    sys.setrecursionlimit(limit)
+    if old_limit < limit:
+        sys.setrecursionlimit(limit)
     yield
     sys.setrecursionlimit(old_limit)
 
