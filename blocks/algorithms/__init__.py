@@ -696,19 +696,21 @@ class StepClipping(StepRule):
 
     """
     def __init__(self, threshold=None):
-        if threshold:
-            self.threshold = shared_floatx(threshold, "threshold")
-            add_role(self.threshold, ALGORITHM_HYPERPARAMETER)
+        if threshold is not None:
+            threshold = shared_floatx(threshold, "threshold")
+            add_role(threshold, ALGORITHM_HYPERPARAMETER)
+        self.threshold = threshold
 
     def compute_steps(self, previous_steps):
-        if not hasattr(self, 'threshold'):
-            return previous_steps
-        norm = l2_norm(previous_steps.values())
-        multiplier = tensor.switch(norm < self.threshold,
-                                   1, self.threshold / norm)
-        steps = OrderedDict(
-            (parameter, step * multiplier)
-            for parameter, step in previous_steps.items())
+        if self.threshold is None:
+            steps = previous_steps
+        else:
+            norm = l2_norm(previous_steps.values())
+            multiplier = tensor.switch(norm < self.threshold,
+                                       1, self.threshold / norm)
+            steps = OrderedDict(
+                (parameter, step * multiplier)
+                for parameter, step in previous_steps.items())
         return steps, []
 
 
