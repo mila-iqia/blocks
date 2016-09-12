@@ -702,13 +702,14 @@ class StepClipping(StepRule):
 
     def compute_steps(self, previous_steps):
         if not hasattr(self, 'threshold'):
-            return previous_steps
-        norm = l2_norm(previous_steps.values())
-        multiplier = tensor.switch(norm < self.threshold,
-                                   1, self.threshold / norm)
-        steps = OrderedDict(
-            (parameter, step * multiplier)
-            for parameter, step in previous_steps.items())
+            steps = previous_steps
+        else:
+            norm = l2_norm(previous_steps.values())
+            multiplier = tensor.switch(norm < self.threshold,
+                                       1, self.threshold / norm)
+            steps = OrderedDict(
+                (parameter, step * multiplier)
+                for parameter, step in previous_steps.items())
         return steps, []
 
 
