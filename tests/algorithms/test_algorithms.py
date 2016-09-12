@@ -314,6 +314,7 @@ def test_step_clipping():
 def test_step_clipping_no_threshold_regression():
     """Test regression for #1145, incorrect output when threshold=None."""
     rule1 = StepClipping()
+    assert rule1.threshold is None
     gradients = {0: shared_floatx(3.0), 1: shared_floatx(4.0)}
     clipped1, updates = rule1.compute_steps(gradients)
     assert len(updates) == 0
