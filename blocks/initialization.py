@@ -6,7 +6,7 @@ import numpy
 import theano
 from six import add_metaclass
 
-from blocks.utils import repr_attrs
+from blocks.utils import repr_attrs, pack
 
 
 @add_metaclass(ABCMeta)
@@ -255,3 +255,38 @@ class Sparse(NdarrayInitialization):
                                                  replace=False)
             weights[i, random_indices] = values[i]
         return weights
+
+
+class SparseND(Sparse):
+    """Initialize only a fraction of the weights with configurable axes.
+
+    Parameters
+    ----------
+    axis : int or sequence
+        Which axis or axes are to be treated as a "unit" for the purpose
+        of the number of elements initialized. For example, an axis of
+        (0, 1) when initializing a 4D tensor `W` will treat the first two
+        axes of the weight tensor as a grid and initialize `num_init`
+        elements of `W[0, 0, :, :]`, another `num_init` elements of
+        `W[0, 1, :, :]`, and so on.
+
+    Notes
+    -----
+    See :class:`Sparse` for documentation of other arguments.
+
+    """
+    def __init__(self, axis, **kwargs):
+        self.axis = axis
+        super().__init__(**kwargs)
+
+    def generate(self, rng, shape):
+        axis_ind = pack(self.axis)
+        other_ind = [i for i in range(len(shape)) if i not in axis_ind]
+        axis_shapes = [shape[i] for i in axis_ind]
+        other_shapes = [shape[i] for i in other_ind]
+        matrix = super().generate(rng, (numpy.prod(axis_shapes),
+                                        numpy.prod(other_shapes)))
+        unflattened = matrix.reshape(tuple(axis_shapes) + tuple(other_shapes))
+        wrong_ind = axis_ind + other_ind
+        transp_ind = [wrong_ind.index(i) for i in range(len(shape))]
+        return unflattened.transpose(transp_ind)
