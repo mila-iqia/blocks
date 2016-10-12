@@ -277,15 +277,16 @@ class SparseND(Sparse):
     """
     def __init__(self, axis, **kwargs):
         self.axis = axis
-        super().__init__(**kwargs)
+        super(SparseND, self).__init__(**kwargs)
 
     def generate(self, rng, shape):
         axis_ind = pack(self.axis)
         other_ind = [i for i in range(len(shape)) if i not in axis_ind]
         axis_shapes = [shape[i] for i in axis_ind]
         other_shapes = [shape[i] for i in other_ind]
-        matrix = super().generate(rng, (numpy.prod(axis_shapes),
-                                        numpy.prod(other_shapes)))
+        matrix = super(SparseND, self).generate(rng,
+                                                (numpy.prod(axis_shapes),
+                                                 numpy.prod(other_shapes)))
         unflattened = matrix.reshape(tuple(axis_shapes) + tuple(other_shapes))
         wrong_ind = axis_ind + other_ind
         transp_ind = [wrong_ind.index(i) for i in range(len(shape))]
