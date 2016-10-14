@@ -4,8 +4,9 @@ import numpy
 import theano
 from numpy.testing import assert_equal, assert_allclose, assert_raises
 
-from blocks.initialization import Constant, IsotropicGaussian, Sparse
+from blocks.initialization import Constant, IsotropicGaussian, Sparse, SparseND
 from blocks.initialization import Uniform, Orthogonal, Identity
+from blocks.utils import pack
 
 
 def test_constant():
@@ -95,6 +96,34 @@ def test_sparse():
     yield check_sparse, rng, 3, Constant(0.), Constant(1.), (10, 10), 70
     yield check_sparse, rng, 0.3, Constant(1.), None, (10, 10), 30
     yield check_sparse, rng, 0.3, Constant(0.), Constant(1.), (10, 10), 70
+
+
+def test_sparse_nd():
+    rng = numpy.random.RandomState(1)
+
+    def check_sparse(rng, axis, num_init, shape, weights_init=Constant(1.)):
+        weights = SparseND(axis=axis, num_init=num_init,
+                           weights_init=weights_init).generate(rng, shape)
+        assert weights.shape == shape
+        assert weights.dtype == theano.config.floatX
+        if isinstance(num_init, numbers.Integral):
+            nnz = numpy.prod([s for i, s in enumerate(shape)
+                              if i in pack(axis)]) * num_init
+            assert numpy.count_nonzero(weights) == nnz
+        else:
+            atom_size = numpy.prod([s for i, s in enumerate(shape)
+                                    if i not in pack(axis)])
+            nnz_atom = int(num_init * atom_size)
+            num_atoms = numpy.prod([s for i, s in enumerate(shape)
+                                    if i in pack(axis)])
+            nnz = nnz_atom * num_atoms
+            assert numpy.count_nonzero(weights) == nnz
+
+    yield check_sparse, rng, 1, 5, (10, 11)
+    yield check_sparse, rng, 2, 3, (7, 8, 9)
+    yield check_sparse, rng, (2, 3), 5. / 6., (2, 3, 5, 7)
+    yield check_sparse, rng, (0, 1), 3, (3, 5, 7, 11)
+    yield check_sparse, rng, (0, 2, 3), 0.5, (2, 3, 2, 6)
 
 
 def test_orthogonal():
