@@ -561,7 +561,7 @@ def _recreate_cuda_ndarray(_, content):
 
 
 def _recreate_pygpu_array(context_name, content):
-    context = theano.sandbox.gpuarray.get_context(context_name)
+    context = theano.gpuarray.get_context(context_name)
     return pygpu.gpuarray.array(content, context=context)
 
 _ARRAY_TYPE_MAP = {numpy.ndarray: 'numpy_ndarray'}
