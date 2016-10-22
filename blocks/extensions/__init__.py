@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+import datetime
 import logging
 from abc import ABCMeta, abstractmethod
 
@@ -655,3 +656,32 @@ class Timing(SimpleExtension):
             total_time = self.prefix + 'time_{}_total'
             current_row[total_time.format(action)] = \
                 self.current[level][action]
+
+
+class Timestamp(SimpleExtension):
+    """Adds a human readable (ISO 8601) timestamp to the log.
+
+    Parameters
+    ----------
+    log_record : str, optional
+        The record name to use. Defaults to 'timestamp'.
+    separator : str, optional
+        Separator between the date and time. ISO 8601 specifies 'T'.
+        Here, we default to ' ' (blank space) for human readability.
+
+    """
+    DEFAULT_LOG_RECORD = 'timestamp'
+
+    def __init__(self, log_record=DEFAULT_LOG_RECORD, separator=' ',
+                 **kwargs):
+        self.log_record = log_record
+        self.separator = separator
+        kwargs.setdefault('after_epoch', True)
+        super(Timestamp, self).__init__(**kwargs)
+
+    def do(self, *args):
+        self.main_loop.log.current_row[self.log_record] = self.get_timestamp()
+
+    def get_timestamp(self):
+        # Separated into a method to override for ease of testing.
+        return datetime.datetime.isoformat(self.separator)
