@@ -1,7 +1,7 @@
 from mock import Mock
 from numpy.testing import assert_raises
 
-from blocks.extensions import SimpleExtension, CompositeExtension
+from blocks.extensions import SimpleExtension, CompositeExtension, Timestamp
 from blocks.extensions.saveload import Checkpoint
 from blocks.extensions.predicates import OnLogRecord
 
@@ -146,3 +146,32 @@ def test_simple_extension_before_batch_callback():
     ext.main_loop = Mock()
     ext.dispatch('before_batch')
     ext.do.assert_called_once_with('before_batch')
+
+
+class InjectedTimestamp(Timestamp):
+    def __init__(self, **kwargs):
+        self.returns = ['foo', 'bar', 'baz']
+        super(InjectedTimestamp, self).__init__(**kwargs)
+
+    def get_timestamp(self):
+        return self.returns.pop()
+
+
+def test_timestamp():
+    def check(kwargs):
+        if 'log_record' in kwargs:
+            log_record = kwargs['log_record']
+        else:
+            log_record = Timestamp.DEFAULT_LOG_RECORD
+        ext = InjectedTimestamp(**kwargs)
+        ext.main_loop = Mock()
+        ext.main_loop.log.current_row = {}
+        ext.do('after_epoch')
+        assert ext.main_loop.log.current_row[log_record] == 'baz'
+        ext.do('after_epoch')
+        assert ext.main_loop.log.current_row[log_record] == 'bar'
+        ext.do('after_epoch')
+        assert ext.main_loop.log.current_row[log_record] == 'foo'
+
+    yield check, {}
+    yield check, {'log_record': 'loggy mclogpants'}
