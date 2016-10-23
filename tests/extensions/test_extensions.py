@@ -154,7 +154,9 @@ class InjectedTimestamp(Timestamp):
         super(InjectedTimestamp, self).__init__(**kwargs)
 
     def get_timestamp(self):
-        return self.returns.pop()
+        if len(self.returns) > 0:
+            return self.returns.pop()
+        return super(InjectedTimestamp, self).get_timestamp()
 
 
 def test_timestamp():
@@ -172,6 +174,8 @@ def test_timestamp():
         assert ext.main_loop.log.current_row[log_record] == 'bar'
         ext.do('after_epoch')
         assert ext.main_loop.log.current_row[log_record] == 'foo'
+        # Exercise original get_timestamp.
+        ext.do('after_epoch')
 
     yield check, {}
     yield check, {'log_record': 'loggy mclogpants'}
