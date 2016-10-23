@@ -684,4 +684,4 @@ class Timestamp(SimpleExtension):
 
     def get_timestamp(self):
         # Separated into a method to override for ease of testing.
-        return datetime.datetime.isoformat(self.separator)
+        return datetime.datetime.now().isoformat(self.separator)
