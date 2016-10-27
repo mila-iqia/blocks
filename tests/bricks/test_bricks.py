@@ -427,14 +427,34 @@ def test_sequence():
 
     linear_2 = Linear(input_dim=8, output_dim=4, weights_init=Constant(3),
                       biases_init=Constant(4))
-    sequence = Sequence([linear_1.apply, linear_2.apply])
-    sequence.initialize()
-    y = sequence.apply(x)
-    x_val = numpy.ones((4, 16), dtype=theano.config.floatX)
-    assert_allclose(
-        y.eval({x: x_val}),
-        (x_val.dot(2 * numpy.ones((16, 8))) + numpy.ones((4, 8))).dot(
-            3 * numpy.ones((8, 4))) + 4 * numpy.ones((4, 4)))
+
+    def check(bricks):
+        sequence = Sequence(bricks)
+        sequence.initialize()
+        y = sequence.apply(x)
+        x_val = numpy.ones((4, 16), dtype=theano.config.floatX)
+        assert_allclose(
+            y.eval({x: x_val}),
+            (x_val.dot(2 * numpy.ones((16, 8))) + numpy.ones((4, 8))).dot(
+                3 * numpy.ones((8, 4))) + 4 * numpy.ones((4, 4)))
+
+    # Test with all application methods.
+    yield check, [linear_1.apply, linear_2.apply]
+
+    # Test with all bricks.
+    yield check, [linear_1, linear_2]
+
+    # Test with a mix of bricks and application methods.
+    yield check, [linear_1, linear_2.apply]
+    yield check, [linear_1.apply, linear_2]
+
+    # Test with an application method not called 'apply'.
+    class Dummy(Brick):
+        @application
+        def foobar(self, input_):
+            return input_
+
+    yield check, [linear_1.apply, linear_2.apply, Dummy().foobar]
 
 
 def test_sequence_variable_outputs():

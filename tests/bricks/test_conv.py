@@ -392,8 +392,8 @@ def test_convolutional_sequence():
     pooling = MaxPooling(pooling_size=(pooling_size, pooling_size))
     conv2 = Convolutional((2, 2), 4, weights_init=Constant(1.))
 
-    seq = ConvolutionalSequence([conv, act, pooling, conv2, act], num_channels,
-                                image_size=(17, 13))
+    seq = ConvolutionalSequence([conv, act, pooling.apply, conv2.apply, act],
+                                num_channels, image_size=(17, 13))
     seq.push_allocation_config()
     assert conv.num_channels == 4
     assert conv2.num_channels == 5
