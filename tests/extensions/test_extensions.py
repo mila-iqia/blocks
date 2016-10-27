@@ -176,6 +176,11 @@ def test_timestamp():
         assert ext.main_loop.log.current_row[log_record] == 'foo'
         # Exercise original get_timestamp.
         ext.do('after_epoch')
+        sep = kwargs.get('separator', ' ')
+        assert bool(re.match(''.join(['[0-9]{4}-[0-9]{2}-[0-9]{2}', sep,
+                                      '[0-9]{2}(\\:[0-9]{2}){2}'
+                                      '\\.[0-9]+']),
+                             ext.main_loop.log.current_row[log_record]))
 
     yield check, {}
     yield check, {'log_record': 'loggy mclogpants'}
