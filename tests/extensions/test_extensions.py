@@ -1,3 +1,4 @@
+import re
 from mock import Mock
 from numpy.testing import assert_raises
 
@@ -184,3 +185,18 @@ def test_timestamp():
 
     yield check, {}
     yield check, {'log_record': 'loggy mclogpants'}
+
+
+def test_timestamp_default_triggers():
+    def check(callback):
+        ext = InjectedTimestamp()
+        ext.main_loop = Mock()
+        ext.main_loop.log.current_row = {}
+        ext.dispatch(callback)
+        assert ext.main_loop.log.current_row.get('timestamp') == 'baz'
+
+    callbacks = ['before_training', 'after_epoch', 'on_error',
+                 'on_interrupt', 'on_resumption', 'after_training']
+
+    for callback in callbacks:
+        yield check, callback
