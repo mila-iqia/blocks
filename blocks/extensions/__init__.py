@@ -219,7 +219,7 @@ class SimpleExtension(TrainingExtension):
     """
     BOOLEAN_TRIGGERS = frozenset(["before_training", "before_first_epoch",
                                   "before_epoch", "before_batch",
-                                  "on_resumption", "on_interrupt",
+                                  "on_resumption", "on_interrupt", "on_error",
                                   "after_epoch", "after_batch",
                                   "after_training"])
 
