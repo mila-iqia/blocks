@@ -214,6 +214,39 @@ class Maximum(Minimum):
 maximum = partial(_simple_aggregation, Maximum)
 
 
+class Concatenate(Minimum):
+    """Aggregation scheme which remembers values from all batches.
+
+    Parameters
+    ----------
+    variable: :class:`~tensor.TensorVariable`
+        The variable that holds the desired value on a single batch.
+    axis : int, optional
+        The axis along which to concatenate. Defaults to 0.
+    promote_scalar : boolean, optional
+        If variable has ``ndim`` 0, automatically promote it to a
+        1-dimensional scalar to make concatenation possible. Requires
+        `axis` to be 0.
+
+    """
+    def __init__(self, variable, axis=0, promote_scalar=True):
+        if promote_scalar and variable.ndim == 0:
+            if axis != 0:
+                raise NotImplementedError
+            variable = (tensor.unbroadcast(variable.dimshuffle('x'), 0)
+                        .copy(variable.name))
+        self.axis = axis
+        super(Concatenate, self).__init__(variable)
+
+    def get_aggregator(self):
+        self.storage = shared_like(self.variable)
+        return self._build_aggregator(tensor.concatenate([self.storage,
+                                                          self.variable],
+                                                         axis=self.axis))
+
+concatenate = partial(_simple_aggregation, Concatenate)
+
+
 @add_metaclass(ABCMeta)
 class MonitoredQuantity(object):
     """The base class for monitored-quantities.

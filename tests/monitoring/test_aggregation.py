@@ -6,7 +6,8 @@ from theano import tensor
 from blocks import bricks
 from blocks.bricks.base import application
 from blocks.graph import ComputationGraph
-from blocks.monitoring.aggregation import mean, Mean, Minimum, Maximum
+from blocks.monitoring.aggregation import (mean, Mean, Minimum, Maximum,
+                                           Concatenate)
 from blocks.utils import shared_floatx
 
 from collections import OrderedDict
@@ -135,6 +136,32 @@ def test_min_max_aggregators():
                     numpy.array([7.25, 10], dtype=theano.config.floatX))
     assert_allclose(DatasetEvaluator([z]).evaluate(data_stream)['z'],
                     numpy.array([2], dtype=theano.config.floatX))
+
+
+def test_concatenate_aggregator():
+    num_examples = 4
+    batch_size = 2
+
+    features = numpy.array([[2, 3],
+                           [2, 9],
+                           [2, 4],
+                           [5, 1]], dtype=theano.config.floatX)
+
+    dataset = IndexableDataset(OrderedDict([('features', features)]))
+
+    data_stream = DataStream(dataset,
+                             iteration_scheme=SequentialScheme(num_examples,
+                                                               batch_size))
+    x = tensor.matrix('features')
+    y = x.sum(axis=0).copy('y')
+    z = y.sum(axis=0).copy('z')
+    y.tag.aggregation_scheme = Concatenate(y)
+    z.tag.aggregation_scheme = Concatenate(z)
+
+    assert_allclose(DatasetEvaluator([y]).evaluate(data_stream)['y'],
+                    numpy.array([4, 12, 7, 5], dtype=theano.config.floatX))
+    assert_allclose(DatasetEvaluator([z]).evaluate(data_stream)['z'],
+                    numpy.array([16, 12], dtype=theano.config.floatX))
 
 
 def test_aggregation_buffer_name_uniqueness():
