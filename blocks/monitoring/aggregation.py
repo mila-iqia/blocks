@@ -1,4 +1,5 @@
 """Evaluate Theano variables on auxiliary data and during training."""
+from functools import partial
 import logging
 from abc import ABCMeta, abstractmethod
 
@@ -170,10 +171,47 @@ class TakeLast(AggregationScheme):
                           readout_variable=self.storage)
 
 
-def take_last(variable):
+def _simple_aggregation(scheme, variable):
     variable = variable.copy(variable.name)
-    variable.tag.aggregation_scheme = TakeLast(variable)
+    variable.tag.aggregation_scheme = scheme(variable)
     return variable
+
+
+take_last = partial(_simple_aggregation, TakeLast)
+
+
+class Minimum(AggregationScheme):
+    """Aggregation scheme which remembers only the minimum value."""
+    def _build_aggregator(self, accumulate_update):
+        initialized = shared_like(0.)
+        accumulate = ifelse(initialized, accumulate_update, self.variable)
+        return Aggregator(aggregation_scheme=self,
+                          initialization_updates=[
+                              (self.storage, tensor.zeros_like(self.storage)),
+                              (initialized, tensor.zeros_like(initialized))
+                          ],
+                          accumulation_updates=[
+                              (self.storage, accumulate),
+                              (initialized, tensor.ones_like(initialized))
+                          ],
+                          readout_variable=self.storage)
+
+    def get_aggregator(self):
+        self.storage = shared_like(self.variable)
+        return self._build_aggregator(tensor.minimum(self.storage,
+                                                     self.variable))
+
+minimum = partial(_simple_aggregation, Minimum)
+
+
+class Maximum(Minimum):
+    """Aggregation scheme which remembers only the maximum value."""
+    def get_aggregator(self):
+        self.storage = shared_like(self.variable)
+        return self._build_aggregator(tensor.maximum(self.storage,
+                                                     self.variable))
+
+maximum = partial(_simple_aggregation, Maximum)
 
 
 @add_metaclass(ABCMeta)

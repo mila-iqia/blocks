@@ -6,7 +6,7 @@ from theano import tensor
 from blocks import bricks
 from blocks.bricks.base import application
 from blocks.graph import ComputationGraph
-from blocks.monitoring.aggregation import mean, Mean
+from blocks.monitoring.aggregation import mean, Mean, Minimum, Maximum
 from blocks.utils import shared_floatx
 
 from collections import OrderedDict
@@ -89,6 +89,52 @@ def test_mean_aggregator():
                     numpy.array([8.25, 26.75], dtype=theano.config.floatX))
     assert_allclose(DatasetEvaluator([z]).evaluate(data_stream)['z'],
                     numpy.array([35], dtype=theano.config.floatX))
+
+
+def test_min_max_aggregators():
+    num_examples = 4
+    batch_size = 2
+
+    features = numpy.array([[2, 3],
+                           [2, 9],
+                           [2, 4],
+                           [5, 1]], dtype=theano.config.floatX)
+
+    dataset = IndexableDataset(OrderedDict([('features', features)]))
+
+    data_stream = DataStream(dataset,
+                             iteration_scheme=SequentialScheme(num_examples,
+                                                               batch_size))
+
+    x = tensor.matrix('features')
+    y = (x**2).sum(axis=0)
+    y.name = 'y'
+    z = y.min()
+    z.name = 'z'
+
+    y.tag.aggregation_scheme = Maximum(y)
+    z.tag.aggregation_scheme = Minimum(z)
+
+    assert_allclose(DatasetEvaluator([y]).evaluate(data_stream)['y'],
+                    numpy.array([29, 90], dtype=theano.config.floatX))
+    assert_allclose(DatasetEvaluator([z]).evaluate(data_stream)['z'],
+                    numpy.array([8], dtype=theano.config.floatX))
+
+    # Make sure accumulators are reset.
+    features = numpy.array([[2, 1],
+                           [1, 3],
+                           [1, -1],
+                           [2.5, 1]], dtype=theano.config.floatX)
+
+    dataset = IndexableDataset(OrderedDict([('features', features)]))
+
+    data_stream = DataStream(dataset,
+                             iteration_scheme=SequentialScheme(num_examples,
+                                                               batch_size))
+    assert_allclose(DatasetEvaluator([y]).evaluate(data_stream)['y'],
+                    numpy.array([7.25, 10], dtype=theano.config.floatX))
+    assert_allclose(DatasetEvaluator([z]).evaluate(data_stream)['z'],
+                    numpy.array([2], dtype=theano.config.floatX))
 
 
 def test_aggregation_buffer_name_uniqueness():
