@@ -29,6 +29,9 @@ class AggregationScheme(object):
         The variable that holds the desired value on a single batch.
 
     """
+    def __init__(self, variable):
+        self.variable = variable
+
     @abstractmethod
     def get_aggregator(self):
         """Return a new Aggregator for this variable."""
@@ -149,9 +152,6 @@ def mean(numerator, denominator=1.):
 
 class _DataIndependent(AggregationScheme):
     """Dummy aggregation scheme for values that don't depend on data."""
-    def __init__(self, variable):
-        self.variable = variable
-
     def get_aggregator(self):
         return Aggregator(aggregation_scheme=self,
                           initialization_updates=[],
@@ -161,9 +161,6 @@ class _DataIndependent(AggregationScheme):
 
 class TakeLast(AggregationScheme):
     """Aggregation scheme which remembers only the last value."""
-    def __init__(self, variable):
-        self.variable = variable
-
     def get_aggregator(self):
         self.storage = shared_like(self.variable)
         return Aggregator(aggregation_scheme=self,
