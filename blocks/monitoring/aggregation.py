@@ -1,4 +1,5 @@
 """Evaluate Theano variables on auxiliary data and during training."""
+from functools import partial
 import logging
 from abc import ABCMeta, abstractmethod
 
@@ -29,6 +30,9 @@ class AggregationScheme(object):
         The variable that holds the desired value on a single batch.
 
     """
+    def __init__(self, variable):
+        self.variable = variable
+
     @abstractmethod
     def get_aggregator(self):
         """Return a new Aggregator for this variable."""
@@ -149,9 +153,6 @@ def mean(numerator, denominator=1.):
 
 class _DataIndependent(AggregationScheme):
     """Dummy aggregation scheme for values that don't depend on data."""
-    def __init__(self, variable):
-        self.variable = variable
-
     def get_aggregator(self):
         return Aggregator(aggregation_scheme=self,
                           initialization_updates=[],
@@ -161,9 +162,6 @@ class _DataIndependent(AggregationScheme):
 
 class TakeLast(AggregationScheme):
     """Aggregation scheme which remembers only the last value."""
-    def __init__(self, variable):
-        self.variable = variable
-
     def get_aggregator(self):
         self.storage = shared_like(self.variable)
         return Aggregator(aggregation_scheme=self,
@@ -173,10 +171,71 @@ class TakeLast(AggregationScheme):
                           readout_variable=self.storage)
 
 
-def take_last(variable):
+def _simple_aggregation(scheme, variable):
     variable = variable.copy(variable.name)
-    variable.tag.aggregation_scheme = TakeLast(variable)
+    variable.tag.aggregation_scheme = scheme(variable)
     return variable
+
+
+take_last = partial(_simple_aggregation, TakeLast)
+
+
+class Minimum(AggregationScheme):
+    """Aggregation scheme which remembers only the minimum value."""
+    def _build_aggregator(self, accumulate_update):
+        initialized = shared_like(0.)
+        accumulate = ifelse(initialized, accumulate_update, self.variable)
+        return Aggregator(aggregation_scheme=self,
+                          initialization_updates=[
+                              (self.storage, tensor.zeros_like(self.storage)),
+                              (initialized, tensor.zeros_like(initialized))
+                          ],
+                          accumulation_updates=[
+                              (self.storage, accumulate),
+                              (initialized, tensor.ones_like(initialized))
+                          ],
+                          readout_variable=self.storage)
+
+    def get_aggregator(self):
+        self.storage = shared_like(self.variable)
+        return self._build_aggregator(tensor.minimum(self.storage,
+                                                     self.variable))
+
+minimum = partial(_simple_aggregation, Minimum)
+
+
+class Maximum(Minimum):
+    """Aggregation scheme which remembers only the maximum value."""
+    def get_aggregator(self):
+        self.storage = shared_like(self.variable)
+        return self._build_aggregator(tensor.maximum(self.storage,
+                                                     self.variable))
+
+maximum = partial(_simple_aggregation, Maximum)
+
+
+class Concatenate(Minimum):
+    """Aggregation scheme which remembers values from all batches.
+
+    Parameters
+    ----------
+    variable: :class:`~tensor.TensorVariable`
+        The variable that holds the desired value on a single batch.
+
+    """
+    def __init__(self, variable):
+        # Add an extra axis to concatenate along. Must be non-broadcastable
+        # for concatenate to always work.
+        variable = (tensor.unbroadcast(tensor.shape_padleft(variable, 1), 0)
+                    .copy(variable.name))
+        super(Concatenate, self).__init__(variable)
+
+    def get_aggregator(self):
+        self.storage = shared_like(self.variable)
+        return self._build_aggregator(tensor.concatenate([self.storage,
+                                                          self.variable]))
+
+concatenate = partial(_simple_aggregation, Concatenate)
 
 
 @add_metaclass(ABCMeta)
