@@ -221,28 +221,19 @@ class Concatenate(Minimum):
     ----------
     variable: :class:`~tensor.TensorVariable`
         The variable that holds the desired value on a single batch.
-    axis : int, optional
-        The axis along which to concatenate. Defaults to 0.
-    promote_scalar : boolean, optional
-        If variable has ``ndim`` 0, automatically promote it to a
-        1-dimensional scalar to make concatenation possible. Requires
-        `axis` to be 0.
 
     """
-    def __init__(self, variable, axis=0, promote_scalar=True):
-        if promote_scalar and variable.ndim == 0:
-            if axis != 0:
-                raise NotImplementedError
-            variable = (tensor.unbroadcast(variable.dimshuffle('x'), 0)
-                        .copy(variable.name))
-        self.axis = axis
+    def __init__(self, variable):
+        # Add an extra axis to concatenate along. Must be non-broadcastable
+        # for concatenate to always work.
+        variable = (tensor.unbroadcast(tensor.shape_padleft(variable, 1), 0)
+                    .copy(variable.name))
         super(Concatenate, self).__init__(variable)
 
     def get_aggregator(self):
         self.storage = shared_like(self.variable)
         return self._build_aggregator(tensor.concatenate([self.storage,
-                                                          self.variable],
-                                                         axis=self.axis))
+                                                          self.variable]))
 
 concatenate = partial(_simple_aggregation, Concatenate)
 

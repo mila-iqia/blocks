@@ -159,7 +159,7 @@ def test_concatenate_aggregator():
     z.tag.aggregation_scheme = Concatenate(z)
 
     assert_allclose(DatasetEvaluator([y]).evaluate(data_stream)['y'],
-                    numpy.array([4, 12, 7, 5], dtype=theano.config.floatX))
+                    numpy.array([[4, 12], [7, 5]], dtype=theano.config.floatX))
     assert_allclose(DatasetEvaluator([z]).evaluate(data_stream)['z'],
                     numpy.array([16, 12], dtype=theano.config.floatX))
 
