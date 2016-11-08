@@ -1,3 +1,4 @@
+import re
 from mock import Mock
 from numpy.testing import assert_raises
 
@@ -176,6 +177,26 @@ def test_timestamp():
         assert ext.main_loop.log.current_row[log_record] == 'foo'
         # Exercise original get_timestamp.
         ext.do('after_epoch')
+        sep = kwargs.get('separator', ' ')
+        assert bool(re.match(''.join(['[0-9]{4}-[0-9]{2}-[0-9]{2}', sep,
+                                      '[0-9]{2}(\\:[0-9]{2}){2}'
+                                      '\\.[0-9]+']),
+                             ext.main_loop.log.current_row[log_record]))
 
     yield check, {}
     yield check, {'log_record': 'loggy mclogpants'}
+
+
+def test_timestamp_default_triggers():
+    def check(callback):
+        ext = InjectedTimestamp()
+        ext.main_loop = Mock()
+        ext.main_loop.log.current_row = {}
+        ext.dispatch(callback)
+        assert ext.main_loop.log.current_row.get('timestamp') == 'baz'
+
+    callbacks = ['before_training', 'after_epoch', 'on_error',
+                 'on_interrupt', 'on_resumption', 'after_training']
+
+    for callback in callbacks:
+        yield check, callback

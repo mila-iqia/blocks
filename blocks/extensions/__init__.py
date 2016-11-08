@@ -219,7 +219,7 @@ class SimpleExtension(TrainingExtension):
     """
     BOOLEAN_TRIGGERS = frozenset(["before_training", "before_first_epoch",
                                   "before_epoch", "before_batch",
-                                  "on_resumption", "on_interrupt",
+                                  "on_resumption", "on_interrupt", "on_error",
                                   "after_epoch", "after_batch",
                                   "after_training"])
 
@@ -669,6 +669,15 @@ class Timestamp(SimpleExtension):
         Separator between the date and time. ISO 8601 specifies 'T'.
         Here, we default to ' ' (blank space) for human readability.
 
+    Notes
+    -----
+    By default, triggers after every epoch as well as before training
+    starts, after training finishes, when an error occurs or when training
+    is interrupted or resumed, as these are all generally useful
+    circumstances for which to have a timestamp. These can be disabled
+    by passing `False` as the appropriate keyword argument; see
+    :class:`SimpleExtension`.
+
     """
     DEFAULT_LOG_RECORD = 'timestamp'
 
@@ -676,7 +685,10 @@ class Timestamp(SimpleExtension):
                  **kwargs):
         self.log_record = log_record
         self.separator = separator
-        kwargs.setdefault('after_epoch', True)
+        default_callbacks = ['before_training', 'after_epoch', 'on_error',
+                             'on_interrupt', 'on_resumption', 'after_training']
+        for callback in default_callbacks:
+            kwargs.setdefault(callback, True)
         super(Timestamp, self).__init__(**kwargs)
 
     def do(self, *args):
