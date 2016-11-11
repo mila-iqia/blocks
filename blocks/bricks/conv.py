@@ -441,9 +441,9 @@ class ConvolutionalSequence(Sequence, Initializable, Feedforward):
     ----------
     layers : list
         List of convolutional bricks (i.e. :class:`Convolutional`,
-        :class:`ConvolutionalActivation`, or :class:`Pooling` bricks).
-        :class:`Activation` bricks that operate elementwise can also
-        be included.
+        :class:`ConvolutionalActivation`, or :class:`Pooling` bricks),
+        or application methods from such bricks.  :class:`Activation`
+        bricks that operate elementwise can also be included.
     num_channels : int
         Number of input channels in the image. For the first layer this is
         normally 1 for grayscale images and 3 for color (RGB) images. For
@@ -494,16 +494,15 @@ class ConvolutionalSequence(Sequence, Initializable, Feedforward):
     def __init__(self, layers, num_channels, batch_size=None,
                  image_size=(None, None), border_mode=None, tied_biases=None,
                  **kwargs):
-        self.layers = layers
+        self.layers = [a if isinstance(a, Brick) else a.brick for a in layers]
         self.image_size = image_size
         self.num_channels = num_channels
         self.batch_size = batch_size
         self.border_mode = border_mode
         self.tied_biases = tied_biases
 
-        application_methods = [brick.apply for brick in layers]
         super(ConvolutionalSequence, self).__init__(
-            application_methods=application_methods, **kwargs)
+            application_methods=layers, **kwargs)
 
     def get_dim(self, name):
         if name == 'input_':

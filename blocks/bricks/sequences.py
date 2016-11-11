@@ -1,6 +1,6 @@
 """Bricks that compose together other bricks in linear sequences."""
 import copy
-from toolz import interleave
+from toolz import interleave, unique
 from picklable_itertools.extras import equizip
 
 from ..utils import pack
@@ -18,16 +18,15 @@ class Sequence(Brick):
     Parameters
     ----------
     application_methods : list
-        List of :class:`.BoundApplication` to apply
+        List of :class:`.BoundApplication` or :class:`.Brick` to apply.
+        For :class:`.Brick`s, the ``.apply`` method is used.
 
     """
     def __init__(self, application_methods, **kwargs):
-        self.application_methods = application_methods
-
-        seen = set()
-        children = [app.brick for app in application_methods
-                    if not (app.brick in seen or seen.add(app.brick))]
-        kwargs.setdefault('children', []).extend(children)
+        pairs = ((a.apply, a) if isinstance(a, Brick) else (a, a.brick)
+                 for a in application_methods)
+        self.application_methods, bricks = zip(*pairs)
+        kwargs.setdefault('children', []).extend(unique(bricks))
         super(Sequence, self).__init__(**kwargs)
 
     @application
@@ -123,19 +122,13 @@ class MLP(FeedforwardSequence, Initializable):
             name = self.prototype.__class__.__name__.lower()
             linear.name = '{}_{}'.format(name, i)
             self.linear_transformations.append(linear)
-        # Interleave the transformations and activations
-        application_methods = []
-        for entity in interleave([self.linear_transformations, activations]):
-            if entity is None:
-                continue
-            if isinstance(entity, Brick):
-                application_methods.append(entity.apply)
-            else:
-                application_methods.append(entity)
         if not dims:
             dims = [None] * (len(activations) + 1)
         self.dims = dims
-        super(MLP, self).__init__(application_methods, **kwargs)
+        # Interleave the transformations and activations
+        applications = [a for a in interleave([self.linear_transformations,
+                                               activations]) if a is not None]
+        super(MLP, self).__init__(applications, **kwargs)
 
     @property
     def input_dim(self):
