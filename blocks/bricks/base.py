@@ -1,4 +1,5 @@
 import inspect
+import warnings
 from abc import ABCMeta
 from collections import OrderedDict
 from six import wraps
@@ -287,11 +288,11 @@ class Application(object):
         last_brick = self.call_stack[-1] if self.call_stack else None
         if (last_brick and brick is not last_brick and
                 brick not in last_brick.children):
-            raise ValueError('Brick ' + str(self.call_stack[-1]) + ' tries '
-                             'to call brick ' + str(self.brick) + ' which '
-                             'is not in the list of its children. This could '
-                             'be caused because an @application decorator is '
-                             'missing.')
+            warnings.warn('Brick ' + str(self.call_stack[-1]) + ' tries '
+                          'to call brick ' + str(self.brick) + ' which '
+                          'is not in the list of its children. This could '
+                          'be caused because an @application decorator is '
+                          'missing.')
         self.call_stack.append(brick)
         try:
             outputs = self.application_function(brick, *args, **kwargs)
