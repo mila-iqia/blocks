@@ -214,19 +214,19 @@ def test_untied_biases():
 
     # Untied biases require images of a specific size
     x_val_1 = numpy.ones((batch_size, num_channels, 28, 30),
-                          dtype=theano.config.floatX)
+                         dtype=theano.config.floatX)
 
     assert_allclose(func(x_val_1),
                     numpy.prod(filter_size) * num_channels *
                     numpy.ones((batch_size, num_filters, 26, 28)) + 2)
 
     x_val_2 = numpy.ones((batch_size, num_channels, 23, 19),
-                          dtype=theano.config.floatX)
+                         dtype=theano.config.floatX)
 
     def wrongsize():
         func(x_val_2)
 
-    assert_raises_regexp(ValueError, 'Input dimension mis-match.*',
+    assert_raises_regexp(AssertionError, 'AbstractConv shape mismatch',
                          wrongsize)
 
 
