@@ -524,10 +524,14 @@ class ProgressBar(TrainingExtension):
     def get_iter_per_epoch(self):
         """Try to infer the number of iterations per epoch."""
         iter_scheme = self.main_loop.data_stream.iteration_scheme
-        if hasattr(iter_scheme, 'num_batches'):
-            return iter_scheme.num_batches
+        if (hasattr(iter_scheme, 'indices') and
+                not hasattr(iter_scheme, 'batch_size')):
+            return len(iter_scheme.indices)
+        elif (hasattr(iter_scheme, 'indices') and
+              hasattr(iter_scheme, 'batch_size')):
+            return len(iter_scheme.indices) // iter_scheme.batch_size
         elif (hasattr(iter_scheme, 'num_examples') and
-                hasattr(iter_scheme, 'batch_size')):
+              hasattr(iter_scheme, 'batch_size')):
             return iter_scheme.num_examples // iter_scheme.batch_size
         return None
 
