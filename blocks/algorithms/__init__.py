@@ -855,12 +855,12 @@ class Adam(StepRule):
     epsilon : float, optional
         Default value is set to 1e-8.
     decay_factor : float, optional
-        Default value is set to 1 - 1e-8.
+        Default value is set to 1.
 
     """
     def __init__(self, learning_rate=0.002,
                  beta1=0.9, beta2=0.999, epsilon=1e-8,
-                 decay_factor=(1 - 1e-8)):
+                 decay_factor=1):
         self.learning_rate = shared_floatx(learning_rate, "learning_rate")
         self.beta1 = shared_floatx(beta1, "beta1")
         self.beta2 = shared_floatx(beta2, "beta2")
