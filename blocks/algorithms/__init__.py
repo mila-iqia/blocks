@@ -848,10 +848,10 @@ class Adam(StepRule):
         Default value is set to 0.002.
     beta1 : float, optional
         Exponential decay rate for the first moment estimates.
-        Default value is set to 0.1.
+        Default value is set to 0.9.
     beta2 : float, optional
         Exponential decay rate for the second moment estimates.
-        Default value is set to 0.001.
+        Default value is set to 0.999.
     epsilon : float, optional
         Default value is set to 1e-8.
     decay_factor : float, optional
@@ -859,7 +859,7 @@ class Adam(StepRule):
 
     """
     def __init__(self, learning_rate=0.002,
-                 beta1=0.1, beta2=0.001, epsilon=1e-8,
+                 beta1=0.9, beta2=0.999, epsilon=1e-8,
                  decay_factor=(1 - 1e-8)):
         self.learning_rate = shared_floatx(learning_rate, "learning_rate")
         self.beta1 = shared_floatx(beta1, "beta1")
@@ -877,13 +877,13 @@ class Adam(StepRule):
         add_role(time, ALGORITHM_BUFFER)
 
         t1 = time + 1
-        beta_1t = 1. - (1. - self.beta1) * self.decay_factor ** (t1 - 1)
+        beta_1t = self.beta1 * self.decay_factor ** (t1 - 1)
         learning_rate = (self.learning_rate *
-                         tensor.sqrt((1. - (1. - self.beta2)**t1)) /
-                         (1. - (1. - beta_1t)**t1))
-        mean_t = beta_1t * previous_step + (1. - beta_1t) * mean
-        variance_t = (self.beta2 * tensor.sqr(previous_step) +
-                      (1. - self.beta2) * variance)
+                         tensor.sqrt(1. - self.beta2**t1) /
+                         (1. - beta_1t**t1))
+        mean_t = beta_1t * mean + (1. - beta_1t) * previous_step
+        variance_t = (self.beta2 * variance +
+                      (1. - self.beta2) * tensor.sqr(previous_step))
         step = (learning_rate * mean_t /
                 (tensor.sqrt(variance_t) + self.epsilon))
 
