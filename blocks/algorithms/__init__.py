@@ -877,11 +877,11 @@ class Adam(StepRule):
         add_role(time, ALGORITHM_BUFFER)
 
         t1 = time + 1
-        beta_1t = self.beta1 * self.decay_factor ** (t1 - 1)
+        beta_1_decayed = self.beta1 * self.decay_factor ** (t1 - 1)
         learning_rate = (self.learning_rate *
                          tensor.sqrt(1. - self.beta2**t1) /
-                         (1. - beta_1t**t1))
-        mean_t = beta_1t * mean + (1. - beta_1t) * previous_step
+                         (1. - beta_1_decayed**t1))
+        mean_t = beta_1_decayed * mean + (1. - beta_1_decayed) * previous_step
         variance_t = (self.beta2 * variance +
                       (1. - self.beta2) * tensor.sqr(previous_step))
         step = (learning_rate * mean_t /
