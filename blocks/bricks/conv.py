@@ -326,8 +326,8 @@ class Pooling(Initializable, Feedforward):
             with the last two dimensions downsampled.
 
         """
-        output = pool_2d(input_, self.pooling_size, st=self.step,
-                         mode=self.mode, padding=self.padding,
+        output = pool_2d(input_, self.pooling_size, stride=self.step,
+                         mode=self.mode, pad=self.padding,
                          ignore_border=self.ignore_border)
         return output
 
