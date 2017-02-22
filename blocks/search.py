@@ -320,7 +320,7 @@ class BeamSearch(object):
     @staticmethod
     def result_to_lists(result):
         outputs, masks, costs = [array.T for array in result]
-        outputs = [list(output[:mask.sum()])
+        outputs = [list(output[:int(mask.sum())])
                    for output, mask in equizip(outputs, masks)]
         costs = list(costs.T.sum(axis=0))
         return outputs, costs
