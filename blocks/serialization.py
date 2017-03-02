@@ -18,7 +18,7 @@ ones are:
       file of numpy arrays.
 
     - More objects can be dumped in the archive using the `add_to_dump`
-      function. If the object has the same parameters as the one alread
+      function. If the object has the same parameters as the one already
       dumped, then you can avoid to dump those parameters thank to the
       persistent id mechanism.
 
@@ -27,7 +27,7 @@ ones are:
       and give a meaningful warning.
 
 If briefly, this module proposes a dumping mechanism which allows for
-greater robustness and persistency than standard pickling.
+greater robustness and persistence than standard pickling.
 
 Examples
 --------
@@ -79,7 +79,7 @@ saved in a zip file.
 ['|mlp|linear_0.W', '|mlp|linear_0.b', '|mlp|linear_1.W', '|mlp|lin...]
 >>> ps.close()
 
-The names for parameters are chosen intellegently to reflect their
+The names for parameters are chosen intelligently to reflect their
 position in the brick hierarchy, if they belong to bricks, and by
 simply using the `.name` attribute, if they do not.
 
@@ -99,7 +99,7 @@ Additionally, this module provides convenience routine
 ['/mlp/linear_0.W', '/mlp/linear_0.b', '/mlp/linear_1.W', '/mlp/line...]
 
 Loading parameters saved by :func:`dump` with :func:`load_parameters`
-ensures that their heirarchical names are compatible with
+ensures that their hierarchical names are compatible with
 :class:`~blocks.model.Model` and :class:`~blocks.select.Selector` classes.
 
 TODO: Add information about :func:`add_to_dump`.
