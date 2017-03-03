@@ -5,7 +5,7 @@ mkdocs==0.16.1
 mock==2.0.0
 pillow==3.3.3  # rq.filter: >=3.3.0,<3.4.0
 git+https://github.com/rtfd/readthedocs-sphinx-ext.git@0.6-alpha#egg=readthedocs-sphinx-ext
-sphinx-rtd-theme==0.2.0
+sphinx-rtd-theme==0.2.1
 alabaster>=0.7,<0.8,!=0.7.5
 commonmark==0.7.3
 recommonmark==0.4.0
