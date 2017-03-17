@@ -84,7 +84,7 @@ class TestCheckpoint(unittest.TestCase):
         """Check behaviour when loading nonexisting main loop."""
         load = Load('mynonexisting.tar')
         load.main_loop = self.main_loop
-        load.before_training()
+        load.do()
 
     def test_loading_exception(self):
         """Check loading exception."""
@@ -92,7 +92,7 @@ class TestCheckpoint(unittest.TestCase):
             f.write('a'.encode('utf-8'))
         load = Load(f.name)
         load.main_loop = self.main_loop
-        self.assertRaises(tarfile.ReadError, load.before_training)
+        self.assertRaises(tarfile.ReadError, load.do)
 
     def test_checkpoint_exception(self):
         """Check checkpoint exception."""
