@@ -2,7 +2,7 @@
 import os.path
 import logging
 
-from blocks.extensions import SimpleExtension, TrainingExtension
+from blocks.extensions import SimpleExtension
 from blocks.utils import reraise_as
 from blocks.serialization import (secure_dump, load, dump_and_add_to_dump,
                                   load_parameters)
@@ -105,7 +105,7 @@ class Checkpoint(SimpleExtension):
             logger.info("Checkpointing has finished")
 
 
-class Load(TrainingExtension):
+class Load(SimpleExtension):
     """Loads a saved checkpoint into the main loop.
 
     Makes a `LOADED_FROM` record in the log with the dump path.
@@ -136,6 +136,7 @@ class Load(TrainingExtension):
     """
     def __init__(self, path, load_iteration_state=False, load_log=False,
                  **kwargs):
+        kwargs.setdefault("before_training", True)
         super(Load, self).__init__(**kwargs)
         self.path = path
         self.load_iteration_state = load_iteration_state
@@ -152,7 +153,7 @@ class Load(TrainingExtension):
                     main_loop.iteration_state = \
                         loaded_main_loop.iteration_state
 
-    def before_training(self):
+    def do(self, *args, **kwargs):
         if not os.path.exists(self.path):
             logger.warning("No dump found")
             return
