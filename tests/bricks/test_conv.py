@@ -226,7 +226,7 @@ def test_untied_biases():
     def wrongsize():
         func(x_val_2)
 
-    assert_raises_regexp(AssertionError, 'AbstractConv shape mismatch',
+    assert_raises_regexp(ValueError, 'Input dimension mis-match',
                          wrongsize)
 
 
