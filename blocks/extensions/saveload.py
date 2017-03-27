@@ -2,7 +2,7 @@
 import os.path
 import logging
 
-from blocks.extensions import SimpleExtension, TrainingExtension
+from blocks.extensions import SimpleExtension
 from blocks.utils import reraise_as
 from blocks.serialization import (secure_dump, load, dump_and_add_to_dump,
                                   load_parameters)
