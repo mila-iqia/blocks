@@ -255,7 +255,6 @@ class DatasetEvaluator(object):
         self.monitored_quantities_buffer = MonitoredQuantityBuffer(
             monitored_quantities)
         self.updates = updates
-        self._compile()
 
     def _compile(self):
         """Compiles Theano functions.
@@ -332,6 +331,8 @@ class DatasetEvaluator(object):
 
         """
         self.initialize_aggregators()
+        if not hasattr(self, '_aggregate_fun'):
+            self._compile()
         if self._aggregate_fun is not None:
             for batch in data_stream.get_epoch_iterator(as_dict=True):
                 self.process_batch(batch)
