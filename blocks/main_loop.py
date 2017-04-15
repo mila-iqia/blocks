@@ -101,6 +101,7 @@ class MainLoop(object):
             extensions = []
 
         self.data_stream = data_stream
+        self.epoch_iterator = None
         self.algorithm = algorithm
         self.log = log
         self.extensions = extensions

@@ -30,6 +30,9 @@ def test_main_loop():
     main_loop = MainLoop(
         MockAlgorithm(), IterableDataset(range(10)).get_example_stream(),
         extensions=[WriteBatchExtension(), FinishAfter(after_n_epochs=2)])
+    # regression test to check that accessing 'iteration_state'
+    # before training does not lead to a crash
+    main_loop.iteration_state
     main_loop.run()
     assert_raises(AttributeError, getattr, main_loop, 'model')
 
