@@ -6,8 +6,8 @@ from theano import tensor
 from blocks import bricks
 from blocks.bricks.base import application
 from blocks.graph import ComputationGraph
-from blocks.monitoring.aggregation import (mean, Mean, Minimum, Maximum,
-                                           Concatenate)
+from blocks.monitoring.aggregation import (
+    mean, Mean, Minimum, Maximum, Concatenate, Perplexity)
 from blocks.utils import shared_floatx
 
 from collections import OrderedDict
@@ -62,14 +62,16 @@ def test_parameter_monitor():
     assert_allclose(aggregator.readout_variable.eval(), 4.5)
 
 
-def test_mean_aggregator():
-    num_examples = 4
+def _test_mean_like_aggregator(scheme, func):
+    """Common test function for both Mean and Perplexity"""
+    features = numpy.array(
+        [[0, 3],
+         [2, 9],
+         [2, 4],
+         [5, 1],
+         [6, 7]], dtype=theano.config.floatX)
+    num_examples = features.shape[0]
     batch_size = 2
-
-    features = numpy.array([[0, 3],
-                           [2, 9],
-                           [2, 4],
-                           [5, 1]], dtype=theano.config.floatX)
 
     dataset = IndexableDataset(OrderedDict([('features', features)]))
 
@@ -78,18 +80,29 @@ def test_mean_aggregator():
                                                                batch_size))
 
     x = tensor.matrix('features')
-    y = (x**2).mean(axis=0)
+    y = (x**0.5).sum(axis=0)
     y.name = 'y'
     z = y.sum()
     z.name = 'z'
 
-    y.tag.aggregation_scheme = Mean(y, 1.)
-    z.tag.aggregation_scheme = Mean(z, 1.)
+    y.tag.aggregation_scheme = scheme(y, x.shape[0])
+    z.tag.aggregation_scheme = scheme(z, x.shape[0])
+
+    y_desired = func((features ** 0.5).mean(axis=0))
+    z_desired = func((features ** 0.5).sum(axis=1).mean(axis=0))
 
     assert_allclose(DatasetEvaluator([y]).evaluate(data_stream)['y'],
-                    numpy.array([8.25, 26.75], dtype=theano.config.floatX))
+                    numpy.array(y_desired, dtype=theano.config.floatX))
     assert_allclose(DatasetEvaluator([z]).evaluate(data_stream)['z'],
-                    numpy.array([35], dtype=theano.config.floatX))
+                    numpy.array(z_desired, dtype=theano.config.floatX))
+
+
+def test_mean_aggregator():
+    _test_mean_like_aggregator(Mean, lambda x: x)
+
+
+def test_perplexity_aggregator():
+    _test_mean_like_aggregator(Perplexity, lambda x: numpy.exp(-x))
 
 
 def test_min_max_aggregators():
