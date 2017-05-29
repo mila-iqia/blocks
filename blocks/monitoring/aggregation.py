@@ -143,11 +143,27 @@ class Mean(AggregationScheme):
         return aggregator
 
 
+class Perplexity(Mean):
+
+    def get_aggregator(self):
+        aggregator = super(Perplexity, self).get_aggregator()
+        aggregator.readout_variable = tensor.exp(-aggregator.readout_variable)
+        return aggregator
+
+
 def mean(numerator, denominator=1.):
     """Mean of quantity (numerator) over a number (denominator) values."""
     variable = numerator / denominator
     variable.tag.aggregation_scheme = Mean(numerator, denominator)
     variable.name = numerator.name
+    return variable
+
+
+def perplexity(log_likelihood, n_examples):
+    """Perplexity for total log_likelihood of n_examples."""
+    variable = tensor.exp(-log_likelihood / n_examples)
+    variable.tag.aggregation_scheme = Perplexity(log_likelihood, n_examples)
+    variable.name = 'perplexity'
     return variable
 
 
