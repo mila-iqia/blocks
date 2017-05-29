@@ -163,8 +163,7 @@ def perplexity(log_likelihood, n_examples):
     """Perplexity for total log_likelihood of n_examples."""
     variable = tensor.exp(-log_likelihood / n_examples)
     variable.tag.aggregation_scheme = Perplexity(log_likelihood, n_examples)
-    # There is no good default name for the output variable,
-    # so we don't try set any.
+    variable.name = 'perplexity'
     return variable
 
 
