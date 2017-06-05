@@ -127,7 +127,7 @@ from six.moves import cPickle
 import theano
 try:
     from theano.sandbox.cuda import cuda_ndarray
-except ImportError:
+except:
     cuda_ndarray = None
 try:
     import pygpu
