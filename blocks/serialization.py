@@ -127,11 +127,11 @@ from six.moves import cPickle
 import theano
 try:
     from theano.sandbox.cuda import cuda_ndarray
-except ImportError:
+except Exception:
     cuda_ndarray = None
 try:
     import pygpu
-except:
+except Exception:
     pygpu = None
 from blocks.config import config
 from blocks.filter import get_brick
