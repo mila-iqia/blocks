@@ -78,3 +78,10 @@ class TestFindBricks(object):
         assert self.mlp.activations[2] in found
         assert self.mlp.activations[1].children[0] in found
         assert self.mlp.activations[3].children[0].children[0]
+
+
+def test_imports():
+    from blocks.utils import dict_union
+    from blocks.utils import check_theano_variable
+    from blocks.utils.utils import dict_union
+    from blocks.utils.theano_utils import check_theano_variable
