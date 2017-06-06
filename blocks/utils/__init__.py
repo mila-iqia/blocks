@@ -35,4 +35,7 @@ class UtilsModule(ModuleType):
             super(UtilsModule, self).__getattribute__(item)
 
 
+# In Python2 (legacy Python) garbage collector destroys the module
+# unless we save a reference
+old_module = sys.modules[__name__]
 sys.modules[__name__] = UtilsModule(__name__)
