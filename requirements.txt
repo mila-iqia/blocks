@@ -1,4 +1,4 @@
-numpy==1.12.1
+numpy==1.13.0
 picklable-itertools==0.1.1
 progressbar2==3.30.2
 pyyaml==3.12
