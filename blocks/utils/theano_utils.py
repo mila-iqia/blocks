@@ -1,10 +1,10 @@
 from __future__ import print_function
-import contextlib
-import numpy
-import six
 import sys
+import contextlib
 from collections import OrderedDict, deque
 
+import numpy
+import six
 import theano
 from theano import tensor
 from theano import printing
