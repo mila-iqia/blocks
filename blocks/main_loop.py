@@ -7,9 +7,7 @@ from blocks.config import config
 from blocks.log import BACKENDS
 from blocks.utils import reraise_as, unpack, change_recursion_limit
 from blocks.utils.profile import Profile, Timer
-from blocks.algorithms import GradientDescent
 from blocks.extensions import CallbackName
-from blocks.model import Model
 
 logger = logging.getLogger(__name__)
 
@@ -151,12 +149,7 @@ class MainLoop(object):
         # reset `profile.current`. Otherwise, it simply does not hurt.
         self.profile.current = []
 
-        # Sanity check for the most common case
-        if (self._model and isinstance(self._model, Model) and
-                isinstance(self.algorithm, GradientDescent)):
-            if not (set(self._model.get_parameter_dict().values()) ==
-                    set(self.algorithm.parameters)):
-                logger.warning("different parameters for model and algorithm")
+        self.algorithm.check_sanity(self._model)
 
         with change_recursion_limit(config.recursion_limit):
             self.original_sigint_handler = signal.signal(

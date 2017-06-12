@@ -13,10 +13,11 @@ from six import add_metaclass
 from theano import tensor
 
 from blocks.graph import ComputationGraph
+from blocks.model import Model
 from blocks.roles import add_role, ALGORITHM_HYPERPARAMETER, ALGORITHM_BUFFER
 from blocks.theano_expressions import l2_norm
-from blocks.utils import (dict_subset, pack, shared_floatx,
-                          shared_floatx_zeros_matching)
+from blocks.utils import dict_subset, pack, shared_floatx
+from blocks.utils.theano_utils import shared_floatx_zeros_matching
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +53,17 @@ class TrainingAlgorithm(object):
         ----------
         batch : dict
             A dictionary of (source name, data) pairs.
+
+        """
+        pass
+
+    def check_sanity(self, model):
+        """Check that the algorithm is suitable to the model
+
+        Parameters
+        ----------
+        model : object
+            Model used for training.
 
         """
         pass
@@ -359,6 +371,14 @@ class GradientDescent(UpdatesAlgorithm):
                 consider_constant=consider_constant)))
         logger.info("The cost gradient computation graph is built")
         return gradients
+
+    def check_sanity(self, model):
+        # Sanity check for the most common case
+        if (model and isinstance(model, Model) and
+                isinstance(self, GradientDescent)):
+            if not (set(model.get_parameter_dict().values()) ==
+                    set(self.parameters)):
+                logger.warning("different parameters for model and algorithm")
 
 
 @add_metaclass(ABCMeta)
