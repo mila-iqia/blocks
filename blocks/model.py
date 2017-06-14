@@ -19,6 +19,7 @@ import logging
 from collections import OrderedDict, Counter
 from itertools import chain
 
+from blocks.algorithms import GradientDescent
 from blocks.graph import ComputationGraph
 from blocks.filter import get_brick
 
@@ -83,6 +84,14 @@ class Model(ComputationGraph):
             else:
                 parameter_list.append((parameter.name, parameter))
         self._parameter_dict = OrderedDict(parameter_list)
+
+    def check_sanity(self, algorithm):
+        # Sanity check for the most common case
+        if (self and isinstance(self, Model) and
+                isinstance(algorithm, GradientDescent)):
+            if not (set(self.get_parameter_dict().values()) ==
+                    set(algorithm.parameters)):
+                logger.warning("different parameters for model and algorithm")
 
     def get_parameter_dict(self):
         """Returns parameters with their hierarchical names.

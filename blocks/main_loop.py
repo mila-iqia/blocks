@@ -149,7 +149,7 @@ class MainLoop(object):
         # reset `profile.current`. Otherwise, it simply does not hurt.
         self.profile.current = []
 
-        self.algorithm.check_sanity(self._model)
+        self._model.check_sanity(self.algorithm)
 
         with change_recursion_limit(config.recursion_limit):
             self.original_sigint_handler = signal.signal(
