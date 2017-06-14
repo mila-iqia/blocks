@@ -7,8 +7,6 @@ def test_no_theano_import():
     assert 'theano' not in sys.modules
     from blocks.utils import dict_union
     assert 'theano' not in sys.modules
-    from blocks.utils import check_theano_variable
-    assert 'theano' in sys.modules
 
 
 def test_imports():
