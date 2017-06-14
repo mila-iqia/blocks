@@ -87,8 +87,7 @@ class Model(ComputationGraph):
 
     def check_sanity(self, algorithm):
         # Sanity check for the most common case
-        if (self and isinstance(self, Model) and
-                isinstance(algorithm, GradientDescent)):
+        if self and isinstance(algorithm, GradientDescent):
             if not (set(self.get_parameter_dict().values()) ==
                     set(algorithm.parameters)):
                 logger.warning("different parameters for model and algorithm")
