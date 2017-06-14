@@ -14,8 +14,7 @@ from ..roles import (BATCH_NORM_POPULATION_MEAN,
                      BATCH_NORM_DIVISOR, BATCH_NORM_MINIBATCH_ESTIMATE,
                      BATCH_NORM_SHIFT_PARAMETER, BATCH_NORM_SCALE_PARAMETER,
                      add_role)
-from ..utils.theano_utils import (
-    shared_floatx, shared_floatx_nans, is_shared_variable)
+from ..utils import shared_floatx, shared_floatx_nans, is_shared_variable
 from .base import lazy, application
 from .sequences import Sequence, Feedforward, MLP
 from .interfaces import RNGMixin
