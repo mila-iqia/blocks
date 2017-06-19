@@ -15,8 +15,8 @@ from theano import tensor
 from blocks.graph import ComputationGraph
 from blocks.roles import add_role, ALGORITHM_HYPERPARAMETER, ALGORITHM_BUFFER
 from blocks.theano_expressions import l2_norm
-from blocks.utils import (dict_subset, pack, shared_floatx,
-                          shared_floatx_zeros_matching)
+from blocks.utils import (
+    dict_subset, pack, shared_floatx, shared_floatx_zeros_matching)
 
 logger = logging.getLogger(__name__)
 
