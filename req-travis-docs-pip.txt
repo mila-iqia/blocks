@@ -1,4 +1,4 @@
-sphinx==1.6.2
+sphinx==1.6.3
 Pygments==2.2.0
 docutils==0.13.1
 mkdocs==0.16.3
