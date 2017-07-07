@@ -247,6 +247,7 @@ class Application(object):
     def apply(self, bound_application, *args, **kwargs):
         as_dict = kwargs.pop('as_dict', False)
         as_list = kwargs.pop('as_list', False)
+        call_id = kwargs.pop('call_id', None)
         if as_list and as_dict:
             raise ValueError
 
@@ -259,6 +260,7 @@ class Application(object):
 
         # Construct the ApplicationCall, used to store data in for this call
         call = ApplicationCall(bound_application)
+        call.metadata['call_id'] = call_id
         args = list(args)
         if 'application' in args_names:
             args.insert(args_names.index('application'), bound_application)

@@ -1,7 +1,8 @@
 from inspect import isclass
 import re
 
-from blocks.bricks.base import ApplicationCall, BoundApplication, Brick
+from blocks.bricks.base import (
+    Application, ApplicationCall, BoundApplication, Brick)
 from blocks.roles import has_roles
 
 
@@ -64,7 +65,11 @@ class VariableFilter(object):
     theano_name_regex : str, optional
         A regular expression for the variable name. The Theano name (i.e.
         `x.name`) is used.
-    applications : list of :class:`.Application`, optional
+    call_id : str, optional
+        The call identifier as written in :class:`.ApplicationCall` metadata
+        attribute.
+    applications : list of :class:`.Application`
+                   or :class:`.BoundApplication`, optional
         Matches a variable that was produced by any of the applications
         given.
 
@@ -101,13 +106,14 @@ class VariableFilter(object):
     """
     def __init__(self, roles=None, bricks=None, each_role=False, name=None,
                  name_regex=None, theano_name=None, theano_name_regex=None,
-                 applications=None):
+                 call_id=None, applications=None):
         if bricks is not None and not all(
             isinstance(brick, Brick) or issubclass(brick, Brick)
                 for brick in bricks):
             raise ValueError('`bricks` should be a list of Bricks')
         if applications is not None and not all(
-            isinstance(application, BoundApplication)
+                isinstance(application, BoundApplication) or
+                isinstance(application, Application)
                 for application in applications):
             raise ValueError('`applications` should be a list of '
                              'BoundApplications')
@@ -118,6 +124,7 @@ class VariableFilter(object):
         self.name_regex = name_regex
         self.theano_name = theano_name
         self.theano_name_regex = theano_name_regex
+        self.call_id = call_id
         self.applications = applications
 
     def __call__(self, variables):
@@ -162,8 +169,20 @@ class VariableFilter(object):
                          if (var.name is not None) and
                          re.match(self.theano_name_regex, var.name)]
         if self.applications:
-            variables = [var for var in variables
-                         if get_application_call(var) and
-                         get_application_call(var).application in
-                         self.applications]
+            filtered_variables = []
+            for var in variables:
+                var_application = get_application_call(var)
+                if var_application is None:
+                    continue
+                if (var_application.application in
+                        self.applications or
+                        var_application.application.application in
+                        self.applications):
+                    filtered_variables.append(var)
+            variables = filtered_variables
+        if self.call_id:
+            variables = [
+                var for var in variables
+                if get_application_call(var) and
+                get_application_call(var).metadata['call_id'] == self.call_id]
         return variables

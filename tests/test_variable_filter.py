@@ -16,8 +16,8 @@ def test_variable_filter():
     activation = Logistic(name='sigm')
 
     x = tensor.vector()
-    h1 = brick1.apply(x)
-    h2 = activation.apply(h1)
+    h1 = brick1.apply(x, call_id='brick1_call_id')
+    h2 = activation.apply(h1, call_id='act')
     h2.name = "h2act"
     y = brick2.apply(h2)
     cg = ComputationGraph(y)
@@ -67,14 +67,18 @@ def test_variable_filter():
     theano_name_filter_regex = VariableFilter(theano_name_regex='h2a.?t')
     assert [cg.variables[11]] == theano_name_filter_regex(cg.variables)
 
+    brick1_apply_variables = [cg.variables[1], cg.variables[8]]
     # Testing filtering by application
     appli_filter = VariableFilter(applications=[brick1.apply])
-    variables = [cg.variables[1], cg.variables[8]]
-    assert variables == appli_filter(cg.variables)
+    assert brick1_apply_variables == appli_filter(cg.variables)
 
-    # Testing filtering by application
-    appli_filter_list = VariableFilter(applications=[brick1.apply])
-    assert variables == appli_filter_list(cg.variables)
+    # Testing filtering by unbound application
+    unbound_appli_filter = VariableFilter(applications=[Linear.apply])
+    assert brick1_apply_variables == unbound_appli_filter(cg.variables)
+
+    # Testing filtering by call identifier
+    call_id_filter = VariableFilter(call_id='brick1_call_id')
+    assert brick1_apply_variables == call_id_filter(cg.variables)
 
     input1 = tensor.matrix('input1')
     input2 = tensor.matrix('input2')
