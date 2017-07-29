@@ -1,5 +1,5 @@
 picklable-itertools==0.1.1
-progressbar2==3.33.1
+progressbar2==3.33.2
 pyyaml==3.12
 six==1.10.0
 toolz==0.8.2
