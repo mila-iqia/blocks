@@ -8,5 +8,5 @@ pytables==3.2.2
 pyyaml==3.12
 pyzmq==16.0.2
 scipy==0.19.1
-six==1.10.0
+six==1.11.0
 toolz==0.8.2
