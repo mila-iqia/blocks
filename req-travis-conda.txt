@@ -6,7 +6,7 @@ numpy==1.13.3
 pillow==3.3.3 # rq.filter: >=3.3.0,<3.4.0
 pytables==3.2.2
 pyyaml==3.12
-pyzmq==16.0.2
+pyzmq==16.0.3
 scipy==1.0.0
 six==1.11.0
 toolz==0.8.2
