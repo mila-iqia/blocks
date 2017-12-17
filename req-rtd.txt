@@ -2,7 +2,7 @@ picklable-itertools==0.1.1
 progressbar2==3.34.3
 pyyaml==3.12
 six==1.11.0
-toolz==0.8.2
+toolz==0.9.0
 
 --allow-external theano
 --allow-unverified theano
