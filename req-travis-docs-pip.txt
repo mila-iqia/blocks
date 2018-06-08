@@ -1,7 +1,7 @@
 sphinx==1.7.5
 Pygments==2.2.0
 docutils==0.14
-mkdocs==0.17.3
+mkdocs==0.17.4
 mock==2.0.0
 pillow==3.3.3  # rq.filter: >=3.3.0,<3.4.0
 git+https://github.com/rtfd/readthedocs-sphinx-ext.git@0.6-alpha#egg=readthedocs-sphinx-ext
