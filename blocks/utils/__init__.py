@@ -10,13 +10,15 @@ from types import ModuleType
 
 
 class UtilsModule(ModuleType):
-    utils_attrs = ("pack", "unpack", "reraise_as", "dict_subset", "dict_union",
-                   "repr_attrs", "ipdb_breakpoint", "print_sum", "print_shape",
-                   "change_recursion_limit", "extract_args", "find_bricks")
-    theano_utils_attrs = ("shared_floatx_zeros_matching", "shared_floatx_zeros",
-                          "shared_floatx_nans", "shared_floatx", "shared_like",
-                          "check_theano_variable", "is_graph_input",
-                          "is_shared_variable", "put_hook")
+    utils_attrs = (
+        "pack", "unpack", "reraise_as", "dict_subset", "dict_union",
+        "repr_attrs", "ipdb_breakpoint", "print_sum", "print_shape",
+        "change_recursion_limit", "extract_args", "find_bricks")
+    theano_utils_attrs = (
+        "shared_floatx_zeros_matching", "shared_floatx_zeros",
+        "shared_floatx_nans", "shared_floatx", "shared_like",
+        "check_theano_variable", "is_graph_input",
+        "is_shared_variable", "put_hook")
     __all__ = utils_attrs + theano_utils_attrs
     __doc__ = __doc__
     __file__ = __file__

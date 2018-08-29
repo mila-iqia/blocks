@@ -58,6 +58,7 @@ class Bidirectional(Initializable):
             return self.prototype.get_dim(name) * 2
         return self.prototype.get_dim(name)
 
+
 RECURRENTSTACK_SEPARATOR = '#'
 
 

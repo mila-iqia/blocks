@@ -217,6 +217,7 @@ class Minimum(AggregationScheme):
         return self._build_aggregator(tensor.minimum(self.storage,
                                                      self.variable))
 
+
 minimum = partial(_simple_aggregation, Minimum)
 
 
@@ -226,6 +227,7 @@ class Maximum(Minimum):
         self.storage = shared_like(self.variable)
         return self._build_aggregator(tensor.maximum(self.storage,
                                                      self.variable))
+
 
 maximum = partial(_simple_aggregation, Maximum)
 
@@ -250,6 +252,7 @@ class Concatenate(Minimum):
         self.storage = shared_like(self.variable)
         return self._build_aggregator(tensor.concatenate([self.storage,
                                                           self.variable]))
+
 
 concatenate = partial(_simple_aggregation, Concatenate)
 

@@ -32,6 +32,7 @@ def create_unbound_method(func, cls):
     if six.PY3:
         return func
 
+
 # Rename built-in property to avoid conflict with Application.property
 property_ = property
 
@@ -805,6 +806,7 @@ class LazyNone(object):
         return False
 
     __nonzero__ = __bool__
+
 
 NoneAllocation = LazyNone('NoneAllocation')
 NoneInitialization = LazyNone('NoneInitialization')

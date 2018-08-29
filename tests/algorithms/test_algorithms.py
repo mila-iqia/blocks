@@ -186,8 +186,8 @@ def test_gradient_descent_spurious_sources():
     algorithm = GradientDescent(cost=cost, parameters=[W])
     algorithm.step_rule.learning_rate.set_value(0.75)
     algorithm.initialize()
-    assert_raises(lambda:
-                  algorithm.process_batch(dict(example_id='test')))
+    with assert_raises(ValueError):
+        algorithm.process_batch(dict(example_id='test'))
 
     algorithm = GradientDescent(cost=cost, parameters=[W],
                                 on_unused_sources='ignore')
