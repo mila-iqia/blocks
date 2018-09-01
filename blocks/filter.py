@@ -66,8 +66,8 @@ class VariableFilter(object):
         A regular expression for the variable name. The Theano name (i.e.
         `x.name`) is used.
     call_id : str, optional
-        The call identifier as written in :class:`.ApplicationCall` metadata
-        attribute.
+        The call identifier as written in :class:`.ApplicationCall`
+        metadata attribute.
     applications : list of :class:`.Application`
                    or :class:`.BoundApplication`, optional
         Matches a variable that was produced by any of the applications
