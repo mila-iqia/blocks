@@ -2,12 +2,12 @@ from blocks.utils.containers import AnnotatingList
 
 
 def test_annotating_list():
-    l = AnnotatingList(range(10))
-    assert repr(l) == repr(list(range(10)))
-    assert l == list(range(10))
-    assert l != list(range(9))
-    assert l[0] == 0
-    l[0] = 10
-    del l[0]
-    l.insert(0, 0)
-    assert l == list(range(10))
+    lst = AnnotatingList(range(10))
+    assert repr(lst) == repr(list(range(10)))
+    assert lst == list(range(10))
+    assert lst != list(range(9))
+    assert lst[0] == 0
+    lst[0] = 10
+    del lst[0]
+    lst.insert(0, 0)
+    assert lst == list(range(10))

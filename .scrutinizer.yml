@@ -1,12 +1,14 @@
 build:
+  environment:
+    python: 3.5.0
   dependencies:
     override:
       - pip install -r req-scrutinizer.txt
   tests:
     override:
-      - flake8 --filename=* bin
+      - flake8 --filename='blocks-continue' bin
       - flake8 blocks doctests tests
-      - pep257 bin --numpy --ignore=D100,D101,D102,D103 --match='.*'
+      - pep257 bin --numpy --ignore=D100,D101,D102,D103 --match='blocks-continue'
       - pep257 blocks --numpy --ignore=D100,D101,D102,D103
       - pep257 doctests tests --numpy --ignore=D100,D101,D102,D103 --match='.*\.py'
 checks:
@@ -115,7 +117,6 @@ checks:
         classes_protected_access: true
         classes_non_parent_init_called: true
         classes_non_iterator_returned: true
-        classes_no_method_argument: true
         classes_no_method_argument: true
         classes_no_init: true
         classes_missing_interface_method: true

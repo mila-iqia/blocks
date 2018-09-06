@@ -63,7 +63,7 @@ def test_parameter_monitor():
 
 
 def _test_mean_like_aggregator(scheme, func):
-    """Common test function for both Mean and Perplexity"""
+    """Common test function for both Mean and Perplexity."""
     features = numpy.array(
         [[0, 3],
          [2, 9],

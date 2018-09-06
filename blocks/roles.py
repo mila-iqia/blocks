@@ -75,12 +75,14 @@ class VariableRole(object):
 class InputRole(VariableRole):
     pass
 
+
 #: The input of a :class:`~.bricks.Brick`
 INPUT = InputRole()
 
 
 class OutputRole(VariableRole):
     pass
+
 
 #: The output of a :class:`~.bricks.Brick`
 OUTPUT = OutputRole()
@@ -89,12 +91,14 @@ OUTPUT = OutputRole()
 class CostRole(VariableRole):
     pass
 
+
 #: A scalar cost that can be used to train or regularize
 COST = CostRole()
 
 
 class PersistentRole(VariableRole):
     pass
+
 
 # Any persistent quantity that should be saved as part of the model
 PERSISTENT = PersistentRole()
@@ -103,12 +107,14 @@ PERSISTENT = PersistentRole()
 class ParameterRole(PersistentRole):
     pass
 
+
 #: A parameter of the model
 PARAMETER = ParameterRole()
 
 
 class AuxiliaryRole(VariableRole):
     pass
+
 
 #: Variables added to the graph as annotations
 AUXILIARY = AuxiliaryRole()
@@ -117,12 +123,14 @@ AUXILIARY = AuxiliaryRole()
 class WeightRole(ParameterRole):
     pass
 
+
 #: The weight matrices of linear transformations
 WEIGHT = WeightRole()
 
 
 class BiasRole(ParameterRole):
     pass
+
 
 #: Biases of linear transformations
 BIAS = BiasRole()
@@ -131,12 +139,14 @@ BIAS = BiasRole()
 class InitialStateRole(ParameterRole):
     pass
 
+
 #: Initial state of a recurrent network
 INITIAL_STATE = InitialStateRole()
 
 
 class FilterRole(WeightRole):
     pass
+
 
 #: The filters (kernels) of a convolution operation
 FILTER = FilterRole()
@@ -145,12 +155,14 @@ FILTER = FilterRole()
 class DropoutRole(VariableRole):
     pass
 
+
 #: Inputs with applied dropout
 DROPOUT = DropoutRole()
 
 
 class CollectedRole(VariableRole):
     pass
+
 
 #: The replacement of a variable collected into a single shared variable
 COLLECTED = CollectedRole()
@@ -159,12 +171,14 @@ COLLECTED = CollectedRole()
 class CollectorRole(ParameterRole):
     pass
 
+
 #: A collection of parameters combined into a single shared variable
 COLLECTOR = CollectorRole()
 
 
 class AlgorithmStateRole(VariableRole):
     pass
+
 
 #: Shared variables used in algorithms updates
 ALGORITHM_STATE = AlgorithmStateRole()
@@ -173,12 +187,14 @@ ALGORITHM_STATE = AlgorithmStateRole()
 class AlgorithmHyperparameterRole(AlgorithmStateRole):
     pass
 
+
 #: hyperparameters accociated with algorithms
 ALGORITHM_HYPERPARAMETER = AlgorithmHyperparameterRole()
 
 
 class AlgorithmBufferRole(AlgorithmStateRole):
     pass
+
 
 #: buffers accociated with algorithms
 ALGORITHM_BUFFER = AlgorithmBufferRole()
@@ -187,12 +203,14 @@ ALGORITHM_BUFFER = AlgorithmBufferRole()
 class BatchNormPopulationStatisticsRole(PersistentRole):
     pass
 
+
 #: base role for batch normalization population statistics
 BATCH_NORM_POPULATION_STATISTICS = BatchNormPopulationStatisticsRole()
 
 
 class BatchNormPopulationMeanRole(BatchNormPopulationStatisticsRole):
     pass
+
 
 #: mean activations accumulated over the dataset
 BATCH_NORM_POPULATION_MEAN = BatchNormPopulationMeanRole()
@@ -201,6 +219,7 @@ BATCH_NORM_POPULATION_MEAN = BatchNormPopulationMeanRole()
 class BatchNormPopulationStdevRole(BatchNormPopulationStatisticsRole):
     pass
 
+
 #: standard deviations of activations accumulated over the dataset
 BATCH_NORM_POPULATION_STDEV = BatchNormPopulationStdevRole()
 
@@ -208,12 +227,14 @@ BATCH_NORM_POPULATION_STDEV = BatchNormPopulationStdevRole()
 class BatchNormGraphVariableRole(VariableRole):
     pass
 
+
 #: base for roles used for within-graph batch normalization replacement
 BATCH_NORM_GRAPH_VARIABLE = BatchNormGraphVariableRole()
 
 
 class BatchNormOffsetRole(BatchNormGraphVariableRole):
     pass
+
 
 #: offset applied in a BatchNormalization application (or its
 #  batch-normalized replacement)
@@ -223,6 +244,7 @@ BATCH_NORM_OFFSET = BatchNormOffsetRole()
 class BatchNormDivisorRole(BatchNormGraphVariableRole):
     pass
 
+
 #: divisor applied in a BatchNormalization application (or its
 #  batch-normalized replacement)
 BATCH_NORM_DIVISOR = BatchNormDivisorRole()
@@ -230,6 +252,7 @@ BATCH_NORM_DIVISOR = BatchNormDivisorRole()
 
 class BatchNormMinibatchEstimateRole(BatchNormGraphVariableRole):
     pass
+
 
 #: role added to variables that are the result of a batch normalization
 #  replacement, rather than the original population statistics variables.
@@ -239,6 +262,7 @@ BATCH_NORM_MINIBATCH_ESTIMATE = BatchNormMinibatchEstimateRole()
 class BatchNormScaleParameterRole(ParameterRole):
     pass
 
+
 #: role given to the scale parameter, referred to as "scale" in the
 # batch normalization manuscript, applied after normalizing.
 BATCH_NORM_SCALE_PARAMETER = BatchNormScaleParameterRole()
@@ -246,6 +270,7 @@ BATCH_NORM_SCALE_PARAMETER = BatchNormScaleParameterRole()
 
 class BatchNormShiftParameterRole(BiasRole):
     pass
+
 
 #: role given to the shift parameter, referred to as "beta" in the
 # batch normalization manuscript, applied after normalizing and scaling.

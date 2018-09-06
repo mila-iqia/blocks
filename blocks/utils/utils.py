@@ -4,7 +4,8 @@ import sys
 import contextlib
 from collections import OrderedDict, deque
 
-import numpy
+# for documentation
+import numpy  # noqa: F401
 
 
 def pack(arg):
@@ -362,4 +363,3 @@ def find_bricks(top_bricks, predicate):
                 found.append(current)
             to_visit.extend(current.children)
     return found
-

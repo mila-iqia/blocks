@@ -229,7 +229,7 @@ def secure_dump(object_, path, dump_function=dump, **kwargs):
         logger.debug("Moving the temporary file")
         shutil.move(temp.name, path)
         logger.debug("Dump finished")
-    except:
+    except:  # noqa: E722
         if "temp" in locals():
             os.remove(temp.name)
         raise
@@ -563,6 +563,7 @@ def _recreate_cuda_ndarray(_, content):
 def _recreate_pygpu_array(context_name, content):
     context = theano.gpuarray.get_context(context_name)
     return pygpu.gpuarray.array(content, context=context)
+
 
 _ARRAY_TYPE_MAP = {numpy.ndarray: 'numpy_ndarray'}
 _INVERSE_ARRAY_TYPE_MAP = {'numpy_ndarray': _recreate_numpy_ndarray}

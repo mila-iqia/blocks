@@ -29,7 +29,7 @@ def load_tests(loader, tests, ignore):
             tests.addTests(doctest.DocTestSuite(
                 module=importlib.import_module(module), setUp=setup,
                 optionflags=doctest.IGNORE_EXCEPTION_DETAIL))
-        except:
+        except:  # noqa: E722
             pass
 
     # This part loads the doctests from the documentation

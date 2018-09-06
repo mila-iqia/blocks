@@ -286,7 +286,7 @@ class Rectifier(Activation):
 
 
 class LeakyRectifier(Activation):
-    r"""Leaky ReLU
+    r"""Leaky ReLU.
 
     Like Rectifier, but inputs are scaled by small constant for negative
     inputs.
