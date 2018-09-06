@@ -3,7 +3,4 @@ progressbar2==3.38.0
 pyyaml==3.13
 six==1.11.0
 toolz==0.9.0
-
---allow-external theano
---allow-unverified theano
 git+https://github.com/Theano/Theano.git#egg=theano
