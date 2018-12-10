@@ -10,4 +10,4 @@ alabaster>=0.7,<0.8,!=0.7.5
 commonmark==0.8.1
 recommonmark==0.4.0
 pyyaml==3.13
-six==1.11.0
+six==1.12.0
