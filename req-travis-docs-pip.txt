@@ -1,5 +1,5 @@
 sphinx==1.8.2
-Pygments==2.3.0
+Pygments==2.3.1
 docutils==0.14
 mkdocs==1.0.4
 mock==2.0.0
