@@ -8,6 +8,6 @@ git+https://github.com/rtfd/readthedocs-sphinx-ext.git@0.6-alpha#egg=readthedocs
 sphinx-rtd-theme==0.4.2
 alabaster>=0.7,<0.8,!=0.7.5
 commonmark==0.8.1
-recommonmark==0.4.0
+recommonmark==0.5.0
 pyyaml==3.13
 six==1.12.0
